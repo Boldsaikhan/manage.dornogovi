@@ -5,7 +5,7 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/Boldsaikhan/manage.dornogovi/main/deploy/server-setup.sh | sudo bash
 #
-# Idempotent — дахин ажиллуулж болно. Ubuntu 24.04 дээр туршсан.
+# Idempotent — дахин ажиллуулж болно. Ubuntu 24.04-т зориулсан (серверт хараахан ажиллуулж туршаагүй).
 set -euo pipefail
 
 REPO_URL="${REPO_URL:-https://github.com/Boldsaikhan/manage.dornogovi.git}"
