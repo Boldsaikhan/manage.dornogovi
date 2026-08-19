@@ -1,0 +1,43 @@
+{
+    "manifest_version": 3,
+    "name": "Manage Dornogovi — нэвтрэлт",
+    "description": "Manage Dornogovi платформд хадгалсан нэвтрэх мэдээллээр төрийн системүүдэд автоматаар нэвтэрнэ.",
+    "version": "1.0.0",
+    "permissions": ["storage"],
+    "host_permissions": [
+        "http://localhost/*",
+        "https://erp.e-mongolia.mn/*",
+        "https://shilen.gov.mn/*",
+        "https://www.gov.mn/*",
+        "https://mail.gov.mn/*",
+        "https://loginnew.unelgee.gov.mn/*",
+        "http://dornogovi.unelgee.gov.mn/*",
+        "https://dornogovi.unelgee.gov.mn/*",
+        "https://sudalgaa.dornogovi.gov.mn/*"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": ["http://localhost/manage.dornogovi.gov.mn/*"],
+            "js": ["bridge.js"],
+            "run_at": "document_start"
+        },
+        {
+            "matches": [
+                "https://erp.e-mongolia.mn/*",
+                "https://shilen.gov.mn/*",
+                "https://www.gov.mn/*",
+                "https://mail.gov.mn/*",
+                "https://loginnew.unelgee.gov.mn/*",
+                "http://dornogovi.unelgee.gov.mn/*",
+                "https://dornogovi.unelgee.gov.mn/*",
+                "https://sudalgaa.dornogovi.gov.mn/*"
+            ],
+            "js": ["autofill.js"],
+            "run_at": "document_idle",
+            "all_frames": false
+        }
+    ]
+}
