@@ -97,9 +97,16 @@ npm run build --silent
 log "7/8 Laravel"
 grep -q '^APP_KEY=base64:' .env || php artisan key:generate --force
 php artisan migrate --force
-php artisan db:seed --class=SystemSeeder --force
-php artisan db:seed --class=TaskSeeder --force
-php artisan db:seed --class=AdminUserSeeder --force
+# Seeder-ийг зөвхөн АНХНЫ удаад — дахин ажиллуулахад хэрэглэгчийн засвар
+# (үүрэг чиглэлийн хэрэгжилт, хэлтэс, нэвтрэх мэдээлэл) устахаас сэргийлнэ.
+TASK_COUNT="$(php artisan tinker --execute='echo App\Models\Task::count();' 2>/dev/null | tail -1 | tr -dc '0-9')"
+if [ "${TASK_COUNT:-0}" = "0" ]; then
+    php artisan db:seed --class=SystemSeeder --force
+    php artisan db:seed --class=TaskSeeder --force
+    php artisan db:seed --class=AdminUserSeeder --force
+else
+    echo "    (өгөгдөл аль хэдийн байгаа тул seeder алгасав — ${TASK_COUNT} ажил)"
+fi
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
