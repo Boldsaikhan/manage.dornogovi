@@ -26,6 +26,31 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            // Утасны дугаараар нэвтрэхэд хэрэглэгдэнэ. Монголын дугаар 8 оронтой.
+            'phone' => [
+                'nullable',
+                'string',
+                'digits:8',
+                Rule::unique(User::class)->ignore($this->user()->id),
+            ],
+        ];
+    }
+
+    /**
+     * Дугаарыг шалгахаас өмнө зөвхөн цифр болгож цэвэрлэнэ — ингэснээр
+     * "9911 1234", "+976 9911-1234" гэх мэт бичлэг ч хүлээн зөвшөөрөгдөнө.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('phone')) {
+            $this->merge(['phone' => User::normalizePhone($this->input('phone'))]);
+        }
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'phone' => 'утасны дугаар',
         ];
     }
 }

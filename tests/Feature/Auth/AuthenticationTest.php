@@ -42,6 +42,62 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_users_can_authenticate_using_their_phone_number(): void
+    {
+        $user = User::factory()->create(['phone' => '99111234']);
+
+        $response = $this->post('/login', [
+            'login' => '99111234',
+            'password' => 'password',
+        ]);
+
+        $this->assertAuthenticatedAs($user);
+        $response->assertRedirect(route('dashboard', absolute: false));
+    }
+
+    /**
+     * Хэрэглэгч зай, зураас, улсын кодтой бичсэн ч нэвтрэх ёстой.
+     */
+    public function test_phone_number_is_normalised_before_lookup(): void
+    {
+        $user = User::factory()->create(['phone' => '99111234']);
+
+        foreach (['9911 1234', '+976 9911-1234', '976 99111234'] as $written) {
+            $this->post('/login', [
+                'login' => $written,
+                'password' => 'password',
+            ]);
+
+            $this->assertAuthenticatedAs($user);
+
+            $this->post('/logout');
+        }
+    }
+
+    public function test_users_can_not_authenticate_with_unknown_phone_number(): void
+    {
+        User::factory()->create(['phone' => '99111234']);
+
+        $this->post('/login', [
+            'login' => '88887777',
+            'password' => 'password',
+        ]);
+
+        $this->assertGuest();
+    }
+
+    public function test_users_can_authenticate_using_their_email(): void
+    {
+        $user = User::factory()->create();
+
+        $this->post('/login', [
+            'login' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $this->assertAuthenticatedAs($user);
+    }
+
     public function test_users_can_logout(): void
     {
         $user = User::factory()->create();
