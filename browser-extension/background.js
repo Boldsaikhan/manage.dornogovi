@@ -7,10 +7,19 @@ const TTL_MS = 90_000;
 
 const key = (host) => `pending:${host}`;
 
+// Мэдээлэл хадгалуулж чадах платформын хаягууд (production + локал хөгжүүлэлт).
+const ALLOWED_ORIGINS = [
+    'https://manage.dornogovi.gov.mn/',
+    'http://localhost/manage.dornogovi.gov.mn/',
+];
+
+const isTrustedSender = (url) =>
+    typeof url === 'string' && ALLOWED_ORIGINS.some((origin) => url.startsWith(origin));
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Зөвхөн өөрийн платформын хуудас мэдээлэл хадгалуулж чадна.
     if (message?.type === 'store') {
-        if (!sender.url || !sender.url.startsWith('http://localhost/manage.dornogovi.gov.mn/')) {
+        if (!isTrustedSender(sender.url)) {
             sendResponse({ ok: false });
 
             return true;

@@ -5,6 +5,7 @@
     "version": "1.0.0",
     "permissions": ["storage"],
     "host_permissions": [
+        "https://manage.dornogovi.gov.mn/*",
         "http://localhost/*",
         "https://erp.e-mongolia.mn/*",
         "https://shilen.gov.mn/*",
@@ -20,7 +21,10 @@
     },
     "content_scripts": [
         {
-            "matches": ["http://localhost/manage.dornogovi.gov.mn/*"],
+            "matches": [
+                "https://manage.dornogovi.gov.mn/*",
+                "http://localhost/manage.dornogovi.gov.mn/*"
+            ],
             "js": ["bridge.js"],
             "run_at": "document_start"
         },

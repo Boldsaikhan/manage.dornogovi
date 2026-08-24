@@ -11,9 +11,19 @@
 set -euo pipefail
 
 SRC_DIR="/opt/manage-dornogovi"
-WEB_ROOT="/var/www/manage.dornogovi.gov.mn"
 BRANCH="main"
 LOCK="/tmp/manage-deploy.lock"
+
+# Веб root болон эзэмшигч нь тохиргооны файлаас уншигдана.
+# CloudPanel руу шилжсэн үед /etc/manage-dornogovi.conf дотор дараах утгууд бичигдэнэ:
+#   WEB_ROOT=/home/<site-user>/htdocs/manage.dornogovi.gov.mn
+#   WEB_USER=<site-user>
+#   PHP_FPM=php8.3-fpm
+[ -f /etc/manage-dornogovi.conf ] && . /etc/manage-dornogovi.conf
+
+WEB_ROOT="${WEB_ROOT:-/var/www/manage.dornogovi.gov.mn}"
+WEB_USER="${WEB_USER:-www-data}"
+PHP_FPM="${PHP_FPM:-php8.3-fpm}"
 
 # Зэрэг ажиллахаас сэргийлнэ (өмнөх ажиллаж дуусаагүй бол чимээгүй гарна)
 exec 9>"${LOCK}"
@@ -50,8 +60,8 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-chown -R www-data:www-data "${WEB_ROOT}/storage" "${WEB_ROOT}/bootstrap/cache"
+chown -R "${WEB_USER}:${WEB_USER}" "${WEB_ROOT}/storage" "${WEB_ROOT}/bootstrap/cache"
 find "${WEB_ROOT}/storage" "${WEB_ROOT}/bootstrap/cache" -type d -exec chmod 775 {} \;
 
-systemctl reload php8.3-fpm 2>/dev/null || true
+systemctl reload "${PHP_FPM}" 2>/dev/null || true
 echo "==> $(date '+%F %T') дууслаа."
