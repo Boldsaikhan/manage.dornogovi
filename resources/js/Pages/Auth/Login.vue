@@ -18,6 +18,9 @@ defineProps({
 const mode = ref('phone');
 const showPassword = ref(false);
 
+/** public/images/building.jpg байхгүй бол градиент дэвсгэрээр орлуулна */
+const buildingMissing = ref(false);
+
 const form = useForm({
     login: '',
     password: '',
@@ -457,6 +460,26 @@ const features = [
                         <rect width="100%" height="100%" fill="url(#khee)" />
                     </svg>
                 </div>
+
+                <!--
+                    Нутгийн удирдлагын ордны зураг.
+                    public/images/building.jpg байхгүй бол зөвхөн градиент үлдэнэ.
+                -->
+                <img
+                    v-if="!buildingMissing"
+                    src="/images/building.jpg"
+                    alt=""
+                    aria-hidden="true"
+                    class="pointer-events-none absolute inset-x-0 bottom-0 h-[58%] w-full object-cover object-top opacity-45"
+                    @error="buildingMissing = true"
+                />
+
+                <!-- зургийг дээрээс нь бүдгэрүүлж, текстийг уншигдахуйц болгоно -->
+                <div
+                    v-if="!buildingMissing"
+                    class="pointer-events-none absolute inset-0 bg-gradient-to-b from-brand-navy-600 via-brand-navy-700/85 to-brand-navy-900/95"
+                    aria-hidden="true"
+                ></div>
 
                 <!-- Уриа -->
                 <div
