@@ -19,8 +19,11 @@ set -euo pipefail
 APP_DOMAIN="manage.dornogovi.gov.mn"
 SRC_DIR="/opt/manage-dornogovi"
 OLD_WEB_ROOT="/var/www/${APP_DOMAIN}"
-DB_NAME="manage_dornogovi"
-DB_USER="manage_user"
+# ⚠️ CloudPanel доогуур зураас (_) зөвшөөрдөггүй — зөвхөн зураас (-).
+#    manage_dornogovi гэвэл "This value is not valid" гэж татгалзана.
+DB_NAME="manage-dornogovi"
+DB_USER="manage-user"
+OLD_DB_NAME="manage_dornogovi"   # хуучин MySQL дээрх нэр (нөөцлөхөд хэрэглэнэ)
 SITE_USER="manage"
 CP_ADMIN="admin"
 ADMIN_EMAIL="${ADMIN_EMAIL:-it@dornogovi.gov.mn}"
@@ -61,8 +64,8 @@ BK="/root/manage-backup-${STAMP}"
 mkdir -p "${BK}"
 
 if command -v mysqldump >/dev/null && systemctl is-active --quiet mysql; then
-    mysqldump --single-transaction --routines --triggers "${DB_NAME}" > "${BK}/${DB_NAME}.sql"
-    echo "    DB: $(wc -c < "${BK}/${DB_NAME}.sql") байт"
+    mysqldump --single-transaction --routines --triggers "${OLD_DB_NAME}" > "${BK}/${OLD_DB_NAME}.sql"
+    echo "    DB: $(wc -c < "${BK}/${OLD_DB_NAME}.sql") байт"
 else
     echo "    АНХААР: MySQL ажиллахгүй байна — DB нөөцлөгдсөнгүй"
 fi
@@ -117,19 +120,18 @@ CP_PASS="$(genpass)"; SITE_PASS="$(genpass)"; DB_PASS="$(genpass)"
 clpctl user:add --userName="${CP_ADMIN}" --email="${ADMIN_EMAIL}" \
     --firstName="Dornogovi" --lastName="Admin" \
     --password="${CP_PASS}" --role="admin" --timezone="Asia/Ulaanbaatar" \
-    --status="1" 2>/dev/null || echo "    (админ аль хэдийн байна)"
+    --status="1" 2>/dev/null \
+    || clpctl user:reset:password --userName="${CP_ADMIN}" --password="${CP_PASS}" \
+    || echo "    АНХААР: админ үүсгэж/шинэчилж чадсангүй"
 
-# Laravel-ийн vhost загвар байвал ашиглана, үгүй бол Generic + root засна
-if ! clpctl site:add:php --domainName="${APP_DOMAIN}" --phpVersion="8.3" \
-        --vhostTemplate="Laravel" --siteUser="${SITE_USER}" \
-        --siteUserPassword="${SITE_PASS}" 2>/dev/null; then
-    echo "    Laravel загвар алга — Generic-ээр үүсгэж root-ыг гараар зална"
-    clpctl site:add:php --domainName="${APP_DOMAIN}" --phpVersion="8.3" \
-        --vhostTemplate="Generic" --siteUser="${SITE_USER}" \
-        --siteUserPassword="${SITE_PASS}" || die "сайт үүсгэж чадсангүй"
-    VHOST="/etc/nginx/sites-enabled/${APP_DOMAIN}.conf"
-    [ -f "${VHOST}" ] && sed -i "s#htdocs/${APP_DOMAIN};#htdocs/${APP_DOMAIN}/public;#g" "${VHOST}"
-fi
+# CloudPanel CE-д "Laravel" нэртэй vhost загвар БАЙХГҮЙ (турших үед батлагдсан) —
+# Generic-ээр үүсгээд root-ыг public/ руу зална.
+clpctl site:add:php --domainName="${APP_DOMAIN}" --phpVersion="8.3" \
+    --vhostTemplate="Generic" --siteUser="${SITE_USER}" \
+    --siteUserPassword="${SITE_PASS}" || die "сайт үүсгэж чадсангүй"
+
+VHOST="/etc/nginx/sites-enabled/${APP_DOMAIN}.conf"
+[ -f "${VHOST}" ] && sed -i "s#htdocs/${APP_DOMAIN};#htdocs/${APP_DOMAIN}/public;#g" "${VHOST}"
 
 clpctl db:add --domainName="${APP_DOMAIN}" --databaseName="${DB_NAME}" \
     --databaseUserName="${DB_USER}" --databaseUserPassword="${DB_PASS}" \
@@ -160,8 +162,8 @@ sed -i "s#^DB_PASSWORD=.*#DB_PASSWORD=${DB_PASS}#"                "${WEB_ROOT}/.
 sed -i "s#^SESSION_SECURE_COOKIE=.*#SESSION_SECURE_COOKIE=false#" "${WEB_ROOT}/.env"
 sed -i "s#^SESSION_DOMAIN=.*#SESSION_DOMAIN=null#"                "${WEB_ROOT}/.env"
 
-if [ -f "${BKDIR}/${DB_NAME}.sql" ]; then
-    mysql -u"${DB_USER}" -p"${DB_PASS}" "${DB_NAME}" < "${BKDIR}/${DB_NAME}.sql" \
+if [ -f "${BKDIR}/${OLD_DB_NAME}.sql" ]; then
+    mysql -u"${DB_USER}" -p"${DB_PASS}" "${DB_NAME}" < "${BKDIR}/${OLD_DB_NAME}.sql" \
         && echo "    ✅ өгөгдлийн сан сэргээгдлээ"
 fi
 [ -f "${BKDIR}/storage-app.tar.gz" ] && tar -xzf "${BKDIR}/storage-app.tar.gz" -C "${WEB_ROOT}" || true
