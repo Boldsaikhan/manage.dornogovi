@@ -60,7 +60,10 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-chown -R "${WEB_USER}:${WEB_USER}" "${WEB_ROOT}/storage" "${WEB_ROOT}/bootstrap/cache"
+# rsync болон artisan-ыг root-оор ажиллуулсан тул файлууд root эзэмшилтэй үлддэг.
+# PHP-FPM нь ${WEB_USER}-ээр ажилладаг тул storage/cache-д бичиж чадахгүй болж
+# 500 алдаа өгнө. Тиймээс БҮХ веб root-ыг буцааж эзэмшүүлнэ.
+chown -R "${WEB_USER}:${WEB_USER}" "${WEB_ROOT}"
 find "${WEB_ROOT}/storage" "${WEB_ROOT}/bootstrap/cache" -type d -exec chmod 775 {} \;
 
 systemctl reload "${PHP_FPM}" 2>/dev/null || true
