@@ -311,17 +311,18 @@ const openAdd = () => {
                 @submit.prevent="submitStaffImport"
             >
                 <div>
-                    <label class="ui-label">Word файл (.docx)</label>
+                    <label class="ui-label">Word, Excel эсвэл PDF файл</label>
                     <input
                         ref="staffFileInput"
                         type="file"
-                        accept=".docx"
+                        accept=".docx,.docm,.xlsx,.xlsm,.pdf"
                         class="ui-input"
                         @change="staffImportForm.file = $event.target.files[0]"
                     />
                     <p class="mt-1 text-xs text-slate-500">
-                        Хүснэгтийн толгой: № / Байгууллага / Нэгж / Албан тушаал / Овог / Нэр / Өрөө /
-                        Ажлын утас / Гар утас / И-мэйл хаяг. Нийлүүлсэн ганц нүдтэй мөрийг байгууллагын нэр гэж уншина.
+                        .docx, .xlsx, .pdf (20 MB хүртэл). Баганын дараалал: № / Байгууллага / Нэгж / Албан тушаал /
+                        Овог / Нэр / Өрөө / Ажлын утас / Гар утас / И-мэйл хаяг. Нийлүүлсэн ганц нүдтэй мөрийг
+                        байгууллагын нэр гэж уншина. Сканнердсан зурган PDF уншигдахгүй.
                     </p>
                     <p v-if="staffImportForm.errors.staff_file" class="mt-1 text-sm text-rose-600">
                         {{ staffImportForm.errors.staff_file }}

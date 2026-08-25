@@ -8,6 +8,7 @@ use App\Support\ModuleAccess;
 use App\Support\OrgEmployeePhoneDocxParser;
 use App\Support\PhoneDirectoryDocxParser;
 use App\Support\PhoneDirectoryDocxWriter;
+use App\Support\TabularFileReader;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -153,32 +154,39 @@ class PhoneDirectoryController extends Controller
         ]);
     }
 
-    public function importStaff(Request $request, OrgEmployeePhoneDocxParser $parser): RedirectResponse
-    {
+    public function importStaff(
+        Request $request,
+        OrgEmployeePhoneDocxParser $parser,
+        TabularFileReader $reader,
+    ): RedirectResponse {
         abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
 
         $request->validate([
-            'file' => ['required', 'file', 'max:10240'],
+            'file' => ['required', 'file', 'max:20480'],
             'replace' => ['nullable', 'boolean'],
         ]);
 
         $extension = strtolower((string) $request->file('file')->getClientOriginalExtension());
 
-        if (! in_array($extension, ['docx', 'docm'], true)) {
-            return back()->withErrors(['staff_file' => 'Зөвхөн .docx файл дэмжинэ. Word дээр «Save as → .docx» хийж оруулна уу.']);
+        if (! in_array($extension, TabularFileReader::EXTENSIONS, true)) {
+            return back()->withErrors([
+                'staff_file' => 'Зөвхөн Word (.docx), Excel (.xlsx), PDF файл дэмжинэ.',
+            ]);
         }
 
         try {
-            $rows = $parser->parse($request->file('file')->getRealPath());
+            $rows = $parser->fromRows(
+                $reader->rows($request->file('file')->getRealPath(), $extension)
+            );
         } catch (RuntimeException $e) {
             return back()->withErrors(['staff_file' => $e->getMessage()]);
         } catch (Throwable) {
-            return back()->withErrors(['staff_file' => 'Word файлыг уншиж чадсангүй. .docx хэлбэрээр хадгалж дахин оруулна уу.']);
+            return back()->withErrors(['staff_file' => 'Файлыг уншиж чадсангүй. Word (.docx), Excel (.xlsx) эсвэл текст агуулсан PDF оруулна уу.']);
         }
 
         if (! $rows) {
             return back()->withErrors([
-                'staff_file' => 'Файлаас хүснэгт олдсонгүй. Толгой нь № / Байгууллага / Нэгж / Албан тушаал / Овог / Нэр / Өрөө / Ажлын утас / Гар утас / И-мэйл хаяг байх ёстой.',
+                'staff_file' => 'Файлаас хүснэгт олдсонгүй. Баганын дараалал: № / Байгууллага / Нэгж / Албан тушаал / Овог / Нэр / Өрөө / Ажлын утас / Гар утас / И-мэйл хаяг. (Сканнердсан зурган PDF уншигдахгүй.)',
             ]);
         }
 

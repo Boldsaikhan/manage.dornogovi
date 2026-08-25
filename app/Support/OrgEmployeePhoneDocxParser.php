@@ -17,12 +17,32 @@ class OrgEmployeePhoneDocxParser
      */
     public function parse(string $path): array
     {
+        $tables = $this->reader->tables($path);
+        $rows = [];
+
+        foreach ($tables as $table) {
+            foreach ($table as $row) {
+                $rows[] = $row;
+            }
+        }
+
+        return $this->fromRows($rows);
+    }
+
+    /**
+     * Word/Excel/PDF-ээс уншсан мөрүүдийг бүртгэл болгоно.
+     *
+     * @param  array<int, array<int, string>>  $input
+     * @return array<int, array<string, string|null>>
+     */
+    public function fromRows(array $input): array
+    {
         $rows = [];
         $organization = '';
         $sortOrder = 0;
 
-        foreach ($this->reader->tables($path) as $table) {
-            foreach ($table as $cells) {
+        foreach ($input as $cells) {
+            {
                 $cells = array_map(
                     fn (string $c) => trim((string) preg_replace('/\s+/u', ' ', $c)),
                     $cells
