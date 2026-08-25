@@ -103,11 +103,34 @@ class DecreeController extends Controller
                 'title' => ['required', 'string', 'max:500'],
                 'blank_number' => ['nullable', 'string', 'max:100'],
                 'issued_on' => ['nullable', 'date'],
+                // Стандарт хүснэгтийн холбогдох талбарууд
+                'person_name' => ['nullable', 'string', 'max:255'],
+                'qty' => ['nullable', 'integer', 'min:0', 'max:9999'],
+                'qty_mn' => ['nullable', 'integer', 'min:0', 'max:9999'],
+                'sheet_number' => ['nullable', 'string', 'max:100'],
+                'void_number' => ['nullable', 'string', 'max:100'],
                 'body' => ['nullable', 'string', 'max:20000'],
             ]);
 
+            // Тухайн төрлийн (захирамж/тушаал) баганад буулгана.
+            $isZahiramj = $tab === 'zahiramj';
+
             Decree::query()->create([
-                ...$data,
+                'kind' => $data['kind'],
+                'number' => $data['number'],
+                'title' => $data['title'],
+                'blank_number' => $data['blank_number'] ?? null,
+                'issued_on' => $data['issued_on'] ?? null,
+                'body' => $data['body'] ?? null,
+                'person_name' => $data['person_name'] ?? null,
+                'qty_zahiramj' => $isZahiramj ? ($data['qty'] ?? 0) : 0,
+                'qty_zahiramj_mn' => $isZahiramj ? ($data['qty_mn'] ?? 0) : 0,
+                'qty_tushaal' => $isZahiramj ? 0 : ($data['qty'] ?? 0),
+                'qty_tushaal_mn' => $isZahiramj ? 0 : ($data['qty_mn'] ?? 0),
+                'num_zahiramj' => $isZahiramj ? ($data['sheet_number'] ?? null) : null,
+                'num_tushaal' => $isZahiramj ? null : ($data['sheet_number'] ?? null),
+                'void_zahiramj' => $isZahiramj ? ($data['void_number'] ?? null) : null,
+                'void_tushaal' => $isZahiramj ? null : ($data['void_number'] ?? null),
                 'category' => $tab,
                 'created_by' => $request->user()->id,
             ]);

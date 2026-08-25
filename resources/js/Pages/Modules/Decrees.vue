@@ -52,6 +52,12 @@ const docForm = useForm({
     title: '',
     blank_number: '',
     issued_on: '',
+    // Стандарт хүснэгтийн холбогдох талбарууд
+    person_name: '',
+    qty: 0,
+    qty_mn: 0,
+    sheet_number: '',
+    void_number: '',
     body: '',
 });
 
@@ -101,6 +107,14 @@ const destroyRow = (id) => {
 };
 
 const activeForm = computed(() => (isAll.value ? blankForm : docForm));
+
+// «Нийт» стандарт хүснэгтийн тухайн төрөлд холбогдох баганууд.
+const qtyKey = computed(() => (isZahiramj.value ? 'qty_zahiramj' : 'qty_tushaal'));
+const qtyMnKey = computed(() => (isZahiramj.value ? 'qty_zahiramj_mn' : 'qty_tushaal_mn'));
+const numKey = computed(() => (isZahiramj.value ? 'num_zahiramj' : 'num_tushaal'));
+const voidKey = computed(() => (isZahiramj.value ? 'void_zahiramj' : 'void_tushaal'));
+const typeLabel = computed(() => (isZahiramj.value ? 'Захирамж' : 'Тушаал'));
+const docColumnCount = computed(() => 11 + (props.canManage ? 1 : 0));
 </script>
 
 <template>
@@ -139,16 +153,28 @@ const activeForm = computed(() => (isAll.value ? blankForm : docForm));
 
             <!-- Захирамж / Тушаал бүртгэл -->
             <div v-if="!isAll" class="ui-table-wrap overflow-x-auto">
-                <table class="ui-table min-w-full">
+                <table class="ui-table min-w-[1200px]">
                     <thead>
                         <tr>
-                            <th class="w-12 text-center">№</th>
-                            <th>Төрөл</th>
-                            <th>Дугаар</th>
-                            <th>Гарчиг</th>
-                            <th>Бланк №</th>
-                            <th>Огноо</th>
-                            <th v-if="canManage" class="w-20" />
+                            <th rowspan="2" class="w-12 text-center align-middle">№</th>
+                            <th rowspan="2" class="w-28 align-middle">Төрөл</th>
+                            <th rowspan="2" class="w-24 align-middle">Дугаар</th>
+                            <th rowspan="2" class="align-middle">Гарчиг</th>
+                            <th rowspan="2" class="w-24 align-middle">Бланк №</th>
+                            <th rowspan="2" class="w-28 align-middle">Огноо</th>
+                            <th rowspan="2" class="w-40 align-middle">Хэвлэмэл хуудас<br>авсан ажилтан</th>
+                            <th colspan="2" class="text-center">Олгосон тоо (ширхэг)</th>
+                            <th rowspan="2" class="w-32 align-middle text-center">
+                                Хэвлэмэл хуудасны<br>дугаар
+                            </th>
+                            <th rowspan="2" class="w-32 align-middle text-center">
+                                Үрэгдүүлсэн хуудасны<br>дугаар
+                            </th>
+                            <th v-if="canManage" rowspan="2" class="w-20 align-middle" />
+                        </tr>
+                        <tr>
+                            <th class="w-24 text-center font-medium">{{ typeLabel }}</th>
+                            <th class="w-24 text-center font-medium">Монгол бичиг</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -167,12 +193,19 @@ const activeForm = computed(() => (isAll.value ? blankForm : docForm));
                                 <span class="ui-clamp-2" :title="row.blank_number || ''">{{ row.blank_number || '—' }}</span>
                             </td>
                             <td>{{ row.issued_on || '—' }}</td>
+                            <td>
+                                <span class="ui-clamp-2" :title="row.person_name || ''">{{ row.person_name || '—' }}</span>
+                            </td>
+                            <td class="text-center">{{ row[qtyKey] || '—' }}</td>
+                            <td class="text-center">{{ row[qtyMnKey] || '—' }}</td>
+                            <td class="text-center">{{ row[numKey] || '—' }}</td>
+                            <td class="text-center">{{ row[voidKey] || '—' }}</td>
                             <td v-if="canManage" class="text-right">
                                 <button type="button" class="ui-btn-danger !py-1 text-xs" @click="destroyRow(row.id)">Устгах</button>
                             </td>
                         </tr>
                         <tr v-if="!rows.length">
-                            <td :colspan="canManage ? 7 : 6" class="!py-12 text-center text-slate-400">
+                            <td :colspan="docColumnCount" class="!py-12 text-center text-slate-400">
                                 {{ isZahiramj ? 'Захирамжийн' : 'Тушаалын' }} бүртгэл алга.
                             </td>
                         </tr>
@@ -371,6 +404,33 @@ const activeForm = computed(() => (isAll.value ? blankForm : docForm));
                         <label class="ui-label">Огноо</label>
                         <input v-model="docForm.issued_on" type="date" class="ui-input" />
                     </div>
+
+                    <div class="md:col-span-2 border-t border-slate-100 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Хэвлэмэл хуудасны бүртгэл
+                    </div>
+                    <div>
+                        <label class="ui-label">Хуудас авсан ажилтан</label>
+                        <input v-model="docForm.person_name" class="ui-input" />
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="ui-label">Олгосон — {{ typeLabel }}</label>
+                            <input v-model.number="docForm.qty" type="number" min="0" class="ui-input" />
+                        </div>
+                        <div>
+                            <label class="ui-label">Монгол бичиг</label>
+                            <input v-model.number="docForm.qty_mn" type="number" min="0" class="ui-input" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="ui-label">Хэвлэмэл хуудасны дугаар</label>
+                        <input v-model="docForm.sheet_number" class="ui-input" placeholder="ж: 810-812" />
+                    </div>
+                    <div>
+                        <label class="ui-label">Үрэгдүүлсэн хуудасны дугаар</label>
+                        <input v-model="docForm.void_number" class="ui-input" />
+                    </div>
+
                     <div class="md:col-span-2">
                         <label class="ui-label">Агуулга</label>
                         <textarea v-model="docForm.body" rows="3" class="ui-input" />
