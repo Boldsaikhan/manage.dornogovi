@@ -29,6 +29,7 @@ class ToolRegistry
         $this->register('get_system_statistics', null, fn (User $u, array $a) => $this->system->statistics($u, $a));
         $this->register('search_employees', null, fn (User $u, array $a) => $this->system->searchEmployees($u, $a));
         $this->register('search_departments', null, fn (User $u, array $a) => $this->system->searchDepartments($u, $a));
+        $this->register('search_phone_directory', 'phone_directory', fn (User $u, array $a) => $this->system->searchPhoneDirectory($u, $a));
 
         $this->register('search_tasks', 'tasks', fn (User $u, array $a) => $this->tasks->search($u, $a));
         $this->register('get_my_tasks', 'tasks', fn (User $u, array $a) => $this->tasks->mine($u, $a));

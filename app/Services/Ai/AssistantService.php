@@ -376,9 +376,20 @@ PROMPT;
                 $n = $i + 1;
                 $title = $item['title'] ?? $item['text'] ?? $item['name'] ?? $item['destination'] ?? ('#'.$item['id']);
                 $extra = [];
-                foreach (['number', 'issued_on', 'kind', 'status', 'responsible', 'period', 'start_date', 'end_date'] as $k) {
+                foreach ([
+                    'number', 'issued_on', 'kind', 'status', 'responsible', 'period',
+                    'start_date', 'end_date', 'position', 'org', 'office_phone', 'mobile_phone', 'person_name',
+                ] as $k) {
                     if (! empty($item[$k])) {
-                        $extra[] = "{$k}: {$item[$k]}";
+                        $label = match ($k) {
+                            'office_phone' => 'ажлын утас',
+                            'mobile_phone' => 'гар утас',
+                            'person_name' => 'боловсруулсан',
+                            'org' => 'байгууллага',
+                            'position' => 'албан тушаал',
+                            default => $k,
+                        };
+                        $extra[] = "{$label}: {$item[$k]}";
                     }
                 }
                 $lines[] = "{$n}. {$title}".($extra ? "\n   ".implode(' | ', $extra) : '');

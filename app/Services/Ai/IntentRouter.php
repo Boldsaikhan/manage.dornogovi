@@ -85,15 +85,38 @@ class IntentRouter
         }
 
         if ($this->matches($q, ['захирамж', 'тушаал'])) {
-            $args = ['q' => $this->extractSearchPhrase($q, ['захирамж', 'тушаал', 'харуул', 'хай', 'ол', 'жагсаа'])];
+            $args = [
+                'q' => $this->extractSearchPhrase($q, [
+                    'захирамжийн', 'тушаалын', 'захирамж', 'тушаал',
+                    'бүртгэлт', 'бүртгэл', 'мэдээлэл', 'жагсаалт', 'жагсаа',
+                    'харуул', 'гаргаж өг', 'гарга', 'хай', 'ол', 'өг',
+                    'байгаа', 'сүүлийн', 'хоног', 'хоногийн',
+                ]),
+            ];
             if (preg_match('/(20\d{2})/u', $q, $m)) {
                 $args['year'] = (int) $m[1];
             }
             if ($this->matches($q, ['30 хоног', 'сүүлийн 30'])) {
                 $args['days'] = 30;
             }
+            if ($this->matches($q, ['захирамж']) && ! $this->matches($q, ['тушаал'])) {
+                $args['kind'] = 'zahiramj_';
+            } elseif ($this->matches($q, ['тушаал']) && ! $this->matches($q, ['захирамж'])) {
+                $args['kind'] = 'tushaal_';
+            }
 
             return ['intent' => 'orders', 'tools' => [['name' => 'search_orders', 'args' => $args]]];
+        }
+
+        if ($this->matches($q, ['утасны жагсаалт', 'утасны дугаар', 'гар утас', 'утас', 'холбоо барих'])) {
+            return ['intent' => 'phone_directory', 'tools' => [['name' => 'search_phone_directory', 'args' => [
+                'q' => $this->extractSearchPhrase($q, [
+                    'утасны жагсаалтаас', 'утасны жагсаалт', 'утасны дугаараас', 'утасны дугаар',
+                    'гар утас', 'утасны', 'утас', 'холбоо барих',
+                    'олж өг', 'олж', 'өгөөч', 'хайж', 'хай', 'харуул',
+                    'жагсаалтаас', 'жагсаалт', 'жагсаа', 'аас', 'ол', 'өг',
+                ]),
+            ]]]];
         }
 
         if ($this->matches($q, ['журам', 'стандарт'])) {
@@ -193,6 +216,8 @@ class IntentRouter
     private function extractSearchPhrase(string $q, array $stop): string
     {
         $clean = $q;
+        // Урт stop үгсээ эхэнд нь хасна («захирамжийн» → «захирамж»-аас өмнө).
+        usort($stop, fn ($a, $b) => mb_strlen($b) <=> mb_strlen($a));
         foreach ($stop as $s) {
             $clean = str_replace(mb_strtolower($s), ' ', $clean);
         }

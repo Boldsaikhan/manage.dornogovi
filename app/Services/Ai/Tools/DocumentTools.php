@@ -20,22 +20,58 @@ class DocumentTools
         $q = trim((string) ($args['q'] ?? ''));
         $year = isset($args['year']) ? (int) $args['year'] : null;
         $days = isset($args['days']) ? (int) $args['days'] : null;
+        $kind = trim((string) ($args['kind'] ?? ''));
+        $category = trim((string) ($args['category'] ?? ''));
 
-        $query = Decree::query()->orderByDesc('issued_on')->orderByDesc('id')->limit(20);
+        $query = Decree::query()
+            ->where('kind', '!=', 'blank')
+            ->orderByDesc('issued_on')
+            ->orderByDesc('id')
+            ->limit(20);
+
+        if ($category !== '' && $category !== 'blank') {
+            $query->where('category', $category);
+        }
+
+        if ($kind !== '') {
+            if (str_ends_with($kind, '_')) {
+                $query->where('kind', 'like', $kind.'%');
+            } else {
+                $query->where('kind', $kind);
+            }
+        }
+
         if ($q !== '') {
             $query->where(function ($w) use ($q) {
                 $w->where('title', 'like', "%{$q}%")
                     ->orWhere('number', 'like', "%{$q}%")
                     ->orWhere('blank_number', 'like', "%{$q}%")
                     ->orWhere('body', 'like', "%{$q}%")
-                    ->orWhere('kind', 'like', "%{$q}%");
+                    ->orWhere('person_name', 'like', "%{$q}%")
+                    ->orWhere('attachment_name', 'like', "%{$q}%")
+                    ->orWhere('num_zahiramj', 'like', "%{$q}%")
+                    ->orWhere('num_tushaal', 'like', "%{$q}%");
             });
         }
+
         if ($year) {
-            $query->whereYear('issued_on', $year);
+            $query->where(function ($w) use ($year) {
+                $w->whereYear('issued_on', $year)
+                    ->orWhere(function ($inner) use ($year) {
+                        $inner->whereNull('issued_on')->whereYear('created_at', $year);
+                    });
+            });
         }
+
         if ($days) {
-            $query->where('created_at', '>=', Carbon::now()->subDays($days));
+            $sinceDate = Carbon::now()->subDays($days)->toDateString();
+            $sinceAt = Carbon::now()->subDays($days);
+            $query->where(function ($w) use ($sinceDate, $sinceAt) {
+                $w->where('issued_on', '>=', $sinceDate)
+                    ->orWhere(function ($inner) use ($sinceAt) {
+                        $inner->whereNull('issued_on')->where('created_at', '>=', $sinceAt);
+                    });
+            });
         }
 
         return [
@@ -43,8 +79,10 @@ class DocumentTools
                 'id' => $d->id,
                 'kind' => $d->kindLabel(),
                 'number' => $d->number,
-                'title' => $d->title,
-                'issued_on' => optional($d->issued_on)?->format('Y-m-d'),
+                'title' => $d->title ?: ($d->person_name ?: '—'),
+                'person_name' => $d->person_name,
+                'issued_on' => optional($d->issued_on)?->format('Y-m-d')
+                    ?? optional($d->created_at)?->format('Y-m-d'),
                 'route' => 'decrees.index',
             ])->all(),
             'source' => 'decrees',
