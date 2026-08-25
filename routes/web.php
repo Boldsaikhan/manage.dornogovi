@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\UserAccessController;
 use App\Http\Controllers\AiAssistantController;
 use App\Http\Controllers\CredentialController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DecreeController;
 use App\Http\Controllers\DepartmentDashboardController;
 use App\Http\Controllers\DocumentStandardController;
 use App\Http\Controllers\LaunchController;
@@ -60,7 +61,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/modules/leaves', [ModuleResourceController::class, 'index'])->name('leaves.index');
     Route::get('/modules/assignments', [ModuleResourceController::class, 'index'])->name('assignments.index');
     Route::get('/modules/regulations', [ModuleResourceController::class, 'index'])->name('regulations.index');
-    Route::get('/modules/decrees', [ModuleResourceController::class, 'index'])->name('decrees.index');
+    Route::get('/modules/decrees', [DecreeController::class, 'index'])->name('decrees.index');
+    Route::post('/modules/decrees', [DecreeController::class, 'store'])->name('decrees.store');
+    Route::delete('/modules/decrees/{decree}', [DecreeController::class, 'destroy'])->name('decrees.destroy');
     Route::get('/modules/contracts', [ModuleResourceController::class, 'index'])->name('contracts.index');
     Route::get('/modules/archives', [ModuleResourceController::class, 'index'])->name('archives.index');
     Route::get('/modules/doc_standards', [DocumentStandardController::class, 'index'])->name('doc-standards.index');
