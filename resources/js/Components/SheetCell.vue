@@ -4,6 +4,7 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 const CATEGORY_FILTERS = [
     { key: 'udirdlaga', label: 'Аймгийн удирдлагууд', short: 'Удирдлага' },
     { key: 'sum', label: 'Сум', short: 'Сум' },
+    { key: 'heltes', label: 'Хэлтэс', short: 'Хэлтэс' },
     { key: 'agentlag', label: 'Агентлаг', short: 'Агентлаг' },
     { key: 'baiguullaga', label: 'Байгууллага', short: 'Байгууллага' },
 ];
@@ -30,12 +31,14 @@ const search = ref('');
 const selected = ref([]);
 const categoryOn = ref({
     udirdlaga: true,
+    heltes: true,
     sum: true,
     agentlag: true,
     baiguullaga: true,
 });
 const inputRef = ref(null);
 const rootRef = ref(null);
+const menuRef = ref(null);
 const highlight = ref(0);
 const menuStyle = ref({});
 const ignoreBlur = ref(false);
@@ -174,6 +177,9 @@ const startEdit = async () => {
     updateMenuPosition();
     window.addEventListener('scroll', updateMenuPosition, true);
     window.addEventListener('resize', updateMenuPosition);
+    if (hasOptions.value) {
+        document.addEventListener('pointerdown', onPointerDownOutside, true);
+    }
 
     const el = inputRef.value;
     if (! el) {
@@ -191,6 +197,37 @@ const startEdit = async () => {
 const stopListeners = () => {
     window.removeEventListener('scroll', updateMenuPosition, true);
     window.removeEventListener('resize', updateMenuPosition);
+    document.removeEventListener('pointerdown', onPointerDownOutside, true);
+};
+
+const onPointerDownOutside = (event) => {
+    if (! editing.value) {
+        return;
+    }
+
+    const target = event.target;
+    if (! (target instanceof Node)) {
+        return;
+    }
+
+    if (rootRef.value?.contains(target) || menuRef.value?.contains(target)) {
+        return;
+    }
+
+    // Гадна дарахад шууд хаана — одоогийн утгыг хадгална (сонгоогүй бол өмнөх утга үлдэнэ).
+    if (blurTimer) {
+        clearTimeout(blurTimer);
+        blurTimer = null;
+    }
+    ignoreBlur.value = false;
+    finish();
+};
+
+const releaseIgnoreBlur = () => {
+    nextTick(() => {
+        ignoreBlur.value = false;
+        inputRef.value?.focus();
+    });
 };
 
 const commitValue = (value) => {
@@ -282,10 +319,7 @@ const pickOption = (opt) => {
         } else {
             selected.value.push(value);
         }
-        nextTick(() => {
-            ignoreBlur.value = false;
-            inputRef.value?.focus();
-        });
+        releaseIgnoreBlur();
 
         return;
     }
@@ -296,10 +330,7 @@ const pickOption = (opt) => {
 const removeChip = (name) => {
     ignoreBlur.value = true;
     selected.value = selected.value.filter((n) => n !== name);
-    nextTick(() => {
-        ignoreBlur.value = false;
-        inputRef.value?.focus();
-    });
+    releaseIgnoreBlur();
 };
 
 const onKeydown = (event) => {
@@ -415,9 +446,10 @@ onBeforeUnmount(() => {
         <Teleport to="body">
             <div
                 v-if="editing && hasOptions"
+                ref="menuRef"
                 class="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl ring-1 ring-slate-900/5"
                 :style="menuStyle"
-                @mousedown.prevent="ignoreBlur = true"
+                @mousedown.prevent="ignoreBlur = true; releaseIgnoreBlur()"
             >
                 <div class="shrink-0 space-y-2 border-b border-slate-100 bg-slate-50/70 px-3 py-2.5">
                     <div class="flex items-center gap-2">
