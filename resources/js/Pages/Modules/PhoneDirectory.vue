@@ -32,11 +32,15 @@ const isDirectory = computed(() => props.tab !== 'staff');
 
 const form = useForm({
     org_name: '',
+    category: '',
     person_name: '',
     position: '',
     office_phone: '',
     mobile_phone: '',
 });
+
+const editingId = ref(null);
+const isEditing = computed(() => editingId.value !== null);
 
 const staffForm = useForm({
     organization: '',
@@ -143,12 +147,26 @@ const filteredStaff = computed(() => {
 });
 
 const submit = () => {
+    if (isEditing.value) {
+        form.patch(route('phone-directory.update', editingId.value), {
+            preserveScroll: true,
+            onSuccess: () => {
+                form.reset();
+                editingId.value = null;
+                showForm.value = false;
+            },
+        });
+        return;
+    }
+
     form.post(route('phone-directory.store'), {
         preserveScroll: true,
         onSuccess: () => {
             const org = form.org_name;
+            const cat = form.category;
             form.reset();
             form.org_name = org;
+            form.category = cat;
             showForm.value = false;
         },
     });
@@ -190,7 +208,7 @@ const submitStaffImport = () => {
     });
 };
 
-// Байгууллагын ангиллыг (агентлаг/сум/байгууллага) бүлгээр нь солино.
+// Байгууллагын ангиллыг (хэлтэс/агентлаг/сум/байгууллага) бүлгээр нь солино.
 const changeCategory = (orgName, category) => {
     router.patch(
         route('phone-directory.category'),
@@ -211,13 +229,38 @@ const destroyStaff = (id) => {
 
 const flash = computed(() => page.props.flash?.success ?? null);
 
+const resetDirectoryForm = () => {
+    form.reset();
+    form.clearErrors();
+    editingId.value = null;
+};
+
 const openAdd = () => {
     if (isDirectory.value) {
+        resetDirectoryForm();
         showForm.value = true;
         showImport.value = false;
     } else {
         showStaffForm.value = true;
     }
+};
+
+const openEdit = (row, group) => {
+    resetDirectoryForm();
+    editingId.value = row.id;
+    form.org_name = group.org_name;
+    form.category = group.category || '';
+    form.person_name = row.person_name || '';
+    form.position = row.position || '';
+    form.office_phone = row.office_phone || '';
+    form.mobile_phone = row.mobile_phone || '';
+    showForm.value = true;
+    showImport.value = false;
+};
+
+const closeDirectoryForm = () => {
+    showForm.value = false;
+    resetDirectoryForm();
 };
 </script>
 
@@ -473,7 +516,8 @@ const openAdd = () => {
                                 </td>
                                 <td class="text-center">{{ row.office_phone || '—' }}</td>
                                 <td class="text-center">{{ row.mobile_phone || '—' }}</td>
-                                <td v-if="canManage" class="text-right">
+                                <td v-if="canManage" class="text-right whitespace-nowrap">
+                                    <button type="button" class="ui-btn-ghost mr-1 !py-1 text-xs" @click="openEdit(row, group)">Засах</button>
                                     <button type="button" class="ui-btn-danger !py-1 text-xs" @click="destroyRow(row.id)">Устгах</button>
                                 </td>
                             </tr>
@@ -551,15 +595,17 @@ const openAdd = () => {
             </div>
         </div>
 
-        <!-- Modal: directory add -->
-        <Modal :show="showForm && canManage && isDirectory" max-width="2xl" @close="showForm = false">
+        <!-- Modal: directory add / edit -->
+        <Modal :show="showForm && canManage && isDirectory" max-width="2xl" @close="closeDirectoryForm">
             <form class="p-6" @submit.prevent="submit">
                 <div class="mb-5 flex items-start justify-between gap-3">
                     <div>
-                        <h3 class="text-base font-semibold text-brand-navy-900">Шинэ бүртгэл</h3>
+                        <h3 class="text-base font-semibold text-brand-navy-900">
+                            {{ isEditing ? 'Бүртгэл засах' : 'Шинэ бүртгэл' }}
+                        </h3>
                         <p class="mt-0.5 text-sm text-slate-500">Утасны жагсаалт</p>
                     </div>
-                    <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" @click="showForm = false">✕</button>
+                    <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" @click="closeDirectoryForm">✕</button>
                 </div>
                 <div class="grid gap-4 md:grid-cols-2">
                     <div>
@@ -569,6 +615,16 @@ const openAdd = () => {
                             <option v-for="name in orgNames" :key="name" :value="name" />
                         </datalist>
                         <InputError :message="form.errors.org_name" class="mt-1" />
+                    </div>
+                    <div>
+                        <label class="ui-label">Ангилал</label>
+                        <select v-model="form.category" class="ui-input">
+                            <option value="">Автомат (нэрээр)</option>
+                            <option v-for="(label, value) in categories" :key="value" :value="value">
+                                {{ label }}
+                            </option>
+                        </select>
+                        <InputError :message="form.errors.category" class="mt-1" />
                     </div>
                     <div>
                         <label class="ui-label">Овог нэр</label>
@@ -589,7 +645,7 @@ const openAdd = () => {
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end gap-2 border-t border-slate-100 pt-4">
-                    <button type="button" class="ui-btn-ghost" @click="showForm = false">Болих</button>
+                    <button type="button" class="ui-btn-ghost" @click="closeDirectoryForm">Болих</button>
                     <button type="submit" class="ui-btn-primary" :disabled="form.processing">Хадгалах</button>
                 </div>
             </form>

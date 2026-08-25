@@ -63,6 +63,7 @@ const CATEGORY_LABELS = {
     agentlag: 'Агентлаг',
     sum: 'Сумд',
     baiguullaga: 'Байгууллага',
+    heltes: 'Хэлтэс',
     unknown: 'Тодорхойгүй',
 };
 

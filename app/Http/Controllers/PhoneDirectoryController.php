@@ -241,6 +241,10 @@ class PhoneDirectoryController extends Controller
             'mobile_phone' => ['nullable', 'string', 'max:64'],
         ]);
 
+        if (($data['category'] ?? '') === '') {
+            $data['category'] = null;
+        }
+
         // Ангилал заагаагүй бол тухайн байгууллагын одоогийн ангиллыг, эсвэл нэрээр таамаглана.
         $data['category'] = $data['category']
             ?? PhoneDirectoryEntry::query()->where('org_name', $data['org_name'])->value('category')
@@ -259,8 +263,51 @@ class PhoneDirectoryController extends Controller
             ->with('success', 'Бүртгэл нэмэгдлээ.');
     }
 
+    public function update(Request $request, PhoneDirectoryEntry $entry): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+
+        $data = $request->validate([
+            'org_name' => ['required', 'string', 'max:255'],
+            'category' => ['nullable', 'string', Rule::in(array_keys(PhoneDirectoryEntry::CATEGORIES))],
+            'person_name' => ['required', 'string', 'max:255'],
+            'position' => ['nullable', 'string', 'max:255'],
+            'office_phone' => ['nullable', 'string', 'max:64'],
+            'mobile_phone' => ['nullable', 'string', 'max:64'],
+        ]);
+
+        if (($data['category'] ?? '') === '') {
+            $data['category'] = null;
+        }
+
+        $orgChanged = $data['org_name'] !== $entry->org_name;
+
+        $data['category'] = $data['category']
+            ?? PhoneDirectoryEntry::query()->where('org_name', $data['org_name'])->value('category')
+            ?? $entry->category
+            ?? PhoneDirectoryEntry::guessCategory($data['org_name']);
+
+        if ($orgChanged) {
+            $sibling = PhoneDirectoryEntry::query()->where('org_name', $data['org_name']);
+            $data['org_order'] = (int) ((clone $sibling)->value('org_order')
+                ?? (PhoneDirectoryEntry::query()->max('org_order') + 1));
+            $data['sort_order'] = (int) (clone $sibling)->max('sort_order') + 1;
+        }
+
+        $entry->update($data);
+
+        // Ангилал солигдвол тухайн байгууллагын бүх мөрийг ижил ангилалд байлгана.
+        PhoneDirectoryEntry::query()
+            ->where('org_name', $data['org_name'])
+            ->update(['category' => $data['category']]);
+
+        return redirect()
+            ->route('phone-directory.index', ['tab' => 'directory'])
+            ->with('success', 'Бүртгэл шинэчлэгдлээ.');
+    }
+
     /**
-     * Байгууллагын ангиллыг (агентлаг/сум/байгууллага) бүлгээр нь солино.
+     * Байгууллагын ангиллыг (хэлтэс/агентлаг/сум/байгууллага) бүлгээр нь солино.
      */
     public function updateCategory(Request $request): RedirectResponse
     {

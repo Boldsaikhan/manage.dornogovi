@@ -137,12 +137,13 @@ const kindLabel = (key) => ({
 }[key] || key);
 
 const emptyMessage = computed(() => {
-    const map = {
-        all: 'Бүртгэл алга',
-        agentlag: 'Агентлагийн бүртгэл алга',
-        sum: 'Сумын бүртгэл алга',
-        baiguullaga: 'Байгууллагын бүртгэл алга',
-    };
+        const map = {
+            all: 'Бүртгэл алга',
+            heltes: 'Хэлтсийн бүртгэл алга',
+            agentlag: 'Агентлагийн бүртгэл алга',
+            sum: 'Сумын бүртгэл алга',
+            baiguullaga: 'Байгууллагын бүртгэл алга',
+        };
     return map[props.activeScope] || 'Бүртгэл алга';
 });
 </script>
@@ -356,6 +357,7 @@ const emptyMessage = computed(() => {
                         <p class="mt-0.5 text-sm text-slate-500">Хэвлэгдэх загварын дагуу шууд бөглөнө.</p>
                     </div>
                     <select v-model="form.scope" class="ui-input w-40 py-1.5 text-sm" required>
+                        <option value="heltes">Хэлтэс</option>
                         <option value="agentlag">Агентлаг</option>
                         <option value="sum">Сумд</option>
                         <option value="baiguullaga">Байгууллага</option>

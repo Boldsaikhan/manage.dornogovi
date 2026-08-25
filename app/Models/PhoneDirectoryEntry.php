@@ -8,6 +8,7 @@ class PhoneDirectoryEntry extends Model
 {
     /** Чөлөөний бүртгэлийн хамрах хүрээтэй нийцсэн ангилал. */
     public const CATEGORIES = [
+        'heltes' => 'Хэлтэс',
         'agentlag' => 'Агентлаг',
         'sum' => 'Сумд',
         'baiguullaga' => 'Байгууллага',
@@ -24,6 +25,10 @@ class PhoneDirectoryEntry extends Model
     public static function guessCategory(?string $orgName): string
     {
         $name = mb_strtolower((string) $orgName);
+
+        if (str_contains($name, 'хэлтэс') || str_contains($name, 'хэллтсийн')) {
+            return 'heltes';
+        }
 
         if (str_contains($name, 'сум')) {
             return 'sum';
