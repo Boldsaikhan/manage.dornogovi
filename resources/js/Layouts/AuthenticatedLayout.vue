@@ -5,6 +5,7 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import StateEmblem from '@/Components/StateEmblem.vue';
 import OrnamentMark from '@/Components/OrnamentMark.vue';
+import AiPanel from '@/Components/AiPanel.vue';
 
 defineProps({
     title: { type: String, default: '' },
@@ -14,15 +15,29 @@ const page = usePage();
 const sidebarOpen = ref(false);
 const sidebarCollapsed = ref(false);
 const SIDEBAR_COLLAPSE_KEY = 'sidebar_collapsed';
+const AI_PANEL_KEY = 'ai_panel_open';
+const aiOpen = ref(false);
 const navTip = ref({ show: false, text: '', x: 0, y: 0 });
 
 onMounted(() => {
     try {
         sidebarCollapsed.value = localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === '1';
+        aiOpen.value = localStorage.getItem(AI_PANEL_KEY) === '1';
     } catch {
         sidebarCollapsed.value = false;
+        aiOpen.value = false;
     }
 });
+
+// Чатын самбарыг нээх/хаах — сонголтыг хадгална.
+const toggleAiPanel = (value) => {
+    aiOpen.value = value ?? ! aiOpen.value;
+    try {
+        localStorage.setItem(AI_PANEL_KEY, aiOpen.value ? '1' : '0');
+    } catch {
+        // localStorage боломжгүй бол зүгээр өнгөрнө.
+    }
+};
 
 const toggleSidebarCollapse = () => {
     sidebarCollapsed.value = !sidebarCollapsed.value;
@@ -318,7 +333,10 @@ const isCurrent = (routeName) => {
 
         <div
             class="transition-[padding] duration-200 ease-out"
-            :class="sidebarCollapsed ? 'lg:pl-[4.25rem]' : 'lg:pl-[17.5rem]'"
+            :class="[
+                sidebarCollapsed ? 'lg:pl-[4.25rem]' : 'lg:pl-[17.5rem]',
+                aiOpen ? 'xl:pr-[24rem]' : '',
+            ]"
         >
             <header class="sticky top-0 z-20 flex h-[4.5rem] items-center gap-4 border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur-md sm:px-6">
                 <button class="rounded-xl p-2 text-brand-navy-700 hover:bg-slate-100 lg:hidden" @click="sidebarOpen = !sidebarOpen">
@@ -360,16 +378,25 @@ const isCurrent = (routeName) => {
         </div>
 
         <!-- AI floating entry -->
-        <Link
-            v-if="page.props.aiAssistant?.available"
-            :href="page.props.aiAssistant.href"
-            class="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-2xl bg-brand-navy-700 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-navy-700/30 transition hover:-translate-y-0.5 hover:bg-brand-navy-800"
+        <button
+            v-if="page.props.aiAssistant?.available && !aiOpen"
+            type="button"
+            class="fixed bottom-5 right-5 z-30 flex items-center gap-2 rounded-2xl bg-brand-navy-700 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-navy-700/30 transition hover:-translate-y-0.5 hover:bg-brand-navy-800"
             :title="page.props.aiAssistant?.name || 'Manage AI'"
+            @click="toggleAiPanel(true)"
         >
             <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                 <path :d="iconPaths.sparkles" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
             <span class="hidden sm:inline">{{ page.props.aiAssistant?.name || 'Manage AI' }}</span>
-        </Link>
+        </button>
+
+        <AiPanel
+            v-if="page.props.aiAssistant?.available"
+            :open="aiOpen"
+            :name="page.props.aiAssistant?.name || 'Manage AI'"
+            :href="page.props.aiAssistant?.href || '/ai'"
+            @close="toggleAiPanel(false)"
+        />
     </div>
 </template>

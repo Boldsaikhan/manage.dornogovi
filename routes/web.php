@@ -88,6 +88,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/ai', [AiAssistantController::class, 'index'])->name('ai.index');
     Route::post('/ai/ask', [AiAssistantController::class, 'ask'])->name('ai.ask');
+    Route::get('/ai/panel', [AiAssistantController::class, 'panel'])->name('ai.panel');
+    Route::post('/ai/panel/ask', [AiAssistantController::class, 'panelAsk'])->name('ai.panel.ask');
     Route::post('/ai/confirm', [AiAssistantController::class, 'confirm'])->name('ai.confirm');
     Route::post('/ai/conversations', [AiAssistantController::class, 'newConversation'])->name('ai.conversations.store');
 

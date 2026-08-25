@@ -8,6 +8,7 @@ use App\Services\Ai\AiRateLimiter;
 use App\Services\Ai\AiSettings;
 use App\Services\Ai\AssistantService;
 use App\Support\ModuleAccess;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -82,6 +83,76 @@ class AiAssistantController extends Controller
         return redirect()
             ->route('ai.index', ['conversation_id' => $result['conversation_id']])
             ->with('success', 'Хариулт бэлэн.');
+    }
+
+    /**
+     * Хажуугийн чат самбарын өгөгдөл (JSON) — хуудас дахин ачаалахгүйгээр.
+     */
+    public function panel(Request $request, AiSettings $settings, AiRateLimiter $limiter): JsonResponse
+    {
+        abort_unless(ModuleAccess::canView($request->user(), 'ai'), 403);
+
+        $conversation = AiConversation::query()
+            ->where('user_id', $request->user()->id)
+            ->orderByDesc('last_message_at')
+            ->first(['id']);
+
+        return response()->json([
+            'display_name' => $settings->displayName(),
+            'enabled' => $settings->enabled(),
+            'conversation_id' => $conversation?->id,
+            'messages' => $this->panelMessages($request, $conversation?->id),
+            'remaining' => $limiter->remaining($request->user()),
+        ]);
+    }
+
+    public function panelAsk(Request $request, AssistantService $assistant, AiRateLimiter $limiter): JsonResponse
+    {
+        abort_unless(ModuleAccess::canView($request->user(), 'ai'), 403);
+
+        $data = $request->validate([
+            'message' => ['required', 'string', 'max:4000'],
+            'conversation_id' => ['nullable', 'integer', 'exists:ai_conversations,id'],
+        ]);
+
+        $result = $assistant->ask(
+            $request->user(),
+            $data['message'],
+            $data['conversation_id'] ?? null,
+        );
+
+        $conversationId = $result['conversation_id'] ?? $data['conversation_id'] ?? null;
+
+        return response()->json([
+            'limited' => (bool) ($result['limited'] ?? false),
+            'conversation_id' => $conversationId,
+            'messages' => $this->panelMessages($request, $conversationId),
+            'remaining' => $limiter->remaining($request->user()),
+        ]);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function panelMessages(Request $request, ?int $conversationId): array
+    {
+        if (! $conversationId) {
+            return [];
+        }
+
+        return AiMessage::query()
+            ->where('user_id', $request->user()->id)
+            ->where('conversation_id', $conversationId)
+            ->orderBy('id')
+            ->limit(60)
+            ->get(['id', 'role', 'content', 'created_at'])
+            ->map(fn (AiMessage $m) => [
+                'id' => $m->id,
+                'role' => $m->role,
+                'content' => $m->content,
+                'time' => optional($m->created_at)->format('H:i'),
+            ])
+            ->all();
     }
 
     public function confirm(Request $request, AssistantService $assistant): RedirectResponse
