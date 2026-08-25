@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\OrgEmployeePhone;
 use App\Models\PhoneDirectoryEntry;
 use App\Support\ModuleAccess;
 use App\Support\PhoneDirectoryDocxParser;
@@ -23,6 +24,11 @@ class PhoneDirectoryController extends Controller
     {
         abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
 
+        $tab = $request->string('tab')->toString();
+        if (! in_array($tab, ['directory', 'staff'], true)) {
+            $tab = 'directory';
+        }
+
         $entries = PhoneDirectoryEntry::query()
             ->orderBy('org_order')
             ->orderBy('sort_order')
@@ -43,10 +49,33 @@ class PhoneDirectoryController extends Controller
             ])
             ->values();
 
+        $staff = OrgEmployeePhone::query()
+            ->orderBy('organization')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (OrgEmployeePhone $row, int $i) => [
+                'id' => $row->id,
+                'no' => $i + 1,
+                'organization' => $row->organization,
+                'unit' => $row->unit,
+                'position' => $row->position,
+                'last_name' => $row->last_name,
+                'first_name' => $row->first_name,
+                'room' => $row->room,
+                'work_phone' => $row->work_phone,
+                'mobile_phone' => $row->mobile_phone,
+                'email' => $row->email,
+            ]);
+
         return Inertia::render('Modules/PhoneDirectory', [
+            'tab' => $tab,
             'groups' => $groups,
             'total' => $entries->count(),
             'orgNames' => $entries->pluck('org_name')->unique()->values(),
+            'staff' => $staff,
+            'staffTotal' => $staff->count(),
+            'staffOrganizations' => $staff->pluck('organization')->unique()->values(),
             'canManage' => ModuleAccess::canManage($request->user(), self::MODULE),
         ]);
     }
@@ -107,7 +136,9 @@ class PhoneDirectoryController extends Controller
 
         PhoneDirectoryEntry::create($data);
 
-        return back()->with('success', 'Бүртгэл нэмэгдлээ.');
+        return redirect()
+            ->route('phone-directory.index', ['tab' => 'directory'])
+            ->with('success', 'Бүртгэл нэмэгдлээ.');
     }
 
     public function destroy(Request $request, PhoneDirectoryEntry $entry): RedirectResponse
@@ -116,7 +147,47 @@ class PhoneDirectoryController extends Controller
 
         $entry->delete();
 
-        return back()->with('success', 'Устгалаа.');
+        return redirect()
+            ->route('phone-directory.index', ['tab' => 'directory'])
+            ->with('success', 'Устгалаа.');
+    }
+
+    public function storeStaff(Request $request): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+
+        $data = $request->validate([
+            'organization' => ['required', 'string', 'max:255'],
+            'unit' => ['nullable', 'string', 'max:255'],
+            'position' => ['nullable', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'room' => ['nullable', 'string', 'max:64'],
+            'work_phone' => ['nullable', 'string', 'max:64'],
+            'mobile_phone' => ['nullable', 'string', 'max:64'],
+            'email' => ['nullable', 'email', 'max:255'],
+        ]);
+
+        $data['sort_order'] = (int) OrgEmployeePhone::query()
+            ->where('organization', $data['organization'])
+            ->max('sort_order') + 1;
+
+        OrgEmployeePhone::create($data);
+
+        return redirect()
+            ->route('phone-directory.index', ['tab' => 'staff'])
+            ->with('success', 'Албан хаагчийн бүртгэл нэмэгдлээ.');
+    }
+
+    public function destroyStaff(Request $request, OrgEmployeePhone $staff): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+
+        $staff->delete();
+
+        return redirect()
+            ->route('phone-directory.index', ['tab' => 'staff'])
+            ->with('success', 'Устгалаа.');
     }
 
     public function import(Request $request, PhoneDirectoryDocxParser $parser): RedirectResponse
@@ -173,6 +244,8 @@ class PhoneDirectoryController extends Controller
             }
         });
 
-        return back()->with('success', count($rows).' мөр импортлолоо.');
+        return redirect()
+            ->route('phone-directory.index', ['tab' => 'directory'])
+            ->with('success', count($rows).' мөр импортлолоо.');
     }
 }
