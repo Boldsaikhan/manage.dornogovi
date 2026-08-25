@@ -135,6 +135,21 @@ const formatSize = (bytes) => {
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
+
+/** Үүрэг чиглэлийн бичвэрийг бүтэн харуулах мөрийн тоо */
+const textRows = (text) => {
+    const value = String(text ?? '');
+    if (!value.trim()) return 3;
+    const lines = value.split('\n');
+    const estimated = lines.reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / 90)), 0);
+    return Math.max(3, Math.min(30, estimated));
+};
+
+const autoGrow = (event) => {
+    const el = event.target;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+};
 </script>
 
 <template>

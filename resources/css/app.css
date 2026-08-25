@@ -84,7 +84,7 @@
     }
 
     .ui-table {
-        @apply min-w-full border-collapse text-sm;
+        @apply w-full min-w-full border-collapse text-sm;
     }
 
     .ui-table thead {
