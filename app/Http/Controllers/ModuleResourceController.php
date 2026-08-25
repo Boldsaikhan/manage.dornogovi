@@ -80,6 +80,7 @@ class ModuleResourceController extends Controller
             'fields' => $config['fields'],
             'directory' => $this->directoryFor($config),
             'rows' => $rows,
+            'rowActions' => $config['row_actions'] ?? [],
             'canManage' => ModuleAccess::canManage($request->user(), $module),
             'storeUrl' => route('modules.store', $module),
             'destroyUrlTemplate' => url('/modules/'.$module).'/{id}',

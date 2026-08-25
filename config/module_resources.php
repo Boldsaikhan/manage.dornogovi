@@ -41,6 +41,9 @@ return [
                 'pending' => 'Хүлээгдэж буй', 'approved' => 'Зөвшөөрсөн', 'rejected' => 'Татгалзсан',
             ]],
         ],
+        'row_actions' => [
+            ['label' => 'Чөлөөний хуудас', 'url' => '/modules/leaves/{id}/slip', 'target' => '_blank'],
+        ],
         'defaults' => ['status' => 'pending', 'type' => 'chuluu', 'scope' => 'baiguullaga'],
         'on_create' => 'attach_user_department',
     ],

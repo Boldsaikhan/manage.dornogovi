@@ -18,6 +18,7 @@ const props = defineProps({
     activeScope: { type: String, default: 'all' },
     scopeField: { type: String, default: null },
     directory: { type: Array, default: () => [] },
+    rowActions: { type: Array, default: () => [] },
 });
 
 const showForm = ref(false);
@@ -178,6 +179,9 @@ const submit = () => {
     });
 };
 
+// Мөр бүрийн нэмэлт үйлдэл (жишээ нь чөлөөний хуудас хэвлэх).
+const actionUrl = (action, id) => action.url.replace('{id}', id);
+
 const destroyRow = (id) => {
     if (!confirm('Устгах уу?')) return;
     router.delete(`/modules/${props.module}/${id}`, { preserveScroll: true });
@@ -225,7 +229,7 @@ const destroyRow = (id) => {
                     <thead>
                         <tr>
                             <th v-for="col in columns" :key="col.key">{{ col.label }}</th>
-                            <th v-if="canManage" />
+                            <th v-if="canManage || rowActions.length" />
                         </tr>
                     </thead>
                     <tbody>
@@ -236,12 +240,28 @@ const destroyRow = (id) => {
                                     :title="row[col.key] != null && row[col.key] !== '' ? String(row[col.key]) : ''"
                                 >{{ row[col.key] != null && row[col.key] !== '' ? row[col.key] : '—' }}</span>
                             </td>
-                            <td v-if="canManage" class="text-right">
-                                <button type="button" class="ui-btn-danger !py-1 text-xs" @click="destroyRow(row.id)">Устгах</button>
+                            <td v-if="canManage || rowActions.length" class="whitespace-nowrap text-right">
+                                <a
+                                    v-for="action in rowActions"
+                                    :key="action.label"
+                                    :href="actionUrl(action, row.id)"
+                                    :target="action.target || '_self'"
+                                    class="ui-btn-ghost mr-2 !py-1 text-xs"
+                                >
+                                    {{ action.label }}
+                                </a>
+                                <button
+                                    v-if="canManage"
+                                    type="button"
+                                    class="ui-btn-danger !py-1 text-xs"
+                                    @click="destroyRow(row.id)"
+                                >
+                                    Устгах
+                                </button>
                             </td>
                         </tr>
                         <tr v-if="!rows.length">
-                            <td :colspan="columns.length + (canManage ? 1 : 0)" class="!py-12 text-center text-slate-400">
+                            <td :colspan="columns.length + (canManage || rowActions.length ? 1 : 0)" class="!py-12 text-center text-slate-400">
                                 {{ activeScopeLabel && activeScope !== 'all' ? activeScopeLabel + '-ын бүртгэл алга.' : 'Одоогоор бүртгэл алга.' }}
                             </td>
                         </tr>
