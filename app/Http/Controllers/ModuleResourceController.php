@@ -190,10 +190,12 @@ class ModuleResourceController extends Controller
             ->orderBy('org_order')
             ->orderBy('sort_order')
             ->orderBy('id')
-            ->get(['org_name', 'person_name', 'position'])
+            ->get(['org_name', 'category', 'person_name', 'position'])
             ->groupBy('org_name')
             ->map(fn ($rows, $orgName) => [
                 'org_name' => $orgName,
+                // Чөлөөний хамрах хүрээгээр шүүхэд ашиглана.
+                'category' => $rows->first()->category ?? 'baiguullaga',
                 'people' => $rows->map(fn (PhoneDirectoryEntry $row) => [
                     'name' => $row->person_name,
                     'position' => $row->position,

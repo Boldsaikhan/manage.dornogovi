@@ -36,14 +36,38 @@ const form = useForm({ ...formState });
 const fieldNames = computed(() => props.fields.map((f) => f.name));
 const hasField = (name) => fieldNames.value.includes(name);
 
-// Утасны жагсаалтын байгууллага, хүмүүс.
-const orgOptions = computed(() => props.directory.map((d) => d.org_name));
+// Утасны жагсаалтын байгууллага, хүмүүс — хамрах хүрээгээр шүүнэ.
+const directoryFor = (field) => {
+    const scopeField = field?.scope_field;
+    const scope = scopeField ? form[scopeField] : null;
+
+    if (!scope) return props.directory;
+
+    return props.directory.filter((d) => d.category === scope);
+};
+
+const orgOptions = (field) => directoryFor(field).map((d) => d.org_name);
 
 const peopleFor = (orgName) => {
     if (!orgName) return props.directory.flatMap((d) => d.people);
 
     return props.directory.find((d) => d.org_name === orgName)?.people ?? [];
 };
+
+// Хамрах хүрээ солигдоход тухайн хүрээнд байхгүй байгууллагыг цэвэрлэнэ.
+watch(
+    () => (props.scopeField ? form[props.scopeField] : null),
+    () => {
+        const orgField = props.fields.find((f) => f.type === 'directory_org');
+        if (!orgField) return;
+
+        const names = orgOptions(orgField);
+        if (form[orgField.name] && !names.includes(form[orgField.name])) {
+            form[orgField.name] = '';
+            if (hasField('person_name')) form.person_name = '';
+        }
+    },
+);
 
 const personOptions = (field) => peopleFor(field.depends_on ? form[field.depends_on] : null);
 
@@ -262,13 +286,13 @@ const destroyRow = (id) => {
                             </option>
                         </select>
                         <select
-                            v-else-if="field.type === 'directory_org' && orgOptions.length"
+                            v-else-if="field.type === 'directory_org' && orgOptions(field).length"
                             v-model="form[field.name]"
                             class="ui-input"
                             :required="field.required"
                         >
                             <option value="">—</option>
-                            <option v-for="name in orgOptions" :key="name" :value="name">{{ name }}</option>
+                            <option v-for="name in orgOptions(field)" :key="name" :value="name">{{ name }}</option>
                         </select>
                         <select
                             v-else-if="field.type === 'directory_person' && personOptions(field).length"
@@ -291,7 +315,9 @@ const destroyRow = (id) => {
                             type="text"
                             class="ui-input"
                             :required="field.required"
-                            :placeholder="directory.length ? 'Утасны жагсаалтад бүртгэлгүй — гараар бичнэ' : 'Утасны жагсаалт хоосон байна'"
+                            :placeholder="directory.length
+                                ? 'Энэ хамрах хүрээнд бүртгэлгүй — гараар бичнэ'
+                                : 'Утасны жагсаалт хоосон байна'"
                         />
                         <textarea
                             v-else-if="field.type === 'textarea'"

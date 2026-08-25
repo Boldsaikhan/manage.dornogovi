@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use RuntimeException;
@@ -41,6 +42,7 @@ class PhoneDirectoryController extends Controller
             ->groupBy('org_name')
             ->map(fn ($rows, $orgName) => [
                 'org_name' => $orgName,
+                'category' => $rows->first()->category ?? 'baiguullaga',
                 'rows' => $rows->map(fn (PhoneDirectoryEntry $row) => [
                     'id' => $row->id,
                     'person_name' => $row->person_name,
@@ -75,6 +77,7 @@ class PhoneDirectoryController extends Controller
             'groups' => $groups,
             'total' => $entries->count(),
             'orgNames' => $entries->pluck('org_name')->unique()->values(),
+            'categories' => PhoneDirectoryEntry::CATEGORIES,
             'staff' => $staff,
             'staffTotal' => $staff->count(),
             'staffOrganizations' => $staff->pluck('organization')->unique()->values(),
@@ -231,11 +234,17 @@ class PhoneDirectoryController extends Controller
 
         $data = $request->validate([
             'org_name' => ['required', 'string', 'max:255'],
+            'category' => ['nullable', 'string', Rule::in(array_keys(PhoneDirectoryEntry::CATEGORIES))],
             'person_name' => ['required', 'string', 'max:255'],
             'position' => ['nullable', 'string', 'max:255'],
             'office_phone' => ['nullable', 'string', 'max:64'],
             'mobile_phone' => ['nullable', 'string', 'max:64'],
         ]);
+
+        // Ангилал заагаагүй бол тухайн байгууллагын одоогийн ангиллыг, эсвэл нэрээр таамаглана.
+        $data['category'] = $data['category']
+            ?? PhoneDirectoryEntry::query()->where('org_name', $data['org_name'])->value('category')
+            ?? PhoneDirectoryEntry::guessCategory($data['org_name']);
 
         $sibling = PhoneDirectoryEntry::query()->where('org_name', $data['org_name']);
 
@@ -248,6 +257,25 @@ class PhoneDirectoryController extends Controller
         return redirect()
             ->route('phone-directory.index', ['tab' => 'directory'])
             ->with('success', 'Бүртгэл нэмэгдлээ.');
+    }
+
+    /**
+     * Байгууллагын ангиллыг (агентлаг/сум/байгууллага) бүлгээр нь солино.
+     */
+    public function updateCategory(Request $request): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+
+        $data = $request->validate([
+            'org_name' => ['required', 'string', 'max:255'],
+            'category' => ['required', 'string', Rule::in(array_keys(PhoneDirectoryEntry::CATEGORIES))],
+        ]);
+
+        PhoneDirectoryEntry::query()
+            ->where('org_name', $data['org_name'])
+            ->update(['category' => $data['category']]);
+
+        return back(303)->with('success', $data['org_name'].' — ангилал шинэчлэгдлээ.');
     }
 
     public function destroy(Request $request, PhoneDirectoryEntry $entry): RedirectResponse
@@ -341,6 +369,7 @@ class PhoneDirectoryController extends Controller
 
                 PhoneDirectoryEntry::insert(array_map(fn (array $row) => [
                     'org_name' => $row['org_name'],
+                    'category' => PhoneDirectoryEntry::guessCategory($row['org_name']),
                     'org_order' => $row['org_order'] + $offset,
                     'sort_order' => $row['sort_order'],
                     'person_name' => $row['person_name'],

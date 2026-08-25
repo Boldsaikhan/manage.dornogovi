@@ -10,6 +10,7 @@ const props = defineProps({
     groups: { type: Array, default: () => [] },
     total: { type: Number, default: 0 },
     orgNames: { type: Array, default: () => [] },
+    categories: { type: Object, default: () => ({}) },
     staff: { type: Array, default: () => [] },
     staffTotal: { type: Number, default: 0 },
     staffOrganizations: { type: Array, default: () => [] },
@@ -151,6 +152,15 @@ const submitStaffImport = () => {
             showStaffImport.value = false;
         },
     });
+};
+
+// Байгууллагын ангиллыг (агентлаг/сум/байгууллага) бүлгээр нь солино.
+const changeCategory = (orgName, category) => {
+    router.patch(
+        route('phone-directory.category'),
+        { org_name: orgName, category },
+        { preserveScroll: true },
+    );
 };
 
 const destroyRow = (id) => {
@@ -368,6 +378,23 @@ const openAdd = () => {
                             <tr class="bg-brand-navy-50">
                                 <td :colspan="canManage ? 6 : 5" class="text-center font-semibold italic text-brand-navy-800">
                                     {{ group.org_name }}
+                                    <select
+                                        v-if="canManage"
+                                        :value="group.category"
+                                        class="ml-2 rounded-lg border-slate-300 bg-white py-0.5 pl-2 pr-7 text-xs font-medium not-italic text-slate-600"
+                                        title="Чөлөөний бүртгэлд ямар хамрах хүрээнд харагдахыг тодорхойлно"
+                                        @change="changeCategory(group.org_name, $event.target.value)"
+                                    >
+                                        <option v-for="(label, value) in categories" :key="value" :value="value">
+                                            {{ label }}
+                                        </option>
+                                    </select>
+                                    <span
+                                        v-else
+                                        class="ml-2 rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-medium not-italic text-slate-500"
+                                    >
+                                        {{ categories[group.category] || '' }}
+                                    </span>
                                 </td>
                             </tr>
                             <tr v-for="(row, index) in group.rows" :key="row.id">
