@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\DocumentFormat;
 use RuntimeException;
 use ZipArchive;
 
@@ -26,7 +27,12 @@ class DocxTableWriter
         array $rows,
         array $centerColumns = [],
         bool $landscape = false,
+        ?DocumentFormat $format = null,
     ): void {
+        // Бичиг хэргийн стандартаас хуудасны тохиргоог авна.
+        $format ??= DocumentFormat::defaultFormat();
+        $widths = $this->fitWidths($widths, $format, $landscape);
+
         $zip = new ZipArchive;
 
         if ($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
@@ -37,9 +43,12 @@ class DocxTableWriter
         $zip->addFromString('_rels/.rels', $this->rels());
         $zip->addFromString('word/_rels/document.xml.rels',
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-            .'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>');
+            .'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            .'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+            .'</Relationships>');
+        $zip->addFromString('word/styles.xml', $this->styles($format));
         $zip->addFromString('word/document.xml',
-            $this->document($title, $headings, $widths, $rows, $centerColumns, $landscape));
+            $this->document($title, $headings, $widths, $rows, $centerColumns, $landscape, $format));
         $zip->close();
     }
 
@@ -50,6 +59,7 @@ class DocxTableWriter
             .'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
             .'<Default Extension="xml" ContentType="application/xml"/>'
             .'<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+            .'<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'
             .'</Types>';
     }
 
@@ -74,6 +84,7 @@ class DocxTableWriter
         array $rows,
         array $centerColumns,
         bool $landscape,
+        ?DocumentFormat $format,
     ): string {
         $body = $this->heading($title);
         $body .= '<w:tbl>'.$this->tableProperties().$this->headerRow($headings, $widths);
@@ -84,7 +95,7 @@ class DocxTableWriter
                 : $this->dataRow(array_values($row['cells'] ?? []), $widths, $centerColumns);
         }
 
-        $body .= '</w:tbl>'.$this->sectionProperties($landscape);
+        $body .= '</w:tbl>'.$this->sectionProperties($landscape, $format);
 
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             .'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
@@ -185,16 +196,68 @@ class DocxTableWriter
             .'</w:p></w:tc>';
     }
 
-    private function sectionProperties(bool $landscape): string
+    /**
+     * Хуудасны хэмжээ, зах — бичиг хэргийн стандартаас.
+     */
+    private function sectionProperties(bool $landscape, ?DocumentFormat $format): string
     {
-        // A4 — босоо эсвэл хэвтээ, 2 см захтай.
-        $size = $landscape
-            ? '<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>'
-            : '<w:pgSz w:w="11906" w:h="16838"/>';
+        $width = $format ? $format->pageWidthTwip($landscape) : ($landscape ? 16838 : 11906);
+        $height = $format ? $format->pageHeightTwip($landscape) : ($landscape ? 11906 : 16838);
+        $orient = $landscape ? ' w:orient="landscape"' : '';
 
-        return '<w:sectPr>'.$size
-            .'<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/>'
+        $top = $format ? DocumentFormat::toTwip($format->margin_top_mm) : 1134;
+        $right = $format ? DocumentFormat::toTwip($format->margin_right_mm) : 1134;
+        $bottom = $format ? DocumentFormat::toTwip($format->margin_bottom_mm) : 1134;
+        $left = $format ? DocumentFormat::toTwip($format->margin_left_mm) : 1134;
+
+        return '<w:sectPr>'
+            ."<w:pgSz w:w=\"{$width}\" w:h=\"{$height}\"{$orient}/>"
+            ."<w:pgMar w:top=\"{$top}\" w:right=\"{$right}\" w:bottom=\"{$bottom}\" w:left=\"{$left}\" w:header=\"708\" w:footer=\"708\" w:gutter=\"0\"/>"
             .'</w:sectPr>';
+    }
+
+    /**
+     * Фонт, үсгийн хэмжээ, мөр хоорондын зайг баримтын үндсэн загвар болгоно.
+     */
+    private function styles(?DocumentFormat $format): string
+    {
+        $font = $this->escape($format?->font_name ?: 'Arial');
+        $size = $format?->fontHalfPoints() ?: 24;
+        $spacing = $format?->lineSpacingTwip() ?: 240;
+
+        return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            .'<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+            .'<w:docDefaults><w:rPrDefault><w:rPr>'
+            ."<w:rFonts w:ascii=\"{$font}\" w:hAnsi=\"{$font}\" w:cs=\"{$font}\"/>"
+            ."<w:sz w:val=\"{$size}\"/><w:szCs w:val=\"{$size}\"/>"
+            .'</w:rPr></w:rPrDefault>'
+            .'<w:pPrDefault><w:pPr>'
+            ."<w:spacing w:after=\"0\" w:line=\"{$spacing}\" w:lineRule=\"auto\"/>"
+            .'</w:pPr></w:pPrDefault></w:docDefaults></w:styles>';
+    }
+
+    /**
+     * Баганын өргөнийг хуудасны цэвэр өргөнд багтаана.
+     *
+     * @param  array<int, int>  $widths
+     * @return array<int, int>
+     */
+    private function fitWidths(array $widths, ?DocumentFormat $format, bool $landscape): array
+    {
+        if (! $format || ! $widths) {
+            return $widths;
+        }
+
+        $total = array_sum($widths);
+        $available = $format->contentWidthTwip($landscape);
+
+        if ($total <= 0 || $total === $available) {
+            return $widths;
+        }
+
+        $ratio = $available / $total;
+
+        return array_map(fn (int $w) => max(300, (int) round($w * $ratio)), $widths);
     }
 
     private function escape(string $text): string
