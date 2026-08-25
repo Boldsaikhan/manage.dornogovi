@@ -6,10 +6,14 @@ use App\Models\Decree;
 use App\Models\EditUndo;
 use App\Models\DocumentFormat;
 use App\Models\PhoneDirectoryEntry;
+use App\Support\DocxTableWriter;
 use App\Support\ModuleAccess;
+use App\Support\PdfTableWriter;
 use App\Support\PersonName;
+use App\Support\XlsxTableWriter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -130,6 +134,192 @@ class DecreeController extends Controller
             'tushaal_b' => 'Тамгын газрын даргын Тушаалын бүртгэл (Б)',
             default => 'Захирамж, тушаалын нэгдсэн бүртгэл',
         };
+    }
+
+    /**
+     * Харагдаж байгаа табыг Word / Excel / PDF файлаар татах.
+     */
+    public function export(
+        Request $request,
+        DocxTableWriter $docx,
+        XlsxTableWriter $xlsx,
+        PdfTableWriter $pdf,
+    ): HttpResponse {
+        abort_unless(ModuleAccess::canView($request->user(), 'decrees'), 403);
+
+        $tab = $this->normalizeTab((string) $request->query('tab', 'zahiramj_a'));
+        $format = strtolower((string) $request->query('format', 'docx'));
+
+        abort_unless(in_array($format, ['docx', 'xlsx', 'pdf'], true), 404);
+
+        $query = Decree::query()->orderBy('id');
+
+        if ($tab === 'blank') {
+            $query->where('category', 'blank');
+        } elseif ($tab === 'niit') {
+            $query->whereIn('kind', self::DOC_KINDS);
+        } else {
+            $query->where('kind', $tab);
+        }
+
+        $rows = $query->limit(1000)->get()->values()
+            ->map(fn (Decree $d, int $i) => $this->serialize($d, $i + 1));
+
+        $payload = $this->exportTable($tab, $rows);
+        $title = $payload['title'];
+        $tmp = tempnam(sys_get_temp_dir(), 'decree_export_');
+
+        try {
+            if ($format === 'docx') {
+                $path = $tmp.'.docx';
+                $docx->write(
+                    $path,
+                    $title,
+                    $payload['headings'],
+                    $payload['widths'],
+                    $payload['docx_rows'],
+                    $payload['center'],
+                    $payload['landscape'],
+                );
+                $mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                $ascii = 'decrees.docx';
+            } elseif ($format === 'xlsx') {
+                $path = $tmp.'.xlsx';
+                $xlsx->write($path, $title, $payload['headings'], $payload['sheet_rows']);
+                $mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                $ascii = 'decrees.xlsx';
+            } else {
+                $path = $tmp.'.pdf';
+                $pdf->write($path, $title, $payload['headings'], $payload['sheet_rows'], $payload['landscape']);
+                $mime = 'application/pdf';
+                $ascii = 'decrees.pdf';
+            }
+
+            $content = (string) file_get_contents($path);
+            @unlink($path);
+        } finally {
+            @unlink($tmp);
+        }
+
+        $fileName = $title.' '.now()->format('Y-m-d').'.'.$format;
+
+        return response($content, 200, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => "attachment; filename=\"{$ascii}\"; filename*=UTF-8''".rawurlencode($fileName),
+            'Content-Length' => (string) strlen($content),
+        ]);
+    }
+
+    /**
+     * Таб бүрийн хүснэгтийн толгой, мөрүүдийг бэлдэнэ.
+     *
+     * @param  \Illuminate\Support\Collection<int, array<string, mixed>>  $rows
+     * @return array{
+     *     title: string,
+     *     headings: array<int, string>,
+     *     widths: array<int, int>,
+     *     center: array<int, int>,
+     *     landscape: bool,
+     *     docx_rows: array<int, array{type: string, cells: array<int, string>}>,
+     *     sheet_rows: array<int, array<int, string>>
+     * }
+     */
+    private function exportTable(string $tab, $rows): array
+    {
+        $title = $this->printTitle($tab);
+
+        if ($tab === 'blank') {
+            $headings = [
+                'Д/д', 'Ажилтны нэр', 'Огноо',
+                'ЗХ', 'ЗХ МБ', 'ТШ', 'ТШ МБ', 'АД', 'АД МБ', 'ЗХр', 'ЗХр МБ',
+                'Дугаар ЗХ', 'Дугаар ТШ', 'Үрэгдүүлсэн ЗХ', 'Үрэгдүүлсэн ТШ',
+            ];
+            $widths = [600, 2200, 1200, 700, 700, 700, 700, 700, 700, 700, 700, 1200, 1200, 1200, 1200];
+            $center = [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+            $sheetRows = [];
+            $docxRows = [];
+
+            foreach ($rows as $row) {
+                $cells = [
+                    (string) $row['no'],
+                    (string) ($row['person_name'] ?? ''),
+                    (string) ($row['issued_on_display'] ?? ''),
+                    (string) ($row['qty_zahiramj'] ?? ''),
+                    (string) ($row['qty_zahiramj_mn'] ?? ''),
+                    (string) ($row['qty_tushaal'] ?? ''),
+                    (string) ($row['qty_tushaal_mn'] ?? ''),
+                    (string) ($row['qty_assignment'] ?? ''),
+                    (string) ($row['qty_assignment_mn'] ?? ''),
+                    (string) ($row['qty_council'] ?? ''),
+                    (string) ($row['qty_council_mn'] ?? ''),
+                    (string) ($row['num_zahiramj'] ?? ''),
+                    (string) ($row['num_tushaal'] ?? ''),
+                    (string) ($row['void_zahiramj'] ?? ''),
+                    (string) ($row['void_tushaal'] ?? ''),
+                ];
+                $sheetRows[] = $cells;
+                $docxRows[] = ['type' => 'data', 'cells' => $cells];
+            }
+
+            return [
+                'title' => $title,
+                'headings' => $headings,
+                'widths' => $widths,
+                'center' => $center,
+                'landscape' => true,
+                'docx_rows' => $docxRows,
+                'sheet_rows' => $sheetRows,
+            ];
+        }
+
+        $titleCol = match (true) {
+            $tab === 'niit' => 'Гарчиг / тэргүү',
+            str_starts_with($tab, 'zahiramj') => 'Захирамжийн тэргүү',
+            default => 'Тушаалын гарчиг',
+        };
+
+        $headings = ['№', 'Дугаар', 'Огноо', $titleCol, 'Хуудас', 'Хавсралт', 'Хавсралтын хуудас', 'Боловсруулсан'];
+        $widths = [600, 1000, 1200, 4200, 900, 2800, 1200, 2400];
+        $center = [0, 1, 2, 4, 6];
+
+        if ($tab === 'niit') {
+            $headings[] = 'Төрөл';
+            $widths[] = 1400;
+            $center[] = 8;
+        }
+
+        $sheetRows = [];
+        $docxRows = [];
+
+        foreach ($rows as $row) {
+            $cells = [
+                (string) $row['no'],
+                (string) ($row['number'] ?? ''),
+                (string) ($row['issued_on_display'] ?? ''),
+                (string) ($row['title'] ?? ''),
+                (string) ($row['page_count'] ?? ''),
+                (string) ($row['attachment_name'] ?? ''),
+                (string) ($row['attachment_pages'] ?? ''),
+                (string) ($row['person_name'] ?? ''),
+            ];
+
+            if ($tab === 'niit') {
+                $cells[] = (string) ($row['kind_label'] ?? '');
+            }
+
+            $sheetRows[] = $cells;
+            $docxRows[] = ['type' => 'data', 'cells' => $cells];
+        }
+
+        return [
+            'title' => $title,
+            'headings' => $headings,
+            'widths' => $widths,
+            'center' => $center,
+            'landscape' => false,
+            'docx_rows' => $docxRows,
+            'sheet_rows' => $sheetRows,
+        ];
     }
 
     /**
