@@ -1,9 +1,8 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, reactive, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import Modal from '@/Components/Modal.vue';
-import InputError from '@/Components/InputError.vue';
+import SheetCell from '@/Components/SheetCell.vue';
 
 const props = defineProps({
     tab: { type: String, default: 'blank' },
@@ -12,7 +11,6 @@ const props = defineProps({
     canManage: { type: Boolean, default: false },
 });
 
-const showForm = ref(false);
 const isBlank = computed(() => props.tab === 'blank');
 const isZahiramj = computed(() => props.tab === 'zahiramj');
 const docLabel = computed(() => (isZahiramj.value ? 'Захирамж' : 'Тушаал'));
@@ -29,77 +27,77 @@ const kindOptions = computed(() => (isZahiramj.value
         { value: 'tushaal_b', label: 'Тушаал Б' },
     ]));
 
-const blankForm = useForm({
-    tab: 'blank',
-    person_name: '',
-    issued_on: '',
-    qty_zahiramj: 0,
-    qty_zahiramj_mn: 0,
-    qty_tushaal: 0,
-    qty_tushaal_mn: 0,
-    qty_assignment: 0,
-    qty_assignment_mn: 0,
-    qty_council: 0,
-    qty_council_mn: 0,
-    num_zahiramj: '',
-    num_tushaal: '',
-    void_zahiramj: '',
-    void_tushaal: '',
-    body: '',
-});
+const drafts = reactive({});
 
-const docForm = useForm({
-    tab: props.tab,
-    kind: '',
-    number: '',
-    title: '',
-    issued_on: '',
-    page_count: null,
-    attachment_name: '',
-    attachment_pages: null,
-    person_name: '',
-    body: '',
-});
+const blankFields = [
+    'person_name', 'issued_on',
+    'qty_zahiramj', 'qty_zahiramj_mn', 'qty_tushaal', 'qty_tushaal_mn',
+    'qty_assignment', 'qty_assignment_mn', 'qty_council', 'qty_council_mn',
+    'num_zahiramj', 'num_tushaal', 'void_zahiramj', 'void_tushaal', 'body',
+];
 
-watch(
-    () => props.tab,
-    (tab) => {
-        docForm.tab = tab;
-        blankForm.tab = 'blank';
-        docForm.kind = '';
-    },
-);
+const docFields = [
+    'kind', 'number', 'issued_on', 'title', 'page_count',
+    'attachment_name', 'attachment_pages', 'person_name', 'body',
+];
+
+const syncDrafts = () => {
+    Object.keys(drafts).forEach((key) => delete drafts[key]);
+    props.rows.forEach((row) => {
+        if (isBlank.value) {
+            drafts[row.id] = Object.fromEntries(blankFields.map((f) => [f, row[f] ?? '']));
+        } else {
+            drafts[row.id] = Object.fromEntries(docFields.map((f) => [f, row[f] ?? '']));
+        }
+    });
+};
+
+watch(() => [props.rows, props.tab], syncDrafts, { immediate: true, deep: true });
 
 const switchTab = (value) => {
     router.get(route('decrees.index'), { tab: value }, { preserveState: false, preserveScroll: true });
 };
 
-const openForm = () => {
+const addRow = () => {
     if (isBlank.value) {
-        blankForm.reset();
-        blankForm.clearErrors();
-        blankForm.tab = 'blank';
-        blankForm.issued_on = new Date().toISOString().slice(0, 10);
-    } else {
-        docForm.reset();
-        docForm.clearErrors();
-        docForm.tab = props.tab;
-        docForm.kind = kindOptions.value[0]?.value ?? '';
-        docForm.issued_on = new Date().toISOString().slice(0, 10);
+        useForm({
+            tab: 'blank',
+            person_name: '',
+            issued_on: new Date().toISOString().slice(0, 10),
+        }).post(route('decrees.store'), { preserveScroll: true });
+        return;
     }
-    showForm.value = true;
+
+    useForm({
+        tab: props.tab,
+        kind: kindOptions.value[0]?.value ?? '',
+        number: '',
+        title: '',
+        issued_on: new Date().toISOString().slice(0, 10),
+    }).post(route('decrees.store'), { preserveScroll: true });
 };
 
-const closeForm = () => {
-    showForm.value = false;
-};
+const saveField = (id, field, value) => {
+    let next = value;
+    if (['qty_zahiramj', 'qty_zahiramj_mn', 'qty_tushaal', 'qty_tushaal_mn',
+        'qty_assignment', 'qty_assignment_mn', 'qty_council', 'qty_council_mn',
+        'page_count', 'attachment_pages'].includes(field)) {
+        if (next === '' || next === null || next === undefined) {
+            next = null;
+        } else {
+            const n = Number.parseInt(next, 10);
+            next = Number.isNaN(n) ? null : n;
+        }
+        if (drafts[id]) {
+            drafts[id][field] = next ?? '';
+        }
+    }
 
-const submit = () => {
-    const form = isBlank.value ? blankForm : docForm;
-    form.post(route('decrees.store'), {
-        preserveScroll: true,
-        onSuccess: () => closeForm(),
-    });
+    router.patch(
+        route('decrees.update', id),
+        { [field]: next },
+        { preserveScroll: true, preserveState: true },
+    );
 };
 
 const destroyRow = (id) => {
@@ -107,8 +105,10 @@ const destroyRow = (id) => {
     router.delete(route('decrees.destroy', id), { preserveScroll: true });
 };
 
-const activeForm = computed(() => (isBlank.value ? blankForm : docForm));
+const blankColCount = computed(() => 15 + (props.canManage ? 1 : 0));
 const docColumnCount = computed(() => 9 + (props.canManage ? 1 : 0));
+
+const cellClass = 'border border-slate-800 p-0 align-middle';
 </script>
 
 <template>
@@ -118,16 +118,16 @@ const docColumnCount = computed(() => 9 + (props.canManage ? 1 : 0));
                 <div>
                     <h2 class="ui-title">Захирамж, тушаал</h2>
                     <p class="ui-subtitle">
-                        Бланкны дугаар болон захирамж/тушаалын дугаарыг тусад нь бүртгэнэ.
+                        Мөрийг нэмээд нүдэн дээр дарж шууд бөглөнө.
                     </p>
                 </div>
                 <button
                     v-if="canManage"
                     type="button"
                     class="ui-btn-accent"
-                    @click="openForm"
+                    @click="addRow"
                 >
-                    Шинэ нэмэх
+                    Шинэ мөр
                 </button>
             </div>
 
@@ -147,7 +147,7 @@ const docColumnCount = computed(() => 9 + (props.canManage ? 1 : 0));
                 </button>
             </nav>
 
-            <!-- Бланкны дугаар: хэвлэмэл хуудас олголт -->
+            <!-- Бланкны дугаар -->
             <div v-if="isBlank" class="overflow-x-auto border border-slate-800 bg-white">
                 <table class="w-full min-w-[1100px] border-collapse text-center text-[11px] leading-tight text-slate-900">
                     <thead>
@@ -193,26 +193,163 @@ const docColumnCount = computed(() => 9 + (props.canManage ? 1 : 0));
                             class="hover:bg-sky-50 focus-within:bg-sky-50"
                         >
                             <td class="border border-slate-800 px-1 py-1">{{ row.no }}</td>
-                            <td class="border border-slate-800 px-1 py-1 text-left">
-                                <span class="ui-clamp-2" :title="row.person_name || row.title || ''">
-                                    {{ row.person_name || row.title || '—' }}
-                                </span>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].person_name"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    placeholder="Нэр…"
+                                    @commit="(v) => saveField(row.id, 'person_name', v)"
+                                />
                             </td>
-                            <td class="border border-slate-800 px-1 py-1">{{ row.issued_on || '—' }}</td>
-                            <td class="border border-slate-800 px-1 py-1">{{ row.qty_zahiramj }}</td>
-                            <td class="border border-slate-800 px-1 py-1">{{ row.qty_zahiramj_mn }}</td>
-                            <td class="border border-slate-800 px-1 py-1">{{ row.qty_tushaal }}</td>
-                            <td class="border border-slate-800 px-1 py-1">{{ row.qty_tushaal_mn }}</td>
-                            <td class="border border-slate-800 px-1 py-1">{{ row.qty_assignment }}</td>
-                            <td class="border border-slate-800 px-1 py-1">{{ row.qty_assignment_mn }}</td>
-                            <td class="border border-slate-800 px-1 py-1">{{ row.qty_council }}</td>
-                            <td class="border border-slate-800 px-1 py-1">{{ row.qty_council_mn }}</td>
-                            <td class="border border-slate-800 px-1 py-1">{{ row.num_zahiramj || '' }}</td>
-                            <td class="border border-slate-800 px-1 py-1">{{ row.num_tushaal || '' }}</td>
-                            <td class="border border-slate-800 px-1 py-1">{{ row.void_zahiramj || '' }}</td>
-                            <td class="border border-slate-800 px-1 py-1">{{ row.void_tushaal || '' }}</td>
-                            <td class="border border-slate-800 px-1 py-1 text-left">
-                                <span class="ui-clamp-2" :title="row.body || ''">{{ row.body || '' }}</span>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].issued_on"
+                                    type="date"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'issued_on', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].qty_zahiramj"
+                                    type="number"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'qty_zahiramj', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].qty_zahiramj_mn"
+                                    type="number"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'qty_zahiramj_mn', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].qty_tushaal"
+                                    type="number"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'qty_tushaal', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].qty_tushaal_mn"
+                                    type="number"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'qty_tushaal_mn', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].qty_assignment"
+                                    type="number"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'qty_assignment', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].qty_assignment_mn"
+                                    type="number"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'qty_assignment_mn', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].qty_council"
+                                    type="number"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'qty_council', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].qty_council_mn"
+                                    type="number"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'qty_council_mn', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].num_zahiramj"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'num_zahiramj', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].num_tushaal"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'num_tushaal', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].void_zahiramj"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'void_zahiramj', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].void_tushaal"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'void_tushaal', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].body"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'body', v)"
+                                />
                             </td>
                             <td v-if="canManage" class="border border-slate-800 px-1 py-1">
                                 <button type="button" class="text-xs text-red-600 hover:underline" @click="destroyRow(row.id)">
@@ -221,15 +358,15 @@ const docColumnCount = computed(() => 9 + (props.canManage ? 1 : 0));
                             </td>
                         </tr>
                         <tr v-if="!rows.length">
-                            <td :colspan="canManage ? 16 : 15" class="border border-slate-800 px-2 py-10 text-slate-400">
-                                Бланкны дугаарын бүртгэл алга. «Шинэ нэмэх» дарж оруулна уу.
+                            <td :colspan="blankColCount" class="border border-slate-800 px-2 py-10 text-slate-400">
+                                Бүртгэл алга. «Шинэ мөр» дарж нүдэн дээр бөглөнө үү.
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            <!-- Захирамж / Тушаалын дугаар: цаасан бүртгэлийн хүснэгт -->
+            <!-- Захирамж / Тушаалын дугаар -->
             <div v-else class="overflow-x-auto border border-slate-800 bg-white">
                 <div class="border-b border-slate-800 px-3 py-2 text-center text-sm font-semibold tracking-wide">
                     Аймгийн Засаг даргын {{ docLabel }}ийн бүртгэл
@@ -250,7 +387,7 @@ const docColumnCount = computed(() => 9 + (props.canManage ? 1 : 0));
                             <th rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold w-36">
                                 Боловсруулсан<br>албан тушаалтан
                             </th>
-                            <th rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold w-16">Төрөл</th>
+                            <th rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold w-24">Төрөл</th>
                             <th v-if="canManage" rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold w-16" />
                         </tr>
                         <tr class="bg-slate-50">
@@ -266,7 +403,7 @@ const docColumnCount = computed(() => 9 + (props.canManage ? 1 : 0));
                             <th class="border border-slate-800 py-0.5">6</th>
                             <th class="border border-slate-800 py-0.5">7</th>
                             <th class="border border-slate-800 py-0.5">8</th>
-                            <th class="border border-slate-800 py-0.5" />
+                            <th class="border border-slate-800 py-0.5">9</th>
                             <th v-if="canManage" class="border border-slate-800 py-0.5" />
                         </tr>
                     </thead>
@@ -274,23 +411,96 @@ const docColumnCount = computed(() => 9 + (props.canManage ? 1 : 0));
                         <tr
                             v-for="row in rows"
                             :key="row.id"
-                            class="hover:bg-sky-50"
+                            class="hover:bg-sky-50 focus-within:bg-sky-50"
                         >
                             <td class="border border-slate-800 px-1.5 py-1.5">{{ row.no }}</td>
-                            <td class="border border-slate-800 px-1.5 py-1.5 font-medium">{{ row.number || '—' }}</td>
-                            <td class="border border-slate-800 px-1.5 py-1.5">{{ row.issued_on_display || row.issued_on || '—' }}</td>
-                            <td class="border border-slate-800 px-1.5 py-1.5 text-left">
-                                <span class="ui-clamp-2" :title="row.title || ''">{{ row.title || '—' }}</span>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].number"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    placeholder="Дугаар…"
+                                    @commit="(v) => saveField(row.id, 'number', v)"
+                                />
                             </td>
-                            <td class="border border-slate-800 px-1.5 py-1.5">{{ row.page_count ?? '' }}</td>
-                            <td class="border border-slate-800 px-1.5 py-1.5 text-left">
-                                <span class="ui-clamp-2" :title="row.attachment_name || ''">{{ row.attachment_name || '' }}</span>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].issued_on"
+                                    type="date"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'issued_on', v)"
+                                />
                             </td>
-                            <td class="border border-slate-800 px-1.5 py-1.5">{{ row.attachment_pages ?? '' }}</td>
-                            <td class="border border-slate-800 px-1.5 py-1.5">
-                                <span class="ui-clamp-2" :title="row.person_name || ''">{{ row.person_name || '' }}</span>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].title"
+                                    multiline
+                                    :editable="canManage"
+                                    empty-label=""
+                                    placeholder="Гарчиг…"
+                                    @commit="(v) => saveField(row.id, 'title', v)"
+                                />
                             </td>
-                            <td class="border border-slate-800 px-1.5 py-1.5 text-[11px]">{{ row.kind_label }}</td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].page_count"
+                                    type="number"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'page_count', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].attachment_name"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'attachment_name', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].attachment_pages"
+                                    type="number"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'attachment_pages', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].person_name"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'person_name', v)"
+                                />
+                            </td>
+                            <td class="border border-slate-800 px-1 py-1">
+                                <select
+                                    v-if="canManage && drafts[row.id]"
+                                    v-model="drafts[row.id].kind"
+                                    class="w-full border-0 bg-transparent py-1 text-center text-[11px] outline-none focus:bg-sky-50"
+                                    @change="saveField(row.id, 'kind', drafts[row.id].kind)"
+                                >
+                                    <option v-for="opt in kindOptions" :key="opt.value" :value="opt.value">
+                                        {{ opt.label }}
+                                    </option>
+                                </select>
+                                <span v-else class="text-[11px]">{{ row.kind_label }}</span>
+                            </td>
                             <td v-if="canManage" class="border border-slate-800 px-1.5 py-1.5">
                                 <button type="button" class="text-xs text-red-600 hover:underline" @click="destroyRow(row.id)">
                                     Устгах
@@ -299,153 +509,12 @@ const docColumnCount = computed(() => 9 + (props.canManage ? 1 : 0));
                         </tr>
                         <tr v-if="!rows.length">
                             <td :colspan="docColumnCount" class="border border-slate-800 px-2 py-10 text-slate-400">
-                                {{ numberLabel }}ын бүртгэл алга.
+                                {{ numberLabel }}ын бүртгэл алга. «Шинэ мөр» дарж бөглөнө үү.
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
-
-        <Modal :show="showForm && canManage" max-width="2xl" @close="closeForm">
-            <form class="p-6" @submit.prevent="submit">
-                <div class="mb-5 flex items-start justify-between gap-3">
-                    <div>
-                        <h3 class="text-base font-semibold text-brand-navy-900">
-                            {{ isBlank ? 'Бланкны дугаар олгох' : `${numberLabel} бүртгэх` }}
-                        </h3>
-                        <p class="mt-0.5 text-sm text-slate-500">Шаардлагатай талбаруудыг бөглөнө үү.</p>
-                    </div>
-                    <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" @click="closeForm">✕</button>
-                </div>
-
-                <!-- Бланкны дугаар -->
-                <div v-if="isBlank" class="grid max-h-[65vh] gap-3 overflow-y-auto pr-1 md:grid-cols-4">
-                    <div class="md:col-span-2">
-                        <label class="ui-label">Хэвлэмэл хуудас авсан ажилтны нэр</label>
-                        <input v-model="blankForm.person_name" class="ui-input" required />
-                        <InputError :message="blankForm.errors.person_name" class="mt-1" />
-                    </div>
-                    <div>
-                        <label class="ui-label">Огноо</label>
-                        <input v-model="blankForm.issued_on" type="date" class="ui-input" required />
-                        <InputError :message="blankForm.errors.issued_on" class="mt-1" />
-                    </div>
-                    <div class="md:col-span-4 grid gap-2 rounded-lg border border-slate-200 p-3 md:grid-cols-4">
-                        <p class="md:col-span-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Олгосон хэвлэмэл хуудас (ширхэг)</p>
-                        <div>
-                            <label class="ui-label">Захирамж</label>
-                            <input v-model.number="blankForm.qty_zahiramj" type="number" min="0" class="ui-input" />
-                        </div>
-                        <div>
-                            <label class="ui-label">Монгол бичиг</label>
-                            <input v-model.number="blankForm.qty_zahiramj_mn" type="number" min="0" class="ui-input" />
-                        </div>
-                        <div>
-                            <label class="ui-label">Тушаал</label>
-                            <input v-model.number="blankForm.qty_tushaal" type="number" min="0" class="ui-input" />
-                        </div>
-                        <div>
-                            <label class="ui-label">Монгол бичиг</label>
-                            <input v-model.number="blankForm.qty_tushaal_mn" type="number" min="0" class="ui-input" />
-                        </div>
-                        <div>
-                            <label class="ui-label">Албан даалгавар</label>
-                            <input v-model.number="blankForm.qty_assignment" type="number" min="0" class="ui-input" />
-                        </div>
-                        <div>
-                            <label class="ui-label">Монгол бичиг</label>
-                            <input v-model.number="blankForm.qty_assignment_mn" type="number" min="0" class="ui-input" />
-                        </div>
-                        <div>
-                            <label class="ui-label">Зөвлөлийн хурал</label>
-                            <input v-model.number="blankForm.qty_council" type="number" min="0" class="ui-input" />
-                        </div>
-                        <div>
-                            <label class="ui-label">Монгол бичиг</label>
-                            <input v-model.number="blankForm.qty_council_mn" type="number" min="0" class="ui-input" />
-                        </div>
-                    </div>
-                    <div>
-                        <label class="ui-label">Бланкны дугаар — Захирамж</label>
-                        <input v-model="blankForm.num_zahiramj" class="ui-input" placeholder="ж: 810-812" />
-                    </div>
-                    <div>
-                        <label class="ui-label">Бланкны дугаар — Тушаал</label>
-                        <input v-model="blankForm.num_tushaal" class="ui-input" placeholder="ж: 263-264" />
-                    </div>
-                    <div>
-                        <label class="ui-label">Үрэгдүүлсэн — Захирамж</label>
-                        <input v-model="blankForm.void_zahiramj" class="ui-input" />
-                    </div>
-                    <div>
-                        <label class="ui-label">Үрэгдүүлсэн — Тушаал</label>
-                        <input v-model="blankForm.void_tushaal" class="ui-input" />
-                    </div>
-                    <div class="md:col-span-4">
-                        <label class="ui-label">Хүлээн авсан / тэмдэглэл</label>
-                        <textarea v-model="blankForm.body" rows="2" class="ui-input" />
-                    </div>
-                </div>
-
-                <!-- Захирамж / Тушаалын дугаар -->
-                <div v-else class="grid max-h-[65vh] gap-4 overflow-y-auto pr-1 md:grid-cols-2">
-                    <div>
-                        <label class="ui-label">Төрөл</label>
-                        <select v-model="docForm.kind" class="ui-input" required>
-                            <option v-for="opt in kindOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                        </select>
-                        <InputError :message="docForm.errors.kind" class="mt-1" />
-                    </div>
-                    <div>
-                        <label class="ui-label">{{ numberLabel }}</label>
-                        <input v-model="docForm.number" class="ui-input" required placeholder="ж: 01" />
-                        <InputError :message="docForm.errors.number" class="mt-1" />
-                    </div>
-                    <div>
-                        <label class="ui-label">Огноо</label>
-                        <input v-model="docForm.issued_on" type="date" class="ui-input" required />
-                        <InputError :message="docForm.errors.issued_on" class="mt-1" />
-                    </div>
-                    <div>
-                        <label class="ui-label">Хуудасны тоо</label>
-                        <input v-model.number="docForm.page_count" type="number" min="0" class="ui-input" />
-                        <InputError :message="docForm.errors.page_count" class="mt-1" />
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="ui-label">{{ titleLabel }}</label>
-                        <textarea v-model="docForm.title" rows="2" class="ui-input" required />
-                        <InputError :message="docForm.errors.title" class="mt-1" />
-                    </div>
-                    <div class="md:col-span-2 border-t border-slate-100 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                        Хавсралтын мэдээлэл
-                    </div>
-                    <div>
-                        <label class="ui-label">Баримт бичгийн нэр</label>
-                        <input v-model="docForm.attachment_name" class="ui-input" placeholder="ж: Арын бичилт, Монгол бичиг" />
-                        <InputError :message="docForm.errors.attachment_name" class="mt-1" />
-                    </div>
-                    <div>
-                        <label class="ui-label">Хавсралтын хуудасны тоо</label>
-                        <input v-model.number="docForm.attachment_pages" type="number" min="0" class="ui-input" />
-                        <InputError :message="docForm.errors.attachment_pages" class="mt-1" />
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="ui-label">Боловсруулсан албан тушаалтан</label>
-                        <input v-model="docForm.person_name" class="ui-input" placeholder="ж: Б.Зоригтбаатар" />
-                        <InputError :message="docForm.errors.person_name" class="mt-1" />
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="ui-label">Тэмдэглэл</label>
-                        <textarea v-model="docForm.body" rows="2" class="ui-input" />
-                    </div>
-                </div>
-
-                <div class="mt-5 flex justify-end gap-2">
-                    <button type="button" class="ui-btn-ghost" @click="closeForm">Болих</button>
-                    <button type="submit" class="ui-btn-primary" :disabled="activeForm.processing">Хадгалах</button>
-                </div>
-            </form>
-        </Modal>
     </AuthenticatedLayout>
 </template>

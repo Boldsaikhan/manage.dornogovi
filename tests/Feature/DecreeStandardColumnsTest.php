@@ -40,6 +40,30 @@ class DecreeStandardColumnsTest extends TestCase
                 ->where('rows.0.num_zahiramj', '810-814'));
     }
 
+    public function test_blank_row_can_be_created_empty_and_patched_inline(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->post(route('decrees.store'), [
+            'tab' => 'blank',
+        ])->assertRedirect(route('decrees.index', ['tab' => 'blank']));
+
+        $decree = Decree::query()->firstOrFail();
+        $this->assertSame('blank', $decree->category);
+
+        $this->actingAs($admin)->patch(route('decrees.update', $decree), [
+            'person_name' => 'А.Ариунболд',
+            'qty_zahiramj' => 3,
+            'num_zahiramj' => '100-102',
+        ])->assertRedirect();
+
+        $decree->refresh();
+        $this->assertSame('А.Ариунболд', $decree->person_name);
+        $this->assertSame(3, $decree->qty_zahiramj);
+        $this->assertSame('100-102', $decree->num_zahiramj);
+        $this->assertSame('100-102', $decree->blank_number);
+    }
+
     public function test_zahiramj_number_tab_stores_register_fields(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

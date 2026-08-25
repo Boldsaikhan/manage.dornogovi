@@ -40,7 +40,7 @@ class DecreeController extends Controller
 
         $rows = Decree::query()
             ->where('category', $tab)
-            ->latest('id')
+            ->orderBy('id')
             ->limit(300)
             ->get()
             ->values()
@@ -72,8 +72,8 @@ class DecreeController extends Controller
 
         if ($tab === 'blank') {
             $data = $request->validate([
-                'person_name' => ['required', 'string', 'max:255'],
-                'issued_on' => ['required', 'date'],
+                'person_name' => ['nullable', 'string', 'max:255'],
+                'issued_on' => ['nullable', 'date'],
                 'qty_zahiramj' => ['nullable', 'integer', 'min:0', 'max:9999'],
                 'qty_zahiramj_mn' => ['nullable', 'integer', 'min:0', 'max:9999'],
                 'qty_tushaal' => ['nullable', 'integer', 'min:0', 'max:9999'],
@@ -89,12 +89,16 @@ class DecreeController extends Controller
                 'body' => ['nullable', 'string', 'max:5000'],
             ]);
 
+            $person = trim((string) ($data['person_name'] ?? ''));
+
             Decree::query()->create([
                 ...$data,
+                'person_name' => $person !== '' ? $person : null,
+                'issued_on' => $data['issued_on'] ?? now()->toDateString(),
                 'category' => 'blank',
                 'kind' => 'blank',
-                'title' => $data['person_name'],
-                'blank_number' => $data['num_zahiramj'] ?: $data['num_tushaal'] ?: null,
+                'title' => $person !== '' ? $person : '',
+                'blank_number' => ($data['num_zahiramj'] ?? null) ?: ($data['num_tushaal'] ?? null) ?: null,
                 'number' => null,
                 'created_by' => $request->user()->id,
             ]);
@@ -104,10 +108,10 @@ class DecreeController extends Controller
                 : ['tushaal_a', 'tushaal_b'];
 
             $data = $request->validate([
-                'kind' => ['required', Rule::in($kinds)],
-                'number' => ['required', 'string', 'max:100'],
-                'title' => ['required', 'string', 'max:1000'],
-                'issued_on' => ['required', 'date'],
+                'kind' => ['nullable', Rule::in($kinds)],
+                'number' => ['nullable', 'string', 'max:100'],
+                'title' => ['nullable', 'string', 'max:1000'],
+                'issued_on' => ['nullable', 'date'],
                 'page_count' => ['nullable', 'integer', 'min:0', 'max:9999'],
                 'attachment_name' => ['nullable', 'string', 'max:500'],
                 'attachment_pages' => ['nullable', 'integer', 'min:0', 'max:9999'],
@@ -117,10 +121,10 @@ class DecreeController extends Controller
 
             Decree::query()->create([
                 'category' => $tab,
-                'kind' => $data['kind'],
-                'number' => $data['number'],
-                'title' => $data['title'],
-                'issued_on' => $data['issued_on'],
+                'kind' => $data['kind'] ?? $kinds[0],
+                'number' => $data['number'] ?? null,
+                'title' => $data['title'] ?? '',
+                'issued_on' => $data['issued_on'] ?? now()->toDateString(),
                 'page_count' => $data['page_count'] ?? null,
                 'attachment_name' => $data['attachment_name'] ?? null,
                 'attachment_pages' => $data['attachment_pages'] ?? null,
@@ -132,7 +136,72 @@ class DecreeController extends Controller
 
         return redirect()
             ->route('decrees.index', ['tab' => $tab])
-            ->with('success', 'Амжилттай хадгаллаа.');
+            ->with('success', 'Мөр нэмлээ.');
+    }
+
+    public function update(Request $request, Decree $decree): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canManage($request->user(), 'decrees'), 403);
+
+        $tab = array_key_exists($decree->category, self::TABS) ? $decree->category : 'blank';
+
+        if ($tab === 'blank') {
+            $data = $request->validate([
+                'person_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+                'issued_on' => ['sometimes', 'nullable', 'date'],
+                'qty_zahiramj' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:9999'],
+                'qty_zahiramj_mn' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:9999'],
+                'qty_tushaal' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:9999'],
+                'qty_tushaal_mn' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:9999'],
+                'qty_assignment' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:9999'],
+                'qty_assignment_mn' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:9999'],
+                'qty_council' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:9999'],
+                'qty_council_mn' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:9999'],
+                'num_zahiramj' => ['sometimes', 'nullable', 'string', 'max:100'],
+                'num_tushaal' => ['sometimes', 'nullable', 'string', 'max:100'],
+                'void_zahiramj' => ['sometimes', 'nullable', 'string', 'max:100'],
+                'void_tushaal' => ['sometimes', 'nullable', 'string', 'max:100'],
+                'body' => ['sometimes', 'nullable', 'string', 'max:5000'],
+            ]);
+
+            if (array_key_exists('person_name', $data)) {
+                $person = trim((string) ($data['person_name'] ?? ''));
+                $data['person_name'] = $person !== '' ? $person : null;
+                $data['title'] = $data['person_name'] ?? '';
+            }
+
+            if (array_key_exists('num_zahiramj', $data) || array_key_exists('num_tushaal', $data)) {
+                $numZ = array_key_exists('num_zahiramj', $data)
+                    ? $data['num_zahiramj']
+                    : $decree->num_zahiramj;
+                $numT = array_key_exists('num_tushaal', $data)
+                    ? $data['num_tushaal']
+                    : $decree->num_tushaal;
+                $data['blank_number'] = $numZ ?: $numT ?: null;
+            }
+
+            $decree->update($data);
+        } else {
+            $kinds = $tab === 'zahiramj'
+                ? ['zahiramj_a', 'zahiramj_b']
+                : ['tushaal_a', 'tushaal_b'];
+
+            $data = $request->validate([
+                'kind' => ['sometimes', 'nullable', Rule::in($kinds)],
+                'number' => ['sometimes', 'nullable', 'string', 'max:100'],
+                'title' => ['sometimes', 'nullable', 'string', 'max:1000'],
+                'issued_on' => ['sometimes', 'nullable', 'date'],
+                'page_count' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:9999'],
+                'attachment_name' => ['sometimes', 'nullable', 'string', 'max:500'],
+                'attachment_pages' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:9999'],
+                'person_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+                'body' => ['sometimes', 'nullable', 'string', 'max:20000'],
+            ]);
+
+            $decree->update($data);
+        }
+
+        return back(303)->with('success', 'Хадгаллаа.');
     }
 
     public function destroy(Request $request, Decree $decree): RedirectResponse
