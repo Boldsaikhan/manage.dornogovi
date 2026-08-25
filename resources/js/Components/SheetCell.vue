@@ -2,10 +2,10 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 
 const CATEGORY_FILTERS = [
-    { key: 'udirdlaga', label: 'Аймгийн удирдлагууд' },
-    { key: 'sum', label: 'Сум' },
-    { key: 'agentlag', label: 'Агентлаг' },
-    { key: 'baiguullaga', label: 'Байгууллага' },
+    { key: 'udirdlaga', label: 'Аймгийн удирдлагууд', short: 'Удирдлага' },
+    { key: 'sum', label: 'Сум', short: 'Сум' },
+    { key: 'agentlag', label: 'Агентлаг', short: 'Агентлаг' },
+    { key: 'baiguullaga', label: 'Байгууллага', short: 'Байгууллага' },
 ];
 
 const props = defineProps({
@@ -438,18 +438,19 @@ onBeforeUnmount(() => {
                         </button>
                     </div>
 
-                    <div class="flex flex-wrap gap-1.5">
+                    <div class="ui-pill-row flex flex-nowrap gap-1.5 overflow-x-auto">
                         <button
                             v-for="cat in CATEGORY_FILTERS"
                             :key="cat.key"
                             type="button"
-                            class="rounded-full border px-2.5 py-1 text-[11px] font-medium transition"
+                            class="shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-medium transition"
                             :class="categoryOn[cat.key]
                                 ? 'border-brand-navy-500 bg-brand-navy-600 text-white'
                                 : 'border-slate-200 bg-white text-slate-500 hover:border-brand-navy-300'"
+                            :title="cat.label"
                             @mousedown.prevent="categoryOn[cat.key] = ! categoryOn[cat.key]"
                         >
-                            {{ cat.label }}
+                            {{ cat.short ?? cat.label }}
                         </button>
                     </div>
 

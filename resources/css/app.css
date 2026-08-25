@@ -116,6 +116,15 @@
         @apply bg-sky-50;
     }
 
+    /* Сонголтын товчнууд нэг мөрөнд — багтахгүй бол хажуу тийш гүйнэ */
+    .ui-pill-row {
+        scrollbar-width: none;
+    }
+
+    .ui-pill-row::-webkit-scrollbar {
+        display: none;
+    }
+
     /* Урт бичвэрийг 2 мөрөнд багтаана — бүтэн утга title-аар */
     .ui-clamp-2 {
         display: -webkit-box;
