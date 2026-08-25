@@ -90,8 +90,17 @@ const removeRow = (taskId) => {
     router.delete(route('tasks.destroy', taskId), { preserveScroll: true });
 };
 
+const latestDocument = computed(() => props.documents?.[0] ?? null);
+
+const pickWordFile = () => {
+    fileInput.value?.click();
+};
+
 const onFileChange = (e) => {
     uploadForm.file = e.target.files?.[0] ?? null;
+    if (uploadForm.file) {
+        submitUpload();
+    }
 };
 
 const submitUpload = () => {
@@ -138,15 +147,41 @@ const formatSize = (bytes) => {
                     <h2 class="ui-title">Үүрэг даалгавар</h2>
                     <p class="ui-subtitle">Word файлын хүснэгтийг уншиж, мөр бүрийг шууд засварлана.</p>
                 </div>
-                <button
-                    v-if="canManage"
-                    type="button"
-                    class="ui-btn-accent"
-                    @click="addRow"
-                >
-                    Мөр нэмэх
-                </button>
+                <div class="flex flex-wrap items-center gap-2">
+                    <input
+                        ref="fileInput"
+                        type="file"
+                        accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        class="hidden"
+                        @change="onFileChange"
+                    />
+                    <button
+                        v-if="canManage"
+                        type="button"
+                        class="ui-btn-primary"
+                        :disabled="uploadForm.processing"
+                        @click="pickWordFile"
+                    >
+                        {{ uploadForm.processing ? 'Оруулж байна…' : 'Word оруулах' }}
+                    </button>
+                    <a
+                        v-if="latestDocument"
+                        :href="route('tasks.documents.download', latestDocument.id)"
+                        class="ui-btn-ghost"
+                    >
+                        Word татах
+                    </a>
+                    <button
+                        v-if="canManage"
+                        type="button"
+                        class="ui-btn-accent"
+                        @click="addRow"
+                    >
+                        Мөр нэмэх
+                    </button>
+                </div>
             </div>
+            <p v-if="uploadForm.errors.file" class="text-sm text-red-600">{{ uploadForm.errors.file }}</p>
 
             <div class="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
                 <Link
@@ -163,50 +198,16 @@ const formatSize = (bytes) => {
                 </Link>
             </div>
 
-            <!-- Word файлууд -->
-            <section class="ui-card-pad space-y-4">
-                <div class="flex flex-wrap items-end justify-between gap-3">
-                    <div>
-                        <h3 class="text-base font-semibold text-slate-800">Word файл</h3>
-                        <p class="mt-0.5 text-sm text-slate-500">
-                            .doc, .docx (хамгийн ихдээ 20 MB). .docx файлын хүснэгтийг оруулмагц доорх хүснэгт болгож уншина.
-                        </p>
-                    </div>
-                </div>
-
-                <form
-                    v-if="canManage"
-                    class="flex flex-wrap items-end gap-3"
-                    @submit.prevent="submitUpload"
-                >
-                    <div class="min-w-[220px] flex-1">
-                        <label class="mb-1 block text-xs font-medium text-slate-500">Файл сонгох</label>
-                        <input
-                            ref="fileInput"
-                            type="file"
-                            accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                            class="ui-input file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium"
-                            @change="onFileChange"
-                        />
-                        <p v-if="uploadForm.errors.file" class="mt-1 text-xs text-red-600">{{ uploadForm.errors.file }}</p>
-                    </div>
-                    <button
-                        type="submit"
-                        class="ui-btn-primary"
-                        :disabled="!uploadForm.file || uploadForm.processing"
-                    >
-                        {{ uploadForm.processing ? 'Оруулж байна…' : 'Оруулах' }}
-                    </button>
-                </form>
-
-                <ul v-if="documents.length" class="divide-y divide-slate-100 rounded-xl border border-slate-200">
+            <!-- Оруулсан Word файлын товч жагсаалт -->
+            <div v-if="documents.length" class="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                <ul class="divide-y divide-slate-100">
                     <li
                         v-for="doc in documents"
                         :key="doc.id"
-                        class="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                        class="flex flex-wrap items-center justify-between gap-3 py-2 first:pt-0 last:pb-0"
                     >
                         <div class="min-w-0">
-                            <p class="truncate font-medium text-slate-800">{{ doc.original_name }}</p>
+                            <p class="truncate text-sm font-medium text-slate-800">{{ doc.original_name }}</p>
                             <p class="text-xs text-slate-500">
                                 {{ formatSize(doc.size) }}
                                 <span v-if="doc.uploader"> · {{ doc.uploader }}</span>
@@ -217,7 +218,7 @@ const formatSize = (bytes) => {
                             <button
                                 v-if="canManage"
                                 type="button"
-                                class="ui-btn-primary !py-1.5 text-xs"
+                                class="ui-btn-ghost !py-1.5 text-xs"
                                 title="Файлын хүснэгтийг доорх хүснэгт болгож уншина"
                                 @click="importDocument(doc.id)"
                             >
@@ -232,18 +233,19 @@ const formatSize = (bytes) => {
                             <button
                                 v-if="canManage"
                                 type="button"
-                                class="ui-btn-danger !py-1.5 text-xs"
+                                class="ui-icon-btn"
+                                title="Устгах"
+                                aria-label="Устгах"
                                 @click="removeDocument(doc.id)"
                             >
-                                Устгах
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6" />
+                                </svg>
                             </button>
                         </div>
                     </li>
                 </ul>
-                <p v-else class="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-400">
-                    Одоогоор Word файл алга.
-                </p>
-            </section>
+            </div>
 
             <!-- Үүрэг чиглэл -->
             <div v-if="isDirective" class="ui-table-wrap overflow-x-auto">
