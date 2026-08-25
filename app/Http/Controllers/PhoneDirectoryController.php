@@ -148,7 +148,7 @@ class PhoneDirectoryController extends Controller
         $content = (string) file_get_contents($tmp);
         @unlink($tmp);
 
-        $fileName = 'Байгууллагын албан хаагчид '.now()->format('Y-m-d').'.docx';
+        $fileName = 'АЗДТГ-н албан хаагчид '.now()->format('Y-m-d').'.docx';
 
         return response($content, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',

@@ -76,7 +76,7 @@ class TaskController extends Controller
     }
 
     /**
-     * Утасны жагсаалт + байгууллагын албан хаагчдын нэрсийн сонголт.
+     * Утасны жагсаалт + АЗДТГ-н албан хаагчдын нэрсийн сонголт.
      *
      * @return array<int, array{value: string, label: string, hint: string, org: string, category: string}>
      */

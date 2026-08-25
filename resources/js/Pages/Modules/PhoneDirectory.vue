@@ -276,7 +276,7 @@ const closeDirectoryForm = () => {
                             Нийт {{ total }} бүртгэл.
                         </template>
                         <template v-else>
-                            Байгууллагын албан хаагчдын дэлгэрэнгүй утасны бүртгэл.
+                            АЗДТГ-н албан хаагчдын дэлгэрэнгүй утасны бүртгэл.
                             Нийт {{ staffTotal }} бүртгэл.
                         </template>
                     </p>
@@ -346,7 +346,7 @@ const closeDirectoryForm = () => {
                         ? 'bg-brand-navy-600 text-white shadow-md shadow-brand-navy-600/20'
                         : 'text-slate-600 hover:bg-slate-50'"
                 >
-                    Байгууллагын албан хаагчид
+                    АЗДТГ-н албан хаагчид
                     <span class="ml-1 opacity-70">{{ staffTotal }}</span>
                 </Link>
             </div>
@@ -657,7 +657,7 @@ const closeDirectoryForm = () => {
                 <div class="mb-5 flex items-start justify-between gap-3">
                     <div>
                         <h3 class="text-base font-semibold text-brand-navy-900">Шинэ бүртгэл</h3>
-                        <p class="mt-0.5 text-sm text-slate-500">Байгууллагын албан хаагч</p>
+                        <p class="mt-0.5 text-sm text-slate-500">АЗДТГ-н албан хаагч</p>
                     </div>
                     <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" @click="showStaffForm = false">✕</button>
                 </div>

@@ -11,7 +11,7 @@ class PhoneDirectoryDocxWriter
 
     private const HEADINGS = ['№', 'Овог нэр', 'Албан тушаал', 'Ажлын өрөөний утас', 'Гар утас'];
 
-    /** Байгууллагын албан хаагчдын дэлгэрэнгүй жагсаалт. */
+    /** АЗДТГ-н албан хаагчдын дэлгэрэнгүй жагсаалт. */
     private const STAFF_HEADINGS = [
         '№', 'Байгууллага', 'Нэгж', 'Албан тушаал', 'Овог', 'Нэр',
         'Өрөө', 'Ажлын утас', 'Гар утас', 'И-мэйл хаяг',
@@ -53,11 +53,11 @@ class PhoneDirectoryDocxWriter
     }
 
     /**
-     * Байгууллагын албан хаагчдын жагсаалт — хэвтээ хуудсаар.
+     * АЗДТГ-н албан хаагчдын жагсаалт — хэвтээ хуудсаар.
      *
      * @param  array<int, array<string, string|null>>  $staff
      */
-    public function writeStaff(array $staff, string $path, string $title = 'Байгууллагын албан хаагчдын утасны жагсаалт'): void
+    public function writeStaff(array $staff, string $path, string $title = 'АЗДТГ-н албан хаагчдын утасны жагсаалт'): void
     {
         $rows = [];
 
