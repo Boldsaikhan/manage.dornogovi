@@ -17,6 +17,7 @@ use App\Http\Controllers\PhoneDirectoryController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SystemViewController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\UndoController;
 use App\Http\Controllers\VaultController;
 use App\Http\Controllers\WorkGroupController;
 use Illuminate\Support\Facades\Route;
@@ -65,6 +66,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/modules/leaves/{leave}/slip', [LeaveSlipController::class, 'show'])->name('leaves.slip');
     Route::get('/modules/assignments', [ModuleResourceController::class, 'index'])->name('assignments.index');
     Route::get('/modules/regulations', [ModuleResourceController::class, 'index'])->name('regulations.index');
+    Route::post('/undo', [UndoController::class, 'store'])->name('undo.store');
+
     Route::get('/modules/decrees', [DecreeController::class, 'index'])->name('decrees.index');
     Route::get('/modules/decrees/print', [DecreeController::class, 'print'])->name('decrees.print');
     Route::post('/modules/decrees', [DecreeController::class, 'store'])->name('decrees.store');

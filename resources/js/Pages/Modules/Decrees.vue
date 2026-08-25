@@ -13,6 +13,7 @@ const props = defineProps({
     pendingOfficials: { type: Array, default: () => [] },
     nextNumber: { type: String, default: null },
     canManage: { type: Boolean, default: false },
+    undoCount: { type: Number, default: 0 },
 });
 
 const isBlank = computed(() => props.tab === 'blank');
@@ -66,6 +67,19 @@ const officialOptions = computed(() => {
 const canManage = computed(() => props.canManage);
 
 const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
+
+// Сүүлийн үйлдлийг буцаана (сервер дээр хадгалагддаг тул дахин ачаалсан ч ажиллана).
+const undoing = ref(false);
+
+const undo = () => {
+    if (undoing.value || props.undoCount < 1) return;
+
+    undoing.value = true;
+    router.post(route('undo.store'), {}, {
+        preserveScroll: true,
+        onFinish: () => (undoing.value = false),
+    });
+};
 
 const drafts = reactive({});
 
@@ -341,6 +355,20 @@ const docColumnCount = computed(() => {
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
+                    <button
+                        v-if="canManage"
+                        type="button"
+                        class="ui-btn-ghost"
+                        :disabled="undoCount < 1 || undoing"
+                        :title="undoCount ? 'Сүүлийн үйлдлийг буцаах' : 'Буцаах үйлдэл алга'"
+                        @click="undo"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path d="M9 14L4 9l5-5" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M4 9h10a6 6 0 010 12h-3" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        Буцаах<span v-if="undoCount"> ({{ undoCount }})</span>
+                    </button>
                     <a
                         :href="route('decrees.print', { tab })"
                         target="_blank"

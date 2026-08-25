@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Decree;
+use App\Models\EditUndo;
 use App\Models\DocumentFormat;
 use App\Models\PhoneDirectoryEntry;
 use App\Support\ModuleAccess;
@@ -80,6 +81,7 @@ class DecreeController extends Controller
             'pendingOfficials' => $this->pendingOfficialsForTab($tab),
             'nextNumber' => isset(self::KIND_TABS[$tab]) ? $this->nextDocumentNumber($tab) : null,
             'canManage' => ModuleAccess::canManage($request->user(), 'decrees'),
+            'undoCount' => EditUndo::query()->where('user_id', $request->user()->id)->count(),
         ]);
     }
 
@@ -391,13 +393,15 @@ class DecreeController extends Controller
                 'qty_zahiramj', 'qty_zahiramj_mn', 'qty_tushaal', 'qty_tushaal_mn',
                 'qty_assignment', 'qty_assignment_mn', 'qty_council', 'qty_council_mn',
                 'num_zahiramj', 'num_tushaal',
+                // Нэр цэвэрлэгдвэл мөрийн бүх утга дагаж цэвэрлэгдэнэ.
+                'person_name',
             ]);
 
             if ($qtyTouched) {
                 $data = $this->applyBlankNumbering($data, $decree);
             }
 
-            $decree->update($data);
+            $this->saveWithUndo($request, $decree, $data);
         } else {
             $data = $request->validate([
                 'kind' => ['sometimes', 'nullable', Rule::in(self::DOC_KINDS)],
@@ -429,10 +433,63 @@ class DecreeController extends Controller
                 $data['issued_on'] = null;
             }
 
-            $decree->update($data);
+            $this->saveWithUndo($request, $decree, $data);
         }
 
         return back(303)->with('success', 'Хадгаллаа.');
+    }
+
+    /**
+     * Өөрчлөлтийг хадгалахын өмнө өмнөх утгуудыг «Буцаах» түүхэнд бичнэ.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function saveWithUndo(Request $request, Decree $decree, array $data): void
+    {
+        $decree->fill($data);
+        $dirty = $decree->getDirty();
+
+        if (! $dirty) {
+            return;
+        }
+
+        $original = [];
+        foreach (array_keys($dirty) as $field) {
+            $original[$field] = $decree->getOriginal($field);
+        }
+
+        EditUndo::record(
+            $request->user(),
+            $decree,
+            $original,
+            'Захирамж, тушаал',
+            $this->undoSummary($decree, $dirty),
+        );
+
+        $decree->save();
+    }
+
+    /**
+     * @param  array<string, mixed>  $dirty
+     */
+    private function undoSummary(Decree $decree, array $dirty): string
+    {
+        $labels = [
+            'person_name' => 'Ажилтны нэр',
+            'number' => 'Дугаар',
+            'title' => 'Гарчиг',
+            'issued_on' => 'Огноо',
+            'page_count' => 'Хуудасны тоо',
+            'attachment_name' => 'Хавсралт',
+            'qty_zahiramj' => 'Захирамжийн тоо',
+            'qty_tushaal' => 'Тушаалын тоо',
+        ];
+
+        $first = array_key_first($dirty);
+        $name = $labels[$first] ?? $first;
+        $count = count($dirty);
+
+        return $count > 1 ? $name.' болон бусад '.($count - 1) : $name;
     }
 
     public function destroy(Request $request, Decree $decree): RedirectResponse
