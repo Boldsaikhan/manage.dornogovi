@@ -29,6 +29,9 @@ PHP_FPM="${PHP_FPM:-php8.3-fpm}"
 exec 9>"${LOCK}"
 flock -n 9 || exit 0
 
+# Cron-ийн PATH ихэвчлэн богино байдаг.
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
+
 git config --global --add safe.directory "${SRC_DIR}" 2>/dev/null || true
 
 cd "${SRC_DIR}"
@@ -41,6 +44,16 @@ if [ "${LOCAL}" = "${REMOTE}" ]; then
     exit 0   # шинэ өөрчлөлт алга
 fi
 
+# rsync/composer/npm root-оор ажилладаг тул ямар ч алдаа гарсан ч эзэмшигчийг
+# ${WEB_USER} руу буцаана — эс бөгөөс PHP-FPM storage-д бичиж чадахгүй, 500 өгнө.
+fix_ownership() {
+    if [ -d "${WEB_ROOT}" ]; then
+        chown -R "${WEB_USER}:${WEB_USER}" "${WEB_ROOT}" 2>/dev/null || true
+        find "${WEB_ROOT}/storage" "${WEB_ROOT}/bootstrap/cache" -type d -exec chmod 775 {} \; 2>/dev/null || true
+    fi
+}
+trap fix_ownership EXIT
+
 echo "==> $(date '+%F %T') шинэчлэл: ${LOCAL:0:7} -> ${REMOTE:0:7}"
 git reset --hard --quiet "origin/${BRANCH}"
 
@@ -52,19 +65,15 @@ rsync -a --delete \
 cd "${WEB_ROOT}"
 
 composer install --no-dev --optimize-autoloader --no-interaction --quiet
-npm ci --silent
-npm run build --silent
+
+# vite нь devDependencies-д байгаа тул production горимд алгасахгүй.
+npm ci --include=dev
+npm run build
 
 php artisan migrate --force
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
-
-# rsync болон artisan-ыг root-оор ажиллуулсан тул файлууд root эзэмшилтэй үлддэг.
-# PHP-FPM нь ${WEB_USER}-ээр ажилладаг тул storage/cache-д бичиж чадахгүй болж
-# 500 алдаа өгнө. Тиймээс БҮХ веб root-ыг буцааж эзэмшүүлнэ.
-chown -R "${WEB_USER}:${WEB_USER}" "${WEB_ROOT}"
-find "${WEB_ROOT}/storage" "${WEB_ROOT}/bootstrap/cache" -type d -exec chmod 775 {} \;
 
 systemctl reload "${PHP_FPM}" 2>/dev/null || true
 echo "==> $(date '+%F %T') дууслаа."
