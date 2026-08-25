@@ -139,6 +139,37 @@
         field-sizing: content;
     }
 
+    /* Google Sheets маягийн нүд — дарахад бүтэн нүд засах горим */
+    .ui-table td.ui-sheet-td {
+        @apply p-0 align-top;
+    }
+
+    .ui-sheet-cell {
+        @apply relative min-h-[2.35rem] w-full;
+    }
+
+    .ui-sheet-cell.is-editable {
+        cursor: cell;
+    }
+
+    .ui-sheet-cell.is-editable:hover:not(.is-editing) {
+        @apply bg-sky-50/80;
+    }
+
+    .ui-sheet-cell.is-editing {
+        @apply z-[1] bg-white ring-2 ring-inset ring-brand-navy-500/35;
+    }
+
+    .ui-sheet-display {
+        @apply px-1.5 py-1 text-sm leading-snug text-slate-800;
+    }
+
+    .ui-sheet-editor {
+        @apply block w-full min-h-[2.35rem] resize-none border-0 bg-transparent px-1.5 py-1
+            text-sm leading-snug text-slate-800 shadow-none outline-none ring-0
+            focus:border-0 focus:outline-none focus:ring-0;
+    }
+
     .ui-icon-btn {
         @apply inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition
             hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/20;

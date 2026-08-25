@@ -2,6 +2,7 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import SheetCell from '@/Components/SheetCell.vue';
 
 const props = defineProps({
     kind: { type: String, required: true },
@@ -325,92 +326,52 @@ const prepTableMinWidth = computed(() => {
                     <tbody>
                         <tr v-for="task in tasks" :key="task.id">
                             <td class="text-center font-semibold text-slate-500">{{ task.no }}</td>
-                            <td class="!align-top">
-                                <textarea
-                                    v-if="canManage && drafts[task.id]"
+                            <td class="ui-sheet-td">
+                                <SheetCell
+                                    v-if="drafts[task.id]"
                                     v-model="drafts[task.id].text"
-                                    rows="2"
-                                    class="ui-table-input-2"
-                                    :title="drafts[task.id].text"
-                                    @change="saveField(task.id, 'text', drafts[task.id].text)"
+                                    multiline
+                                    :editable="canManage"
+                                    @commit="(v) => saveField(task.id, 'text', v)"
                                 />
-                                <div
-                                    v-else
-                                    class="ui-clamp-2 px-1 py-0.5"
-                                    :title="task.text || ''"
-                                >
-                                    {{ task.text || '—' }}
-                                </div>
                             </td>
-                            <td>
-                                <input
-                                    v-if="canManage && drafts[task.id]"
+                            <td class="ui-sheet-td">
+                                <SheetCell
+                                    v-if="drafts[task.id]"
                                     v-model="drafts[task.id].responsible"
-                                    class="ui-table-input"
-                                    :title="drafts[task.id].responsible"
-                                    @change="saveField(task.id, 'responsible', drafts[task.id].responsible)"
+                                    :editable="canManage"
+                                    @commit="(v) => saveField(task.id, 'responsible', v)"
                                 />
-                                <span
-                                    v-else
-                                    class="ui-clamp-2 block px-1 py-0.5"
-                                    :title="task.responsible || ''"
-                                >{{ task.responsible || '—' }}</span>
                             </td>
-                            <td>
-                                <input
-                                    v-if="canManage && drafts[task.id]"
+                            <td class="ui-sheet-td">
+                                <SheetCell
+                                    v-if="drafts[task.id]"
                                     v-model="drafts[task.id].collaborator"
-                                    class="ui-table-input"
-                                    :title="drafts[task.id].collaborator"
-                                    @change="saveField(task.id, 'collaborator', drafts[task.id].collaborator)"
+                                    :editable="canManage"
+                                    @commit="(v) => saveField(task.id, 'collaborator', v)"
                                 />
-                                <span
-                                    v-else
-                                    class="ui-clamp-2 block px-1 py-0.5"
-                                    :title="task.collaborator || ''"
-                                >{{ task.collaborator || '—' }}</span>
                             </td>
-                            <td>
-                                <textarea
-                                    v-if="canManage && drafts[task.id]"
+                            <td class="ui-sheet-td">
+                                <SheetCell
+                                    v-if="drafts[task.id]"
                                     v-model="drafts[task.id].note"
-                                    rows="2"
-                                    class="ui-table-input-2"
+                                    multiline
                                     placeholder="Хэрэгжилт…"
-                                    :title="drafts[task.id].note"
-                                    @change="saveField(task.id, 'note', drafts[task.id].note)"
+                                    :editable="canManage"
+                                    @commit="(v) => saveField(task.id, 'note', v)"
                                 />
-                                <div
-                                    v-else
-                                    class="ui-clamp-2 px-1 py-0.5"
-                                    :title="task.note || ''"
-                                >
-                                    {{ task.note || '—' }}
-                                </div>
                             </td>
-                            <td class="text-center align-middle">
-                                <div v-if="canManage && drafts[task.id]" class="inline-flex items-center gap-0.5">
-                                    <input
-                                        v-model.number="drafts[task.id].progress"
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        class="ui-table-input !w-14 text-center font-semibold"
-                                        @change="saveProgress(task.id)"
-                                    />
-                                    <span class="text-xs font-medium text-slate-500">%</span>
-                                </div>
-                                <span
-                                    v-else
-                                    class="inline-flex min-w-[3rem] justify-center rounded-full px-2 py-0.5 text-xs font-semibold"
-                                    :class="(task.progress ?? 0) >= 100
-                                        ? 'bg-emerald-100 text-emerald-700'
-                                        : (task.progress ?? 0) > 0
-                                            ? 'bg-amber-100 text-amber-800'
-                                            : 'bg-slate-100 text-slate-600'"
+                            <td class="ui-sheet-td text-center">
+                                <SheetCell
+                                    v-if="drafts[task.id]"
+                                    v-model="drafts[task.id].progress"
+                                    type="number"
+                                    align="center"
+                                    :editable="canManage"
+                                    @commit="() => saveProgress(task.id)"
                                 >
-                                    {{ task.progress ?? 0 }}%
-                                </span>
+                                    {{ drafts[task.id].progress ?? 0 }}%
+                                </SheetCell>
                             </td>
                             <td v-if="canManage" class="text-center align-middle">
                                 <button
@@ -468,116 +429,68 @@ const prepTableMinWidth = computed(() => {
                     <tbody>
                         <tr v-for="task in tasks" :key="task.id">
                             <td class="text-center font-semibold text-slate-500">{{ task.no }}</td>
-                            <td>
-                                <input
-                                    v-if="canManage && drafts[task.id]"
+                            <td class="ui-sheet-td">
+                                <SheetCell
+                                    v-if="drafts[task.id]"
                                     v-model="drafts[task.id].sector"
-                                    class="ui-table-input"
-                                    :title="drafts[task.id].sector"
-                                    @change="saveField(task.id, 'sector', drafts[task.id].sector)"
+                                    :editable="canManage"
+                                    @commit="(v) => saveField(task.id, 'sector', v)"
                                 />
-                                <span
-                                    v-else
-                                    class="ui-clamp-2 block px-1 py-0.5"
-                                    :title="task.sector || ''"
-                                >{{ task.sector || '—' }}</span>
                             </td>
-                            <td>
-                                <textarea
-                                    v-if="canManage && drafts[task.id]"
+                            <td class="ui-sheet-td">
+                                <SheetCell
+                                    v-if="drafts[task.id]"
                                     v-model="drafts[task.id].text"
-                                    rows="2"
-                                    class="ui-table-input-2"
-                                    :title="drafts[task.id].text"
-                                    @change="saveField(task.id, 'text', drafts[task.id].text)"
+                                    multiline
+                                    :editable="canManage"
+                                    @commit="(v) => saveField(task.id, 'text', v)"
                                 />
-                                <span
-                                    v-else
-                                    class="ui-clamp-2 block px-1 py-0.5"
-                                    :title="task.text || ''"
-                                >{{ task.text || '—' }}</span>
                             </td>
-                            <td>
-                                <input
-                                    v-if="canManage && drafts[task.id]"
+                            <td class="ui-sheet-td">
+                                <SheetCell
+                                    v-if="drafts[task.id]"
                                     v-model="drafts[task.id].period"
-                                    class="ui-table-input"
-                                    :title="drafts[task.id].period"
-                                    @change="saveField(task.id, 'period', drafts[task.id].period)"
+                                    :editable="canManage"
+                                    @commit="(v) => saveField(task.id, 'period', v)"
                                 />
-                                <span
-                                    v-else
-                                    class="ui-clamp-2 block px-1 py-0.5"
-                                    :title="task.period || ''"
-                                >{{ task.period || '—' }}</span>
                             </td>
-                            <td>
-                                <input
-                                    v-if="canManage && drafts[task.id]"
+                            <td class="ui-sheet-td">
+                                <SheetCell
+                                    v-if="drafts[task.id]"
                                     v-model="drafts[task.id].responsible"
-                                    class="ui-table-input"
-                                    :title="drafts[task.id].responsible"
-                                    @change="saveField(task.id, 'responsible', drafts[task.id].responsible)"
+                                    :editable="canManage"
+                                    @commit="(v) => saveField(task.id, 'responsible', v)"
                                 />
-                                <span
-                                    v-else
-                                    class="ui-clamp-2 block px-1 py-0.5"
-                                    :title="task.responsible || ''"
-                                >{{ task.responsible || '—' }}</span>
                             </td>
-                            <td>
-                                <input
-                                    v-if="canManage && drafts[task.id]"
+                            <td class="ui-sheet-td">
+                                <SheetCell
+                                    v-if="drafts[task.id]"
                                     v-model="drafts[task.id].collaborator"
-                                    class="ui-table-input"
-                                    :title="drafts[task.id].collaborator"
-                                    @change="saveField(task.id, 'collaborator', drafts[task.id].collaborator)"
+                                    :editable="canManage"
+                                    @commit="(v) => saveField(task.id, 'collaborator', v)"
                                 />
-                                <span
-                                    v-else
-                                    class="ui-clamp-2 block px-1 py-0.5"
-                                    :title="task.collaborator || ''"
-                                >{{ task.collaborator || '—' }}</span>
                             </td>
-                            <td>
-                                <textarea
-                                    v-if="canManage && drafts[task.id]"
+                            <td class="ui-sheet-td">
+                                <SheetCell
+                                    v-if="drafts[task.id]"
                                     v-model="drafts[task.id].note"
-                                    rows="2"
-                                    class="ui-table-input-2"
+                                    multiline
                                     placeholder="Хэрэгжилт…"
-                                    :title="drafts[task.id].note"
-                                    @change="saveField(task.id, 'note', drafts[task.id].note)"
+                                    :editable="canManage"
+                                    @commit="(v) => saveField(task.id, 'note', v)"
                                 />
-                                <span
-                                    v-else
-                                    class="ui-clamp-2 block px-1 py-0.5"
-                                    :title="task.note || ''"
-                                >{{ task.note || '—' }}</span>
                             </td>
-                            <td class="text-center align-middle">
-                                <div v-if="canManage && drafts[task.id]" class="inline-flex items-center gap-0.5">
-                                    <input
-                                        v-model.number="drafts[task.id].progress"
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        class="ui-table-input !w-14 text-center font-semibold"
-                                        @change="saveProgress(task.id)"
-                                    />
-                                    <span class="text-xs font-medium text-slate-500">%</span>
-                                </div>
-                                <span
-                                    v-else
-                                    class="inline-flex min-w-[3rem] justify-center rounded-full px-2 py-0.5 text-xs font-semibold"
-                                    :class="(task.progress ?? 0) >= 100
-                                        ? 'bg-emerald-100 text-emerald-700'
-                                        : (task.progress ?? 0) > 0
-                                            ? 'bg-amber-100 text-amber-800'
-                                            : 'bg-slate-100 text-slate-600'"
+                            <td class="ui-sheet-td text-center">
+                                <SheetCell
+                                    v-if="drafts[task.id]"
+                                    v-model="drafts[task.id].progress"
+                                    type="number"
+                                    align="center"
+                                    :editable="canManage"
+                                    @commit="() => saveProgress(task.id)"
                                 >
-                                    {{ task.progress ?? 0 }}%
-                                </span>
+                                    {{ drafts[task.id].progress ?? 0 }}%
+                                </SheetCell>
                             </td>
                             <td v-if="canManage" class="text-center align-middle">
                                 <button
