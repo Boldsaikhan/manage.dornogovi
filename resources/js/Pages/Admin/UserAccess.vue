@@ -1,6 +1,6 @@
 <script setup>
-import { computed, reactive, ref } from 'vue';
-import { useForm, router } from '@inertiajs/vue3';
+import { computed, reactive, ref, watch } from 'vue';
+import { useForm, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 const props = defineProps({
@@ -8,6 +8,29 @@ const props = defineProps({
     departments: Array,
     modules: Array,
 });
+
+const page = usePage();
+
+const notice = computed(() => {
+    const flash = page.props.flash ?? {};
+    if (flash.success) {
+        return { type: 'success', text: flash.success };
+    }
+    if (flash.warning) {
+        return { type: 'warning', text: flash.warning };
+    }
+    if (flash.info) {
+        return { type: 'info', text: flash.info };
+    }
+
+    return null;
+});
+
+const noticeClass = computed(() => ({
+    success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+    warning: 'border-amber-200 bg-amber-50 text-amber-900',
+    info: 'border-sky-200 bg-sky-50 text-sky-800',
+}[notice.value?.type] ?? ''));
 
 const selectedId = ref(props.users[0]?.id ?? null);
 const selected = computed(() => props.users.find((u) => u.id === selectedId.value) || null);
@@ -53,6 +76,10 @@ const loadSelected = () => {
 
 loadSelected();
 
+watch(() => props.users, () => {
+    loadSelected();
+}, { deep: true });
+
 const selectUser = (id) => {
     selectedId.value = id;
     loadSelected();
@@ -68,7 +95,10 @@ const setLevel = (key, level) => {
 
 const saveUser = () => {
     if (!selected.value) return;
-    router.patch(route('admin.users.update', selected.value.id), { ...editState }, { preserveScroll: true });
+    router.patch(route('admin.users.update', selected.value.id), { ...editState }, {
+        preserveScroll: true,
+        onSuccess: () => loadSelected(),
+    });
 };
 
 const createUser = () => {
@@ -81,6 +111,10 @@ const createUser = () => {
 
 <template>
     <AuthenticatedLayout title="Хандах эрх">
+        <div v-if="notice" class="mb-4 rounded-xl border px-4 py-3 text-sm shadow-sm" :class="noticeClass">
+            {{ notice.text }}
+        </div>
+
         <div class="grid gap-4 lg:grid-cols-[280px_1fr]">
             <div class="ui-card overflow-hidden">
                 <div class="border-b border-slate-100 px-4 py-3 text-sm font-bold text-brand-navy-800">Албан хаагчид</div>

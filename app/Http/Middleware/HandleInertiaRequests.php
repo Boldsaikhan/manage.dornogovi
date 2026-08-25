@@ -41,6 +41,8 @@ class HandleInertiaRequests extends Middleware
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
+                'info' => fn () => $request->session()->get('info'),
+                'warning' => fn () => $request->session()->get('warning'),
             ],
             'vault' => fn () => [
                 'unlocked' => Vault::isUnlocked($request),

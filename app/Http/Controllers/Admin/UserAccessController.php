@@ -72,7 +72,7 @@ class UserAccessController extends Controller
             'is_specialist' => $request->boolean('is_specialist'),
         ]);
 
-        return back()->with('success', 'Албан хаагч нэмлээ.');
+        return back()->with('success', sprintf('«%s» нэмэгдлээ. Эрхийг дээрээс тохируулна уу.', $data['name']));
     }
 
     public function update(Request $request, User $user): RedirectResponse
@@ -91,6 +91,23 @@ class UserAccessController extends Controller
             'permissions.*' => ['in:view,manage'],
         ]);
 
+        $beforePermissions = $user->modulePermissions
+            ->mapWithKeys(fn (UserModulePermission $p) => [$p->module_key => $p->level])
+            ->all();
+
+        $beforeProfile = [
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'department_id' => $user->department_id,
+            'position' => $user->position,
+            'is_admin' => (bool) $user->is_admin,
+            'is_department_head' => (bool) $user->is_department_head,
+            'is_specialist' => (bool) $user->is_specialist,
+        ];
+
+        $passwordChanged = ! empty($data['password']);
+
         $user->fill([
             'name' => $data['name'],
             'email' => $data['email'],
@@ -102,7 +119,7 @@ class UserAccessController extends Controller
             'is_specialist' => $request->boolean('is_specialist'),
         ]);
 
-        if (! empty($data['password'])) {
+        if ($passwordChanged) {
             $user->password = $data['password'];
         }
 
@@ -120,6 +137,114 @@ class UserAccessController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Эрх шинэчиллээ.');
+        $profileChanges = $this->profileChangeLines($beforeProfile, [
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'phone' => $data['phone'] ?? null,
+            'department_id' => $data['department_id'] ?? null,
+            'position' => $data['position'] ?? null,
+            'is_admin' => $request->boolean('is_admin'),
+            'is_department_head' => $request->boolean('is_department_head'),
+            'is_specialist' => $request->boolean('is_specialist'),
+        ], $passwordChanged);
+
+        $permissionChanges = $this->permissionChangeLines($beforePermissions, $permissions);
+
+        if ($profileChanges === [] && $permissionChanges === []) {
+            return back()->with('info', 'Өөрчлөлт оруулаагүй байна.');
+        }
+
+        $parts = [];
+        if ($profileChanges !== []) {
+            $parts[] = 'Профайл: '.implode('; ', $profileChanges);
+        }
+        if ($permissionChanges !== []) {
+            $parts[] = 'Эрх: '.implode('; ', $permissionChanges);
+        }
+
+        $flashKey = $profileChanges !== [] && $permissionChanges !== []
+            ? 'success'
+            : ($permissionChanges !== [] ? 'warning' : 'success');
+
+        return back()->with($flashKey, implode('. ', $parts).'.');
+    }
+
+    /**
+     * @param  array<string, mixed>  $before
+     * @param  array<string, mixed>  $after
+     * @return array<int, string>
+     */
+    private function profileChangeLines(array $before, array $after, bool $passwordChanged): array
+    {
+        $lines = [];
+
+        if ($before['name'] !== $after['name']) {
+            $lines[] = 'нэр';
+        }
+        if ($before['email'] !== $after['email']) {
+            $lines[] = 'и-мэйл';
+        }
+        if (($before['phone'] ?? null) !== ($after['phone'] ?? null)) {
+            $lines[] = 'утас';
+        }
+        if (($before['department_id'] ?? null) != ($after['department_id'] ?? null)) {
+            $lines[] = 'хэлтэс';
+        }
+        if (($before['position'] ?? null) !== ($after['position'] ?? null)) {
+            $lines[] = 'албан тушаал';
+        }
+        if ($before['is_admin'] !== $after['is_admin']) {
+            $lines[] = $after['is_admin'] ? 'супер админ нэмэгдлээ' : 'супер админ хасагдлаа';
+        }
+        if ($before['is_department_head'] !== $after['is_department_head']) {
+            $lines[] = $after['is_department_head'] ? 'хэлтсийн дарга боллоо' : 'хэлтсийн дарга эрх хасагдлаа';
+        }
+        if ($before['is_specialist'] !== $after['is_specialist']) {
+            $lines[] = $after['is_specialist'] ? 'мэргэжилтэн боллоо' : 'мэргэжилтэн эрх хасагдлаа';
+        }
+        if ($passwordChanged) {
+            $lines[] = 'нууц үг солигдлоо';
+        }
+
+        return $lines;
+    }
+
+    /**
+     * @param  array<string, string>  $before
+     * @param  array<string, string>  $after
+     * @return array<int, string>
+     */
+    private function permissionChangeLines(array $before, array $after): array
+    {
+        $keys = array_unique([...array_keys($before), ...array_keys($after)]);
+        $lines = [];
+
+        foreach ($keys as $key) {
+            $old = $before[$key] ?? null;
+            $new = $after[$key] ?? null;
+
+            if ($old === $new) {
+                continue;
+            }
+
+            $label = ModuleAccess::find($key)['label'] ?? $key;
+            $lines[] = sprintf(
+                '%s (%s → %s)',
+                $label,
+                $this->levelLabel($old),
+                $this->levelLabel($new),
+            );
+        }
+
+        return $lines;
+    }
+
+    private function levelLabel(?string $level): string
+    {
+        return match ($level) {
+            'manage' => 'Удирдах',
+            'view' => 'Харах',
+            default => 'Хаалттай',
+        };
     }
 }
