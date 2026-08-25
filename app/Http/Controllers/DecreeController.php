@@ -12,36 +12,39 @@ use Inertia\Response;
 
 class DecreeController extends Controller
 {
+    /** Бланкны дугаар | Захирамжийн дугаар | Тушаалын дугаар */
     private const TABS = [
-        'zahiramj' => 'Захирамж',
-        'tushaal' => 'Тушаал',
-        'all' => 'Нийт',
+        'blank' => 'Бланкны дугаар',
+        'zahiramj' => 'Захирамжийн дугаар',
+        'tushaal' => 'Тушаалын дугаар',
     ];
 
     public function index(Request $request): Response
     {
         abort_unless(ModuleAccess::canView($request->user(), 'decrees'), 403);
 
-        $tab = (string) $request->query('tab', 'zahiramj');
+        $tab = (string) $request->query('tab', 'blank');
+        // Хуучин «all» → бланк
+        if ($tab === 'all') {
+            $tab = 'blank';
+        }
         if (! array_key_exists($tab, self::TABS)) {
-            $tab = 'zahiramj';
+            $tab = 'blank';
         }
 
         $counts = [
+            'blank' => Decree::query()->where('category', 'blank')->count(),
             'zahiramj' => Decree::query()->where('category', 'zahiramj')->count(),
             'tushaal' => Decree::query()->where('category', 'tushaal')->count(),
-            'all' => Decree::query()->where('category', 'blank')->count(),
         ];
 
-        $query = Decree::query()->latest('id')->limit(300);
-
-        if ($tab === 'all') {
-            $query->where('category', 'blank');
-        } else {
-            $query->where('category', $tab);
-        }
-
-        $rows = $query->get()->values()->map(fn (Decree $d, int $i) => $this->serialize($d, $i + 1));
+        $rows = Decree::query()
+            ->where('category', $tab)
+            ->latest('id')
+            ->limit(300)
+            ->get()
+            ->values()
+            ->map(fn (Decree $d, int $i) => $this->serialize($d, $i + 1));
 
         return Inertia::render('Modules/Decrees', [
             'tab' => $tab,
@@ -59,12 +62,15 @@ class DecreeController extends Controller
     {
         abort_unless(ModuleAccess::canManage($request->user(), 'decrees'), 403);
 
-        $tab = (string) $request->input('tab', 'zahiramj');
+        $tab = (string) $request->input('tab', 'blank');
+        if ($tab === 'all') {
+            $tab = 'blank';
+        }
         if (! array_key_exists($tab, self::TABS)) {
-            $tab = 'zahiramj';
+            $tab = 'blank';
         }
 
-        if ($tab === 'all') {
+        if ($tab === 'blank') {
             $data = $request->validate([
                 'person_name' => ['required', 'string', 'max:255'],
                 'issued_on' => ['required', 'date'],
@@ -100,38 +106,26 @@ class DecreeController extends Controller
             $data = $request->validate([
                 'kind' => ['required', Rule::in($kinds)],
                 'number' => ['required', 'string', 'max:100'],
-                'title' => ['required', 'string', 'max:500'],
-                'blank_number' => ['nullable', 'string', 'max:100'],
-                'issued_on' => ['nullable', 'date'],
-                // Стандарт хүснэгтийн холбогдох талбарууд
+                'title' => ['required', 'string', 'max:1000'],
+                'issued_on' => ['required', 'date'],
+                'page_count' => ['nullable', 'integer', 'min:0', 'max:9999'],
+                'attachment_name' => ['nullable', 'string', 'max:500'],
+                'attachment_pages' => ['nullable', 'integer', 'min:0', 'max:9999'],
                 'person_name' => ['nullable', 'string', 'max:255'],
-                'qty' => ['nullable', 'integer', 'min:0', 'max:9999'],
-                'qty_mn' => ['nullable', 'integer', 'min:0', 'max:9999'],
-                'sheet_number' => ['nullable', 'string', 'max:100'],
-                'void_number' => ['nullable', 'string', 'max:100'],
                 'body' => ['nullable', 'string', 'max:20000'],
             ]);
 
-            // Тухайн төрлийн (захирамж/тушаал) баганад буулгана.
-            $isZahiramj = $tab === 'zahiramj';
-
             Decree::query()->create([
+                'category' => $tab,
                 'kind' => $data['kind'],
                 'number' => $data['number'],
                 'title' => $data['title'],
-                'blank_number' => $data['blank_number'] ?? null,
-                'issued_on' => $data['issued_on'] ?? null,
-                'body' => $data['body'] ?? null,
+                'issued_on' => $data['issued_on'],
+                'page_count' => $data['page_count'] ?? null,
+                'attachment_name' => $data['attachment_name'] ?? null,
+                'attachment_pages' => $data['attachment_pages'] ?? null,
                 'person_name' => $data['person_name'] ?? null,
-                'qty_zahiramj' => $isZahiramj ? ($data['qty'] ?? 0) : 0,
-                'qty_zahiramj_mn' => $isZahiramj ? ($data['qty_mn'] ?? 0) : 0,
-                'qty_tushaal' => $isZahiramj ? 0 : ($data['qty'] ?? 0),
-                'qty_tushaal_mn' => $isZahiramj ? 0 : ($data['qty_mn'] ?? 0),
-                'num_zahiramj' => $isZahiramj ? ($data['sheet_number'] ?? null) : null,
-                'num_tushaal' => $isZahiramj ? null : ($data['sheet_number'] ?? null),
-                'void_zahiramj' => $isZahiramj ? ($data['void_number'] ?? null) : null,
-                'void_tushaal' => $isZahiramj ? null : ($data['void_number'] ?? null),
-                'category' => $tab,
+                'body' => $data['body'] ?? null,
                 'created_by' => $request->user()->id,
             ]);
         }
@@ -145,7 +139,7 @@ class DecreeController extends Controller
     {
         abort_unless(ModuleAccess::canManage($request->user(), 'decrees'), 403);
 
-        $tab = $decree->category === 'blank' ? 'all' : $decree->category;
+        $tab = array_key_exists($decree->category, self::TABS) ? $decree->category : 'blank';
         $decree->delete();
 
         return redirect()
@@ -167,6 +161,9 @@ class DecreeController extends Controller
             'blank_number' => $d->blank_number,
             'number' => $d->number,
             'title' => $d->title,
+            'page_count' => $d->page_count,
+            'attachment_name' => $d->attachment_name,
+            'attachment_pages' => $d->attachment_pages,
             'person_name' => $d->person_name,
             'qty_zahiramj' => $d->qty_zahiramj ?: '',
             'qty_zahiramj_mn' => $d->qty_zahiramj_mn ?: '',
@@ -181,6 +178,7 @@ class DecreeController extends Controller
             'void_zahiramj' => $d->void_zahiramj,
             'void_tushaal' => $d->void_tushaal,
             'issued_on' => optional($d->issued_on)?->format('Y-m-d'),
+            'issued_on_display' => optional($d->issued_on)?->format('Y.m.d'),
             'body' => $d->body,
         ];
     }

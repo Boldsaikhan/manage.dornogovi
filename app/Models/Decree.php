@@ -8,9 +8,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Decree extends Model
 {
     public const CATEGORIES = [
-        'zahiramj' => 'Захирамж',
-        'tushaal' => 'Тушаал',
-        'blank' => 'Нийт (хэвлэмэл)',
+        'blank' => 'Бланкны дугаар',
+        'zahiramj' => 'Захирамжийн дугаар',
+        'tushaal' => 'Тушаалын дугаар',
     ];
 
     public const KINDS = [
@@ -27,6 +27,9 @@ class Decree extends Model
         'blank_number',
         'number',
         'title',
+        'page_count',
+        'attachment_name',
+        'attachment_pages',
         'person_name',
         'qty_zahiramj',
         'qty_zahiramj_mn',
@@ -50,6 +53,8 @@ class Decree extends Model
     {
         return [
             'issued_on' => 'date',
+            'page_count' => 'integer',
+            'attachment_pages' => 'integer',
             'qty_zahiramj' => 'integer',
             'qty_zahiramj_mn' => 'integer',
             'qty_tushaal' => 'integer',
@@ -69,7 +74,7 @@ class Decree extends Model
     public function kindLabel(): string
     {
         if ($this->category === 'blank' || $this->kind === 'blank') {
-            return 'Хэвлэмэл';
+            return 'Бланк';
         }
 
         return self::KINDS[$this->kind] ?? ($this->kind ?: '—');

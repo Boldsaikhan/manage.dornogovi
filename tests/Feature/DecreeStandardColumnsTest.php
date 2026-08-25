@@ -12,40 +12,65 @@ class DecreeStandardColumnsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_zahiramj_row_carries_standard_columns(): void
+    public function test_blank_number_tab_stores_printed_form_fields(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->post(route('decrees.store'), [
+            'tab' => 'blank',
+            'person_name' => 'Б.Батбаяр',
+            'issued_on' => '2026-08-25',
+            'qty_zahiramj' => 5,
+            'qty_zahiramj_mn' => 2,
+            'num_zahiramj' => '810-814',
+            'void_zahiramj' => '811',
+        ])->assertRedirect(route('decrees.index', ['tab' => 'blank']));
+
+        $decree = Decree::query()->firstOrFail();
+        $this->assertSame('blank', $decree->category);
+        $this->assertSame(5, $decree->qty_zahiramj);
+        $this->assertSame('810-814', $decree->num_zahiramj);
+
+        $this->actingAs($admin)
+            ->get(route('decrees.index', ['tab' => 'blank']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Modules/Decrees')
+                ->where('tab', 'blank')
+                ->where('rows.0.person_name', 'Б.Батбаяр')
+                ->where('rows.0.num_zahiramj', '810-814'));
+    }
+
+    public function test_zahiramj_number_tab_stores_register_fields(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
 
         $this->actingAs($admin)->post(route('decrees.store'), [
             'tab' => 'zahiramj',
             'kind' => 'zahiramj_a',
-            'number' => 'A/123',
-            'title' => 'Тест захирамж',
-            'blank_number' => '810',
-            'issued_on' => '2026-08-25',
-            'person_name' => 'Б.Батбаяр',
-            'qty' => 5,
-            'qty_mn' => 2,
-            'sheet_number' => '810-814',
-            'void_number' => '811',
-        ])->assertRedirect();
+            'number' => '01',
+            'title' => '2026 оныг бүтээмжийн жил болгон зарлах тухай',
+            'issued_on' => '2026-01-02',
+            'page_count' => 2,
+            'attachment_name' => 'Арын бичилт',
+            'attachment_pages' => 1,
+            'person_name' => 'Б.Зоригтбаатар',
+        ])->assertRedirect(route('decrees.index', ['tab' => 'zahiramj']));
 
         $decree = Decree::query()->firstOrFail();
         $this->assertSame('zahiramj', $decree->category);
-        $this->assertSame(5, $decree->qty_zahiramj);
-        $this->assertSame(2, $decree->qty_zahiramj_mn);
-        $this->assertSame(0, $decree->qty_tushaal);
-        $this->assertSame('810-814', $decree->num_zahiramj);
-        $this->assertNull($decree->num_tushaal);
-        $this->assertSame('811', $decree->void_zahiramj);
+        $this->assertSame('01', $decree->number);
+        $this->assertSame(2, $decree->page_count);
+        $this->assertSame('Арын бичилт', $decree->attachment_name);
+        $this->assertSame(1, $decree->attachment_pages);
+        $this->assertSame('Б.Зоригтбаатар', $decree->person_name);
 
         $this->actingAs($admin)
             ->get(route('decrees.index', ['tab' => 'zahiramj']))
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Modules/Decrees')
-                ->where('rows.0.person_name', 'Б.Батбаяр')
-                ->where('rows.0.qty_zahiramj', 5)
-                ->where('rows.0.num_zahiramj', '810-814')
-                ->where('rows.0.void_zahiramj', '811'));
+                ->where('tab', 'zahiramj')
+                ->where('rows.0.number', '01')
+                ->where('rows.0.page_count', 2)
+                ->where('rows.0.attachment_name', 'Арын бичилт'));
     }
 }
