@@ -18,7 +18,7 @@ class LeaveController extends Controller
     private const MODULE = 'leaves';
 
     private const SCOPES = [
-        'heltes' => 'Хэлтэс',
+        'udirdlaga' => 'Аймгийн удирдлагууд',
         'azdtg' => 'АЗДТГ-ын албан хаагчид',
         'agentlag' => 'Агентлаг',
         'sum' => 'Сумд',

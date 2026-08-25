@@ -9,7 +9,6 @@ class PhoneDirectoryEntry extends Model
     /** Чөлөөний бүртгэлийн хамрах хүрээтэй нийцсэн ангилал. */
     public const CATEGORIES = [
         'udirdlaga' => 'Аймгийн удирдлагууд',
-        'heltes' => 'Хэлтэс',
         'agentlag' => 'Агентлаг',
         'sum' => 'Сумд',
         'baiguullaga' => 'Байгууллага',
@@ -22,17 +21,19 @@ class PhoneDirectoryEntry extends Model
 
     /**
      * Байгууллагын нэрээр ангиллыг таамаглана — дараа нь гараар засаж болно.
+     * Хэлтэс нь АЗДТГ-ын албан хаагчдын нэгжид хамаарах тул энд ангилахгүй.
      */
-    public static function guessCategory(?string $orgName): string
+    public static function guessCategory(?string $orgName): ?string
     {
         $name = mb_strtolower((string) $orgName);
 
-        if (str_contains($name, 'удирдлага')) {
-            return 'udirdlaga';
+        // Хэлтэс/хэлтсийн — утасны жагсаалтын ангилал биш, АЗДТГ нэгж.
+        if (str_contains($name, 'хэлтэс') || str_contains($name, 'хэллтсийн')) {
+            return null;
         }
 
-        if (str_contains($name, 'хэлтэс') || str_contains($name, 'хэллтсийн')) {
-            return 'heltes';
+        if (str_contains($name, 'удирдлага')) {
+            return 'udirdlaga';
         }
 
         if (str_contains($name, 'сум')) {
@@ -44,6 +45,14 @@ class PhoneDirectoryEntry extends Model
         }
 
         return 'baiguullaga';
+    }
+
+    /** Нэр нь хэлтэс (АЗДТГ нэгж)-ийг илэрхийлж байгаа эсэх. */
+    public static function looksLikeDepartment(?string $orgName): bool
+    {
+        $name = mb_strtolower(trim((string) $orgName));
+
+        return str_contains($name, 'хэлтэс') || str_contains($name, 'хэллтсийн');
     }
 
     /**

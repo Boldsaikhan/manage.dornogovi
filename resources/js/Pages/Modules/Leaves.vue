@@ -139,13 +139,14 @@ const kindLabel = (key) => ({
 }[key] || key);
 
 const emptyMessage = computed(() => {
-        const map = {
-            all: 'Бүртгэл алга',
-            heltes: 'Хэлтсийн бүртгэл алга',
-            agentlag: 'Агентлагийн бүртгэл алга',
-            sum: 'Сумын бүртгэл алга',
-            baiguullaga: 'Байгууллагын бүртгэл алга',
-        };
+    const map = {
+        all: 'Бүртгэл алга',
+        udirdlaga: 'Аймгийн удирдлагын бүртгэл алга',
+        azdtg: 'АЗДТГ-ын албан хаагчийн бүртгэл алга',
+        agentlag: 'Агентлагийн бүртгэл алга',
+        sum: 'Сумын бүртгэл алга',
+        baiguullaga: 'Байгууллагын бүртгэл алга',
+    };
     return map[props.activeScope] || 'Бүртгэл алга';
 });
 </script>

@@ -72,6 +72,15 @@ class PhoneDirectoryController extends Controller
                 'email' => $row->email,
             ]);
 
+        $departmentUnits = $entries
+            ->groupBy('org_name')
+            ->filter(fn ($rows, $orgName) => PhoneDirectoryEntry::looksLikeDepartment($orgName)
+                || ($rows->first()->category ?? null) === 'heltes')
+            ->keys()
+            ->sort()
+            ->values()
+            ->all();
+
         return Inertia::render('Modules/PhoneDirectory', [
             'tab' => $tab,
             'groups' => $groups,
@@ -81,6 +90,7 @@ class PhoneDirectoryController extends Controller
             'staff' => $staff,
             'staffTotal' => $staff->count(),
             'staffOrganizations' => $staff->pluck('organization')->unique()->values(),
+            'departmentUnits' => $departmentUnits,
             'canManage' => ModuleAccess::canManage($request->user(), self::MODULE),
         ]);
     }

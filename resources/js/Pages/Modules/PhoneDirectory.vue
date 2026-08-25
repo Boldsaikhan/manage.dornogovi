@@ -14,6 +14,7 @@ const props = defineProps({
     staff: { type: Array, default: () => [] },
     staffTotal: { type: Number, default: 0 },
     staffOrganizations: { type: Array, default: () => [] },
+    departmentUnits: { type: Array, default: () => [] },
     canManage: Boolean,
 });
 
@@ -94,11 +95,13 @@ const categoryTabs = computed(() => {
     ];
 });
 
-// Албан хаагчдын нэгжүүд (хэлтэс).
+// Албан хаагчдын нэгжүүд (хэлтэс) — АЗДТГ хэсгийн сонголт.
 const unitOptions = computed(() => {
-    const units = props.staff.map((r) => r.unit).filter(Boolean);
+    const fromStaff = props.staff.map((r) => r.unit).filter(Boolean);
+    const fromDepartments = (props.departmentUnits || []).filter(Boolean);
+    const all = [...new Set([...fromStaff, ...fromDepartments])];
 
-    return [...new Set(units)].sort((a, b) => a.localeCompare(b, 'mn'));
+    return all.sort((a, b) => a.localeCompare(b, 'mn'));
 });
 
 const filteredGroups = computed(() => {
@@ -434,9 +437,9 @@ const closeDirectoryForm = () => {
                     v-else
                     v-model="unitFilter"
                     class="ui-input md:max-w-xs"
-                    title="Нэгж (хэлтэс)-ээр шүүх"
+                    title="Хэлтэс / нэгжээр шүүх"
                 >
-                    <option value="all">Бүх нэгж ({{ staffTotal }})</option>
+                    <option value="all">Бүх хэлтэс / нэгж ({{ staffTotal }})</option>
                     <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
                 </select>
             </div>
@@ -679,7 +682,7 @@ const closeDirectoryForm = () => {
                 </div>
                 <div class="grid max-h-[65vh] gap-4 overflow-y-auto pr-1 md:grid-cols-2">
                     <div class="md:col-span-2">
-                        <label class="ui-label">Нэгж</label>
+                        <label class="ui-label">Хэлтэс / нэгж</label>
                         <input v-model="staffForm.unit" list="staff-unit-names" class="ui-input" />
                         <datalist id="staff-unit-names">
                             <option v-for="unit in unitOptions" :key="unit" :value="unit" />

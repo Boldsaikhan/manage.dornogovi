@@ -11,7 +11,8 @@ return [
         'scope_column' => 'scope',
         'scope_label' => 'Хамрах хүрээ',
         'scopes' => [
-            'heltes' => 'Хэлтэс',
+            'udirdlaga' => 'Аймгийн удирдлагууд',
+            'azdtg' => 'АЗДТГ-ын албан хаагчид',
             'agentlag' => 'Агентлаг',
             'sum' => 'Сумд',
             'baiguullaga' => 'Байгууллага',
@@ -27,7 +28,11 @@ return [
         ],
         'fields' => [
             ['name' => 'scope', 'label' => 'Хамрах хүрээ', 'type' => 'select', 'required' => true, 'options' => [
-                'heltes' => 'Хэлтэс', 'agentlag' => 'Агентлаг', 'sum' => 'Сумд', 'baiguullaga' => 'Байгууллага',
+                'udirdlaga' => 'Аймгийн удирдлагууд',
+                'azdtg' => 'АЗДТГ-ын албан хаагчид',
+                'agentlag' => 'Агентлаг',
+                'sum' => 'Сумд',
+                'baiguullaga' => 'Байгууллага',
             ]],
             ['name' => 'org_name', 'label' => 'Агентлаг / сум / байгууллага', 'type' => 'directory_org', 'scope_field' => 'scope'],
             ['name' => 'person_name', 'label' => 'Дарга / албан хаагч', 'type' => 'directory_person', 'depends_on' => 'org_name'],

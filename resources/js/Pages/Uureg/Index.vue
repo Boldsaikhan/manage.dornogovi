@@ -56,13 +56,14 @@ watch(
 );
 
 // ── Дашбоард: хэрэгжилтийг хэлтэс, ангиллаар нэгтгэнэ ──────────────────────────
-const showDashboard = ref(true);
+const showDashboard = ref(false); // дэлгэц дүүрэн дашбоард
+
+const CATEGORY_ORDER = ['heltes', 'azdtg', 'agentlag', 'sum', 'baiguullaga', 'unknown'];
 const filter = ref(null); // { type: 'category' | 'org', value, label }
 
 const CATEGORY_LABELS = {
     udirdlaga: 'Аймгийн удирдлагууд',
     azdtg: 'АЗДТГ-ын албан хаагчид',
-    heltes: 'Хэлтэс',
     agentlag: 'Агентлаг',
     sum: 'Сумд',
     baiguullaga: 'Байгууллага',
@@ -135,6 +136,49 @@ const buildStats = (keyFn, labelFn) => {
         .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'mn'));
 };
 
+// АЗДТГ-ын нэгжүүд (хэлтэс) — зөвхөн тухайн ангиллын эзэдээр.
+const azdtgStats = computed(() => {
+    const groups = new Map();
+
+    props.tasks.forEach((task) => {
+        taskOwners(task)
+            .filter((owner) => owner.category === 'azdtg')
+            .forEach((owner) => {
+                const key = owner.org || 'Тодорхойгүй';
+                if (!groups.has(key)) groups.set(key, { key, label: key, tasks: [] });
+                if (!groups.get(key).tasks.includes(task)) groups.get(key).tasks.push(task);
+            });
+    });
+
+    return [...groups.values()]
+        .map((g) => ({
+            key: g.key,
+            label: g.label,
+            count: g.tasks.length,
+            done: g.tasks.filter((t) => Number(t.progress) >= 100).length,
+            progress: average(g.tasks),
+        }))
+        .sort((a, b) => b.progress - a.progress || b.count - a.count);
+});
+
+// Дугуй диаграмын тойрог
+const donut = (value, radius = 52) => {
+    const circumference = 2 * Math.PI * radius;
+    const filled = (Math.max(0, Math.min(100, value)) / 100) * circumference;
+
+    return { circumference, dash: `${filled} ${circumference - filled}` };
+};
+
+const statusSegments = computed(() => {
+    const total = overall.value.count || 1;
+
+    return [
+        { label: 'Дууссан', value: overall.value.done, color: '#10b981' },
+        { label: 'Хэрэгжиж буй', value: overall.value.started, color: '#f59e0b' },
+        { label: 'Эхлээгүй', value: overall.value.pending, color: '#cbd5e1' },
+    ].map((s) => ({ ...s, percent: Math.round((s.value / total) * 100) }));
+});
+
 const categoryStats = computed(() => buildStats(
     (owner) => owner.category,
     (owner, key) => CATEGORY_LABELS[key] ?? key,
@@ -159,6 +203,15 @@ const barColor = (value) => {
     if (value > 0) return 'bg-amber-500';
 
     return 'bg-slate-300';
+};
+
+const openDashboard = () => {
+    showDashboard.value = true;
+};
+
+const applyFilterAndClose = (type, key, label) => {
+    applyFilter(type, key, label);
+    showDashboard.value = false;
 };
 
 const applyFilter = (type, key, label) => {

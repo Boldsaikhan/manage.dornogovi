@@ -4,7 +4,6 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 const CATEGORY_FILTERS = [
     { key: 'udirdlaga', label: 'Аймгийн удирдлагууд' },
     { key: 'azdtg', label: 'АЗДТГ-ын албан хаагчид' },
-    { key: 'heltes', label: 'Хэлтэс' },
     { key: 'sum', label: 'Сум' },
     { key: 'agentlag', label: 'Агентлаг' },
     { key: 'baiguullaga', label: 'Байгууллага' },
@@ -33,7 +32,6 @@ const selected = ref([]);
 const categoryOn = ref({
     udirdlaga: true,
     azdtg: true,
-    heltes: true,
     sum: true,
     agentlag: true,
     baiguullaga: true,
@@ -135,7 +133,7 @@ const startEdit = async () => {
 
     editing.value = true;
     highlight.value = 0;
-    categoryOn.value = { udirdlaga: true, azdtg: true, heltes: true, sum: true, agentlag: true, baiguullaga: true };
+    categoryOn.value = { udirdlaga: true, azdtg: true, sum: true, agentlag: true, baiguullaga: true };
 
     if (hasOptions.value) {
         search.value = '';
