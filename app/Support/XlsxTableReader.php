@@ -22,7 +22,8 @@ class XlsxTableReader
     {
         $zip = new ZipArchive;
 
-        if ($zip->open($path) !== true) {
+        // RDONLY — эс бөгөөс буруу файлыг хаахад ZipArchive эх файлыг устгаж болно.
+        if ($zip->open($path, ZipArchive::RDONLY) !== true) {
             throw new RuntimeException('Excel файлыг нээж чадсангүй. .xlsx хэлбэрээр хадгалж дахин оруулна уу.');
         }
 

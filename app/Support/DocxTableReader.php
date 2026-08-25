@@ -55,7 +55,8 @@ class DocxTableReader
     {
         $zip = new ZipArchive;
 
-        if ($zip->open($path) !== true) {
+        // RDONLY — эс бөгөөс буруу файлыг хаахад ZipArchive эх файлыг устгаж болно.
+        if ($zip->open($path, ZipArchive::RDONLY) !== true) {
             throw new RuntimeException('Word файлыг нээж чадсангүй. .docx хэлбэрээр хадгалж дахин оруулна уу.');
         }
 
