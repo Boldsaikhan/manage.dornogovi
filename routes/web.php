@@ -59,6 +59,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/phone-directory/staff/export', [PhoneDirectoryController::class, 'exportStaff'])->name('phone-directory.staff.export');
     Route::post('/phone-directory/staff/import', [PhoneDirectoryController::class, 'importStaff'])->name('phone-directory.staff.import');
     Route::post('/phone-directory/staff', [PhoneDirectoryController::class, 'storeStaff'])->name('phone-directory.staff.store');
+    Route::patch('/phone-directory/staff/unit-type', [PhoneDirectoryController::class, 'updateUnitType'])->name('phone-directory.staff.unit-type');
     Route::delete('/phone-directory/staff/{staff}', [PhoneDirectoryController::class, 'destroyStaff'])->name('phone-directory.staff.destroy');
 
     Route::get('/modules/leaves', [LeaveController::class, 'index'])->name('leaves.index');

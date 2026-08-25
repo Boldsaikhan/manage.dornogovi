@@ -15,6 +15,7 @@ const props = defineProps({
     staffTotal: { type: Number, default: 0 },
     staffOrganizations: { type: Array, default: () => [] },
     departmentUnits: { type: Array, default: () => [] },
+    unitTypes: { type: Object, default: () => ({}) },
     canManage: Boolean,
 });
 
@@ -22,6 +23,7 @@ const page = usePage();
 const search = ref('');
 const categoryFilter = ref('all');
 const unitFilter = ref('all');
+const unitTypeFilter = ref('all');
 const showForm = ref(false);
 const showImport = ref(false);
 const showStaffForm = ref(false);
@@ -46,6 +48,7 @@ const isEditing = computed(() => editingId.value !== null);
 const staffForm = useForm({
     organization: 'Дорноговь аймгийн Засаг даргын Тамгын газар',
     unit: '',
+    unit_type: '',
     position: '',
     last_name: '',
     first_name: '',
@@ -75,6 +78,7 @@ watch(
         showStaffImport.value = false;
         categoryFilter.value = 'all';
         unitFilter.value = 'all';
+        unitTypeFilter.value = 'all';
     },
 );
 
@@ -130,9 +134,13 @@ const filteredGroups = computed(() => {
 
 const filteredStaff = computed(() => {
     const q = search.value.trim().toLowerCase();
-    const scoped = unitFilter.value === 'all'
+    let scoped = unitFilter.value === 'all'
         ? props.staff
         : props.staff.filter((r) => (r.unit || '—') === unitFilter.value);
+
+    if (unitTypeFilter.value !== 'all') {
+        scoped = scoped.filter((r) => (r.unit_type || '') === unitTypeFilter.value);
+    }
 
     if (!q) return scoped;
 
@@ -157,15 +165,23 @@ const staffGroups = computed(() => {
     filteredStaff.value.forEach((row) => {
         const key = row.unit || 'Бусад';
         if (! map.has(key)) {
-            map.set(key, []);
+            map.set(key, { unit: key, unit_type: row.unit_type || '', rows: [] });
         }
-        map.get(key).push(row);
+        map.get(key).rows.push(row);
     });
 
-    return [...map.entries()].map(([unit, rows]) => ({ unit, rows }));
+    return [...map.values()];
 });
 
 const staffColumnCount = computed(() => 6 + (props.canManage ? 1 : 0));
+
+const changeUnitType = (unit, unitType) => {
+    router.patch(
+        route('phone-directory.staff.unit-type'),
+        { unit, unit_type: unitType },
+        { preserveScroll: true },
+    );
+};
 
 const submit = () => {
     if (isEditing.value) {
@@ -204,6 +220,7 @@ const submitStaff = () => {
             staffForm.reset();
             staffForm.organization = 'Дорноговь аймгийн Засаг даргын Тамгын газар';
             staffForm.unit = unit;
+            staffForm.unit_type = '';
             showStaffForm.value = false;
         },
     });
@@ -446,6 +463,16 @@ const closeDirectoryForm = () => {
                     <option value="all">Бүх хэлтэс / нэгж ({{ staffTotal }})</option>
                     <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
                 </select>
+                <select
+                    v-if="!isDirectory"
+                    v-model="unitTypeFilter"
+                    class="ui-input md:max-w-[12rem]"
+                    title="Нэгжийн төрлөөр шүүх"
+                >
+                    <option value="all">Бүх төрөл</option>
+                    <option value="">Сонголтгүй</option>
+                    <option v-for="(label, value) in unitTypes" :key="value" :value="value">{{ label }}</option>
+                </select>
             </div>
 
             <!-- Staff: import -->
@@ -578,6 +605,24 @@ const closeDirectoryForm = () => {
                                     class="text-center font-semibold italic text-brand-navy-800"
                                 >
                                     {{ group.unit }}
+                                    <select
+                                        v-if="canManage"
+                                        :value="group.unit_type || ''"
+                                        class="ml-2 rounded-lg border-slate-300 bg-white py-0.5 pl-2 pr-7 text-xs font-medium not-italic text-slate-600"
+                                        title="Нэгжийн төрөл"
+                                        @change="changeUnitType(group.unit, $event.target.value)"
+                                    >
+                                        <option value="">Сонголтгүй</option>
+                                        <option v-for="(label, value) in unitTypes" :key="value" :value="value">
+                                            {{ label }}
+                                        </option>
+                                    </select>
+                                    <span
+                                        v-else-if="group.unit_type && unitTypes[group.unit_type]"
+                                        class="ml-2 rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-medium not-italic text-slate-500"
+                                    >
+                                        {{ unitTypes[group.unit_type] }}
+                                    </span>
                                 </td>
                             </tr>
                             <tr v-for="(row, index) in group.rows" :key="row.id">
@@ -691,6 +736,15 @@ const closeDirectoryForm = () => {
                         <datalist id="staff-unit-names">
                             <option v-for="unit in unitOptions" :key="unit" :value="unit" />
                         </datalist>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="ui-label">Төрөл</label>
+                        <select v-model="staffForm.unit_type" class="ui-input">
+                            <option value="">Сонголтгүй / автомат</option>
+                            <option v-for="(label, value) in unitTypes" :key="value" :value="value">
+                                {{ label }}
+                            </option>
+                        </select>
                     </div>
                     <div>
                         <label class="ui-label">Албан тушаал</label>

@@ -63,6 +63,7 @@ class PhoneDirectoryController extends Controller
                 'no' => $i + 1,
                 'organization' => $row->organization,
                 'unit' => $row->unit,
+                'unit_type' => $row->unit_type ?: OrgEmployeePhone::guessUnitType($row->unit),
                 'position' => $row->position,
                 'last_name' => $row->last_name,
                 'first_name' => $row->first_name,
@@ -93,6 +94,7 @@ class PhoneDirectoryController extends Controller
             'staffTotal' => $staff->count(),
             'staffOrganizations' => $staff->pluck('organization')->unique()->values(),
             'departmentUnits' => $departmentUnits,
+            'unitTypes' => OrgEmployeePhone::UNIT_TYPES,
             'canManage' => ModuleAccess::canManage($request->user(), self::MODULE),
         ]);
     }
@@ -221,6 +223,7 @@ class PhoneDirectoryController extends Controller
                 OrgEmployeePhone::insert(array_map(fn (array $row) => [
                     'organization' => $row['organization'],
                     'unit' => $row['unit'],
+                    'unit_type' => OrgEmployeePhone::guessUnitType($row['unit'] ?? null),
                     'position' => $row['position'],
                     'last_name' => $row['last_name'],
                     'first_name' => $row['first_name'],
@@ -359,6 +362,7 @@ class PhoneDirectoryController extends Controller
         $data = $request->validate([
             'organization' => ['nullable', 'string', 'max:255'],
             'unit' => ['nullable', 'string', 'max:255'],
+            'unit_type' => ['nullable', 'string', Rule::in(array_keys(OrgEmployeePhone::UNIT_TYPES))],
             'position' => ['nullable', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'first_name' => ['required', 'string', 'max:255'],
@@ -371,6 +375,14 @@ class PhoneDirectoryController extends Controller
         $data['organization'] = $data['organization']
             ?: 'Дорноговь аймгийн Засаг даргын Тамгын газар';
 
+        if (($data['unit_type'] ?? '') === '') {
+            $data['unit_type'] = OrgEmployeePhone::query()
+                ->where('unit', $data['unit'] ?? '')
+                ->whereNotNull('unit_type')
+                ->value('unit_type')
+                ?? OrgEmployeePhone::guessUnitType($data['unit'] ?? null);
+        }
+
         $data['sort_order'] = (int) OrgEmployeePhone::query()
             ->where('unit', $data['unit'] ?? '')
             ->max('sort_order') + 1;
@@ -380,6 +392,35 @@ class PhoneDirectoryController extends Controller
         return redirect()
             ->route('phone-directory.index', ['tab' => 'staff'])
             ->with('success', 'Албан хаагчийн бүртгэл нэмэгдлээ.');
+    }
+
+    /**
+     * Нэгжийн төрлийг бүлгээр нь солино (ж: хэлтэс).
+     */
+    public function updateUnitType(Request $request): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+
+        $request->merge([
+            'unit_type' => $request->input('unit_type') === '' || $request->input('unit_type') === null
+                ? null
+                : $request->input('unit_type'),
+        ]);
+
+        $data = $request->validate([
+            'unit' => ['required', 'string', 'max:255'],
+            'unit_type' => ['nullable', 'string', Rule::in(array_keys(OrgEmployeePhone::UNIT_TYPES))],
+        ]);
+
+        OrgEmployeePhone::query()
+            ->where('unit', $data['unit'])
+            ->update(['unit_type' => $data['unit_type'] ?? null]);
+
+        $label = isset($data['unit_type'])
+            ? (OrgEmployeePhone::UNIT_TYPES[$data['unit_type']] ?? $data['unit_type'])
+            : 'Сонголтгүй';
+
+        return back(303)->with('success', $data['unit'].' — '.$label);
     }
 
     public function destroyStaff(Request $request, OrgEmployeePhone $staff): RedirectResponse
