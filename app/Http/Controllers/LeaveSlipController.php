@@ -9,7 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
 /**
- * Чөлөөний хуудас — албан хэрэг хөтлөлтийн загвараар хэвлэх.
+ * Чөлөөний хуудас — албан хэрэг хөтлөлтийн загвараар хэвлэх (A4-д 6 ширхэг).
  */
 class LeaveSlipController extends Controller
 {
@@ -22,7 +22,8 @@ class LeaveSlipController extends Controller
         $copies = (int) $request->query('copies', 6);
         $copies = in_array($copies, [1, 2, 4, 6], true) ? $copies : 6;
 
-        $signer = $request->query('signer') === 'head' ? 'head' : 'acting';
+        $signer = $request->query('signer', $leave->signer ?: 'acting');
+        $signer = $signer === 'head' ? 'head' : 'acting';
 
         $start = $leave->start_date;
 
@@ -31,15 +32,15 @@ class LeaveSlipController extends Controller
             'copies' => $copies,
             'signer' => $signer,
             'format' => DocumentFormat::defaultFormat(),
-            // Загварт «... хэлтсийн» гэж үргэлжлэх тул нэрийн төгсгөлийн «хэлтэс»-ийг хасна.
-            'unit' => $this->unitName($leave->department?->name ?: $leave->org_name),
+            'unit' => $this->unitName($leave->org_name ?: $leave->department?->name),
             'person' => $leave->person_name ?: ($leave->user?->name ?? ''),
+            'slipNumber' => $leave->slip_number,
             'year' => $start?->format('Y'),
             'month' => $start?->format('n'),
             'day' => $start?->format('j'),
             'days' => $leave->days,
             'reason' => $leave->reason,
-            'kind' => $leave->type, // chuluu | amralt | busad
+            'kind' => $leave->type,
             'actingName' => $request->query('name', 'М.МӨНХБАТ'),
         ]);
     }

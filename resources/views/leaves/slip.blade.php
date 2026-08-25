@@ -3,25 +3,41 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Чөлөөний хуудас</title>
+    <title>Чөлөөний хуудас №{{ $slipNumber ?: $leave->id }}</title>
     @php
-        $pageWidth = $format?->width_mm ?? 210;
-        $pageHeight = $format?->height_mm ?? 297;
-        $marginTop = $format?->margin_top_mm ?? 20;
-        $marginRight = $format?->margin_right_mm ?? 15;
-        $marginBottom = $format?->margin_bottom_mm ?? 20;
-        $marginLeft = $format?->margin_left_mm ?? 30;
-        $fontName = $format?->font_name ?: 'Arial';
-        $fontSize = $format?->font_size_pt ?? 12;
-        $columns = $copies > 1 ? 2 : 1;
+        $pageWidth = 210;
+        $pageHeight = 297;
+        // Албан бичгийн захын зай — агуулгын өндөр / 3 ≈ нэг хуудасны өндөр
+        $marginTop = 12;
+        $marginRight = 12;
+        $marginBottom = 12;
+        $marginLeft = 14;
+        $gapX = 8;
+        $gapY = 6;
+        $contentH = $pageHeight - $marginTop - $marginBottom;
+        $contentW = $pageWidth - $marginLeft - $marginRight;
+        $cols = $copies >= 2 ? 2 : 1;
+        $rows = (int) ceil($copies / max(1, $cols));
+        $slipH = ($contentH - ($rows - 1) * $gapY) / max(1, $rows);
 
-        // Хэвлэхэд харагдах цэгэн зураас — утга байвал түүнийг дунд нь бичнэ.
         $fill = function (?string $value, int $width) {
             $text = trim((string) $value);
 
             return $text !== ''
                 ? '<span class="filled" style="min-width:'.$width.'mm">'.e($text).'</span>'
                 : '<span class="blank" style="min-width:'.$width.'mm"></span>';
+        };
+
+        $kindMark = function (string $key) use ($kind) {
+            return $kind === $key ? '<u>'.e([
+                'tsalintai' => 'цалинтай',
+                'tsalingui' => 'цалингүй',
+                'eeljiin' => 'ээлжийн амралтаас',
+            ][$key] ?? $key).'</u>' : e([
+                'tsalintai' => 'цалинтай',
+                'tsalingui' => 'цалингүй',
+                'eeljiin' => 'ээлжийн амралтаас',
+            ][$key] ?? $key);
         };
     @endphp
     <style>
@@ -34,21 +50,20 @@
 
         body {
             margin: 0;
-            font-family: "{{ $fontName }}", Arial, sans-serif;
-            font-size: {{ $fontSize - 2 }}pt;
+            font-family: Arial, "Times New Roman", sans-serif;
+            font-size: 10.5pt;
             color: #000;
-            background: #f1f5f9;
+            background: #e2e8f0;
         }
 
         .toolbar {
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 10px;
             align-items: center;
-            padding: 14px 20px;
+            padding: 12px 16px;
             background: #fff;
-            border-bottom: 1px solid #e2e8f0;
-            font-family: Arial, sans-serif;
+            border-bottom: 1px solid #cbd5e1;
             font-size: 13px;
         }
 
@@ -68,47 +83,51 @@
 
         .sheet {
             width: {{ $pageWidth }}mm;
-            min-height: {{ $pageHeight }}mm;
-            margin: 18px auto;
+            height: {{ $pageHeight }}mm;
+            margin: 16px auto;
             padding: {{ $marginTop }}mm {{ $marginRight }}mm {{ $marginBottom }}mm {{ $marginLeft }}mm;
             background: #fff;
             box-shadow: 0 6px 24px rgba(15, 23, 42, .12);
             display: grid;
-            grid-template-columns: repeat({{ $columns }}, 1fr);
-            gap: 8mm 10mm;
-            align-content: start;
+            grid-template-columns: repeat({{ $cols }}, 1fr);
+            grid-template-rows: repeat({{ $rows }}, {{ $slipH }}mm);
+            gap: {{ $gapY }}mm {{ $gapX }}mm;
         }
 
-        .slip { break-inside: avoid; }
+        .slip {
+            height: {{ $slipH }}mm;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 1mm 0;
+        }
 
         .slip h1 {
-            font-size: {{ $fontSize - 2 }}pt;
-            font-weight: 400;
+            font-size: 11pt;
+            font-weight: 700;
             text-align: center;
             margin: 0;
+            letter-spacing: 0.02em;
         }
 
-        .slip .no { text-align: center; margin: 1mm 0 3mm; }
+        .slip .no { text-align: center; margin: 1mm 0 2mm; font-size: 10pt; }
 
-        .slip p {
+        .slip .body {
             margin: 0;
             text-align: justify;
-            line-height: 1.65;
+            line-height: 1.55;
+            flex: 1;
         }
 
-        .blank {
+        .blank, .filled {
             display: inline-block;
             border-bottom: 1px dotted #000;
             vertical-align: bottom;
+            padding: 0 0.8mm;
         }
 
-        .filled {
-            display: inline-block;
-            border-bottom: 1px dotted #000;
-            text-align: center;
-            vertical-align: bottom;
-            padding: 0 1mm;
-        }
+        .filled { text-align: center; }
 
         u { text-underline-offset: 2px; }
 
@@ -116,23 +135,26 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            gap: 6mm;
-            margin-top: 8mm;
-            line-height: 1.3;
+            gap: 4mm;
+            margin-top: 3mm;
+            line-height: 1.25;
+            font-size: 9.5pt;
         }
 
-        .sign .title { text-transform: uppercase; }
+        .sign .title {
+            text-transform: uppercase;
+            max-width: 58%;
+        }
+
         .sign .line { white-space: nowrap; }
 
         @media print {
             body { background: #fff; }
-            .toolbar { display: none; }
+            .toolbar { display: none !important; }
             .sheet {
-                width: auto;
-                min-height: auto;
                 margin: 0;
-                padding: 0;
                 box-shadow: none;
+                page-break-after: always;
             }
         }
     </style>
@@ -140,43 +162,32 @@
 <body>
     <div class="toolbar">
         <button class="primary" onclick="window.print()">Хэвлэх</button>
-        <span>Нэг хуудсанд:</span>
+        <span>Нэг A4 хуудсанд:</span>
         @foreach ([1, 2, 4, 6] as $option)
-            <a
-                href="{{ request()->fullUrlWithQuery(['copies' => $option]) }}"
-                class="{{ $copies === $option ? 'active' : '' }}"
-            >{{ $option }}</a>
+            <a href="{{ request()->fullUrlWithQuery(['copies' => $option]) }}" class="{{ $copies === $option ? 'active' : '' }}">{{ $option }}</a>
         @endforeach
         <span>Гарын үсэг:</span>
-        <a
-            href="{{ request()->fullUrlWithQuery(['signer' => 'acting']) }}"
-            class="{{ $signer === 'acting' ? 'active' : '' }}"
-        >Даргын албан үүргийг түр орлон гүйцэтгэгч</a>
-        <a
-            href="{{ request()->fullUrlWithQuery(['signer' => 'head']) }}"
-            class="{{ $signer === 'head' ? 'active' : '' }}"
-        >Хэлтсийн дарга</a>
-        <span style="color:#64748b">Хуудасны хэмжээ: {{ $pageWidth }}×{{ $pageHeight }} мм (бичиг хэргийн стандартаас)</span>
+        <a href="{{ request()->fullUrlWithQuery(['signer' => 'acting']) }}" class="{{ $signer === 'acting' ? 'active' : '' }}">Даргын үүрэг гүйцэтгэгч</a>
+        <a href="{{ request()->fullUrlWithQuery(['signer' => 'head']) }}" class="{{ $signer === 'head' ? 'active' : '' }}">Хэлтсийн дарга</a>
     </div>
 
     <div class="sheet">
         @for ($i = 0; $i < $copies; $i++)
             <div class="slip">
-                <h1>ЧӨЛӨӨНИЙ ХУУДАС</h1>
-                <div class="no">№ <span class="blank" style="min-width:18mm"></span></div>
-
-                <p>
-                    Аймгийн ЗДТГ-ын {!! $fill($unit, 34) !!} хэлтсийн
-                    мэргэжилтэн {!! $fill($person, 48) !!} нь
-                    {!! $fill($reason, 60) !!} үндэслэлээр {{ $year ?? '20' }}
-                    оны {!! $fill($month, 10) !!} сарын {!! $fill($day, 10) !!}-ны өдрөөс
-                    ажлын {!! $fill($days ? (string) $days : null, 12) !!} өдрийн
-                    чөлөө /@if ($kind === 'chuluu')<u>цалинтай</u>@else цалинтай @endif,
-                    цалингүй,
-                    @if ($kind === 'amralt')<u>ээлжийн амралтаас</u>@else ээлжийн амралтаас @endif/
-                    олгов. <em>Доогуур зурах</em>
-                </p>
-
+                <div>
+                    <h1>ЧӨЛӨӨНИЙ ХУУДАС</h1>
+                    <div class="no">№ {!! $fill($slipNumber, 16) !!}</div>
+                    <p class="body">
+                        Аймгийн ЗДТГ-ын {!! $fill($unit, 28) !!} хэлтсийн
+                        мэргэжилтэн {!! $fill($person, 42) !!} нь
+                        {!! $fill($reason, 48) !!} үндэслэлээр
+                        {{ $year ?: '____' }} оны {!! $fill($month ? (string) $month : null, 8) !!} сарын
+                        {!! $fill($day ? (string) $day : null, 8) !!}-ны өдрөөс
+                        ажлын {!! $fill($days ? (string) $days : null, 10) !!} өдрийн
+                        чөлөө /{!! $kindMark('tsalintai') !!}, {!! $kindMark('tsalingui') !!}, {!! $kindMark('eeljiin') !!}/
+                        олгов. <em>Доогуур зурах</em>
+                    </p>
+                </div>
                 <div class="sign">
                     @if ($signer === 'acting')
                         <span class="title">Даргын албан үүргийг<br>түр орлон гүйцэтгэгч</span>

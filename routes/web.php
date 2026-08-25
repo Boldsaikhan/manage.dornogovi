@@ -9,6 +9,7 @@ use App\Http\Controllers\DecreeController;
 use App\Http\Controllers\DepartmentDashboardController;
 use App\Http\Controllers\DocumentStandardController;
 use App\Http\Controllers\LaunchController;
+use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\LeaveSlipController;
 use App\Http\Controllers\ModuleResourceController;
 use App\Http\Controllers\PhoneDirectoryController;
@@ -59,7 +60,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/phone-directory/staff', [PhoneDirectoryController::class, 'storeStaff'])->name('phone-directory.staff.store');
     Route::delete('/phone-directory/staff/{staff}', [PhoneDirectoryController::class, 'destroyStaff'])->name('phone-directory.staff.destroy');
 
-    Route::get('/modules/leaves', [ModuleResourceController::class, 'index'])->name('leaves.index');
+    Route::get('/modules/leaves', [LeaveController::class, 'index'])->name('leaves.index');
+    Route::post('/modules/leaves', [LeaveController::class, 'store'])->name('leaves.store');
+    Route::delete('/modules/leaves/{leave}', [LeaveController::class, 'destroy'])->name('leaves.destroy');
     Route::get('/modules/leaves/{leave}/slip', [LeaveSlipController::class, 'show'])->name('leaves.slip');
     Route::get('/modules/assignments', [ModuleResourceController::class, 'index'])->name('assignments.index');
     Route::get('/modules/regulations', [ModuleResourceController::class, 'index'])->name('regulations.index');

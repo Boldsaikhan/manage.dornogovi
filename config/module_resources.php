@@ -30,13 +30,17 @@ return [
             ]],
             ['name' => 'org_name', 'label' => 'Агентлаг / сум / байгууллага', 'type' => 'directory_org', 'scope_field' => 'scope'],
             ['name' => 'person_name', 'label' => 'Дарга / албан хаагч', 'type' => 'directory_person', 'depends_on' => 'org_name'],
+            ['name' => 'slip_number', 'label' => 'Хуудасны №', 'type' => 'text'],
+            ['name' => 'signer', 'label' => 'Гарын үсэг', 'type' => 'select', 'options' => [
+                'acting' => 'Даргын албан үүргийг түр орлон гүйцэтгэгч',
+                'head' => 'Хэлтсийн дарга',
+            ]],
             ['name' => 'type', 'label' => 'Төрөл', 'type' => 'select', 'options' => [
-                'chuluu' => 'Чөлөө', 'amralt' => 'Амралт', 'busad' => 'Бусад',
+                'tsalintai' => 'Цалинтай', 'tsalingui' => 'Цалингүй', 'eeljiin' => 'Ээлжийн амралтаас',
             ]],
             ['name' => 'start_date', 'label' => 'Эхлэх', 'type' => 'date', 'required' => true],
-            ['name' => 'end_date', 'label' => 'Дуусах', 'type' => 'date', 'required' => true],
-            ['name' => 'days', 'label' => 'Хоног', 'type' => 'number'],
-            ['name' => 'reason', 'label' => 'Шалтгаан', 'type' => 'textarea'],
+            ['name' => 'days', 'label' => 'Ажлын өдөр', 'type' => 'number', 'required' => true],
+            ['name' => 'reason', 'label' => 'Үндэслэл', 'type' => 'textarea'],
             ['name' => 'status', 'label' => 'Төлөв', 'type' => 'select', 'options' => [
                 'pending' => 'Хүлээгдэж буй', 'approved' => 'Зөвшөөрсөн', 'rejected' => 'Татгалзсан',
             ]],
@@ -44,7 +48,7 @@ return [
         'row_actions' => [
             ['label' => 'Чөлөөний хуудас', 'url' => '/modules/leaves/{id}/slip', 'target' => '_blank'],
         ],
-        'defaults' => ['status' => 'pending', 'type' => 'chuluu', 'scope' => 'baiguullaga'],
+        'defaults' => ['status' => 'approved', 'type' => 'tsalintai', 'scope' => 'baiguullaga', 'signer' => 'acting'],
         'on_create' => 'attach_user_department',
     ],
     'assignments' => [

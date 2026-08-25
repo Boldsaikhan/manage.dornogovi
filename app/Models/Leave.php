@@ -7,9 +7,32 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Leave extends Model
 {
+    public const TYPES = [
+        'tsalintai' => 'Цалинтай',
+        'tsalingui' => 'Цалингүй',
+        'eeljiin' => 'Ээлжийн амралтаас',
+    ];
+
+    public const SIGNERS = [
+        'acting' => 'Даргын албан үүргийг түр орлон гүйцэтгэгч',
+        'head' => 'Хэлтсийн дарга',
+    ];
+
     protected $fillable = [
-        'user_id', 'department_id', 'scope', 'org_name', 'person_name', 'type', 'start_date', 'end_date', 'days',
-        'reason', 'status', 'approved_by',
+        'user_id',
+        'department_id',
+        'scope',
+        'org_name',
+        'person_name',
+        'slip_number',
+        'signer',
+        'type',
+        'start_date',
+        'end_date',
+        'days',
+        'reason',
+        'status',
+        'approved_by',
     ];
 
     protected function casts(): array
@@ -33,5 +56,10 @@ class Leave extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function typeLabel(): string
+    {
+        return self::TYPES[$this->type] ?? $this->type;
     }
 }
