@@ -55,6 +55,130 @@ watch(
     { immediate: true, deep: true },
 );
 
+// ── Дашбоард: хэрэгжилтийг хэлтэс, ангиллаар нэгтгэнэ ──────────────────────────
+const showDashboard = ref(true);
+const filter = ref(null); // { type: 'category' | 'org', value, label }
+
+const CATEGORY_LABELS = {
+    agentlag: 'Агентлаг',
+    sum: 'Сумд',
+    baiguullaga: 'Байгууллага',
+    unknown: 'Тодорхойгүй',
+};
+
+const peopleIndex = computed(() => {
+    const map = {};
+    props.people.forEach((p) => {
+        map[p.value] = p;
+    });
+
+    return map;
+});
+
+const splitNames = (value) => String(value ?? '')
+    .split(/[/;,|]+/)
+    .map((v) => v.trim())
+    .filter(Boolean);
+
+// Нэг үүрэг олон хариуцагчтай байж болно.
+const taskOwners = (task) => {
+    const names = splitNames(task.responsible);
+
+    if (!names.length) {
+        return [{ value: '—', org: 'Тодорхойгүй', category: 'unknown' }];
+    }
+
+    return names.map((name) => {
+        const person = peopleIndex.value[name];
+
+        return {
+            value: name,
+            org: person?.org || 'Тодорхойгүй',
+            category: person?.category || 'unknown',
+        };
+    });
+};
+
+const average = (list) => (list.length
+    ? Math.round(list.reduce((sum, t) => sum + (Number(t.progress) || 0), 0) / list.length)
+    : 0);
+
+const buildStats = (keyFn, labelFn) => {
+    const groups = new Map();
+
+    props.tasks.forEach((task) => {
+        const seen = new Set();
+
+        taskOwners(task).forEach((owner) => {
+            const key = keyFn(owner);
+            if (seen.has(key)) return;
+            seen.add(key);
+
+            if (!groups.has(key)) {
+                groups.set(key, { key, label: labelFn(owner, key), tasks: [] });
+            }
+            groups.get(key).tasks.push(task);
+        });
+    });
+
+    return [...groups.values()]
+        .map((g) => ({
+            key: g.key,
+            label: g.label,
+            count: g.tasks.length,
+            done: g.tasks.filter((t) => Number(t.progress) >= 100).length,
+            progress: average(g.tasks),
+        }))
+        .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'mn'));
+};
+
+const categoryStats = computed(() => buildStats(
+    (owner) => owner.category,
+    (owner, key) => CATEGORY_LABELS[key] ?? key,
+));
+
+const orgStats = computed(() => buildStats(
+    (owner) => owner.org,
+    (owner) => owner.org,
+));
+
+const overall = computed(() => ({
+    count: props.tasks.length,
+    progress: average(props.tasks),
+    done: props.tasks.filter((t) => Number(t.progress) >= 100).length,
+    started: props.tasks.filter((t) => Number(t.progress) > 0 && Number(t.progress) < 100).length,
+    pending: props.tasks.filter((t) => !Number(t.progress)).length,
+}));
+
+const barColor = (value) => {
+    if (value >= 80) return 'bg-emerald-500';
+    if (value >= 50) return 'bg-brand-navy-500';
+    if (value > 0) return 'bg-amber-500';
+
+    return 'bg-slate-300';
+};
+
+const applyFilter = (type, key, label) => {
+    filter.value = filter.value && filter.value.type === type && filter.value.value === key
+        ? null
+        : { type, value: key, label };
+};
+
+const clearFilter = () => {
+    filter.value = null;
+};
+
+// Шүүлттэй үед зөвхөн холбогдох үүрэг чиглэл харагдана.
+const visibleTasks = computed(() => {
+    if (!filter.value) return props.tasks;
+
+    return props.tasks.filter((task) => taskOwners(task).some((owner) => (
+        filter.value.type === 'category'
+            ? owner.category === filter.value.value
+            : owner.org === filter.value.value
+    )));
+});
+
 const switchKind = (key) => {
     router.get(route('tasks.index'), { kind: key }, { preserveState: false });
 };
@@ -298,6 +422,109 @@ const prepTableMinWidth = computed(() => {
                 </ul>
             </div>
 
+            <!-- Дашбоард: хэрэгжилтийн нэгтгэл -->
+            <section class="ui-card-pad space-y-5">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-semibold text-slate-800">Хэрэгжилтийн дашбоард</h3>
+                        <p class="mt-0.5 text-sm text-slate-500">
+                            Хэлтэс, агентлаг, байгууллагаар нэгтгэсэн хувь. Дээр нь дарж холбогдох үүрэг чиглэлийг харна.
+                        </p>
+                    </div>
+                    <button type="button" class="ui-btn-ghost !py-1.5 text-xs" @click="showDashboard = !showDashboard">
+                        {{ showDashboard ? 'Хураах' : 'Дэлгэх' }}
+                    </button>
+                </div>
+
+                <template v-if="showDashboard">
+                    <!-- Нийт -->
+                    <button
+                        type="button"
+                        class="flex w-full flex-wrap items-center gap-4 rounded-2xl border px-4 py-3 text-left transition"
+                        :class="filter ? 'border-slate-200 bg-white hover:border-brand-navy-300' : 'border-brand-navy-500 bg-brand-navy-50'"
+                        @click="clearFilter"
+                    >
+                        <div class="min-w-[7rem]">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Нийт хэрэгжилт</p>
+                            <p class="text-2xl font-bold text-brand-navy-800">{{ overall.progress }}%</p>
+                        </div>
+                        <div class="h-2.5 min-w-[8rem] flex-1 overflow-hidden rounded-full bg-slate-200">
+                            <div class="h-full rounded-full" :class="barColor(overall.progress)" :style="{ width: overall.progress + '%' }" />
+                        </div>
+                        <div class="flex gap-4 text-xs text-slate-500">
+                            <span>Нийт <b class="text-slate-700">{{ overall.count }}</b></span>
+                            <span>Дууссан <b class="text-emerald-600">{{ overall.done }}</b></span>
+                            <span>Хэрэгжиж буй <b class="text-amber-600">{{ overall.started }}</b></span>
+                            <span>Эхлээгүй <b class="text-slate-600">{{ overall.pending }}</b></span>
+                        </div>
+                    </button>
+
+                    <!-- Ангиллаар -->
+                    <div>
+                        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Ангиллаар</p>
+                        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            <button
+                                v-for="item in categoryStats"
+                                :key="item.key"
+                                type="button"
+                                class="rounded-2xl border px-4 py-3 text-left transition"
+                                :class="filter && filter.type === 'category' && filter.value === item.key
+                                    ? 'border-brand-navy-500 bg-brand-navy-50'
+                                    : 'border-slate-200 bg-white hover:border-brand-navy-300'"
+                                @click="applyFilter('category', item.key, item.label)"
+                            >
+                                <div class="flex items-baseline justify-between gap-2">
+                                    <span class="truncate text-sm font-semibold text-slate-700">{{ item.label }}</span>
+                                    <span class="text-lg font-bold text-brand-navy-700">{{ item.progress }}%</span>
+                                </div>
+                                <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+                                    <div class="h-full rounded-full" :class="barColor(item.progress)" :style="{ width: item.progress + '%' }" />
+                                </div>
+                                <p class="mt-1.5 text-xs text-slate-500">
+                                    {{ item.count }} үүрэг · {{ item.done }} дууссан
+                                </p>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Хэлтэс, байгууллагаар -->
+                    <div v-if="orgStats.length">
+                        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                            Хэлтэс, агентлаг, байгууллагаар
+                        </p>
+                        <div class="max-h-72 space-y-1.5 overflow-y-auto pr-1">
+                            <button
+                                v-for="item in orgStats"
+                                :key="item.key"
+                                type="button"
+                                class="flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition"
+                                :class="filter && filter.type === 'org' && filter.value === item.key
+                                    ? 'border-brand-navy-500 bg-brand-navy-50'
+                                    : 'border-slate-200 bg-white hover:border-brand-navy-300'"
+                                @click="applyFilter('org', item.key, item.label)"
+                            >
+                                <span class="w-56 shrink-0 truncate text-sm text-slate-700" :title="item.label">{{ item.label }}</span>
+                                <span class="h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
+                                    <span class="block h-full rounded-full" :class="barColor(item.progress)" :style="{ width: item.progress + '%' }" />
+                                </span>
+                                <span class="w-12 shrink-0 text-right text-sm font-semibold text-brand-navy-700">{{ item.progress }}%</span>
+                                <span class="w-16 shrink-0 text-right text-xs text-slate-500">{{ item.count }} үүрэг</span>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </section>
+
+            <!-- Идэвхтэй шүүлт -->
+            <div v-if="filter" class="flex flex-wrap items-center gap-2 text-sm">
+                <span class="text-slate-500">Шүүлт:</span>
+                <span class="inline-flex items-center gap-2 rounded-full bg-brand-navy-600 px-3 py-1 font-medium text-white">
+                    {{ filter.label }}
+                    <button type="button" class="text-white/80 hover:text-white" @click="clearFilter">✕</button>
+                </span>
+                <span class="text-slate-500">{{ visibleTasks.length }} үүрэг чиглэл</span>
+            </div>
+
             <!-- Үүрэг чиглэл -->
             <div v-if="isDirective" class="ui-table-wrap w-full overflow-x-auto">
                 <table
@@ -325,7 +552,7 @@ const prepTableMinWidth = computed(() => {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="task in tasks" :key="task.id">
+                        <tr v-for="task in visibleTasks" :key="task.id">
                             <td class="text-center font-semibold text-slate-500">{{ task.no }}</td>
                             <td class="ui-sheet-td">
                                 <SheetCell
@@ -394,9 +621,9 @@ const prepTableMinWidth = computed(() => {
                                 </button>
                             </td>
                         </tr>
-                        <tr v-if="!tasks.length">
+                        <tr v-if="!visibleTasks.length">
                             <td :colspan="canManage ? 7 : 6" class="!py-14 text-center text-slate-400">
-                                Одоогоор мөр алга. «Мөр нэмэх» дарж эхлүүлнэ үү.
+                                {{ filter ? 'Энэ шүүлтэд тохирох үүрэг чиглэл алга.' : 'Одоогоор мөр алга. «Мөр нэмэх» дарж эхлүүлнэ үү.' }}
                             </td>
                         </tr>
                     </tbody>
@@ -434,7 +661,7 @@ const prepTableMinWidth = computed(() => {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="task in tasks" :key="task.id">
+                        <tr v-for="task in visibleTasks" :key="task.id">
                             <td class="text-center font-semibold text-slate-500">{{ task.no }}</td>
                             <td class="ui-sheet-td">
                                 <SheetCell
@@ -519,9 +746,9 @@ const prepTableMinWidth = computed(() => {
                                 </button>
                             </td>
                         </tr>
-                        <tr v-if="!tasks.length">
+                        <tr v-if="!visibleTasks.length">
                             <td :colspan="canManage ? 9 : 8" class="!py-14 text-center text-slate-400">
-                                Одоогоор мөр алга. «Мөр нэмэх» дарж эхлүүлнэ үү.
+                                {{ filter ? 'Энэ шүүлтэд тохирох үүрэг чиглэл алга.' : 'Одоогоор мөр алга. «Мөр нэмэх» дарж эхлүүлнэ үү.' }}
                             </td>
                         </tr>
                     </tbody>
