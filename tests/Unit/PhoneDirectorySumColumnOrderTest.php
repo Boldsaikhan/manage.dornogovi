@@ -3,7 +3,6 @@
 namespace Tests\Unit;
 
 use App\Support\PhoneDirectoryDocxParser;
-use ReflectionMethod;
 use Tests\TestCase;
 
 class PhoneDirectorySumColumnOrderTest extends TestCase
@@ -11,10 +10,6 @@ class PhoneDirectorySumColumnOrderTest extends TestCase
     public function test_sum_org_maps_position_then_name(): void
     {
         $parser = app(PhoneDirectoryDocxParser::class);
-
-        $setOrder = new ReflectionMethod(PhoneDirectoryDocxParser::class, 'columnOrder');
-        // columnOrder is private property — use toEntry via reflection after setting order.
-
         $ref = new \ReflectionClass($parser);
         $prop = $ref->getProperty('columnOrder');
         $prop->setAccessible(true);
