@@ -392,30 +392,40 @@ const openAdd = () => {
 
             <!-- Tab 2: staff -->
             <div v-else class="ui-table-wrap overflow-x-auto">
-                <table class="ui-table min-w-[1100px]">
+                <table class="ui-table w-full min-w-[1400px] table-fixed">
                     <thead>
                         <tr>
-                            <th class="w-12 text-center">№</th>
-                            <th>Байгууллага</th>
-                            <th>Нэгж</th>
-                            <th>Албан тушаал</th>
-                            <th>Овог</th>
-                            <th>Нэр</th>
-                            <th class="text-center">Өрөө</th>
-                            <th class="text-center">Ажлын утас</th>
-                            <th class="text-center">Гар утас</th>
-                            <th>И-Мэйл хаяг</th>
-                            <th v-if="canManage" />
+                            <th class="w-10 text-center">№</th>
+                            <th class="w-56">Байгууллага</th>
+                            <th class="w-44">Нэгж</th>
+                            <th class="w-64">Албан тушаал</th>
+                            <th class="w-28">Овог</th>
+                            <th class="w-28">Нэр</th>
+                            <th class="w-16 text-center">Өрөө</th>
+                            <th class="w-24 text-center">Ажлын утас</th>
+                            <th class="w-28 text-center">Гар утас</th>
+                            <th class="w-56">И-Мэйл хаяг</th>
+                            <th v-if="canManage" class="w-20" />
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="(row, index) in filteredStaff" :key="row.id">
                             <td class="text-center">{{ index + 1 }}</td>
-                            <td>{{ row.organization }}</td>
-                            <td>{{ row.unit || '—' }}</td>
-                            <td>{{ row.position || '—' }}</td>
-                            <td>{{ row.last_name }}</td>
-                            <td>{{ row.first_name }}</td>
+                            <td>
+                                <span class="ui-clamp-2" :title="row.organization">{{ row.organization }}</span>
+                            </td>
+                            <td>
+                                <span class="ui-clamp-2" :title="row.unit || ''">{{ row.unit || '—' }}</span>
+                            </td>
+                            <td>
+                                <span class="ui-clamp-2" :title="row.position || ''">{{ row.position || '—' }}</span>
+                            </td>
+                            <td>
+                                <span class="ui-clamp-2" :title="row.last_name">{{ row.last_name }}</span>
+                            </td>
+                            <td>
+                                <span class="ui-clamp-2" :title="row.first_name">{{ row.first_name }}</span>
+                            </td>
                             <td class="text-center">{{ row.room || '—' }}</td>
                             <td class="text-center">{{ row.work_phone || '—' }}</td>
                             <td class="text-center">{{ row.mobile_phone || '—' }}</td>
@@ -423,7 +433,8 @@ const openAdd = () => {
                                 <a
                                     v-if="row.email"
                                     :href="`mailto:${row.email}`"
-                                    class="text-brand-navy-600 hover:underline"
+                                    class="ui-clamp-2 break-all text-brand-navy-600 hover:underline"
+                                    :title="row.email"
                                 >
                                     {{ row.email }}
                                 </a>

@@ -107,6 +107,15 @@
         @apply bg-brand-navy-50/40;
     }
 
+    /* Урт бичвэрийг хамгийн ихдээ 2 мөрөнд багтаана */
+    .ui-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        @apply leading-snug;
+    }
+
     /* Хүснэгтийн нүдэнд нийцсэн оруулга — форм шиг биш, хүснэгт шиг */
     .ui-table-input {
         @apply w-full rounded-md border-0 bg-transparent px-1.5 py-1 text-sm text-slate-800
