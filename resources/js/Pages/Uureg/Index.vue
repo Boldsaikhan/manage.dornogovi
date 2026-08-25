@@ -58,7 +58,7 @@ watch(
 // ── Дашбоард: хэрэгжилтийг хэлтэс, ангиллаар нэгтгэнэ ──────────────────────────
 const showDashboard = ref(false); // дэлгэц дүүрэн дашбоард
 
-const CATEGORY_ORDER = ['heltes', 'azdtg', 'agentlag', 'sum', 'baiguullaga', 'unknown'];
+const CATEGORY_ORDER = ['udirdlaga', 'heltes', 'azdtg', 'agentlag', 'sum', 'baiguullaga', 'unknown'];
 const filter = ref(null); // { type: 'category' | 'org', value, label }
 
 const CATEGORY_LABELS = {
@@ -179,10 +179,16 @@ const statusSegments = computed(() => {
     ].map((s) => ({ ...s, percent: Math.round((s.value / total) * 100) }));
 });
 
+// Ангиллын картуудыг тогтмол дарааллаар харуулна.
 const categoryStats = computed(() => buildStats(
     (owner) => owner.category,
     (owner, key) => CATEGORY_LABELS[key] ?? key,
-));
+).sort((a, b) => {
+    const ai = CATEGORY_ORDER.indexOf(a.key);
+    const bi = CATEGORY_ORDER.indexOf(b.key);
+
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+}));
 
 const orgStats = computed(() => buildStats(
     (owner) => owner.org,
@@ -478,98 +484,36 @@ const prepTableMinWidth = computed(() => {
                 </ul>
             </div>
 
-            <!-- Дашбоард: хэрэгжилтийн нэгтгэл -->
-            <section class="ui-card-pad space-y-5">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <h3 class="text-base font-semibold text-slate-800">Хэрэгжилтийн дашбоард</h3>
-                        <p class="mt-0.5 text-sm text-slate-500">
-                            Хэлтэс, агентлаг, байгууллагаар нэгтгэсэн хувь. Дээр нь дарж холбогдох үүрэг чиглэлийг харна.
-                        </p>
-                    </div>
-                    <button type="button" class="ui-btn-ghost !py-1.5 text-xs" @click="showDashboard = !showDashboard">
-                        {{ showDashboard ? 'Хураах' : 'Дэлгэх' }}
-                    </button>
-                </div>
+            <!-- Дашбоард: товч хураангуй, дарахад дэлгэц дүүрэн нээгдэнэ -->
+            <button
+                type="button"
+                class="flex w-full flex-wrap items-center gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-soft transition hover:border-brand-navy-300"
+                @click="openDashboard"
+            >
+                <span class="flex items-center gap-2.5">
+                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-navy-50 text-brand-navy-700">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path d="M4 20V10M10 20V4M16 20v-6M22 20H2" stroke-linecap="round" />
+                        </svg>
+                    </span>
+                    <span>
+                        <span class="block text-sm font-semibold text-slate-800">Хэрэгжилтийн дашбоард</span>
+                        <span class="block text-xs text-slate-500">Дарж дэлгэрэнгүй графикаар харна</span>
+                    </span>
+                </span>
 
-                <template v-if="showDashboard">
-                    <!-- Нийт -->
-                    <button
-                        type="button"
-                        class="flex w-full flex-wrap items-center gap-4 rounded-2xl border px-4 py-3 text-left transition"
-                        :class="filter ? 'border-slate-200 bg-white hover:border-brand-navy-300' : 'border-brand-navy-500 bg-brand-navy-50'"
-                        @click="clearFilter"
-                    >
-                        <div class="min-w-[7rem]">
-                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Нийт хэрэгжилт</p>
-                            <p class="text-2xl font-bold text-brand-navy-800">{{ overall.progress }}%</p>
-                        </div>
-                        <div class="h-2.5 min-w-[8rem] flex-1 overflow-hidden rounded-full bg-slate-200">
-                            <div class="h-full rounded-full" :class="barColor(overall.progress)" :style="{ width: overall.progress + '%' }" />
-                        </div>
-                        <div class="flex gap-4 text-xs text-slate-500">
-                            <span>Нийт <b class="text-slate-700">{{ overall.count }}</b></span>
-                            <span>Дууссан <b class="text-emerald-600">{{ overall.done }}</b></span>
-                            <span>Хэрэгжиж буй <b class="text-amber-600">{{ overall.started }}</b></span>
-                            <span>Эхлээгүй <b class="text-slate-600">{{ overall.pending }}</b></span>
-                        </div>
-                    </button>
+                <span class="text-2xl font-bold text-brand-navy-800">{{ overall.progress }}%</span>
 
-                    <!-- Ангиллаар -->
-                    <div>
-                        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Ангиллаар</p>
-                        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                            <button
-                                v-for="item in categoryStats"
-                                :key="item.key"
-                                type="button"
-                                class="rounded-2xl border px-4 py-3 text-left transition"
-                                :class="filter && filter.type === 'category' && filter.value === item.key
-                                    ? 'border-brand-navy-500 bg-brand-navy-50'
-                                    : 'border-slate-200 bg-white hover:border-brand-navy-300'"
-                                @click="applyFilter('category', item.key, item.label)"
-                            >
-                                <div class="flex items-baseline justify-between gap-2">
-                                    <span class="truncate text-sm font-semibold text-slate-700">{{ item.label }}</span>
-                                    <span class="text-lg font-bold text-brand-navy-700">{{ item.progress }}%</span>
-                                </div>
-                                <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
-                                    <div class="h-full rounded-full" :class="barColor(item.progress)" :style="{ width: item.progress + '%' }" />
-                                </div>
-                                <p class="mt-1.5 text-xs text-slate-500">
-                                    {{ item.count }} үүрэг · {{ item.done }} дууссан
-                                </p>
-                            </button>
-                        </div>
-                    </div>
+                <span class="h-2 min-w-[6rem] flex-1 overflow-hidden rounded-full bg-slate-200">
+                    <span class="block h-full rounded-full" :class="barColor(overall.progress)" :style="{ width: overall.progress + '%' }" />
+                </span>
 
-                    <!-- Хэлтэс, байгууллагаар -->
-                    <div v-if="orgStats.length">
-                        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                            Хэлтэс, агентлаг, байгууллагаар
-                        </p>
-                        <div class="max-h-72 space-y-1.5 overflow-y-auto pr-1">
-                            <button
-                                v-for="item in orgStats"
-                                :key="item.key"
-                                type="button"
-                                class="flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition"
-                                :class="filter && filter.type === 'org' && filter.value === item.key
-                                    ? 'border-brand-navy-500 bg-brand-navy-50'
-                                    : 'border-slate-200 bg-white hover:border-brand-navy-300'"
-                                @click="applyFilter('org', item.key, item.label)"
-                            >
-                                <span class="w-56 shrink-0 truncate text-sm text-slate-700" :title="item.label">{{ item.label }}</span>
-                                <span class="h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
-                                    <span class="block h-full rounded-full" :class="barColor(item.progress)" :style="{ width: item.progress + '%' }" />
-                                </span>
-                                <span class="w-12 shrink-0 text-right text-sm font-semibold text-brand-navy-700">{{ item.progress }}%</span>
-                                <span class="w-16 shrink-0 text-right text-xs text-slate-500">{{ item.count }} үүрэг</span>
-                            </button>
-                        </div>
-                    </div>
-                </template>
-            </section>
+                <span class="flex gap-3 text-xs text-slate-500">
+                    <span>Нийт <b class="text-slate-700">{{ overall.count }}</b></span>
+                    <span>Дууссан <b class="text-emerald-600">{{ overall.done }}</b></span>
+                    <span>Эхлээгүй <b class="text-slate-600">{{ overall.pending }}</b></span>
+                </span>
+            </button>
 
             <!-- Идэвхтэй шүүлт -->
             <div v-if="filter" class="flex flex-wrap items-center gap-2 text-sm">
@@ -811,5 +755,142 @@ const prepTableMinWidth = computed(() => {
                 </table>
             </div>
         </div>
+
+        <!-- Дэлгэц дүүрэн график дашбоард -->
+        <div v-if="showDashboard" class="fixed inset-0 z-50 overflow-y-auto bg-slate-100">
+            <div class="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+                <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-xl font-bold text-brand-navy-900">Хэрэгжилтийн дашбоард</h2>
+                        <p class="mt-0.5 text-sm text-slate-500">
+                            {{ source.name }} · нийт {{ overall.count }} үүрэг чиглэл. Аль ч хэсэг дээр дарж холбогдох
+                            үүргүүдийг хүснэгтээр харна.
+                        </p>
+                    </div>
+                    <button type="button" class="ui-btn-ghost" @click="showDashboard = false">Хаах</button>
+                </div>
+
+                <div class="grid gap-4 lg:grid-cols-3">
+                    <section class="ui-card-pad flex items-center gap-5">
+                        <svg viewBox="0 0 130 130" class="h-32 w-32 shrink-0 -rotate-90">
+                            <circle cx="65" cy="65" r="52" fill="none" stroke="#e2e8f0" stroke-width="16" />
+                            <circle
+                                cx="65"
+                                cy="65"
+                                r="52"
+                                fill="none"
+                                :stroke="overall.progress >= 80 ? '#10b981' : overall.progress >= 50 ? '#3771b8' : '#f59e0b'"
+                                stroke-width="16"
+                                stroke-linecap="round"
+                                :stroke-dasharray="donut(overall.progress).dash"
+                            />
+                        </svg>
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Нийт хэрэгжилт</p>
+                            <p class="text-4xl font-bold text-brand-navy-800">{{ overall.progress }}%</p>
+                            <p class="mt-1 text-sm text-slate-500">{{ overall.done }}/{{ overall.count }} үүрэг дууссан</p>
+                        </div>
+                    </section>
+
+                    <section class="ui-card-pad lg:col-span-2">
+                        <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Гүйцэтгэлийн төлөв</p>
+                        <div class="flex h-5 overflow-hidden rounded-full bg-slate-200">
+                            <div
+                                v-for="segment in statusSegments"
+                                :key="segment.label"
+                                :style="{ width: segment.percent + '%', background: segment.color }"
+                                :title="segment.label + ': ' + segment.value"
+                            />
+                        </div>
+                        <div class="mt-3 flex flex-wrap gap-4 text-sm">
+                            <span v-for="segment in statusSegments" :key="segment.label" class="flex items-center gap-2">
+                                <span class="h-3 w-3 rounded-sm" :style="{ background: segment.color }" />
+                                <span class="text-slate-600">{{ segment.label }}</span>
+                                <b class="text-slate-800">{{ segment.value }}</b>
+                                <span class="text-xs text-slate-400">({{ segment.percent }}%)</span>
+                            </span>
+                        </div>
+                    </section>
+                </div>
+
+                <section class="ui-card-pad mt-4">
+                    <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Ангиллаар</p>
+                    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        <button
+                            v-for="item in categoryStats"
+                            :key="item.key"
+                            type="button"
+                            class="rounded-2xl border border-slate-200 p-4 text-left transition hover:border-brand-navy-400 hover:shadow-soft"
+                            @click="applyFilterAndClose('category', item.key, item.label)"
+                        >
+                            <div class="flex items-center gap-4">
+                                <svg viewBox="0 0 130 130" class="h-16 w-16 shrink-0 -rotate-90">
+                                    <circle cx="65" cy="65" r="52" fill="none" stroke="#e2e8f0" stroke-width="20" />
+                                    <circle
+                                        cx="65"
+                                        cy="65"
+                                        r="52"
+                                        fill="none"
+                                        :stroke="item.progress >= 80 ? '#10b981' : item.progress >= 50 ? '#3771b8' : item.progress > 0 ? '#f59e0b' : '#cbd5e1'"
+                                        stroke-width="20"
+                                        :stroke-dasharray="donut(item.progress).dash"
+                                    />
+                                </svg>
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-semibold text-slate-700" :title="item.label">{{ item.label }}</p>
+                                    <p class="text-2xl font-bold text-brand-navy-700">{{ item.progress }}%</p>
+                                    <p class="text-xs text-slate-500">{{ item.count }} үүрэг · {{ item.done }} дууссан</p>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                </section>
+
+                <section v-if="azdtgStats.length" class="ui-card-pad mt-4">
+                    <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        АЗДТГ-ын нэгжүүдийн хэрэгжилт
+                    </p>
+                    <div class="space-y-2">
+                        <button
+                            v-for="item in azdtgStats"
+                            :key="item.key"
+                            type="button"
+                            class="flex w-full items-center gap-3 rounded-xl border border-slate-200 px-3 py-2 text-left transition hover:border-brand-navy-400"
+                            @click="applyFilterAndClose('org', item.key, item.label)"
+                        >
+                            <span class="w-64 shrink-0 truncate text-sm text-slate-700" :title="item.label">{{ item.label }}</span>
+                            <span class="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-200">
+                                <span class="block h-full rounded-full" :class="barColor(item.progress)" :style="{ width: item.progress + '%' }" />
+                            </span>
+                            <span class="w-12 shrink-0 text-right text-sm font-semibold text-brand-navy-700">{{ item.progress }}%</span>
+                            <span class="w-20 shrink-0 text-right text-xs text-slate-500">{{ item.count }} үүрэг</span>
+                        </button>
+                    </div>
+                </section>
+
+                <section v-if="orgStats.length" class="ui-card-pad mb-8 mt-4">
+                    <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Хэлтэс, агентлаг, байгууллагаар
+                    </p>
+                    <div class="space-y-2">
+                        <button
+                            v-for="item in orgStats"
+                            :key="item.key"
+                            type="button"
+                            class="flex w-full items-center gap-3 rounded-xl border border-slate-200 px-3 py-2 text-left transition hover:border-brand-navy-400"
+                            @click="applyFilterAndClose('org', item.key, item.label)"
+                        >
+                            <span class="w-64 shrink-0 truncate text-sm text-slate-700" :title="item.label">{{ item.label }}</span>
+                            <span class="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-200">
+                                <span class="block h-full rounded-full" :class="barColor(item.progress)" :style="{ width: item.progress + '%' }" />
+                            </span>
+                            <span class="w-12 shrink-0 text-right text-sm font-semibold text-brand-navy-700">{{ item.progress }}%</span>
+                            <span class="w-20 shrink-0 text-right text-xs text-slate-500">{{ item.count }} үүрэг</span>
+                        </button>
+                    </div>
+                </section>
+            </div>
+        </div>
+
     </AuthenticatedLayout>
 </template>

@@ -115,7 +115,8 @@ class TaskController extends Controller
                 if ($name === '') {
                     return;
                 }
-                $org = trim(implode(' · ', array_filter([(string) $row->unit, (string) $row->organization])));
+                // Дашбоардад АЗДТГ-ын нэгж (хэлтэс)-ээр бүлэглэнэ.
+                $org = trim((string) $row->unit) ?: trim((string) $row->organization);
                 // АЗДТГ-ын албан хаагчид — тусдаа шүүлтүүрт харагдана.
                 if (! isset($items[$name])) {
                     $items[$name] = [
