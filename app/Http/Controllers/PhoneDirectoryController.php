@@ -345,7 +345,7 @@ class PhoneDirectoryController extends Controller
         abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
 
         $data = $request->validate([
-            'organization' => ['required', 'string', 'max:255'],
+            'organization' => ['nullable', 'string', 'max:255'],
             'unit' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
@@ -356,8 +356,11 @@ class PhoneDirectoryController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
         ]);
 
+        $data['organization'] = $data['organization']
+            ?: 'Дорноговь аймгийн Засаг даргын Тамгын газар';
+
         $data['sort_order'] = (int) OrgEmployeePhone::query()
-            ->where('organization', $data['organization'])
+            ->where('unit', $data['unit'] ?? '')
             ->max('sort_order') + 1;
 
         OrgEmployeePhone::create($data);

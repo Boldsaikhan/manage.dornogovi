@@ -43,7 +43,7 @@ const editingId = ref(null);
 const isEditing = computed(() => editingId.value !== null);
 
 const staffForm = useForm({
-    organization: '',
+    organization: 'Дорноговь аймгийн Засаг даргын Тамгын газар',
     unit: '',
     position: '',
     last_name: '',
@@ -131,13 +131,10 @@ const filteredStaff = computed(() => {
 
     return scoped.filter((r) =>
         [
-            r.organization,
             r.unit,
             r.position,
             r.last_name,
             r.first_name,
-            r.room,
-            r.work_phone,
             r.mobile_phone,
             r.email,
         ]
@@ -145,6 +142,23 @@ const filteredStaff = computed(() => {
             .some((v) => String(v).toLowerCase().includes(q)),
     );
 });
+
+/** Нэгжээр бүлэглэсэн жагсаалт — нэгж нь бүлгийн мөр болно. */
+const staffGroups = computed(() => {
+    const map = new Map();
+
+    filteredStaff.value.forEach((row) => {
+        const key = row.unit || 'Бусад';
+        if (! map.has(key)) {
+            map.set(key, []);
+        }
+        map.get(key).push(row);
+    });
+
+    return [...map.entries()].map(([unit, rows]) => ({ unit, rows }));
+});
+
+const staffColumnCount = computed(() => 6 + (props.canManage ? 1 : 0));
 
 const submit = () => {
     if (isEditing.value) {
@@ -173,12 +187,16 @@ const submit = () => {
 };
 
 const submitStaff = () => {
+    if (! staffForm.organization) {
+        staffForm.organization = 'Дорноговь аймгийн Засаг даргын Тамгын газар';
+    }
     staffForm.post(route('phone-directory.staff.store'), {
         preserveScroll: true,
         onSuccess: () => {
-            const org = staffForm.organization;
+            const unit = staffForm.unit;
             staffForm.reset();
-            staffForm.organization = org;
+            staffForm.organization = 'Дорноговь аймгийн Засаг даргын Тамгын газар';
+            staffForm.unit = unit;
             showStaffForm.value = false;
         },
     });
@@ -389,7 +407,7 @@ const closeDirectoryForm = () => {
                     class="ui-input md:max-w-sm"
                     :placeholder="isDirectory
                         ? 'Нэр, албан тушаал, утсаар хайх…'
-                        : 'Байгууллага, нэр, утас, и-мэйлээр хайх…'"
+                        : 'Нэгж, нэр, утас, и-мэйлээр хайх…'"
                 />
 
                 <!-- Ангиллаар шүүх (утасны жагсаалт) -->
@@ -439,9 +457,8 @@ const closeDirectoryForm = () => {
                         @change="staffImportForm.file = $event.target.files[0]"
                     />
                     <p class="mt-1 text-xs text-slate-500">
-                        .docx, .xlsx, .pdf (20 MB хүртэл). Баганын дараалал: № / Байгууллага / Нэгж / Албан тушаал /
-                        Овог / Нэр / Өрөө / Ажлын утас / Гар утас / И-мэйл хаяг. Нийлүүлсэн ганц нүдтэй мөрийг
-                        байгууллагын нэр гэж уншина. Сканнердсан зурган PDF уншигдахгүй.
+                        .docx, .xlsx, .pdf (20 MB хүртэл). Баганууд: № / Нэгж / Албан тушаал /
+                        Овог / Нэр / Гар утас / И-мэйл хаяг (хуучин файл дахь байгууллага, өрөө, ажлын утас ч уншигдана).
                     </p>
                     <p v-if="staffImportForm.errors.staff_file" class="mt-1 text-sm text-rose-600">
                         {{ staffImportForm.errors.staff_file }}
@@ -532,62 +549,60 @@ const closeDirectoryForm = () => {
                 </table>
             </div>
 
-            <!-- Tab 2: staff -->
+            <!-- Tab 2: staff — нэгжээр бүлэглэсэн -->
             <div v-else class="ui-table-wrap overflow-x-auto">
-                <table class="ui-table w-full min-w-[1400px] table-fixed">
+                <table class="ui-table min-w-[720px]">
                     <thead>
                         <tr>
-                            <th class="w-10 text-center">№</th>
-                            <th class="w-56">Байгууллага</th>
-                            <th class="w-44">Нэгж</th>
-                            <th class="w-64">Албан тушаал</th>
-                            <th class="w-28">Овог</th>
-                            <th class="w-28">Нэр</th>
-                            <th class="w-16 text-center">Өрөө</th>
-                            <th class="w-24 text-center">Ажлын утас</th>
-                            <th class="w-28 text-center">Гар утас</th>
-                            <th class="w-56">И-Мэйл хаяг</th>
+                            <th class="w-14 text-center">№</th>
+                            <th>Албан тушаал</th>
+                            <th>Овог</th>
+                            <th>Нэр</th>
+                            <th class="text-center">Гар утас</th>
+                            <th>И-Мэйл хаяг</th>
                             <th v-if="canManage" class="w-20" />
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="(row, index) in filteredStaff" :key="row.id">
-                            <td class="text-center">{{ index + 1 }}</td>
-                            <td>
-                                <span class="ui-clamp-2" :title="row.organization">{{ row.organization }}</span>
-                            </td>
-                            <td>
-                                <span class="ui-clamp-2" :title="row.unit || ''">{{ row.unit || '—' }}</span>
-                            </td>
-                            <td>
-                                <span class="ui-clamp-2" :title="row.position || ''">{{ row.position || '—' }}</span>
-                            </td>
-                            <td>
-                                <span class="ui-clamp-2" :title="row.last_name">{{ row.last_name }}</span>
-                            </td>
-                            <td>
-                                <span class="ui-clamp-2" :title="row.first_name">{{ row.first_name }}</span>
-                            </td>
-                            <td class="text-center">{{ row.room || '—' }}</td>
-                            <td class="text-center">{{ row.work_phone || '—' }}</td>
-                            <td class="text-center">{{ row.mobile_phone || '—' }}</td>
-                            <td>
-                                <a
-                                    v-if="row.email"
-                                    :href="`mailto:${row.email}`"
-                                    class="ui-clamp-2 break-all text-brand-navy-600 hover:underline"
-                                    :title="row.email"
+                        <template v-for="group in staffGroups" :key="group.unit">
+                            <tr class="bg-brand-navy-50">
+                                <td
+                                    :colspan="staffColumnCount"
+                                    class="text-center font-semibold italic text-brand-navy-800"
                                 >
-                                    {{ row.email }}
-                                </a>
-                                <span v-else>—</span>
-                            </td>
-                            <td v-if="canManage" class="text-right">
-                                <button type="button" class="ui-btn-danger !py-1 text-xs" @click="destroyStaff(row.id)">Устгах</button>
-                            </td>
-                        </tr>
-                        <tr v-if="!filteredStaff.length">
-                            <td :colspan="canManage ? 11 : 10" class="!py-12 text-center text-slate-400">
+                                    {{ group.unit }}
+                                </td>
+                            </tr>
+                            <tr v-for="(row, index) in group.rows" :key="row.id">
+                                <td class="text-center">{{ index + 1 }}</td>
+                                <td>
+                                    <span class="ui-clamp-2" :title="row.position || ''">{{ row.position || '—' }}</span>
+                                </td>
+                                <td>
+                                    <span class="ui-clamp-2" :title="row.last_name">{{ row.last_name }}</span>
+                                </td>
+                                <td>
+                                    <span class="ui-clamp-2" :title="row.first_name">{{ row.first_name }}</span>
+                                </td>
+                                <td class="text-center">{{ row.mobile_phone || '—' }}</td>
+                                <td>
+                                    <a
+                                        v-if="row.email"
+                                        :href="`mailto:${row.email}`"
+                                        class="ui-clamp-2 break-all text-brand-navy-600 hover:underline"
+                                        :title="row.email"
+                                    >
+                                        {{ row.email }}
+                                    </a>
+                                    <span v-else>—</span>
+                                </td>
+                                <td v-if="canManage" class="text-right">
+                                    <button type="button" class="ui-btn-danger !py-1 text-xs" @click="destroyStaff(row.id)">Устгах</button>
+                                </td>
+                            </tr>
+                        </template>
+                        <tr v-if="!staffGroups.length">
+                            <td :colspan="staffColumnCount" class="!py-12 text-center text-slate-400">
                                 {{ search ? 'Хайлтад тохирох бүртгэл алга.' : 'Одоогоор бүртгэл алга. «Шинэ нэмэх» дарж оруулна уу.' }}
                             </td>
                         </tr>
@@ -663,17 +678,12 @@ const closeDirectoryForm = () => {
                     <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" @click="showStaffForm = false">✕</button>
                 </div>
                 <div class="grid max-h-[65vh] gap-4 overflow-y-auto pr-1 md:grid-cols-2">
-                    <div>
-                        <label class="ui-label">Байгууллага</label>
-                        <input v-model="staffForm.organization" list="staff-org-names" class="ui-input" required />
-                        <datalist id="staff-org-names">
-                            <option v-for="name in staffOrganizations" :key="name" :value="name" />
-                        </datalist>
-                        <InputError :message="staffForm.errors.organization" class="mt-1" />
-                    </div>
-                    <div>
+                    <div class="md:col-span-2">
                         <label class="ui-label">Нэгж</label>
-                        <input v-model="staffForm.unit" class="ui-input" />
+                        <input v-model="staffForm.unit" list="staff-unit-names" class="ui-input" />
+                        <datalist id="staff-unit-names">
+                            <option v-for="unit in unitOptions" :key="unit" :value="unit" />
+                        </datalist>
                     </div>
                     <div>
                         <label class="ui-label">Албан тушаал</label>
@@ -688,14 +698,6 @@ const closeDirectoryForm = () => {
                         <label class="ui-label">Нэр</label>
                         <input v-model="staffForm.first_name" class="ui-input" required />
                         <InputError :message="staffForm.errors.first_name" class="mt-1" />
-                    </div>
-                    <div>
-                        <label class="ui-label">Өрөө</label>
-                        <input v-model="staffForm.room" class="ui-input" />
-                    </div>
-                    <div>
-                        <label class="ui-label">Ажлын утас</label>
-                        <input v-model="staffForm.work_phone" class="ui-input" />
                     </div>
                     <div>
                         <label class="ui-label">Гар утас</label>

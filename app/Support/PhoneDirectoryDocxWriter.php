@@ -11,13 +11,12 @@ class PhoneDirectoryDocxWriter
 
     private const HEADINGS = ['№', 'Овог нэр', 'Албан тушаал', 'Ажлын өрөөний утас', 'Гар утас'];
 
-    /** АЗДТГ-н албан хаагчдын дэлгэрэнгүй жагсаалт. */
+    /** АЗДТГ-н албан хаагчид — нэгжээр бүлэглэнэ. */
     private const STAFF_HEADINGS = [
-        '№', 'Байгууллага', 'Нэгж', 'Албан тушаал', 'Овог', 'Нэр',
-        'Өрөө', 'Ажлын утас', 'Гар утас', 'И-мэйл хаяг',
+        '№', 'Албан тушаал', 'Овог', 'Нэр', 'Гар утас', 'И-мэйл хаяг',
     ];
 
-    private const STAFF_WIDTHS = [500, 2200, 1500, 2000, 1300, 1300, 700, 1100, 1100, 2000];
+    private const STAFF_WIDTHS = [700, 3200, 1800, 1800, 1600, 2800];
 
     public function __construct(private readonly DocxTableWriter $writer) {}
 
@@ -53,27 +52,34 @@ class PhoneDirectoryDocxWriter
     }
 
     /**
-     * АЗДТГ-н албан хаагчдын жагсаалт — хэвтээ хуудсаар.
+     * АЗДТГ-н албан хаагчдын жагсаалт — нэгжийг бүлгийн мөрөөр.
      *
      * @param  array<int, array<string, string|null>>  $staff
      */
     public function writeStaff(array $staff, string $path, string $title = 'АЗДТГ-н албан хаагчдын утасны жагсаалт'): void
     {
+        $grouped = [];
+
+        foreach ($staff as $row) {
+            $unit = trim((string) ($row['unit'] ?? '')) ?: 'Бусад';
+            $grouped[$unit][] = $row;
+        }
+
         $rows = [];
 
-        foreach (array_values($staff) as $index => $row) {
-            $rows[] = ['type' => 'data', 'cells' => [
-                (string) ($index + 1),
-                (string) ($row['organization'] ?? ''),
-                (string) ($row['unit'] ?? ''),
-                (string) ($row['position'] ?? ''),
-                (string) ($row['last_name'] ?? ''),
-                (string) ($row['first_name'] ?? ''),
-                (string) ($row['room'] ?? ''),
-                (string) ($row['work_phone'] ?? ''),
-                (string) ($row['mobile_phone'] ?? ''),
-                (string) ($row['email'] ?? ''),
-            ]];
+        foreach ($grouped as $unit => $people) {
+            $rows[] = ['type' => 'group', 'text' => $unit];
+
+            foreach (array_values($people) as $index => $row) {
+                $rows[] = ['type' => 'data', 'cells' => [
+                    (string) ($index + 1),
+                    (string) ($row['position'] ?? ''),
+                    (string) ($row['last_name'] ?? ''),
+                    (string) ($row['first_name'] ?? ''),
+                    (string) ($row['mobile_phone'] ?? ''),
+                    (string) ($row['email'] ?? ''),
+                ]];
+            }
         }
 
         $this->writer->write(
@@ -82,8 +88,8 @@ class PhoneDirectoryDocxWriter
             self::STAFF_HEADINGS,
             self::STAFF_WIDTHS,
             $rows,
-            centerColumns: [0, 6, 7, 8],
-            landscape: true,
+            centerColumns: [0, 4],
+            landscape: false,
         );
     }
 }
