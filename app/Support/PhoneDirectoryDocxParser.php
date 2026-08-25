@@ -2,12 +2,6 @@
 
 namespace App\Support;
 
-use DOMDocument;
-use DOMElement;
-use DOMXPath;
-use RuntimeException;
-use ZipArchive;
-
 /**
  * Word (.docx) файлын хүснэгтээс утасны жагсаалтыг уншина.
  *
@@ -16,31 +10,24 @@ use ZipArchive;
  */
 class PhoneDirectoryDocxParser
 {
-    private const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+    public function __construct(private readonly DocxTableReader $reader) {}
 
     /**
      * @return array<int, array<string, mixed>>
      */
     public function parse(string $path): array
     {
-        $xml = $this->documentXml($path);
-
-        $dom = new DOMDocument;
-        $dom->loadXML($xml, LIBXML_NOENT | LIBXML_NONET);
-        $xpath = new DOMXPath($dom);
-        $xpath->registerNamespace('w', self::W);
-
         $rows = [];
         $orgName = '';
         $orgOrder = 0;
         $sortOrder = 0;
 
-        foreach ($xpath->query('//w:tbl') as $table) {
-            foreach ($xpath->query('.//w:tr', $table) as $tr) {
-                $cells = [];
-                foreach ($xpath->query('./w:tc', $tr) as $tc) {
-                    $cells[] = $this->cellText($xpath, $tc);
-                }
+        foreach ($this->reader->tables($path) as $table) {
+            foreach ($table as $cells) {
+                $cells = array_map(
+                    fn (string $c) => trim((string) preg_replace('/\s+/u', ' ', $c)),
+                    $cells
+                );
 
                 $filled = array_values(array_filter($cells, fn (string $c) => $c !== ''));
 
@@ -80,37 +67,6 @@ class PhoneDirectoryDocxParser
         return $rows;
     }
 
-    private function documentXml(string $path): string
-    {
-        $zip = new ZipArchive;
-
-        if ($zip->open($path) !== true) {
-            throw new RuntimeException('Word файлыг нээж чадсангүй. .docx хэлбэрээр хадгалж дахин оруулна уу.');
-        }
-
-        $xml = $zip->getFromName('word/document.xml');
-        $zip->close();
-
-        if ($xml === false) {
-            throw new RuntimeException('Файлын агуулга уншигдсангүй. .docx хэлбэрээр хадгалж дахин оруулна уу.');
-        }
-
-        return $xml;
-    }
-
-    private function cellText(DOMXPath $xpath, DOMElement $tc): string
-    {
-        $parts = [];
-
-        foreach ($xpath->query('.//w:t', $tc) as $t) {
-            $parts[] = $t->textContent;
-        }
-
-        $text = preg_replace('/\s+/u', ' ', implode('', $parts));
-
-        return trim((string) $text);
-    }
-
     /**
      * @param  array<int, string>  $cells
      */
@@ -129,13 +85,14 @@ class PhoneDirectoryDocxParser
 
     /**
      * @param  array<int, string>  $cells
-     * @return array<string, string>|null
+     * @return array<string, string|null>|null
      */
     private function toEntry(array $cells): ?array
     {
         // Эхний нүд зөвхөн дугаар бол хасна.
         if (isset($cells[0]) && preg_match('/^\d+[.)]?$/u', $cells[0])) {
             array_shift($cells);
+            $cells = array_values($cells);
         }
 
         $name = trim($cells[0] ?? '');

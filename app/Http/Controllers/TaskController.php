@@ -6,6 +6,7 @@ use App\Models\Task;
 use App\Models\TaskDocument;
 use App\Models\TaskSource;
 use App\Support\ModuleAccess;
+use App\Support\TaskDocxParser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -13,6 +14,7 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 class TaskController extends Controller
 {
@@ -153,7 +155,7 @@ class TaskController extends Controller
         $file = $request->file('file');
         $path = $file->store('task-documents/'.$source->key, 'local');
 
-        $source->documents()->create([
+        $document = $source->documents()->create([
             'uploaded_by' => $request->user()->id,
             'original_name' => $file->getClientOriginalName(),
             'path' => $path,
@@ -161,7 +163,75 @@ class TaskController extends Controller
             'size' => $file->getSize() ?: 0,
         ]);
 
-        return back(303)->with('success', 'Word файл хадгаллаа.');
+        // Файлын хүснэгтийг шууд мөр болгож уншина.
+        $imported = $this->importRows($document, $source->key, replace: false);
+
+        return back(303)->with('success', $imported > 0
+            ? "Word файл хадгалж, {$imported} мөрийг хүснэгтэд оруулав."
+            : 'Word файл хадгаллаа. (Хүснэгт олдсонгүй — .docx хэлбэртэй, хүснэгттэй файл байх шаардлагатай.)');
+    }
+
+    public function importDocument(Request $request, TaskDocument $document): RedirectResponse
+    {
+        abort_unless(
+            ModuleAccess::canManage($request->user(), 'tasks') || $request->user()->is_admin,
+            403
+        );
+
+        $imported = $this->importRows($document, $document->source->key, $request->boolean('replace'));
+
+        if ($imported === 0) {
+            return back(303)->withErrors([
+                'file' => 'Файлаас хүснэгт олдсонгүй. Word дээр .docx хэлбэрээр хадгалж дахин оруулна уу.',
+            ]);
+        }
+
+        return back(303)->with('success', "{$imported} мөрийг хүснэгтэд уншлаа.");
+    }
+
+    /**
+     * Word файлын хүснэгтийг үүргийн мөр болгож хадгална.
+     */
+    private function importRows(TaskDocument $document, string $kind, bool $replace): int
+    {
+        if (! Storage::disk('local')->exists($document->path)) {
+            return 0;
+        }
+
+        $extension = strtolower(pathinfo($document->original_name, PATHINFO_EXTENSION));
+
+        if ($extension !== 'docx') {
+            return 0;
+        }
+
+        try {
+            $rows = app(TaskDocxParser::class)->parse(
+                Storage::disk('local')->path($document->path),
+                $kind
+            );
+        } catch (Throwable) {
+            return 0;
+        }
+
+        if (! $rows) {
+            return 0;
+        }
+
+        $source = $document->source;
+
+        if ($replace) {
+            $source->tasks()->delete();
+            $next = 0;
+        } else {
+            $next = (int) $source->tasks()->max('sort_order');
+        }
+
+        foreach ($rows as $row) {
+            $next++;
+            $source->tasks()->create($row + ['sort_order' => $next, 'progress' => 0]);
+        }
+
+        return count($rows);
     }
 
     public function downloadDocument(Request $request, TaskDocument $document): StreamedResponse

@@ -2,6 +2,8 @@
 import { computed, reactive, ref } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Modal from '@/Components/Modal.vue';
+import InputError from '@/Components/InputError.vue';
 
 const props = defineProps({
     module: String,
@@ -24,7 +26,6 @@ props.fields.forEach((f) => {
     formState[f.name] = f.type === 'checkbox' ? false : '';
 });
 
-// Идэвхтэй таб дээр шинээр нэмэхэд хамрах хүрээ нь урьдчилан сонгогдоно.
 if (props.scopeField && props.activeScope !== 'all') {
     formState[props.scopeField] = props.activeScope;
 }
@@ -34,6 +35,23 @@ const form = useForm({ ...formState });
 const activeScopeLabel = computed(
     () => props.scopeTabs.find((t) => t.value === props.activeScope)?.label ?? '',
 );
+
+const resetFormDefaults = () => {
+    form.reset();
+    form.clearErrors();
+    if (props.scopeField && props.activeScope !== 'all') {
+        form[props.scopeField] = props.activeScope;
+    }
+};
+
+const openForm = () => {
+    resetFormDefaults();
+    showForm.value = true;
+};
+
+const closeForm = () => {
+    showForm.value = false;
+};
 
 const switchScope = (value) => {
     router.get(
@@ -47,11 +65,8 @@ const submit = () => {
     form.transform(() => ({ ...form.data() })).post(props.storeUrl, {
         preserveScroll: true,
         onSuccess: () => {
-            showForm.value = false;
-            form.reset();
-            if (props.scopeField && props.activeScope !== 'all') {
-                form[props.scopeField] = props.activeScope;
-            }
+            closeForm();
+            resetFormDefaults();
         },
     });
 };
@@ -74,9 +89,9 @@ const destroyRow = (id) => {
                     v-if="canManage"
                     type="button"
                     class="ui-btn-accent"
-                    @click="showForm = !showForm"
+                    @click="openForm"
                 >
-                    {{ showForm ? 'Хаах' : 'Шинэ нэмэх' }}
+                    Шинэ нэмэх
                 </button>
             </div>
 
@@ -97,45 +112,6 @@ const destroyRow = (id) => {
                     <span class="ml-1 text-xs opacity-70">{{ tab.count }}</span>
                 </button>
             </nav>
-
-            <form
-                v-if="showForm && canManage"
-                class="ui-card grid gap-4 p-5 md:grid-cols-2"
-                @submit.prevent="submit"
-            >
-                <div v-for="field in fields" :key="field.name" :class="field.type === 'textarea' ? 'md:col-span-2' : ''">
-                    <label v-if="field.type !== 'checkbox'" class="ui-label">{{ field.label }}</label>
-                    <select
-                        v-if="field.type === 'select'"
-                        v-model="form[field.name]"
-                        class="ui-input"
-                        :required="field.required"
-                    >
-                        <option value="">—</option>
-                        <option v-for="(label, value) in field.options" :key="value" :value="value">{{ label }}</option>
-                    </select>
-                    <textarea
-                        v-else-if="field.type === 'textarea'"
-                        v-model="form[field.name]"
-                        rows="3"
-                        class="ui-input"
-                    />
-                    <label v-else-if="field.type === 'checkbox'" class="flex items-center gap-2 text-sm font-medium text-slate-700">
-                        <input v-model="form[field.name]" type="checkbox" class="rounded border-slate-300 text-brand-navy-600 focus:ring-brand-navy-600" />
-                        {{ field.label }}
-                    </label>
-                    <input
-                        v-else
-                        v-model="form[field.name]"
-                        :type="field.type === 'number' ? 'number' : field.type === 'datetime' ? 'datetime-local' : field.type"
-                        class="ui-input"
-                        :required="field.required"
-                    />
-                </div>
-                <div class="md:col-span-2">
-                    <button type="submit" class="ui-btn-primary" :disabled="form.processing">Хадгалах</button>
-                </div>
-            </form>
 
             <div class="ui-table-wrap">
                 <table class="ui-table">
@@ -161,5 +137,83 @@ const destroyRow = (id) => {
                 </table>
             </div>
         </div>
+
+        <Modal :show="showForm && canManage" max-width="2xl" @close="closeForm">
+            <form class="p-6" @submit.prevent="submit">
+                <div class="mb-5 flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-semibold text-brand-navy-900">Шинэ бүртгэл</h3>
+                        <p class="mt-0.5 text-sm text-slate-500">{{ title }} — мэдээллээ оруулна уу.</p>
+                    </div>
+                    <button
+                        type="button"
+                        class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                        aria-label="Хаах"
+                        @click="closeForm"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M6 6l12 12M18 6L6 18" stroke-linecap="round" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="grid max-h-[65vh] gap-4 overflow-y-auto pr-1 md:grid-cols-2">
+                    <div
+                        v-for="field in fields"
+                        :key="field.name"
+                        :class="field.type === 'textarea' ? 'md:col-span-2' : ''"
+                    >
+                        <label v-if="field.type !== 'checkbox'" class="ui-label">{{ field.label }}</label>
+                        <select
+                            v-if="field.type === 'select'"
+                            v-model="form[field.name]"
+                            class="ui-input"
+                            :required="field.required"
+                        >
+                            <option value="">—</option>
+                            <option
+                                v-for="(label, value) in field.options"
+                                :key="value"
+                                :value="value"
+                            >
+                                {{ label }}
+                            </option>
+                        </select>
+                        <textarea
+                            v-else-if="field.type === 'textarea'"
+                            v-model="form[field.name]"
+                            rows="3"
+                            class="ui-input"
+                        />
+                        <label
+                            v-else-if="field.type === 'checkbox'"
+                            class="flex items-center gap-2 text-sm font-medium text-slate-700"
+                        >
+                            <input
+                                v-model="form[field.name]"
+                                type="checkbox"
+                                class="rounded border-slate-300 text-brand-navy-600 focus:ring-brand-navy-600"
+                            />
+                            {{ field.label }}
+                        </label>
+                        <input
+                            v-else
+                            v-model="form[field.name]"
+                            :type="field.type === 'number' ? 'number' : field.type === 'datetime' ? 'datetime-local' : field.type"
+                            class="ui-input"
+                            :required="field.required"
+                        />
+                        <InputError :message="form.errors[field.name]" class="mt-1" />
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end gap-2 border-t border-slate-100 pt-4">
+                    <button type="button" class="ui-btn-ghost" @click="closeForm">Болих</button>
+                    <button type="submit" class="ui-btn-primary" :disabled="form.processing">
+                        {{ form.processing ? 'Хадгалж байна…' : 'Хадгалах' }}
+                    </button>
+                </div>
+            </form>
+        </Modal>
     </AuthenticatedLayout>
 </template>

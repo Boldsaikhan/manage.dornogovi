@@ -42,10 +42,12 @@ Route::middleware('auth')->group(function () {
     Route::delete('/uureg/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
     Route::post('/uureg/documents', [TaskController::class, 'storeDocument'])->name('tasks.documents.store');
     Route::get('/uureg/documents/{document}/download', [TaskController::class, 'downloadDocument'])->name('tasks.documents.download');
+    Route::post('/uureg/documents/{document}/import', [TaskController::class, 'importDocument'])->name('tasks.documents.import');
     Route::delete('/uureg/documents/{document}', [TaskController::class, 'destroyDocument'])->name('tasks.documents.destroy');
 
     Route::get('/phone-directory', [PhoneDirectoryController::class, 'index'])->name('phone-directory.index');
     Route::post('/phone-directory', [PhoneDirectoryController::class, 'store'])->name('phone-directory.store');
+    Route::get('/phone-directory/export', [PhoneDirectoryController::class, 'export'])->name('phone-directory.export');
     Route::post('/phone-directory/import', [PhoneDirectoryController::class, 'import'])->name('phone-directory.import');
     Route::delete('/phone-directory/{entry}', [PhoneDirectoryController::class, 'destroy'])->name('phone-directory.destroy');
 

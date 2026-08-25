@@ -95,6 +95,15 @@ const submitUpload = () => {
     });
 };
 
+const importDocument = (id) => {
+    if (!confirm('Энэ файлын хүснэгтийг уншиж, одоо байгаа мөрүүдийг солих уу?')) return;
+    router.post(
+        route('tasks.documents.import', id),
+        { replace: true },
+        { preserveScroll: true },
+    );
+};
+
 const removeDocument = (id) => {
     if (!confirm('Энэ файлыг устгах уу?')) return;
     router.delete(route('tasks.documents.destroy', id), { preserveScroll: true });
@@ -116,7 +125,7 @@ const formatSize = (bytes) => {
             <div class="flex flex-wrap items-end justify-between gap-3">
                 <div>
                     <h2 class="ui-title">Үүрэг даалгавар</h2>
-                    <p class="ui-subtitle">Хүснэгт болон Word файлын хавсралт.</p>
+                    <p class="ui-subtitle">Word файлын хүснэгтийг уншиж, мөр бүрийг шууд засварлана.</p>
                 </div>
                 <button
                     v-if="canManage"
@@ -148,7 +157,9 @@ const formatSize = (bytes) => {
                 <div class="flex flex-wrap items-end justify-between gap-3">
                     <div>
                         <h3 class="text-base font-semibold text-slate-800">Word файл</h3>
-                        <p class="mt-0.5 text-sm text-slate-500">.doc, .docx (хамгийн ихдээ 20 MB)</p>
+                        <p class="mt-0.5 text-sm text-slate-500">
+                            .doc, .docx (хамгийн ихдээ 20 MB). .docx файлын хүснэгтийг оруулмагц доорх хүснэгт болгож уншина.
+                        </p>
                     </div>
                 </div>
 
@@ -192,6 +203,15 @@ const formatSize = (bytes) => {
                             </p>
                         </div>
                         <div class="flex shrink-0 items-center gap-2">
+                            <button
+                                v-if="canManage"
+                                type="button"
+                                class="ui-btn-primary !py-1.5 text-xs"
+                                title="Файлын хүснэгтийг доорх хүснэгт болгож уншина"
+                                @click="importDocument(doc.id)"
+                            >
+                                Хүснэгт болгох
+                            </button>
                             <a
                                 :href="route('tasks.documents.download', doc.id)"
                                 class="ui-btn-ghost !py-1.5 text-xs"
