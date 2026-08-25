@@ -263,31 +263,41 @@ const autoGrow = (event) => {
             </div>
 
             <!-- Үүрэг чиглэл -->
-            <div v-if="isDirective" class="ui-table-wrap overflow-x-auto">
-                <table class="ui-table min-w-[1000px]">
+            <div v-if="isDirective" class="ui-table-wrap w-full overflow-x-auto">
+                <table class="ui-table w-full table-fixed">
+                    <colgroup>
+                        <col class="w-12" />
+                        <col />
+                        <col class="w-[12%]" />
+                        <col class="w-[14%]" />
+                        <col class="w-[16%]" />
+                        <col class="w-24" />
+                        <col v-if="canManage" class="w-12" />
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th class="w-12 text-center">№</th>
+                            <th class="text-center">№</th>
                             <th>Үүрэг чиглэл</th>
-                            <th class="w-40">Хариуцах эзэн</th>
-                            <th class="w-48">Хяналт тавих албан тушаалтан</th>
-                            <th class="w-48">Хэрэгжилт</th>
-                            <th class="w-28 text-center">Биелэлтийн хувь</th>
-                            <th v-if="canManage" class="w-12 text-center" />
+                            <th>Хариуцах эзэн</th>
+                            <th>Хяналт тавих албан тушаалтан</th>
+                            <th>Хэрэгжилт</th>
+                            <th class="text-center">Биелэлтийн хувь</th>
+                            <th v-if="canManage" class="text-center" />
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="task in tasks" :key="task.id">
                             <td class="text-center font-semibold text-slate-500">{{ task.no }}</td>
-                            <td class="min-w-[280px]">
+                            <td class="!align-top">
                                 <textarea
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].text"
-                                    rows="3"
-                                    class="ui-table-input resize-y"
+                                    :rows="textRows(drafts[task.id].text)"
+                                    class="ui-table-input max-h-none resize-none overflow-hidden whitespace-pre-wrap leading-relaxed"
+                                    @input="autoGrow"
                                     @change="saveField(task.id, 'text', drafts[task.id].text)"
                                 />
-                                <span v-else class="block whitespace-pre-wrap px-1.5 py-1 leading-relaxed">{{ task.text || '—' }}</span>
+                                <div v-else class="whitespace-pre-wrap px-1.5 py-1 leading-relaxed">{{ task.text || '—' }}</div>
                             </td>
                             <td>
                                 <input
@@ -311,12 +321,13 @@ const autoGrow = (event) => {
                                 <textarea
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].note"
-                                    rows="3"
-                                    class="ui-table-input resize-y"
+                                    :rows="textRows(drafts[task.id].note)"
+                                    class="ui-table-input resize-none overflow-hidden whitespace-pre-wrap leading-relaxed"
                                     placeholder="Хэрэгжилт…"
+                                    @input="autoGrow"
                                     @change="saveField(task.id, 'note', drafts[task.id].note)"
                                 />
-                                <span v-else class="block whitespace-pre-wrap px-1.5 py-1">{{ task.note || '—' }}</span>
+                                <div v-else class="whitespace-pre-wrap px-1.5 py-1 leading-relaxed">{{ task.note || '—' }}</div>
                             </td>
                             <td class="text-center align-middle">
                                 <div v-if="canManage && drafts[task.id]" class="inline-flex items-center gap-0.5">
