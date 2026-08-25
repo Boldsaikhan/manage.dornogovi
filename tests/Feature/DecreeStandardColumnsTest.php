@@ -96,13 +96,12 @@ class DecreeStandardColumnsTest extends TestCase
                 ->where('people.0.label', 'О.Батжаргал'));
     }
 
-    public function test_zahiramj_number_tab_stores_register_fields(): void
+    public function test_zahiramj_a_tab_stores_register_fields(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
 
         $this->actingAs($admin)->post(route('decrees.store'), [
-            'tab' => 'zahiramj',
-            'kind' => 'zahiramj_a',
+            'tab' => 'zahiramj_a',
             'number' => '01',
             'title' => '2026 оныг бүтээмжийн жил болгон зарлах тухай',
             'issued_on' => '2026-01-02',
@@ -110,10 +109,11 @@ class DecreeStandardColumnsTest extends TestCase
             'attachment_name' => 'Арын бичилт',
             'attachment_pages' => 1,
             'person_name' => 'Б.Зоригтбаатар',
-        ])->assertRedirect(route('decrees.index', ['tab' => 'zahiramj']));
+        ])->assertRedirect(route('decrees.index', ['tab' => 'zahiramj_a']));
 
         $decree = Decree::query()->firstOrFail();
         $this->assertSame('zahiramj', $decree->category);
+        $this->assertSame('zahiramj_a', $decree->kind);
         $this->assertSame('01', $decree->number);
         $this->assertSame(2, $decree->page_count);
         $this->assertSame('Арын бичилт', $decree->attachment_name);
@@ -121,12 +121,52 @@ class DecreeStandardColumnsTest extends TestCase
         $this->assertSame('Б.Зоригтбаатар', $decree->person_name);
 
         $this->actingAs($admin)
-            ->get(route('decrees.index', ['tab' => 'zahiramj']))
+            ->get(route('decrees.index', ['tab' => 'zahiramj_a']))
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Modules/Decrees')
-                ->where('tab', 'zahiramj')
+                ->where('tab', 'zahiramj_a')
                 ->where('rows.0.number', '01')
                 ->where('rows.0.page_count', 2)
                 ->where('rows.0.attachment_name', 'Арын бичилт'));
+    }
+
+    public function test_niit_tab_lists_all_register_kinds(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        Decree::query()->create([
+            'category' => 'zahiramj',
+            'kind' => 'zahiramj_a',
+            'number' => '1',
+            'title' => 'А',
+            'created_by' => $admin->id,
+        ]);
+        Decree::query()->create([
+            'category' => 'tushaal',
+            'kind' => 'tushaal_b',
+            'number' => '2',
+            'title' => 'Б',
+            'created_by' => $admin->id,
+        ]);
+        Decree::query()->create([
+            'category' => 'blank',
+            'kind' => 'blank',
+            'title' => 'Бланк',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('decrees.index', ['tab' => 'niit']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Modules/Decrees')
+                ->where('tab', 'niit')
+                ->has('rows', 2)
+                ->where('tabs.5.value', 'niit')
+                ->where('tabs.5.count', 2));
+
+        $this->actingAs($admin)
+            ->get(route('decrees.index', ['tab' => 'zahiramj']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('tab', 'zahiramj_a'));
     }
 }

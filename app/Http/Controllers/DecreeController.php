@@ -14,35 +14,51 @@ use Inertia\Response;
 
 class DecreeController extends Controller
 {
-    /** Бланкны дугаар | Захирамжийн дугаар | Тушаалын дугаар */
+    /** Бланк + төрлөөр салгах + нийт */
     private const TABS = [
         'blank' => 'Бланкны дугаар',
-        'zahiramj' => 'Захирамжийн дугаар',
-        'tushaal' => 'Тушаалын дугаар',
+        'zahiramj_a' => 'Захирамж А',
+        'zahiramj_b' => 'Захирамж Б',
+        'tushaal_a' => 'Тушаал А',
+        'tushaal_b' => 'Тушаал Б',
+        'niit' => 'Нийт',
     ];
+
+    private const KIND_TABS = [
+        'zahiramj_a' => ['category' => 'zahiramj', 'kind' => 'zahiramj_a'],
+        'zahiramj_b' => ['category' => 'zahiramj', 'kind' => 'zahiramj_b'],
+        'tushaal_a' => ['category' => 'tushaal', 'kind' => 'tushaal_a'],
+        'tushaal_b' => ['category' => 'tushaal', 'kind' => 'tushaal_b'],
+    ];
+
+    private const DOC_KINDS = ['zahiramj_a', 'zahiramj_b', 'tushaal_a', 'tushaal_b'];
 
     public function index(Request $request): Response
     {
         abort_unless(ModuleAccess::canView($request->user(), 'decrees'), 403);
 
-        $tab = (string) $request->query('tab', 'blank');
-        // Хуучин «all» → бланк
-        if ($tab === 'all') {
-            $tab = 'blank';
-        }
-        if (! array_key_exists($tab, self::TABS)) {
-            $tab = 'blank';
-        }
+        $tab = $this->normalizeTab((string) $request->query('tab', 'zahiramj_a'));
 
         $counts = [
             'blank' => Decree::query()->where('category', 'blank')->count(),
-            'zahiramj' => Decree::query()->where('category', 'zahiramj')->count(),
-            'tushaal' => Decree::query()->where('category', 'tushaal')->count(),
+            'zahiramj_a' => Decree::query()->where('kind', 'zahiramj_a')->count(),
+            'zahiramj_b' => Decree::query()->where('kind', 'zahiramj_b')->count(),
+            'tushaal_a' => Decree::query()->where('kind', 'tushaal_a')->count(),
+            'tushaal_b' => Decree::query()->where('kind', 'tushaal_b')->count(),
+            'niit' => Decree::query()->whereIn('kind', self::DOC_KINDS)->count(),
         ];
 
-        $rows = Decree::query()
-            ->where('category', $tab)
-            ->orderBy('id')
+        $query = Decree::query()->orderBy('id');
+
+        if ($tab === 'blank') {
+            $query->where('category', 'blank');
+        } elseif ($tab === 'niit') {
+            $query->whereIn('kind', self::DOC_KINDS);
+        } else {
+            $query->where('kind', $tab);
+        }
+
+        $rows = $query
             ->limit(300)
             ->get()
             ->values()
@@ -65,12 +81,12 @@ class DecreeController extends Controller
     {
         abort_unless(ModuleAccess::canManage($request->user(), 'decrees'), 403);
 
-        $tab = (string) $request->input('tab', 'blank');
-        if ($tab === 'all') {
-            $tab = 'blank';
-        }
-        if (! array_key_exists($tab, self::TABS)) {
-            $tab = 'blank';
+        $tab = $this->normalizeTab((string) $request->input('tab', 'zahiramj_a'));
+
+        if ($tab === 'niit') {
+            return redirect()
+                ->route('decrees.index', ['tab' => 'niit'])
+                ->withErrors(['tab' => 'Нийт таб дээр мөр нэмэхийн тулд төрлийн таб сонгоно уу.']);
         }
 
         if ($tab === 'blank') {
@@ -106,12 +122,9 @@ class DecreeController extends Controller
                 'created_by' => $request->user()->id,
             ]);
         } else {
-            $kinds = $tab === 'zahiramj'
-                ? ['zahiramj_a', 'zahiramj_b']
-                : ['tushaal_a', 'tushaal_b'];
+            $meta = self::KIND_TABS[$tab];
 
             $data = $request->validate([
-                'kind' => ['nullable', Rule::in($kinds)],
                 'number' => ['nullable', 'string', 'max:100'],
                 'title' => ['nullable', 'string', 'max:1000'],
                 'issued_on' => ['nullable', 'date'],
@@ -125,8 +138,8 @@ class DecreeController extends Controller
             $person = PersonName::short(trim((string) ($data['person_name'] ?? '')));
 
             Decree::query()->create([
-                'category' => $tab,
-                'kind' => $data['kind'] ?? $kinds[0],
+                'category' => $meta['category'],
+                'kind' => $meta['kind'],
                 'number' => $data['number'] ?? null,
                 'title' => $data['title'] ?? '',
                 'issued_on' => $data['issued_on'] ?? null,
@@ -148,9 +161,7 @@ class DecreeController extends Controller
     {
         abort_unless(ModuleAccess::canManage($request->user(), 'decrees'), 403);
 
-        $tab = array_key_exists($decree->category, self::TABS) ? $decree->category : 'blank';
-
-        if ($tab === 'blank') {
+        if ($decree->category === 'blank' || $decree->kind === 'blank') {
             $data = $request->validate([
                 'person_name' => ['sometimes', 'nullable', 'string', 'max:255'],
                 'issued_on' => ['sometimes', 'nullable', 'date'],
@@ -200,12 +211,8 @@ class DecreeController extends Controller
 
             $decree->update($data);
         } else {
-            $kinds = $tab === 'zahiramj'
-                ? ['zahiramj_a', 'zahiramj_b']
-                : ['tushaal_a', 'tushaal_b'];
-
             $data = $request->validate([
-                'kind' => ['sometimes', 'nullable', Rule::in($kinds)],
+                'kind' => ['sometimes', 'nullable', Rule::in(self::DOC_KINDS)],
                 'number' => ['sometimes', 'nullable', 'string', 'max:100'],
                 'title' => ['sometimes', 'nullable', 'string', 'max:1000'],
                 'issued_on' => ['sometimes', 'nullable', 'date'],
@@ -215,6 +222,10 @@ class DecreeController extends Controller
                 'person_name' => ['sometimes', 'nullable', 'string', 'max:255'],
                 'body' => ['sometimes', 'nullable', 'string', 'max:20000'],
             ]);
+
+            if (array_key_exists('kind', $data) && isset(self::KIND_TABS[$data['kind']])) {
+                $data['category'] = self::KIND_TABS[$data['kind']]['category'];
+            }
 
             if (array_key_exists('person_name', $data)) {
                 $person = PersonName::short(trim((string) ($data['person_name'] ?? '')));
@@ -235,12 +246,36 @@ class DecreeController extends Controller
     {
         abort_unless(ModuleAccess::canManage($request->user(), 'decrees'), 403);
 
-        $tab = array_key_exists($decree->category, self::TABS) ? $decree->category : 'blank';
+        $tab = $this->tabForDecree($decree);
         $decree->delete();
 
         return redirect()
             ->route('decrees.index', ['tab' => $tab])
             ->with('success', 'Устгалаа.');
+    }
+
+    private function normalizeTab(string $tab): string
+    {
+        // Хуучин URL-уудыг шилжүүлэх
+        return match ($tab) {
+            'all' => 'niit',
+            'zahiramj' => 'zahiramj_a',
+            'tushaal' => 'tushaal_a',
+            default => array_key_exists($tab, self::TABS) ? $tab : 'zahiramj_a',
+        };
+    }
+
+    private function tabForDecree(Decree $decree): string
+    {
+        if ($decree->category === 'blank' || $decree->kind === 'blank') {
+            return 'blank';
+        }
+
+        if (array_key_exists((string) $decree->kind, self::KIND_TABS)) {
+            return (string) $decree->kind;
+        }
+
+        return 'niit';
     }
 
     /**

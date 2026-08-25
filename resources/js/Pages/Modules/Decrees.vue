@@ -5,7 +5,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import SheetCell from '@/Components/SheetCell.vue';
 
 const props = defineProps({
-    tab: { type: String, default: 'blank' },
+    tab: { type: String, default: 'zahiramj_a' },
     tabs: { type: Array, default: () => [] },
     rows: { type: Array, default: () => [] },
     people: { type: Array, default: () => [] },
@@ -13,20 +13,31 @@ const props = defineProps({
 });
 
 const isBlank = computed(() => props.tab === 'blank');
-const isZahiramj = computed(() => props.tab === 'zahiramj');
-const docLabel = computed(() => (isZahiramj.value ? 'Захирамж' : 'Тушаал'));
-const titleLabel = computed(() => (isZahiramj.value ? 'Захирамжийн тэргүү' : 'Тушаалын гарчиг'));
-const numberLabel = computed(() => (isZahiramj.value ? 'Захирамжийн дугаар' : 'Тушаалын дугаар'));
+const isNiit = computed(() => props.tab === 'niit');
+const isZahiramj = computed(() => props.tab.startsWith('zahiramj'));
+const isDoc = computed(() => ! isBlank.value);
 
-const kindOptions = computed(() => (isZahiramj.value
-    ? [
-        { value: 'zahiramj_a', label: 'Захирамж А' },
-        { value: 'zahiramj_b', label: 'Захирамж Б' },
-    ]
-    : [
-        { value: 'tushaal_a', label: 'Тушаал А' },
-        { value: 'tushaal_b', label: 'Тушаал Б' },
-    ]));
+const docLabel = computed(() => {
+    if (isNiit.value) return 'Захирамж, тушаал';
+    return isZahiramj.value ? 'Захирамж' : 'Тушаал';
+});
+const titleLabel = computed(() => {
+    if (isNiit.value) return 'Гарчиг / тэргүү';
+    return isZahiramj.value ? 'Захирамжийн тэргүү' : 'Тушаалын гарчиг';
+});
+const numberLabel = computed(() => {
+    if (isNiit.value) return 'Бүртгэл';
+    return isZahiramj.value ? 'Захирамжийн дугаар' : 'Тушаалын дугаар';
+});
+
+const kindOptions = [
+    { value: 'zahiramj_a', label: 'Захирамж А' },
+    { value: 'zahiramj_b', label: 'Захирамж Б' },
+    { value: 'tushaal_a', label: 'Тушаал А' },
+    { value: 'tushaal_b', label: 'Тушаал Б' },
+];
+
+const canAddRow = computed(() => props.canManage && ! isNiit.value);
 
 const drafts = reactive({});
 
@@ -60,6 +71,8 @@ const switchTab = (value) => {
 };
 
 const addRow = () => {
+    if (isNiit.value) return;
+
     if (isBlank.value) {
         useForm({
             tab: 'blank',
@@ -71,7 +84,6 @@ const addRow = () => {
 
     useForm({
         tab: props.tab,
-        kind: kindOptions.value[0]?.value ?? '',
         number: '',
         title: '',
         issued_on: '',
@@ -114,7 +126,12 @@ const destroyRow = (id) => {
 };
 
 const blankColCount = computed(() => 15 + (props.canManage ? 1 : 0));
-const docColumnCount = computed(() => 9 + (props.canManage ? 1 : 0));
+const docColumnCount = computed(() => {
+    let n = 8;
+    if (isNiit.value) n += 1;
+    if (props.canManage) n += 1;
+    return n;
+});
 
 const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
 </script>
@@ -130,7 +147,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                     </p>
                 </div>
                 <button
-                    v-if="canManage"
+                    v-if="canAddRow"
                     type="button"
                     class="ui-btn-accent"
                     @click="addRow"
@@ -385,7 +402,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
             </div>
 
             <!-- Захирамж / Тушаалын дугаар -->
-            <div v-else class="decree-sheet overflow-x-auto border border-slate-800 bg-white">
+            <div v-else-if="isDoc" class="decree-sheet overflow-x-auto border border-slate-800 bg-white">
                 <div class="border-b border-slate-800 px-3 py-2 text-center text-sm font-semibold tracking-wide">
                     Аймгийн Засаг даргын {{ docLabel }}ийн бүртгэл
                 </div>
@@ -399,7 +416,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                         <col style="width: 10rem" />
                         <col style="width: 4.5rem" />
                         <col style="width: 8rem" />
-                        <col style="width: 6.5rem" />
+                        <col v-if="isNiit" style="width: 6.5rem" />
                         <col v-if="canManage" style="width: 3.5rem" />
                     </colgroup>
                     <thead>
@@ -417,7 +434,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                             <th rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold w-36">
                                 Боловсруулсан<br>албан тушаалтан
                             </th>
-                            <th rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold w-24">Төрөл</th>
+                            <th v-if="isNiit" rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold w-24">Төрөл</th>
                             <th v-if="canManage" rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold w-16" />
                         </tr>
                         <tr class="bg-slate-50">
@@ -433,7 +450,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                             <th class="border border-slate-800 py-0.5">6</th>
                             <th class="border border-slate-800 py-0.5">7</th>
                             <th class="border border-slate-800 py-0.5">8</th>
-                            <th class="border border-slate-800 py-0.5">9</th>
+                            <th v-if="isNiit" class="border border-slate-800 py-0.5">9</th>
                             <th v-if="canManage" class="border border-slate-800 py-0.5" />
                         </tr>
                     </thead>
@@ -520,7 +537,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     @commit="(v) => saveField(row.id, 'person_name', v)"
                                 />
                             </td>
-                            <td class="border border-slate-800 px-1 py-1">
+                            <td v-if="isNiit" class="border border-slate-800 px-1 py-1">
                                 <select
                                     v-if="canManage && drafts[row.id]"
                                     v-model="drafts[row.id].kind"
@@ -541,7 +558,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                         </tr>
                         <tr v-if="!rows.length">
                             <td :colspan="docColumnCount" class="border border-slate-800 px-2 py-10 text-slate-400">
-                                {{ numberLabel }}ын бүртгэл алга. «Шинэ мөр» дарж бөглөнө үү.
+                                {{ isNiit ? 'Бүртгэл алга.' : `${numberLabel}ын бүртгэл алга. «Шинэ мөр» дарж бөглөнө үү.` }}
                             </td>
                         </tr>
                     </tbody>
