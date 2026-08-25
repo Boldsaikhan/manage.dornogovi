@@ -50,6 +50,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/phone-directory', [PhoneDirectoryController::class, 'store'])->name('phone-directory.store');
     Route::get('/phone-directory/export', [PhoneDirectoryController::class, 'export'])->name('phone-directory.export');
     Route::post('/phone-directory/import', [PhoneDirectoryController::class, 'import'])->name('phone-directory.import');
+    Route::patch('/phone-directory/category', [PhoneDirectoryController::class, 'updateCategory'])->name('phone-directory.category');
     Route::delete('/phone-directory/{entry}', [PhoneDirectoryController::class, 'destroy'])->name('phone-directory.destroy');
     Route::get('/phone-directory/staff/export', [PhoneDirectoryController::class, 'exportStaff'])->name('phone-directory.staff.export');
     Route::post('/phone-directory/staff/import', [PhoneDirectoryController::class, 'importStaff'])->name('phone-directory.staff.import');
@@ -58,7 +59,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/modules/leaves', [ModuleResourceController::class, 'index'])->name('leaves.index');
     Route::get('/modules/assignments', [ModuleResourceController::class, 'index'])->name('assignments.index');
-    Route::get('/modules/agency_hr', [ModuleResourceController::class, 'index'])->name('agency-hr.index');
     Route::get('/modules/regulations', [ModuleResourceController::class, 'index'])->name('regulations.index');
     Route::get('/modules/decrees', [ModuleResourceController::class, 'index'])->name('decrees.index');
     Route::get('/modules/contracts', [ModuleResourceController::class, 'index'])->name('contracts.index');

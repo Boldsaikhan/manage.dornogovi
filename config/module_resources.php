@@ -70,32 +70,6 @@ return [
         'defaults' => ['status' => 'pending'],
         'on_create' => 'attach_user_department',
     ],
-    'agency_hr' => [
-        'model' => App\Models\AgencyLeaderRecord::class,
-        'title' => 'Агентлаг дарга нарын бүртгэл',
-        'description' => 'Агентлаг, газрын дарга нарын томилолт, чөлөө, амралт.',
-        'columns' => [
-            ['key' => 'person_name', 'label' => 'Нэр'],
-            ['key' => 'agency', 'label' => 'Агентлаг'],
-            ['key' => 'type', 'label' => 'Төрөл'],
-            ['key' => 'start_date', 'label' => 'Эхлэх'],
-            ['key' => 'end_date', 'label' => 'Дуусах'],
-            ['key' => 'destination', 'label' => 'Газар'],
-        ],
-        'fields' => [
-            ['name' => 'person_name', 'label' => 'Нэр', 'type' => 'text', 'required' => true],
-            ['name' => 'agency', 'label' => 'Агентлаг / газар', 'type' => 'text'],
-            ['name' => 'type', 'label' => 'Төрөл', 'type' => 'select', 'options' => [
-                'tomilolt' => 'Томилолт', 'chuluu' => 'Чөлөө', 'amralt' => 'Амралт',
-            ], 'required' => true],
-            ['name' => 'start_date', 'label' => 'Эхлэх', 'type' => 'date', 'required' => true],
-            ['name' => 'end_date', 'label' => 'Дуусах', 'type' => 'date'],
-            ['name' => 'destination', 'label' => 'Очих газар', 'type' => 'text'],
-            ['name' => 'note', 'label' => 'Тэмдэглэл', 'type' => 'textarea'],
-        ],
-        'defaults' => [],
-        'on_create' => 'attach_creator',
-    ],
     'regulations' => [
         'model' => App\Models\Regulation::class,
         'title' => 'Дотоод журам',

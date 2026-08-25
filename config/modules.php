@@ -80,13 +80,6 @@ return [
             'icon' => 'phone',
         ],
         [
-            'key' => 'agency_hr',
-            'label' => 'Агентлаг дарга нар',
-            'route' => 'agency-hr.index',
-            'group' => 'hr',
-            'icon' => 'building',
-        ],
-        [
             'key' => 'regulations',
             'label' => 'Дотоод журам',
             'route' => 'regulations.index',
