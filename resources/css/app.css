@@ -258,3 +258,54 @@
         @apply !mt-4 px-3 pb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400;
     }
 }
+
+/* ── Гар утас (≤640px) — унших, дарахад тохиромжтой хэмжээ ─────────────── */
+@media (max-width: 640px) {
+    .ui-page {
+        @apply space-y-4;
+    }
+
+    .ui-title {
+        @apply text-base;
+    }
+
+    .ui-subtitle {
+        @apply text-[13px];
+    }
+
+    /* Товчнууд хуруунд тохирсон өндөртэй, шаардлагатай бол мөр дүүрэн */
+    .ui-btn,
+    .ui-btn-primary,
+    .ui-btn-accent,
+    .ui-btn-ghost,
+    .ui-btn-danger {
+        @apply min-h-[2.5rem] px-3.5 text-sm;
+    }
+
+    /* Хүснэгтийг хажуу тийш гүйлгэхэд саадгүй, мөр нь нягт */
+    .ui-table-wrap {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .ui-table th {
+        @apply px-1.5 py-1 text-[10px];
+    }
+
+    .ui-table td {
+        @apply px-1.5 py-1 text-[12px];
+    }
+
+    /* Карт, форм дотор зай багасгана */
+    .ui-card-pad {
+        @apply p-4;
+    }
+
+    /* Оруулгын үсэг 16px-ээс багагүй — iOS автоматаар томруулахгүй */
+    .ui-input,
+    .ui-sheet-editor,
+    input,
+    select,
+    textarea {
+        font-size: 16px;
+    }
+}

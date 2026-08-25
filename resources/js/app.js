@@ -25,3 +25,12 @@ createInertiaApp({
         color: '#4B5563',
     },
 });
+
+// Гар утсанд апп болгож суулгах — service worker бүртгэнэ.
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {
+            // Дэмжихгүй эсвэл http үед чимээгүй өнгөрнө.
+        });
+    });
+}

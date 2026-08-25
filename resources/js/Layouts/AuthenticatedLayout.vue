@@ -5,6 +5,7 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import StateEmblem from '@/Components/StateEmblem.vue';
 import OrnamentMark from '@/Components/OrnamentMark.vue';
+import InstallAppButton from '@/Components/InstallAppButton.vue';
 import AiPanel from '@/Components/AiPanel.vue';
 
 defineProps({
@@ -244,6 +245,8 @@ const isCurrent = (routeName) => {
                     />
                 </button>
             </nav>
+
+            <InstallAppButton v-if="! sidebarCollapsed" />
 
             <div
                 class="space-y-1 border-t border-slate-100 p-3"
