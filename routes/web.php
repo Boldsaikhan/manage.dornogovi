@@ -51,16 +51,17 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/phone-directory', [PhoneDirectoryController::class, 'index'])->name('phone-directory.index');
     Route::post('/phone-directory', [PhoneDirectoryController::class, 'store'])->name('phone-directory.store');
-    Route::patch('/phone-directory/{entry}', [PhoneDirectoryController::class, 'update'])->name('phone-directory.update');
     Route::get('/phone-directory/export', [PhoneDirectoryController::class, 'export'])->name('phone-directory.export');
     Route::post('/phone-directory/import', [PhoneDirectoryController::class, 'import'])->name('phone-directory.import');
     Route::patch('/phone-directory/category', [PhoneDirectoryController::class, 'updateCategory'])->name('phone-directory.category');
-    Route::delete('/phone-directory/{entry}', [PhoneDirectoryController::class, 'destroy'])->name('phone-directory.destroy');
     Route::get('/phone-directory/staff/export', [PhoneDirectoryController::class, 'exportStaff'])->name('phone-directory.staff.export');
     Route::post('/phone-directory/staff/import', [PhoneDirectoryController::class, 'importStaff'])->name('phone-directory.staff.import');
     Route::post('/phone-directory/staff', [PhoneDirectoryController::class, 'storeStaff'])->name('phone-directory.staff.store');
     Route::patch('/phone-directory/staff/unit-type', [PhoneDirectoryController::class, 'updateUnitType'])->name('phone-directory.staff.unit-type');
     Route::delete('/phone-directory/staff/{staff}', [PhoneDirectoryController::class, 'destroyStaff'])->name('phone-directory.staff.destroy');
+    // Parameterized routes last — otherwise "category"/"export" match as {entry}.
+    Route::patch('/phone-directory/{entry}', [PhoneDirectoryController::class, 'update'])->name('phone-directory.update');
+    Route::delete('/phone-directory/{entry}', [PhoneDirectoryController::class, 'destroy'])->name('phone-directory.destroy');
 
     Route::get('/modules/leaves', [LeaveController::class, 'index'])->name('leaves.index');
     Route::post('/modules/leaves', [LeaveController::class, 'store'])->name('leaves.store');
