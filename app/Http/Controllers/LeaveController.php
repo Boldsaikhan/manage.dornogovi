@@ -126,6 +126,7 @@ class LeaveController extends Controller
             'type' => $leave->type,
             'type_label' => $leave->typeLabel(),
             'start_date' => optional($start)?->format('Y-m-d'),
+            'end_date' => optional($leave->end_date)?->format('Y-m-d'),
             'year' => optional($start)?->format('Y'),
             'month' => optional($start)?->format('n'),
             'day' => optional($start)?->format('j'),

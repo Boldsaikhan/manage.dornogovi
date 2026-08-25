@@ -16,6 +16,7 @@ const props = defineProps({
 });
 
 const showForm = ref(false);
+const view = ref('table'); // 'table' | 'sheet'
 const previewCopies = ref(6);
 const actingName = ref('М.МӨНХБАТ');
 
@@ -193,8 +194,85 @@ const emptyMessage = computed(() => {
                 </button>
             </nav>
 
+            <div class="flex flex-wrap items-center gap-2">
+                <button
+                    type="button"
+                    class="rounded-full border px-3.5 py-1.5 text-sm font-medium transition"
+                    :class="view === 'table'
+                        ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-brand-navy-300'"
+                    @click="view = 'table'"
+                >
+                    Хүснэгт
+                </button>
+                <button
+                    type="button"
+                    class="rounded-full border px-3.5 py-1.5 text-sm font-medium transition"
+                    :class="view === 'sheet'
+                        ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-brand-navy-300'"
+                    @click="view = 'sheet'"
+                >
+                    Хуудасны харагдац
+                </button>
+            </div>
+
             <div v-if="!rows.length" class="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center text-slate-500">
                 {{ emptyMessage }}
+            </div>
+
+            <!-- Бүртгэлийн хүснэгт -->
+            <div v-else-if="view === 'table'" class="ui-table-wrap overflow-x-auto">
+                <table class="ui-table min-w-[1150px] table-fixed">
+                    <thead>
+                        <tr>
+                            <th class="w-12 text-center">№</th>
+                            <th class="w-24 text-center">Хуудас №</th>
+                            <th class="w-28">Хамрах хүрээ</th>
+                            <th class="w-56">Байгууллага / хэлтэс</th>
+                            <th class="w-40">Албан хаагч</th>
+                            <th class="w-32">Төрөл</th>
+                            <th class="w-28 text-center">Эхлэх</th>
+                            <th class="w-16 text-center">Хоног</th>
+                            <th class="w-28 text-center">Дуусах</th>
+                            <th>Үндэслэл</th>
+                            <th class="w-44">Гарын үсэг</th>
+                            <th class="w-28" />
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(row, index) in rows" :key="row.id">
+                            <td class="text-center">{{ index + 1 }}</td>
+                            <td class="text-center">{{ row.slip_number || '—' }}</td>
+                            <td>{{ row.scope_label }}</td>
+                            <td><span class="ui-clamp-2" :title="row.org_name">{{ row.org_name }}</span></td>
+                            <td><span class="ui-clamp-2" :title="row.person_name">{{ row.person_name }}</span></td>
+                            <td>{{ row.type_label }}</td>
+                            <td class="text-center">{{ row.start_date || '—' }}</td>
+                            <td class="text-center">{{ row.days || '—' }}</td>
+                            <td class="text-center">{{ row.end_date || '—' }}</td>
+                            <td><span class="ui-clamp-2" :title="row.reason || ''">{{ row.reason || '—' }}</span></td>
+                            <td><span class="ui-clamp-2">{{ signers[row.signer] || '—' }}</span></td>
+                            <td class="whitespace-nowrap text-right">
+                                <a
+                                    :href="slipPrintUrl(row)"
+                                    target="_blank"
+                                    class="ui-btn-ghost mr-1 !py-1 text-xs"
+                                >
+                                    Хэвлэх
+                                </a>
+                                <button
+                                    v-if="canManage"
+                                    type="button"
+                                    class="ui-btn-danger !py-1 text-xs"
+                                    @click="destroyRow(row.id)"
+                                >
+                                    Устгах
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
 
             <div v-else class="space-y-8">
@@ -271,103 +349,126 @@ const emptyMessage = computed(() => {
         </div>
 
         <Modal :show="showForm" max-width="2xl" @close="closeForm">
-            <div class="p-6">
-                <h3 class="text-lg font-semibold text-slate-900">Чөлөөний хуудас нэмэх</h3>
-                <p class="mt-1 text-sm text-slate-500">Доорх талбарууд хэвлэх загварын хоёр хүснэгтэд нийцнэ.</p>
+            <form class="p-6" @submit.prevent="submit">
+                <div class="mb-4 flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-semibold text-brand-navy-900">Чөлөөний хуудас бөглөх</h3>
+                        <p class="mt-0.5 text-sm text-slate-500">Хэвлэгдэх загварын дагуу шууд бөглөнө.</p>
+                    </div>
+                    <select v-model="form.scope" class="ui-input w-40 py-1.5 text-sm" required>
+                        <option value="agentlag">Агентлаг</option>
+                        <option value="sum">Сумд</option>
+                        <option value="baiguullaga">Байгууллага</option>
+                    </select>
+                </div>
 
-                <form class="mt-5 grid gap-4 sm:grid-cols-2" @submit.prevent="submit">
-                    <label class="block text-sm">
-                        <span class="mb-1 block font-medium text-slate-700">Хамрах хүрээ</span>
-                        <select v-model="form.scope" class="ui-input" required>
-                            <option value="agentlag">Агентлаг</option>
-                            <option value="sum">Сумд</option>
-                            <option value="baiguullaga">Байгууллага</option>
-                        </select>
-                        <InputError :message="form.errors.scope" class="mt-1" />
-                    </label>
+                <!-- Хуудасны загвар — талбарууд шууд бичвэр дотор -->
+                <div class="rounded-2xl border border-slate-300 bg-white p-5 leading-8 text-slate-800">
+                    <h4 class="text-center text-sm font-bold uppercase tracking-wide">Чөлөөний хуудас</h4>
+                    <p class="mt-1 text-center text-sm">
+                        №
+                        <input
+                            v-model="form.slip_number"
+                            class="slip-input w-24 text-center"
+                            placeholder="дугаар"
+                        />
+                    </p>
 
-                    <label class="block text-sm">
-                        <span class="mb-1 block font-medium text-slate-700">Гарын үсэг (загвар)</span>
-                        <select v-model="form.signer" class="ui-input" required>
-                            <option v-for="[value, label] in signerEntries" :key="value" :value="value">
-                                {{ label }}
-                            </option>
-                        </select>
-                        <InputError :message="form.errors.signer" class="mt-1" />
-                    </label>
-
-                    <label class="block text-sm sm:col-span-2">
-                        <span class="mb-1 block font-medium text-slate-700">Хэлтэс / байгууллага</span>
-                        <select v-if="orgOptions.length" v-model="form.org_name" class="ui-input" required>
-                            <option value="" disabled>Сонгох…</option>
+                    <p class="mt-3 text-justify text-sm">
+                        Аймгийн ЗДТГ-ын
+                        <select v-if="orgOptions.length" v-model="form.org_name" class="slip-input w-56" required>
+                            <option value="" disabled>сонгох…</option>
                             <option v-for="name in orgOptions" :key="name" :value="name">{{ name }}</option>
                         </select>
-                        <input v-else v-model="form.org_name" class="ui-input" required placeholder="Хэлтсийн нэр" />
-                        <InputError :message="form.errors.org_name" class="mt-1" />
-                    </label>
-
-                    <label class="block text-sm sm:col-span-2">
-                        <span class="mb-1 block font-medium text-slate-700">Мэргэжилтэн / албан хаагч</span>
-                        <select v-if="peopleOptions.length" v-model="form.person_name" class="ui-input" required>
-                            <option value="" disabled>Сонгох…</option>
+                        <input v-else v-model="form.org_name" class="slip-input w-56" required placeholder="хэлтсийн нэр" />
+                        хэлтсийн мэргэжилтэн
+                        <select v-if="peopleOptions.length" v-model="form.person_name" class="slip-input w-52" required>
+                            <option value="" disabled>сонгох…</option>
                             <option v-for="p in peopleOptions" :key="p.name" :value="p.name">
                                 {{ p.name }}{{ p.position ? ` — ${p.position}` : '' }}
                             </option>
                         </select>
-                        <input v-else v-model="form.person_name" class="ui-input" required placeholder="Овог нэр" />
-                        <InputError :message="form.errors.person_name" class="mt-1" />
-                    </label>
+                        <input v-else v-model="form.person_name" class="slip-input w-52" required placeholder="овог нэр" />
+                        нь
+                        <input v-model="form.reason" class="slip-input w-64" placeholder="үндэслэл" />
+                        үндэслэлээр
+                        <input v-model="form.start_date" type="date" class="slip-input w-40" required />
+                        -ны өдрөөс ажлын
+                        <input v-model.number="form.days" type="number" min="1" max="365" class="slip-input w-16 text-center" required />
+                        өдрийн чөлөө /
+                        <button
+                            v-for="[value, label] in typeEntries"
+                            :key="value"
+                            type="button"
+                            class="slip-type"
+                            :class="form.type === value ? 'font-semibold underline decoration-2' : 'text-slate-500'"
+                            @click="form.type = value"
+                        >{{ label.toLowerCase() }}</button>
+                        / олгов.
+                        <span class="text-xs italic text-slate-400">(доогуур зурахыг товшиж сонгоно)</span>
+                    </p>
 
-                    <label class="block text-sm">
-                        <span class="mb-1 block font-medium text-slate-700">Хуудасны №</span>
-                        <input v-model="form.slip_number" class="ui-input" placeholder="Жишээ: 12" />
-                        <InputError :message="form.errors.slip_number" class="mt-1" />
-                    </label>
-
-                    <label class="block text-sm">
-                        <span class="mb-1 block font-medium text-slate-700">Төрөл (доогуур зурах)</span>
-                        <select v-model="form.type" class="ui-input" required>
-                            <option v-for="[value, label] in typeEntries" :key="value" :value="value">
+                    <div class="mt-6 flex flex-wrap items-end justify-between gap-3 text-sm">
+                        <select v-model="form.signer" class="slip-input w-72 uppercase" required>
+                            <option v-for="[value, label] in signerEntries" :key="value" :value="value">
                                 {{ label }}
                             </option>
                         </select>
-                        <InputError :message="form.errors.type" class="mt-1" />
-                    </label>
-
-                    <label class="block text-sm">
-                        <span class="mb-1 block font-medium text-slate-700">Эхлэх өдөр</span>
-                        <input v-model="form.start_date" type="date" class="ui-input" required />
-                        <InputError :message="form.errors.start_date" class="mt-1" />
-                    </label>
-
-                    <label class="block text-sm">
-                        <span class="mb-1 block font-medium text-slate-700">Ажлын өдөр</span>
-                        <input v-model.number="form.days" type="number" min="1" max="365" class="ui-input" required />
-                        <InputError :message="form.errors.days" class="mt-1" />
-                    </label>
-
-                    <label class="block text-sm sm:col-span-2">
-                        <span class="mb-1 block font-medium text-slate-700">Үндэслэл</span>
-                        <textarea v-model="form.reason" rows="2" class="ui-input" placeholder="Үндэслэл…" />
-                        <InputError :message="form.errors.reason" class="mt-1" />
-                    </label>
-
-                    <label v-if="form.signer === 'acting'" class="block text-sm sm:col-span-2">
-                        <span class="mb-1 block font-medium text-slate-700">Үүрэг гүйцэтгэгчийн нэр (харагдах)</span>
-                        <input v-model="actingName" class="ui-input" />
-                    </label>
-
-                    <div class="flex justify-end gap-2 sm:col-span-2">
-                        <button type="button" class="ui-btn-ghost" @click="closeForm">Болих</button>
-                        <button type="submit" class="ui-btn-accent" :disabled="form.processing">Хадгалах</button>
+                        <input
+                            v-if="form.signer === 'acting'"
+                            v-model="actingName"
+                            class="slip-input w-44 text-right uppercase"
+                        />
+                        <span v-else class="pr-4">/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /</span>
                     </div>
-                </form>
-            </div>
+                </div>
+
+                <div class="mt-3 space-y-1">
+                    <InputError :message="form.errors.org_name" />
+                    <InputError :message="form.errors.person_name" />
+                    <InputError :message="form.errors.start_date" />
+                    <InputError :message="form.errors.days" />
+                    <InputError :message="form.errors.reason" />
+                    <InputError :message="form.errors.slip_number" />
+                </div>
+
+                <div class="mt-5 flex justify-end gap-2 border-t border-slate-100 pt-4">
+                    <button type="button" class="ui-btn-ghost" @click="closeForm">Болих</button>
+                    <button type="submit" class="ui-btn-accent" :disabled="form.processing">
+                        {{ form.processing ? 'Хадгалж байна…' : 'Хадгалах' }}
+                    </button>
+                </div>
+            </form>
         </Modal>
     </AuthenticatedLayout>
 </template>
 
 <style scoped>
+/* Хуудасны загварт тохирсон — доогуур зураастай, тунгалаг оруулга */
+.slip-input {
+    display: inline-block;
+    border: 0;
+    border-bottom: 1px dotted #475569;
+    background: transparent;
+    padding: 0 0.25rem;
+    font-size: 0.875rem;
+    line-height: 1.5rem;
+    color: #0f172a;
+}
+
+.slip-input:focus {
+    outline: none;
+    border-bottom-color: #1c55a5;
+    background: #f3f7fc;
+}
+
+.slip-type {
+    border: 0;
+    background: transparent;
+    padding: 0 0.15rem;
+    cursor: pointer;
+}
+
 /* A4 харьцаа — дэлгэц дээр 6 ширхэг (2×3) багтана. */
 .leave-a4 {
     width: min(100%, 210mm);
