@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\OrgEmployeePhone;
+use App\Models\PhoneDirectoryEntry;
 use App\Models\Task;
 use App\Models\TaskDocument;
 use App\Models\TaskSource;
@@ -67,9 +69,89 @@ class TaskController extends Controller
             ],
             'tasks' => $tasks,
             'documents' => $documents,
+            'people' => $this->phoneDirectoryPeople(),
             'canManage' => ModuleAccess::canManage($request->user(), 'tasks')
                 || (bool) $request->user()->is_admin,
         ]);
+    }
+
+    /**
+     * Утасны жагсаалт + байгууллагын албан хаагчдын нэрсийн сонголт.
+     *
+     * @return array<int, array{value: string, label: string, hint: string}>
+     */
+    private function phoneDirectoryPeople(): array
+    {
+        $items = [];
+
+        PhoneDirectoryEntry::query()
+            ->orderBy('org_order')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get(['person_name', 'position', 'org_name'])
+            ->each(function (PhoneDirectoryEntry $row) use (&$items) {
+                $name = trim((string) $row->person_name);
+                if ($name === '') {
+                    return;
+                }
+                $hint = trim(implode(' · ', array_filter([
+                    $row->position,
+                    $row->org_name,
+                ])));
+                $items[$name] = [
+                    'value' => $name,
+                    'label' => $name,
+                    'hint' => $hint,
+                ];
+            });
+
+        OrgEmployeePhone::query()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get(['last_name', 'first_name', 'position', 'organization', 'unit'])
+            ->each(function (OrgEmployeePhone $row) use (&$items) {
+                $name = $this->formatEmployeeName($row->last_name, $row->first_name);
+                if ($name === '') {
+                    return;
+                }
+                $hint = trim(implode(' · ', array_filter([
+                    $row->position,
+                    $row->unit,
+                    $row->organization,
+                ])));
+                if (! isset($items[$name]) || ($hint !== '' && ($items[$name]['hint'] ?? '') === '')) {
+                    $items[$name] = [
+                        'value' => $name,
+                        'label' => $name,
+                        'hint' => $hint,
+                    ];
+                }
+            });
+
+        return array_values($items);
+    }
+
+    private function formatEmployeeName(?string $lastName, ?string $firstName): string
+    {
+        $last = trim((string) $lastName);
+        $first = trim((string) $firstName);
+
+        if ($last === '' && $first === '') {
+            return '';
+        }
+        if ($last === '') {
+            return $first;
+        }
+        if ($first === '') {
+            return $last;
+        }
+
+        // Богино овог (жишээ: «Ц») → «Ц.Мөнх-Эрдэнэ»
+        if (mb_strlen($last) <= 3) {
+            return $last.'.'.$first;
+        }
+
+        return $last.' '.$first;
     }
 
     public function store(Request $request): RedirectResponse

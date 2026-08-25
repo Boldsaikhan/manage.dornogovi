@@ -9,6 +9,7 @@ const props = defineProps({
     source: { type: Object, required: true },
     tasks: { type: Array, default: () => [] },
     documents: { type: Array, default: () => [] },
+    people: { type: Array, default: () => [] },
     canManage: { type: Boolean, default: false },
 });
 
@@ -340,6 +341,8 @@ const prepTableMinWidth = computed(() => {
                                     v-if="drafts[task.id]"
                                     v-model="drafts[task.id].responsible"
                                     :editable="canManage"
+                                    :options="people"
+                                    placeholder="Утасны жагсаалтаас сонгох…"
                                     @commit="(v) => saveField(task.id, 'responsible', v)"
                                 />
                             </td>
@@ -348,6 +351,8 @@ const prepTableMinWidth = computed(() => {
                                     v-if="drafts[task.id]"
                                     v-model="drafts[task.id].collaborator"
                                     :editable="canManage"
+                                    :options="people"
+                                    placeholder="Утасны жагсаалтаас сонгох…"
                                     @commit="(v) => saveField(task.id, 'collaborator', v)"
                                 />
                             </td>
@@ -459,6 +464,8 @@ const prepTableMinWidth = computed(() => {
                                     v-if="drafts[task.id]"
                                     v-model="drafts[task.id].responsible"
                                     :editable="canManage"
+                                    :options="people"
+                                    placeholder="Утасны жагсаалтаас сонгох…"
                                     @commit="(v) => saveField(task.id, 'responsible', v)"
                                 />
                             </td>
@@ -467,6 +474,8 @@ const prepTableMinWidth = computed(() => {
                                     v-if="drafts[task.id]"
                                     v-model="drafts[task.id].collaborator"
                                     :editable="canManage"
+                                    :options="people"
+                                    placeholder="Утасны жагсаалтаас сонгох…"
                                     @commit="(v) => saveField(task.id, 'collaborator', v)"
                                 />
                             </td>
