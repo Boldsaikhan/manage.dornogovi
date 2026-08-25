@@ -199,6 +199,25 @@ class DecreeController extends Controller
      */
     private function applyBlankNumbering(array $data, ?Decree $decree = null): array
     {
+        // Хэвлэмэл хуудас авсан ажилтны нэргүй бол тоо, дугаар бүртгэхгүй.
+        $person = array_key_exists('person_name', $data)
+            ? trim((string) ($data['person_name'] ?? ''))
+            : trim((string) ($decree->person_name ?? ''));
+
+        if ($person === '') {
+            foreach (self::BLANK_GROUPS as $fields) {
+                foreach ($fields as $field) {
+                    $data[$field] = 0;
+                }
+            }
+
+            $data['num_zahiramj'] = null;
+            $data['num_tushaal'] = null;
+            $data['blank_number'] = null;
+
+            return $data;
+        }
+
         $values = [];
 
         foreach (self::BLANK_GROUPS as $fields) {

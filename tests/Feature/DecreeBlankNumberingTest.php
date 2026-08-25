@@ -45,7 +45,8 @@ class DecreeBlankNumberingTest extends TestCase
         $decree = Decree::create([
             'category' => 'blank',
             'kind' => 'blank',
-            'title' => '',
+            'title' => 'Б.Гантөмөр',
+            'person_name' => 'Б.Гантөмөр',
             'qty_zahiramj' => 2,
             'created_by' => $admin->id,
         ]);
@@ -68,7 +69,8 @@ class DecreeBlankNumberingTest extends TestCase
         $decree = Decree::create([
             'category' => 'blank',
             'kind' => 'blank',
-            'title' => '',
+            'title' => 'Б.Гантөмөр',
+            'person_name' => 'Б.Гантөмөр',
             'qty_zahiramj' => 3,
             'num_zahiramj' => '1-3',
             'created_by' => $admin->id,
@@ -88,6 +90,7 @@ class DecreeBlankNumberingTest extends TestCase
         // Эхлэх дугаарыг гараар тохируулна
         $this->actingAs($admin)->post(route('decrees.store'), [
             'tab' => 'blank',
+            'person_name' => 'Б.Гантөмөр',
             'qty_zahiramj' => 2,
             'num_zahiramj' => '1402-1403',
         ])->assertRedirect();
@@ -97,9 +100,38 @@ class DecreeBlankNumberingTest extends TestCase
         // Дараагийн мөр өмнөхөөс үргэлжилнэ
         $this->actingAs($admin)->post(route('decrees.store'), [
             'tab' => 'blank',
+            'person_name' => 'Ц.Батсугир',
             'qty_zahiramj' => 3,
         ])->assertRedirect();
 
         $this->assertSame('1404-1406', Decree::query()->latest('id')->firstOrFail()->num_zahiramj);
+    }
+
+    public function test_quantities_are_ignored_without_person_name(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->post(route('decrees.store'), [
+            'tab' => 'blank',
+            'qty_zahiramj' => 4,
+        ])->assertRedirect();
+
+        $row = Decree::query()->firstOrFail();
+
+        $this->assertSame(0, $row->qty_zahiramj);
+        $this->assertNull($row->num_zahiramj);
+
+        // Нэр бөглөсний дараа тоо бүртгэгдэнэ
+        $this->actingAs($admin)
+            ->patch(route('decrees.update', $row), ['person_name' => 'Н.Алдарбаяр'])
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->patch(route('decrees.update', $row), ['qty_zahiramj' => 4])
+            ->assertRedirect();
+
+        $fresh = $row->fresh();
+        $this->assertSame(4, $fresh->qty_zahiramj);
+        $this->assertSame('1-4', $fresh->num_zahiramj);
     }
 }

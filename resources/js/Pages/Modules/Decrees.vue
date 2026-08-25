@@ -65,6 +65,8 @@ const officialOptions = computed(() => {
 
 const canManage = computed(() => props.canManage);
 
+const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
+
 const drafts = reactive({});
 
 // Хэвлэмэл хуудасны бүлгүүд — нэг мөрд зөвхөн нэгийг нь бөглөнө.
@@ -84,14 +86,24 @@ const activeGroup = (rowId) => {
     ) ?? null;
 };
 
-// Тухайн бүлгийн нүд засварлаж болох эсэх (өөр бүлэг бөглөгдсөн бол үгүй).
+// Хэвлэмэл хуудас авсан ажилтны нэр бөглөгдсөн эсэх.
+const hasPerson = (rowId) => String(drafts[rowId]?.person_name ?? '').trim() !== '';
+
+// Тухайн бүлгийн нүд засварлаж болох эсэх:
+// нэр сонгосон, өөр бүлэг бөглөгдөөгүй байх ёстой.
 const groupEditable = (rowId, group) => {
-    if (! canManage.value) return false;
+    if (! canManage.value || ! hasPerson(rowId)) return false;
 
     const active = activeGroup(rowId);
 
     return active === null || active === group;
 };
+
+// Идэвхгүй нүдийг саарлаар ялгана.
+const qtyCellClass = (rowId, group) => [
+    cellClass,
+    groupEditable(rowId, group) ? '' : 'bg-slate-100',
+];
 
 const imageInput = ref(null);
 const uploadingId = ref(null);
@@ -316,7 +328,6 @@ const docColumnCount = computed(() => {
     return n;
 });
 
-const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
 </script>
 
 <template>
@@ -442,7 +453,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     @commit="(v) => saveField(row.id, 'issued_on', v)"
                                 />
                             </td>
-                            <td :class="cellClass">
+                            <td :class="qtyCellClass(row.id, 'zahiramj')">
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].qty_zahiramj"
@@ -453,7 +464,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     @commit="(v) => saveField(row.id, 'qty_zahiramj', v)"
                                 />
                             </td>
-                            <td :class="cellClass">
+                            <td :class="qtyCellClass(row.id, 'zahiramj')">
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].qty_zahiramj_mn"
@@ -464,7 +475,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     @commit="(v) => saveField(row.id, 'qty_zahiramj_mn', v)"
                                 />
                             </td>
-                            <td :class="cellClass">
+                            <td :class="qtyCellClass(row.id, 'tushaal')">
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].qty_tushaal"
@@ -475,7 +486,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     @commit="(v) => saveField(row.id, 'qty_tushaal', v)"
                                 />
                             </td>
-                            <td :class="cellClass">
+                            <td :class="qtyCellClass(row.id, 'tushaal')">
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].qty_tushaal_mn"
@@ -486,7 +497,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     @commit="(v) => saveField(row.id, 'qty_tushaal_mn', v)"
                                 />
                             </td>
-                            <td :class="cellClass">
+                            <td :class="qtyCellClass(row.id, 'assignment')">
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].qty_assignment"
@@ -497,7 +508,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     @commit="(v) => saveField(row.id, 'qty_assignment', v)"
                                 />
                             </td>
-                            <td :class="cellClass">
+                            <td :class="qtyCellClass(row.id, 'assignment')">
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].qty_assignment_mn"
@@ -508,7 +519,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     @commit="(v) => saveField(row.id, 'qty_assignment_mn', v)"
                                 />
                             </td>
-                            <td :class="cellClass">
+                            <td :class="qtyCellClass(row.id, 'council')">
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].qty_council"
@@ -519,7 +530,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     @commit="(v) => saveField(row.id, 'qty_council', v)"
                                 />
                             </td>
-                            <td :class="cellClass">
+                            <td :class="qtyCellClass(row.id, 'council')">
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].qty_council_mn"
