@@ -11,6 +11,7 @@ const props = defineProps({
     rows: { type: Array, default: () => [] },
     directory: { type: Array, default: () => [] },
     canManage: { type: Boolean, default: false },
+    scopes: { type: Object, default: () => ({}) },
     types: { type: Object, default: () => ({}) },
     signers: { type: Object, default: () => ({}) },
 });
@@ -34,6 +35,7 @@ const form = useForm({
 });
 
 const typeEntries = computed(() => Object.entries(props.types));
+const scopeEntries = computed(() => Object.entries(props.scopes));
 const signerEntries = computed(() => Object.entries(props.signers));
 
 const directoryForScope = computed(() => {
@@ -356,11 +358,10 @@ const emptyMessage = computed(() => {
                         <h3 class="text-base font-semibold text-brand-navy-900">Чөлөөний хуудас бөглөх</h3>
                         <p class="mt-0.5 text-sm text-slate-500">Хэвлэгдэх загварын дагуу шууд бөглөнө.</p>
                     </div>
-                    <select v-model="form.scope" class="ui-input w-40 py-1.5 text-sm" required>
-                        <option value="heltes">Хэлтэс</option>
-                        <option value="agentlag">Агентлаг</option>
-                        <option value="sum">Сумд</option>
-                        <option value="baiguullaga">Байгууллага</option>
+                    <select v-model="form.scope" class="ui-input w-56 py-1.5 text-sm" required>
+                        <option v-for="[value, label] in scopeEntries" :key="value" :value="value">
+                            {{ label }}
+                        </option>
                     </select>
                 </div>
 
