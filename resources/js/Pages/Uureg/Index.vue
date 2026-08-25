@@ -247,76 +247,96 @@ const formatSize = (bytes) => {
 
             <!-- Үүрэг чиглэл -->
             <div v-if="isDirective" class="ui-table-wrap overflow-x-auto">
-                <table class="ui-table min-w-[980px]">
+                <table class="ui-table min-w-[1000px]">
                     <thead>
                         <tr>
-                            <th class="w-14">№</th>
+                            <th class="w-12 text-center">№</th>
                             <th>Үүрэг чиглэл</th>
                             <th class="w-40">Хариуцах эзэн</th>
                             <th class="w-48">Хяналт тавих албан тушаалтан</th>
-                            <th class="w-52">Хэрэгжилт</th>
+                            <th class="w-48">Хэрэгжилт</th>
                             <th class="w-28 text-center">Биелэлтийн хувь</th>
-                            <th v-if="canManage" class="w-20" />
+                            <th v-if="canManage" class="w-12 text-center" />
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="task in tasks" :key="task.id">
-                            <td class="font-semibold text-slate-500">{{ task.no }}</td>
-                            <td>
+                            <td class="text-center font-semibold text-slate-500">{{ task.no }}</td>
+                            <td class="min-w-[280px]">
                                 <textarea
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].text"
-                                    rows="2"
-                                    class="ui-input"
+                                    rows="3"
+                                    class="ui-table-input resize-y"
                                     @change="saveField(task.id, 'text', drafts[task.id].text)"
                                 />
-                                <span v-else class="whitespace-pre-wrap">{{ task.text || '—' }}</span>
+                                <span v-else class="block whitespace-pre-wrap px-1.5 py-1 leading-relaxed">{{ task.text || '—' }}</span>
                             </td>
                             <td>
                                 <input
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].responsible"
-                                    class="ui-input"
+                                    class="ui-table-input"
                                     @change="saveField(task.id, 'responsible', drafts[task.id].responsible)"
                                 />
-                                <span v-else>{{ task.responsible || '—' }}</span>
+                                <span v-else class="block px-1.5 py-1">{{ task.responsible || '—' }}</span>
                             </td>
                             <td>
                                 <input
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].collaborator"
-                                    class="ui-input"
+                                    class="ui-table-input"
                                     @change="saveField(task.id, 'collaborator', drafts[task.id].collaborator)"
                                 />
-                                <span v-else>{{ task.collaborator || '—' }}</span>
+                                <span v-else class="block px-1.5 py-1">{{ task.collaborator || '—' }}</span>
                             </td>
                             <td>
                                 <textarea
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].note"
-                                    rows="2"
-                                    class="ui-input"
-                                    placeholder="Хэрэгжилтийн тэмдэглэл…"
+                                    rows="3"
+                                    class="ui-table-input resize-y"
+                                    placeholder="Хэрэгжилт…"
                                     @change="saveField(task.id, 'note', drafts[task.id].note)"
                                 />
-                                <span v-else class="whitespace-pre-wrap">{{ task.note || '—' }}</span>
+                                <span v-else class="block whitespace-pre-wrap px-1.5 py-1">{{ task.note || '—' }}</span>
                             </td>
-                            <td class="text-center">
-                                <div v-if="canManage && drafts[task.id]" class="flex items-center justify-center gap-1">
+                            <td class="text-center align-middle">
+                                <div v-if="canManage && drafts[task.id]" class="inline-flex items-center gap-0.5">
                                     <input
                                         v-model.number="drafts[task.id].progress"
                                         type="number"
                                         min="0"
                                         max="100"
-                                        class="ui-input !w-16 text-center"
+                                        class="ui-table-input !w-14 text-center font-semibold"
                                         @change="saveProgress(task.id)"
                                     />
-                                    <span class="text-xs text-slate-500">%</span>
+                                    <span class="text-xs font-medium text-slate-500">%</span>
                                 </div>
-                                <span v-else>{{ task.progress ?? 0 }}%</span>
+                                <span
+                                    v-else
+                                    class="inline-flex min-w-[3rem] justify-center rounded-full px-2 py-0.5 text-xs font-semibold"
+                                    :class="(task.progress ?? 0) >= 100
+                                        ? 'bg-emerald-100 text-emerald-700'
+                                        : (task.progress ?? 0) > 0
+                                            ? 'bg-amber-100 text-amber-800'
+                                            : 'bg-slate-100 text-slate-600'"
+                                >
+                                    {{ task.progress ?? 0 }}%
+                                </span>
                             </td>
-                            <td v-if="canManage" class="text-right">
-                                <button type="button" class="ui-btn-danger !py-1 text-xs" @click="removeRow(task.id)">Устгах</button>
+                            <td v-if="canManage" class="text-center align-middle">
+                                <button
+                                    type="button"
+                                    class="ui-icon-btn"
+                                    title="Устгах"
+                                    aria-label="Устгах"
+                                    @click="removeRow(task.id)"
+                                >
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6" />
+                                    </svg>
+                                </button>
                             </td>
                         </tr>
                         <tr v-if="!tasks.length">
@@ -330,96 +350,116 @@ const formatSize = (bytes) => {
 
             <!-- Бэлтгэл ажил хангах төлөвлөгөө -->
             <div v-else class="ui-table-wrap overflow-x-auto">
-                <table class="ui-table min-w-[1100px]">
+                <table class="ui-table min-w-[1120px]">
                     <thead>
                         <tr>
-                            <th class="w-14">№</th>
+                            <th class="w-12 text-center">№</th>
                             <th class="w-36">Ажлын чиглэл</th>
                             <th>Арга хэмжээ</th>
                             <th class="w-28">Хугацаа</th>
                             <th class="w-36">Хариуцах эзэн</th>
-                            <th class="w-44">Хамтран хэрэгжүүлэх албан тушаалтан</th>
-                            <th class="w-44">Хэрэгжилт</th>
+                            <th class="w-40">Хамтран хэрэгжүүлэх</th>
+                            <th class="w-40">Хэрэгжилт</th>
                             <th class="w-28 text-center">Биелэлтийн хувь</th>
-                            <th v-if="canManage" class="w-20" />
+                            <th v-if="canManage" class="w-12 text-center" />
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="task in tasks" :key="task.id">
-                            <td class="font-semibold text-slate-500">{{ task.no }}</td>
+                            <td class="text-center font-semibold text-slate-500">{{ task.no }}</td>
                             <td>
                                 <input
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].sector"
-                                    class="ui-input"
+                                    class="ui-table-input"
                                     @change="saveField(task.id, 'sector', drafts[task.id].sector)"
                                 />
-                                <span v-else>{{ task.sector || '—' }}</span>
+                                <span v-else class="block px-1.5 py-1">{{ task.sector || '—' }}</span>
                             </td>
-                            <td>
+                            <td class="min-w-[220px]">
                                 <textarea
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].text"
-                                    rows="2"
-                                    class="ui-input"
+                                    rows="3"
+                                    class="ui-table-input resize-y"
                                     @change="saveField(task.id, 'text', drafts[task.id].text)"
                                 />
-                                <span v-else class="whitespace-pre-wrap">{{ task.text || '—' }}</span>
+                                <span v-else class="block whitespace-pre-wrap px-1.5 py-1 leading-relaxed">{{ task.text || '—' }}</span>
                             </td>
                             <td>
                                 <input
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].period"
-                                    class="ui-input"
+                                    class="ui-table-input"
                                     @change="saveField(task.id, 'period', drafts[task.id].period)"
                                 />
-                                <span v-else>{{ task.period || '—' }}</span>
+                                <span v-else class="block px-1.5 py-1">{{ task.period || '—' }}</span>
                             </td>
                             <td>
                                 <input
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].responsible"
-                                    class="ui-input"
+                                    class="ui-table-input"
                                     @change="saveField(task.id, 'responsible', drafts[task.id].responsible)"
                                 />
-                                <span v-else>{{ task.responsible || '—' }}</span>
+                                <span v-else class="block px-1.5 py-1">{{ task.responsible || '—' }}</span>
                             </td>
                             <td>
                                 <input
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].collaborator"
-                                    class="ui-input"
+                                    class="ui-table-input"
                                     @change="saveField(task.id, 'collaborator', drafts[task.id].collaborator)"
                                 />
-                                <span v-else>{{ task.collaborator || '—' }}</span>
+                                <span v-else class="block px-1.5 py-1">{{ task.collaborator || '—' }}</span>
                             </td>
                             <td>
                                 <textarea
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].note"
-                                    rows="2"
-                                    class="ui-input"
-                                    placeholder="Хэрэгжилтийн тэмдэглэл…"
+                                    rows="3"
+                                    class="ui-table-input resize-y"
+                                    placeholder="Хэрэгжилт…"
                                     @change="saveField(task.id, 'note', drafts[task.id].note)"
                                 />
-                                <span v-else class="whitespace-pre-wrap">{{ task.note || '—' }}</span>
+                                <span v-else class="block whitespace-pre-wrap px-1.5 py-1">{{ task.note || '—' }}</span>
                             </td>
-                            <td class="text-center">
-                                <div v-if="canManage && drafts[task.id]" class="flex items-center justify-center gap-1">
+                            <td class="text-center align-middle">
+                                <div v-if="canManage && drafts[task.id]" class="inline-flex items-center gap-0.5">
                                     <input
                                         v-model.number="drafts[task.id].progress"
                                         type="number"
                                         min="0"
                                         max="100"
-                                        class="ui-input !w-16 text-center"
+                                        class="ui-table-input !w-14 text-center font-semibold"
                                         @change="saveProgress(task.id)"
                                     />
-                                    <span class="text-xs text-slate-500">%</span>
+                                    <span class="text-xs font-medium text-slate-500">%</span>
                                 </div>
-                                <span v-else>{{ task.progress ?? 0 }}%</span>
+                                <span
+                                    v-else
+                                    class="inline-flex min-w-[3rem] justify-center rounded-full px-2 py-0.5 text-xs font-semibold"
+                                    :class="(task.progress ?? 0) >= 100
+                                        ? 'bg-emerald-100 text-emerald-700'
+                                        : (task.progress ?? 0) > 0
+                                            ? 'bg-amber-100 text-amber-800'
+                                            : 'bg-slate-100 text-slate-600'"
+                                >
+                                    {{ task.progress ?? 0 }}%
+                                </span>
                             </td>
-                            <td v-if="canManage" class="text-right">
-                                <button type="button" class="ui-btn-danger !py-1 text-xs" @click="removeRow(task.id)">Устгах</button>
+                            <td v-if="canManage" class="text-center align-middle">
+                                <button
+                                    type="button"
+                                    class="ui-icon-btn"
+                                    title="Устгах"
+                                    aria-label="Устгах"
+                                    @click="removeRow(task.id)"
+                                >
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6" />
+                                    </svg>
+                                </button>
                             </td>
                         </tr>
                         <tr v-if="!tasks.length">
