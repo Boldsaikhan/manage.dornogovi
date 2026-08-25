@@ -71,9 +71,28 @@ class TaskController extends Controller
             'tasks' => $tasks,
             'documents' => $documents,
             'people' => $this->phoneDirectoryPeople(),
+            'azdtgUnits' => $this->azdtgUnits(),
             'canManage' => ModuleAccess::canManage($request->user(), 'tasks')
                 || (bool) $request->user()->is_admin,
         ]);
+    }
+
+    /**
+     * АЗДТГ-ын бүх нэгж (хэлтэс) — үүрэггүй нэгж ч дашбоардад харагдана.
+     *
+     * @return array<int, string>
+     */
+    private function azdtgUnits(): array
+    {
+        return OrgEmployeePhone::query()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->pluck('unit')
+            ->map(fn (?string $unit) => trim((string) $unit))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**

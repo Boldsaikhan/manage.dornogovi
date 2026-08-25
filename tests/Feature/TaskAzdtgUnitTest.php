@@ -30,6 +30,8 @@ class TaskAzdtgUnitTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('people.0.value', 'Ц.Мөнх-Эрдэнэ')
                 ->where('people.0.category', 'azdtg')
-                ->where('people.0.org', 'Төрийн захиргааны удирдлагын хэлтэс'));
+                ->where('people.0.org', 'Төрийн захиргааны удирдлагын хэлтэс')
+                // Дашбоардад бүх нэгж (үүрэггүй ч) харагдана
+                ->where('azdtgUnits.0', 'Төрийн захиргааны удирдлагын хэлтэс'));
     }
 }

@@ -10,6 +10,7 @@ const props = defineProps({
     tasks: { type: Array, default: () => [] },
     documents: { type: Array, default: () => [] },
     people: { type: Array, default: () => [] },
+    azdtgUnits: { type: Array, default: () => [] },
     canManage: { type: Boolean, default: false },
 });
 
@@ -63,6 +64,7 @@ const filter = ref(null); // { type: 'category' | 'org', value, label }
 
 const CATEGORY_LABELS = {
     udirdlaga: 'Аймгийн удирдлагууд',
+    heltes: 'Хэлтэс',
     azdtg: 'АЗДТГ-ын албан хаагчид',
     agentlag: 'Агентлаг',
     sum: 'Сумд',
@@ -136,9 +138,13 @@ const buildStats = (keyFn, labelFn) => {
         .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'mn'));
 };
 
-// АЗДТГ-ын нэгжүүд (хэлтэс) — зөвхөн тухайн ангиллын эзэдээр.
+// АЗДТГ-ын нэгжүүд (хэлтэс) — үүрэггүй нэгжийг ч 0%-иар харуулна.
 const azdtgStats = computed(() => {
     const groups = new Map();
+
+    props.azdtgUnits.forEach((unit) => {
+        groups.set(unit, { key: unit, label: unit, tasks: [] });
+    });
 
     props.tasks.forEach((task) => {
         taskOwners(task)
@@ -158,7 +164,7 @@ const azdtgStats = computed(() => {
             done: g.tasks.filter((t) => Number(t.progress) >= 100).length,
             progress: average(g.tasks),
         }))
-        .sort((a, b) => b.progress - a.progress || b.count - a.count);
+        .sort((a, b) => b.progress - a.progress || b.count - a.count || a.label.localeCompare(b.label, 'mn'));
 });
 
 // Дугуй диаграмын тойрог
@@ -178,6 +184,14 @@ const statusSegments = computed(() => {
         { label: 'Эхлээгүй', value: overall.value.pending, color: '#cbd5e1' },
     ].map((s) => ({ ...s, percent: Math.round((s.value / total) * 100) }));
 });
+
+// Ангиллын хэсэгт: бусад ангилал + АЗДТГ-ын нэгж бүр (албан хаагчид гэсэн нэгдсэн карт байхгүй).
+const dashboardCards = computed(() => [
+    ...categoryStats.value
+        .filter((item) => item.key !== 'azdtg')
+        .map((item) => ({ ...item, type: 'category' })),
+    ...azdtgStats.value.map((item) => ({ ...item, type: 'org' })),
+]);
 
 // Ангиллын картуудыг тогтмол дарааллаар харуулна.
 const categoryStats = computed(() => buildStats(
@@ -758,7 +772,7 @@ const prepTableMinWidth = computed(() => {
 
         <!-- Дэлгэц дүүрэн график дашбоард -->
         <div v-if="showDashboard" class="fixed inset-0 z-50 overflow-y-auto bg-slate-100">
-            <div class="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+            <div class="w-full p-4 sm:p-6 lg:p-8">
                 <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <h2 class="text-xl font-bold text-brand-navy-900">Хэрэгжилтийн дашбоард</h2>
@@ -814,14 +828,14 @@ const prepTableMinWidth = computed(() => {
                 </div>
 
                 <section class="ui-card-pad mt-4">
-                    <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Ангиллаар</p>
+                    <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Ангиллаар · АЗДТГ-ын хэлтсүүд</p>
                     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <button
-                            v-for="item in categoryStats"
-                            :key="item.key"
+                            v-for="item in dashboardCards"
+                            :key="item.type + item.key"
                             type="button"
                             class="rounded-2xl border border-slate-200 p-4 text-left transition hover:border-brand-navy-400 hover:shadow-soft"
-                            @click="applyFilterAndClose('category', item.key, item.label)"
+                            @click="applyFilterAndClose(item.type, item.key, item.label)"
                         >
                             <div class="flex items-center gap-4">
                                 <svg viewBox="0 0 130 130" class="h-16 w-16 shrink-0 -rotate-90">
@@ -842,28 +856,6 @@ const prepTableMinWidth = computed(() => {
                                     <p class="text-xs text-slate-500">{{ item.count }} үүрэг · {{ item.done }} дууссан</p>
                                 </div>
                             </div>
-                        </button>
-                    </div>
-                </section>
-
-                <section v-if="azdtgStats.length" class="ui-card-pad mt-4">
-                    <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                        АЗДТГ-ын нэгжүүдийн хэрэгжилт
-                    </p>
-                    <div class="space-y-2">
-                        <button
-                            v-for="item in azdtgStats"
-                            :key="item.key"
-                            type="button"
-                            class="flex w-full items-center gap-3 rounded-xl border border-slate-200 px-3 py-2 text-left transition hover:border-brand-navy-400"
-                            @click="applyFilterAndClose('org', item.key, item.label)"
-                        >
-                            <span class="w-64 shrink-0 truncate text-sm text-slate-700" :title="item.label">{{ item.label }}</span>
-                            <span class="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-200">
-                                <span class="block h-full rounded-full" :class="barColor(item.progress)" :style="{ width: item.progress + '%' }" />
-                            </span>
-                            <span class="w-12 shrink-0 text-right text-sm font-semibold text-brand-navy-700">{{ item.progress }}%</span>
-                            <span class="w-20 shrink-0 text-right text-xs text-slate-500">{{ item.count }} үүрэг</span>
                         </button>
                     </div>
                 </section>
