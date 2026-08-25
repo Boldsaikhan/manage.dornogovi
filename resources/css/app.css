@@ -161,6 +161,18 @@
         cursor: cell;
     }
 
+    /* Нүдийг нэг товшилтоор цэвэрлэх товч — хулгана аваачихад л харагдана */
+    .ui-sheet-clear {
+        @apply absolute right-0.5 top-0.5 z-10 hidden h-5 w-5 items-center justify-center
+            rounded-full bg-white/90 text-[11px] leading-none text-slate-400 shadow-sm
+            transition hover:bg-rose-50 hover:text-rose-600;
+    }
+
+    .ui-sheet-cell:hover .ui-sheet-clear,
+    .ui-sheet-cell:focus-within .ui-sheet-clear {
+        @apply flex;
+    }
+
     .ui-sheet-cell.is-editable:hover:not(.is-editing) {
         @apply bg-sky-50/80;
     }

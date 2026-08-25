@@ -256,6 +256,13 @@ const commitValue = (value) => {
     emit('commit', next);
 };
 
+// Нүдийг нэг товшилтоор цэвэрлэнэ (жагсаалтаас сонгосон нэрийг устгах).
+const clearCell = () => {
+    selected.value = [];
+    search.value = '';
+    commitValue('');
+};
+
 const commitMulti = () => {
     commitValue(selected.value.join('/'));
 };
@@ -434,8 +441,17 @@ onBeforeUnmount(() => {
             @blur="onBlur"
             @keydown="onKeydown"
         />
+        <button
+            v-if="! editing && editable && hasOptions && modelValue"
+            type="button"
+            class="ui-sheet-clear"
+            title="Цэвэрлэх"
+            @click.stop="clearCell"
+        >
+            ✕
+        </button>
         <div
-            v-else
+            v-if="! editing"
             class="ui-sheet-display ui-clamp-2"
             :class="{ 'text-center': align === 'center', 'text-slate-400': ! modelValue && !! placeholder }"
             :title="modelValue ? String(modelValue) : ''"
@@ -509,10 +525,11 @@ onBeforeUnmount(() => {
                     <button
                         v-if="! multiple"
                         type="button"
-                        class="flex w-full items-center gap-2 border-b border-slate-100 px-3 py-2 text-left text-sm text-slate-500 transition hover:bg-slate-50"
-                        @mousedown.prevent="commitValue('')"
+                        class="flex w-full items-center gap-2 border-b border-slate-100 px-3 py-2 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50"
+                        @mousedown.prevent="clearCell"
                     >
-                        Сонголтгүй
+                        <span class="flex h-5 w-5 items-center justify-center rounded-full border border-rose-200 text-[11px]">✕</span>
+                        Сонголтгүй (цэвэрлэх)
                     </button>
                     <button
                         v-for="(opt, idx) in filteredOptions"
