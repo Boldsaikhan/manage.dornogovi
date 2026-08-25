@@ -179,8 +179,8 @@ const contentSize = (d) => ({
                 </div>
             </form>
 
-            <div class="ui-table-wrap">
-                <table class="ui-table">
+            <div class="ui-table-wrap overflow-x-auto">
+                <table class="ui-table min-w-[720px]">
                     <thead>
                         <tr>
                             <th class="w-64">Гарчиг</th>
@@ -191,8 +191,12 @@ const contentSize = (d) => ({
                     </thead>
                     <tbody>
                         <tr v-for="row in standards" :key="row.id">
-                            <td class="font-medium text-slate-800">{{ row.title }}</td>
-                            <td class="whitespace-pre-wrap">{{ row.body || '—' }}</td>
+                            <td class="font-medium text-slate-800">
+                                <span class="ui-clamp-2" :title="row.title">{{ row.title }}</span>
+                            </td>
+                            <td>
+                                <span class="ui-clamp-2" :title="row.body || ''">{{ row.body || '—' }}</span>
+                            </td>
                             <td class="text-center">{{ row.sort_order }}</td>
                             <td v-if="canManage" class="text-right">
                                 <button type="button" class="ui-btn-danger !py-1 text-xs" @click="destroyStandard(row.id)">Устгах</button>

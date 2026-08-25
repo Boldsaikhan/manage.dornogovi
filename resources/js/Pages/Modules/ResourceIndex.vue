@@ -190,8 +190,8 @@ const destroyRow = (id) => {
                 </button>
             </nav>
 
-            <div class="ui-table-wrap">
-                <table class="ui-table">
+            <div class="ui-table-wrap overflow-x-auto">
+                <table class="ui-table min-w-full">
                     <thead>
                         <tr>
                             <th v-for="col in columns" :key="col.key">{{ col.label }}</th>
@@ -200,7 +200,12 @@ const destroyRow = (id) => {
                     </thead>
                     <tbody>
                         <tr v-for="row in rows" :key="row.id">
-                            <td v-for="col in columns" :key="col.key">{{ row[col.key] }}</td>
+                            <td v-for="col in columns" :key="col.key">
+                                <span
+                                    class="ui-clamp-2"
+                                    :title="row[col.key] != null && row[col.key] !== '' ? String(row[col.key]) : ''"
+                                >{{ row[col.key] != null && row[col.key] !== '' ? row[col.key] : '—' }}</span>
+                            </td>
                             <td v-if="canManage" class="text-right">
                                 <button type="button" class="ui-btn-danger !py-1 text-xs" @click="destroyRow(row.id)">Устгах</button>
                             </td>

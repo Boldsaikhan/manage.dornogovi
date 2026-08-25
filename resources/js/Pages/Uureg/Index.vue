@@ -136,20 +136,54 @@ const formatSize = (bytes) => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-/** Үүрэг чиглэлийн бичвэрийг бүтэн харуулах мөрийн тоо */
-const textRows = (text) => {
-    const value = String(text ?? '');
-    if (!value.trim()) return 2;
-    const lines = value.split('\n');
-    const estimated = lines.reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / 90)), 0);
-    return Math.max(2, Math.min(30, estimated));
+/** Урт бичвэрийг 2 мөрөнд багтаахад шаардлагатай баганы өргөн (px) */
+const twoLineWidth = (text, { min = 220, max = 780, pxPerChar = 7.2 } = {}) => {
+    const len = String(text ?? '').replace(/\s+/g, ' ').trim().length;
+    if (!len) return min;
+    return Math.min(max, Math.max(min, Math.ceil(len / 2) * pxPerChar));
 };
 
-const autoGrow = (event) => {
-    const el = event.target;
-    el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight}px`;
-};
+const directiveTextColWidth = computed(() => {
+    const widths = props.tasks.map((t) => {
+        const draft = drafts[t.id];
+        return twoLineWidth(draft?.text ?? t.text, { min: 280, max: 900 });
+    });
+    return widths.length ? Math.max(...widths) : 320;
+});
+
+const directiveNoteColWidth = computed(() => {
+    const widths = props.tasks.map((t) => {
+        const draft = drafts[t.id];
+        return twoLineWidth(draft?.note ?? t.note, { min: 140, max: 360, pxPerChar: 7 });
+    });
+    return widths.length ? Math.max(...widths) : 160;
+});
+
+const directiveTableMinWidth = computed(() => {
+    const fixed = 48 + 140 + 160 + 96 + (props.canManage ? 48 : 0);
+    return fixed + directiveTextColWidth.value + directiveNoteColWidth.value;
+});
+
+const prepTextColWidth = computed(() => {
+    const widths = props.tasks.map((t) => {
+        const draft = drafts[t.id];
+        return twoLineWidth(draft?.text ?? t.text, { min: 260, max: 720 });
+    });
+    return widths.length ? Math.max(...widths) : 280;
+});
+
+const prepNoteColWidth = computed(() => {
+    const widths = props.tasks.map((t) => {
+        const draft = drafts[t.id];
+        return twoLineWidth(draft?.note ?? t.note, { min: 140, max: 320, pxPerChar: 7 });
+    });
+    return widths.length ? Math.max(...widths) : 160;
+});
+
+const prepTableMinWidth = computed(() => {
+    const fixed = 48 + 140 + 110 + 140 + 150 + 96 + (props.canManage ? 48 : 0);
+    return fixed + prepTextColWidth.value + prepNoteColWidth.value;
+});
 </script>
 
 <template>
@@ -264,14 +298,17 @@ const autoGrow = (event) => {
 
             <!-- Үүрэг чиглэл -->
             <div v-if="isDirective" class="ui-table-wrap w-full overflow-x-auto">
-                <table class="ui-table w-full table-fixed">
+                <table
+                    class="ui-table table-fixed"
+                    :style="{ width: `${directiveTableMinWidth}px`, minWidth: `${directiveTableMinWidth}px` }"
+                >
                     <colgroup>
                         <col class="w-12" />
-                        <col />
-                        <col class="w-[12%]" />
-                        <col class="w-[14%]" />
-                        <col class="w-[16%]" />
-                        <col class="w-24" />
+                        <col :style="{ width: `${directiveTextColWidth}px` }" />
+                        <col style="width: 140px" />
+                        <col style="width: 160px" />
+                        <col :style="{ width: `${directiveNoteColWidth}px` }" />
+                        <col style="width: 96px" />
                         <col v-if="canManage" class="w-12" />
                     </colgroup>
                     <thead>
@@ -292,42 +329,64 @@ const autoGrow = (event) => {
                                 <textarea
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].text"
-                                    :rows="textRows(drafts[task.id].text)"
-                                    class="ui-table-input max-h-none resize-none overflow-hidden whitespace-pre-wrap"
-                                    @input="autoGrow"
+                                    rows="2"
+                                    class="ui-table-input-2"
+                                    :title="drafts[task.id].text"
                                     @change="saveField(task.id, 'text', drafts[task.id].text)"
                                 />
-                                <div v-else class="whitespace-pre-wrap px-1 py-0.5 leading-snug">{{ task.text || '—' }}</div>
+                                <div
+                                    v-else
+                                    class="ui-clamp-2 px-1 py-0.5"
+                                    :title="task.text || ''"
+                                >
+                                    {{ task.text || '—' }}
+                                </div>
                             </td>
                             <td>
                                 <input
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].responsible"
                                     class="ui-table-input"
+                                    :title="drafts[task.id].responsible"
                                     @change="saveField(task.id, 'responsible', drafts[task.id].responsible)"
                                 />
-                                <span v-else class="block px-1 py-0.5">{{ task.responsible || '—' }}</span>
+                                <span
+                                    v-else
+                                    class="ui-clamp-2 block px-1 py-0.5"
+                                    :title="task.responsible || ''"
+                                >{{ task.responsible || '—' }}</span>
                             </td>
                             <td>
                                 <input
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].collaborator"
                                     class="ui-table-input"
+                                    :title="drafts[task.id].collaborator"
                                     @change="saveField(task.id, 'collaborator', drafts[task.id].collaborator)"
                                 />
-                                <span v-else class="block px-1 py-0.5">{{ task.collaborator || '—' }}</span>
+                                <span
+                                    v-else
+                                    class="ui-clamp-2 block px-1 py-0.5"
+                                    :title="task.collaborator || ''"
+                                >{{ task.collaborator || '—' }}</span>
                             </td>
                             <td>
                                 <textarea
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].note"
-                                    :rows="textRows(drafts[task.id].note)"
-                                    class="ui-table-input resize-none overflow-hidden whitespace-pre-wrap"
+                                    rows="2"
+                                    class="ui-table-input-2"
                                     placeholder="Хэрэгжилт…"
-                                    @input="autoGrow"
+                                    :title="drafts[task.id].note"
                                     @change="saveField(task.id, 'note', drafts[task.id].note)"
                                 />
-                                <div v-else class="whitespace-pre-wrap px-1 py-0.5 leading-snug">{{ task.note || '—' }}</div>
+                                <div
+                                    v-else
+                                    class="ui-clamp-2 px-1 py-0.5"
+                                    :title="task.note || ''"
+                                >
+                                    {{ task.note || '—' }}
+                                </div>
                             </td>
                             <td class="text-center align-middle">
                                 <div v-if="canManage && drafts[task.id]" class="inline-flex items-center gap-0.5">
@@ -378,18 +437,32 @@ const autoGrow = (event) => {
 
             <!-- Бэлтгэл ажил хангах төлөвлөгөө -->
             <div v-else class="ui-table-wrap overflow-x-auto">
-                <table class="ui-table min-w-[1120px]">
+                <table
+                    class="ui-table table-fixed"
+                    :style="{ width: `${prepTableMinWidth}px`, minWidth: `${prepTableMinWidth}px` }"
+                >
+                    <colgroup>
+                        <col style="width: 48px" />
+                        <col style="width: 140px" />
+                        <col :style="{ width: `${prepTextColWidth}px` }" />
+                        <col style="width: 110px" />
+                        <col style="width: 140px" />
+                        <col style="width: 150px" />
+                        <col :style="{ width: `${prepNoteColWidth}px` }" />
+                        <col style="width: 96px" />
+                        <col v-if="canManage" style="width: 48px" />
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th class="w-12 text-center">№</th>
-                            <th class="w-36">Ажлын чиглэл</th>
+                            <th class="text-center">№</th>
+                            <th>Ажлын чиглэл</th>
                             <th>Арга хэмжээ</th>
-                            <th class="w-28">Хугацаа</th>
-                            <th class="w-36">Хариуцах эзэн</th>
-                            <th class="w-40">Хамтран хэрэгжүүлэх</th>
-                            <th class="w-40">Хэрэгжилт</th>
-                            <th class="w-28 text-center">Биелэлтийн хувь</th>
-                            <th v-if="canManage" class="w-12 text-center" />
+                            <th>Хугацаа</th>
+                            <th>Хариуцах эзэн</th>
+                            <th>Хамтран хэрэгжүүлэх</th>
+                            <th>Хэрэгжилт</th>
+                            <th class="text-center">Биелэлтийн хувь</th>
+                            <th v-if="canManage" class="text-center" />
                         </tr>
                     </thead>
                     <tbody>
@@ -400,57 +473,87 @@ const autoGrow = (event) => {
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].sector"
                                     class="ui-table-input"
+                                    :title="drafts[task.id].sector"
                                     @change="saveField(task.id, 'sector', drafts[task.id].sector)"
                                 />
-                                <span v-else class="block px-1 py-0.5">{{ task.sector || '—' }}</span>
+                                <span
+                                    v-else
+                                    class="ui-clamp-2 block px-1 py-0.5"
+                                    :title="task.sector || ''"
+                                >{{ task.sector || '—' }}</span>
                             </td>
-                            <td class="min-w-[220px]">
+                            <td>
                                 <textarea
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].text"
-                                    rows="3"
-                                    class="ui-table-input resize-y"
+                                    rows="2"
+                                    class="ui-table-input-2"
+                                    :title="drafts[task.id].text"
                                     @change="saveField(task.id, 'text', drafts[task.id].text)"
                                 />
-                                <span v-else class="block whitespace-pre-wrap px-1 py-0.5 leading-snug">{{ task.text || '—' }}</span>
+                                <span
+                                    v-else
+                                    class="ui-clamp-2 block px-1 py-0.5"
+                                    :title="task.text || ''"
+                                >{{ task.text || '—' }}</span>
                             </td>
                             <td>
                                 <input
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].period"
                                     class="ui-table-input"
+                                    :title="drafts[task.id].period"
                                     @change="saveField(task.id, 'period', drafts[task.id].period)"
                                 />
-                                <span v-else class="block px-1 py-0.5">{{ task.period || '—' }}</span>
+                                <span
+                                    v-else
+                                    class="ui-clamp-2 block px-1 py-0.5"
+                                    :title="task.period || ''"
+                                >{{ task.period || '—' }}</span>
                             </td>
                             <td>
                                 <input
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].responsible"
                                     class="ui-table-input"
+                                    :title="drafts[task.id].responsible"
                                     @change="saveField(task.id, 'responsible', drafts[task.id].responsible)"
                                 />
-                                <span v-else class="block px-1 py-0.5">{{ task.responsible || '—' }}</span>
+                                <span
+                                    v-else
+                                    class="ui-clamp-2 block px-1 py-0.5"
+                                    :title="task.responsible || ''"
+                                >{{ task.responsible || '—' }}</span>
                             </td>
                             <td>
                                 <input
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].collaborator"
                                     class="ui-table-input"
+                                    :title="drafts[task.id].collaborator"
                                     @change="saveField(task.id, 'collaborator', drafts[task.id].collaborator)"
                                 />
-                                <span v-else class="block px-1 py-0.5">{{ task.collaborator || '—' }}</span>
+                                <span
+                                    v-else
+                                    class="ui-clamp-2 block px-1 py-0.5"
+                                    :title="task.collaborator || ''"
+                                >{{ task.collaborator || '—' }}</span>
                             </td>
                             <td>
                                 <textarea
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].note"
-                                    rows="3"
-                                    class="ui-table-input resize-y"
+                                    rows="2"
+                                    class="ui-table-input-2"
                                     placeholder="Хэрэгжилт…"
+                                    :title="drafts[task.id].note"
                                     @change="saveField(task.id, 'note', drafts[task.id].note)"
                                 />
-                                <span v-else class="block whitespace-pre-wrap px-1 py-0.5 leading-snug">{{ task.note || '—' }}</span>
+                                <span
+                                    v-else
+                                    class="ui-clamp-2 block px-1 py-0.5"
+                                    :title="task.note || ''"
+                                >{{ task.note || '—' }}</span>
                             </td>
                             <td class="text-center align-middle">
                                 <div v-if="canManage && drafts[task.id]" class="inline-flex items-center gap-0.5">

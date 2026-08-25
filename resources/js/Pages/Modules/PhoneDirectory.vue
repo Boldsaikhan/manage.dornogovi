@@ -372,8 +372,12 @@ const openAdd = () => {
                             </tr>
                             <tr v-for="(row, index) in group.rows" :key="row.id">
                                 <td class="text-center">{{ index + 1 }}</td>
-                                <td>{{ row.person_name }}</td>
-                                <td>{{ row.position || '—' }}</td>
+                                <td>
+                                    <span class="ui-clamp-2" :title="row.person_name">{{ row.person_name }}</span>
+                                </td>
+                                <td>
+                                    <span class="ui-clamp-2" :title="row.position || ''">{{ row.position || '—' }}</span>
+                                </td>
                                 <td class="text-center">{{ row.office_phone || '—' }}</td>
                                 <td class="text-center">{{ row.mobile_phone || '—' }}</td>
                                 <td v-if="canManage" class="text-right">
