@@ -10,6 +10,7 @@ const key = (host) => `pending:${host}`;
 // Мэдээлэл хадгалуулж чадах платформын хаягууд (production + локал хөгжүүлэлт).
 const ALLOWED_ORIGINS = [
     'https://manage.dornogovi.gov.mn/',
+    'http://manage.dornogovi.gov.mn/',
     'http://localhost/manage.dornogovi.gov.mn/',
 ];
 
