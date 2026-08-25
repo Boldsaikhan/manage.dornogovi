@@ -227,6 +227,11 @@ class DecreeController extends Controller
                 'body' => ['sometimes', 'nullable', 'string', 'max:20000'],
             ]);
 
+            // Төрөл нь NOT NULL — хоосон болговол хуучин утгыг үлдээнэ.
+            if (array_key_exists('kind', $data) && ($data['kind'] === null || $data['kind'] === '')) {
+                unset($data['kind']);
+            }
+
             if (array_key_exists('kind', $data) && isset(self::KIND_TABS[$data['kind']])) {
                 $data['category'] = self::KIND_TABS[$data['kind']]['category'];
             }
