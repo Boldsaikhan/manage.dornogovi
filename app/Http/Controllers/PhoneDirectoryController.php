@@ -175,6 +175,44 @@ class PhoneDirectoryController extends Controller
             ->with('success', 'Бүртгэл шинэчлэгдлээ.');
     }
 
+    /**
+     * Байгууллагын ангиллыг (агентлаг/сум/байгууллага) бүлгээр нь солино.
+     */
+    public function updateCategory(Request $request): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+
+        $request->merge([
+            'category' => $request->input('category') === '' || $request->input('category') === null
+                ? null
+                : $request->input('category'),
+        ]);
+
+        $data = $request->validate([
+            'org_name' => ['required', 'string', 'max:255'],
+            'category' => ['nullable', 'string', Rule::in(array_keys(PhoneDirectoryEntry::CATEGORIES))],
+        ]);
+
+        PhoneDirectoryEntry::query()
+            ->where('org_name', $data['org_name'])
+            ->update(['category' => $data['category'] ?? null]);
+
+        $label = isset($data['category'])
+            ? (PhoneDirectoryEntry::CATEGORIES[$data['category']] ?? $data['category'])
+            : 'Сонголтгүй';
+
+        return back(303)->with('success', $data['org_name'].' — '.$label);
+    }
+
+    public function destroy(Request $request, PhoneDirectoryEntry $entry): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+
+        $entry->delete();
+
+        return back(303)->with('success', 'Устгалаа.');
+    }
+
     public function import(Request $request, PhoneDirectoryDocxParser $parser): RedirectResponse
     {
         abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
