@@ -107,7 +107,7 @@ const updateMenuPosition = () => {
         return;
     }
     const rect = el.getBoundingClientRect();
-    const width = Math.min(Math.max(rect.width, 380), window.innerWidth - 16);
+    const width = Math.min(Math.max(rect.width, 430), window.innerWidth - 16);
     let left = rect.left;
     if (left + width > window.innerWidth - 8) {
         left = Math.max(8, window.innerWidth - width - 8);
@@ -486,12 +486,12 @@ onBeforeUnmount(() => {
                         </button>
                     </div>
 
-                    <div class="ui-pill-row flex flex-nowrap gap-1.5 overflow-x-auto">
+                    <div class="flex flex-wrap gap-1">
                         <button
                             v-for="cat in CATEGORY_FILTERS"
                             :key="cat.key"
                             type="button"
-                            class="shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-medium transition"
+                            class="shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide transition"
                             :class="categoryOn[cat.key]
                                 ? 'border-brand-navy-500 bg-brand-navy-600 text-white'
                                 : 'border-slate-200 bg-white text-slate-500 hover:border-brand-navy-300'"
@@ -506,7 +506,7 @@ onBeforeUnmount(() => {
                         <span
                             v-for="name in selected"
                             :key="name"
-                            class="inline-flex max-w-full items-center gap-1 rounded-full bg-brand-navy-600 px-2 py-0.5 text-[11px] font-medium text-white"
+                            class="inline-flex max-w-full items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-medium text-white"
                         >
                             <span class="truncate">{{ name }}</span>
                             <button
@@ -537,27 +537,30 @@ onBeforeUnmount(() => {
                         type="button"
                         class="flex w-full items-center gap-2.5 px-3 py-2 text-left transition"
                         :class="[
-                            idx === highlight ? 'bg-brand-navy-50' : 'hover:bg-slate-50',
-                            isSelected(opt) ? 'bg-brand-navy-50/70' : '',
+                            isSelected(opt)
+                                ? 'bg-emerald-50 ring-1 ring-inset ring-emerald-200'
+                                : (idx === highlight ? 'bg-brand-navy-50' : 'hover:bg-slate-50'),
                         ]"
                         @mousedown.prevent="pickOption(opt)"
                     >
                         <span
                             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold uppercase"
                             :class="isSelected(opt)
-                                ? 'bg-brand-navy-600 text-white'
+                                ? 'bg-emerald-600 text-white'
                                 : 'bg-slate-100 text-slate-500'"
                         >
                             {{ initials(opt) }}
                         </span>
 
                         <span class="min-w-0 flex-1">
-                            <span class="block truncate text-sm font-medium text-slate-800">{{ opt.label ?? opt.value }}</span>
-                            <span
-                                v-if="opt.hint"
-                                class="block truncate text-[11px] text-slate-500"
-                                :title="opt.hint"
-                            >{{ opt.hint }}</span>
+                            <span class="flex min-w-0 items-baseline gap-1.5">
+                                <span class="shrink-0 text-sm font-semibold text-slate-800">{{ opt.label ?? opt.value }}</span>
+                                <span
+                                    v-if="opt.hint"
+                                    class="min-w-0 truncate text-[11px] text-slate-500"
+                                    :title="opt.hint"
+                                >— {{ opt.hint }}</span>
+                            </span>
                             <span
                                 v-if="opt.org"
                                 class="block truncate text-[10px] uppercase tracking-wide text-slate-400"
@@ -568,7 +571,7 @@ onBeforeUnmount(() => {
                         <span
                             class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px]"
                             :class="isSelected(opt)
-                                ? 'bg-brand-navy-600 text-white'
+                                ? 'bg-emerald-600 text-white'
                                 : 'border border-slate-200 text-transparent'"
                         >
                             ✓
