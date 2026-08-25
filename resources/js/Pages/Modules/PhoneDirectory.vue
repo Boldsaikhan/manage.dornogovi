@@ -19,6 +19,8 @@ const props = defineProps({
 
 const page = usePage();
 const search = ref('');
+const categoryFilter = ref('all');
+const unitFilter = ref('all');
 const showForm = ref(false);
 const showImport = ref(false);
 const showStaffForm = ref(false);
@@ -66,14 +68,44 @@ watch(
         showImport.value = false;
         showStaffForm.value = false;
         showStaffImport.value = false;
+        categoryFilter.value = 'all';
+        unitFilter.value = 'all';
     },
 );
 
+// Ангилал тус бүрийн байгууллагын тоо.
+const categoryTabs = computed(() => {
+    const counts = {};
+    props.groups.forEach((g) => {
+        counts[g.category] = (counts[g.category] ?? 0) + g.rows.length;
+    });
+
+    return [
+        { value: 'all', label: 'Бүгд', count: props.total },
+        ...Object.entries(props.categories).map(([value, label]) => ({
+            value,
+            label,
+            count: counts[value] ?? 0,
+        })),
+    ];
+});
+
+// Албан хаагчдын нэгжүүд (хэлтэс).
+const unitOptions = computed(() => {
+    const units = props.staff.map((r) => r.unit).filter(Boolean);
+
+    return [...new Set(units)].sort((a, b) => a.localeCompare(b, 'mn'));
+});
+
 const filteredGroups = computed(() => {
     const q = search.value.trim().toLowerCase();
-    if (!q) return props.groups;
+    const scoped = categoryFilter.value === 'all'
+        ? props.groups
+        : props.groups.filter((g) => g.category === categoryFilter.value);
 
-    return props.groups
+    if (!q) return scoped;
+
+    return scoped
         .map((g) => ({
             ...g,
             rows: g.rows.filter((r) =>
@@ -87,9 +119,13 @@ const filteredGroups = computed(() => {
 
 const filteredStaff = computed(() => {
     const q = search.value.trim().toLowerCase();
-    if (!q) return props.staff;
+    const scoped = unitFilter.value === 'all'
+        ? props.staff
+        : props.staff.filter((r) => (r.unit || '—') === unitFilter.value);
 
-    return props.staff.filter((r) =>
+    if (!q) return scoped;
+
+    return scoped.filter((r) =>
         [
             r.organization,
             r.unit,
@@ -303,7 +339,7 @@ const openAdd = () => {
                 </div>
             </form>
 
-            <div>
+            <div class="flex flex-wrap items-center gap-3">
                 <input
                     v-model="search"
                     type="search"
@@ -312,6 +348,36 @@ const openAdd = () => {
                         ? 'Нэр, албан тушаал, утсаар хайх…'
                         : 'Байгууллага, нэр, утас, и-мэйлээр хайх…'"
                 />
+
+                <!-- Ангиллаар шүүх (утасны жагсаалт) -->
+                <div v-if="isDirectory" class="flex flex-wrap gap-2">
+                    <button
+                        v-for="tab in categoryTabs"
+                        :key="tab.value"
+                        type="button"
+                        class="rounded-full border px-3.5 py-1.5 text-sm font-medium transition"
+                        :class="
+                            tab.value === categoryFilter
+                                ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
+                                : 'border-slate-200 bg-white text-slate-600 hover:border-brand-navy-300 hover:text-brand-navy-700'
+                        "
+                        @click="categoryFilter = tab.value"
+                    >
+                        {{ tab.label }}
+                        <span class="ml-1 text-xs opacity-70">{{ tab.count }}</span>
+                    </button>
+                </div>
+
+                <!-- Нэгжээр шүүх (албан хаагчид) -->
+                <select
+                    v-else
+                    v-model="unitFilter"
+                    class="ui-input md:max-w-xs"
+                    title="Нэгж (хэлтэс)-ээр шүүх"
+                >
+                    <option value="all">Бүх нэгж ({{ staffTotal }})</option>
+                    <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
+                </select>
             </div>
 
             <!-- Staff: import -->
