@@ -5,8 +5,9 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
 
-defineProps({
+const props = defineProps({
     systems: Array,
+    ai: Object,
 });
 
 const page = usePage();
@@ -25,6 +26,15 @@ const form = useForm({
     is_active: true,
     requires_login: true,
     is_internal: false,
+});
+
+const aiForm = useForm({
+    enabled: props.ai?.enabled ?? true,
+    provider: props.ai?.provider ?? 'local',
+    openai_model: props.ai?.openai_model ?? 'gpt-4o-mini',
+    daily_question_limit: props.ai?.daily_question_limit ?? 30,
+    openai_api_key: '',
+    clear_api_key: false,
 });
 
 const openEdit = (system) => {
@@ -53,6 +63,16 @@ const submit = () => {
 const checkEmbed = (system) => {
     router.post(route('admin.systems.check-embed', system.id), {}, { preserveScroll: true });
 };
+
+const saveAi = () => {
+    aiForm.patch(route('admin.ai-settings.update'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            aiForm.openai_api_key = '';
+            aiForm.clear_api_key = false;
+        },
+    });
+};
 </script>
 
 <template>
@@ -68,11 +88,89 @@ const checkEmbed = (system) => {
             {{ page.props.flash.success }}
         </div>
 
+        <section class="mb-8 rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm">
+            <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h2 class="text-base font-semibold text-brand-navy-900">AI туслах</h2>
+                    <p class="mt-1 max-w-2xl text-sm text-brand-navy-400">
+                        API түлхүүр зөвхөн серверт шифрлэгдэнэ. Frontend руу илгээгдэхгүй.
+                    </p>
+                </div>
+                <span
+                    class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                    :class="ai?.has_api_key ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'"
+                >
+                    {{ ai?.has_api_key ? `Түлхүүр: ${ai.api_key_hint}` : 'API түлхүүр алга' }}
+                </span>
+            </div>
+
+            <form class="grid gap-4 md:grid-cols-2" @submit.prevent="saveAi">
+                <label class="flex items-center gap-2 text-sm text-brand-navy-700 md:col-span-2">
+                    <input
+                        v-model="aiForm.enabled"
+                        type="checkbox"
+                        class="rounded border-brand-navy-200 text-brand-orange-500 focus:ring-brand-orange-500"
+                    />
+                    AI туслахыг идэвхжүүлэх
+                </label>
+
+                <div>
+                    <label class="mb-1 block text-xs font-medium text-brand-navy-700">Provider</label>
+                    <select v-model="aiForm.provider" class="ui-input">
+                        <option value="local">Local (tool / системийн өгөгдөл)</option>
+                        <option value="openai">OpenAI API</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="mb-1 block text-xs font-medium text-brand-navy-700">Модель</label>
+                    <input v-model="aiForm.openai_model" type="text" class="ui-input" placeholder="gpt-4o-mini" />
+                    <InputError :message="aiForm.errors.openai_model" class="mt-1" />
+                </div>
+
+                <div>
+                    <label class="mb-1 block text-xs font-medium text-brand-navy-700">
+                        Нэг албан хаагчийн өдрийн асуултын лимит
+                    </label>
+                    <input
+                        v-model.number="aiForm.daily_question_limit"
+                        type="number"
+                        min="0"
+                        max="1000"
+                        class="ui-input"
+                    />
+                    <p class="mt-1 text-xs text-slate-500">0 = хязгааргүй</p>
+                    <InputError :message="aiForm.errors.daily_question_limit" class="mt-1" />
+                </div>
+
+                <div>
+                    <label class="mb-1 block text-xs font-medium text-brand-navy-700">OpenAI API key</label>
+                    <input
+                        v-model="aiForm.openai_api_key"
+                        type="password"
+                        autocomplete="new-password"
+                        class="ui-input"
+                        placeholder="Шинэ түлхүүр оруулах (хоосон бол өөрчлөхгүй)"
+                    />
+                    <InputError :message="aiForm.errors.openai_api_key" class="mt-1" />
+                    <label class="mt-2 flex items-center gap-2 text-xs text-red-600">
+                        <input v-model="aiForm.clear_api_key" type="checkbox" class="rounded border-red-200 text-red-600" />
+                        Одоогийн түлхүүрийг устгах
+                    </label>
+                </div>
+
+                <div class="md:col-span-2">
+                    <button type="submit" class="ui-btn-primary" :disabled="aiForm.processing">
+                        AI тохиргоо хадгалах
+                    </button>
+                </div>
+            </form>
+        </section>
+
         <p class="mb-6 max-w-3xl text-sm text-brand-navy-400">
             Систем бүрийн нэвтрэх аргыг энд тохируулна. <strong>Шууд илгээх</strong> горим нь
             хэрэглэгчийн нэр, нууц үгийг нуугдмал маягтаар тухайн системийн нэвтрэх хаяг руу
-            илгээж, нэг товшилтоор нэвтрүүлнэ. Энэ нь сонгодог маягтан нэвтрэлттэй системд
-            ажилладаг ба орчин үеийн SPA (ж: Төрийн ERP) дээр ажиллахгүй.
+            илгээж, нэг товшилтоор нэвтрүүлнэ.
         </p>
 
         <div class="overflow-hidden rounded-xl border border-brand-navy-100 bg-white shadow-sm">
@@ -179,100 +277,47 @@ const checkEmbed = (system) => {
                             v-model="form.login_method"
                             class="w-full rounded-md border border-brand-navy-200 px-3 py-2 text-sm focus:border-brand-orange-500 focus:ring-brand-orange-500"
                         >
-                            <option value="manual">Хуулж өгөх — хаягийг нээгээд нэр/нууц үгийг хуулна</option>
-                            <option value="form_post">Шууд илгээх — нуугдмал маягтаар нэвтэрнэ</option>
+                            <option value="manual">Хуулж өгөх</option>
+                            <option value="form_post">Шууд илгээх</option>
                         </select>
                     </div>
 
                     <template v-if="form.login_method === 'form_post'">
-                        <div class="rounded-lg border border-brand-navy-100 bg-brand-navy-50 p-3">
-                            <p class="mb-3 text-xs text-brand-navy-400">
-                                Тухайн системийн нэвтрэх хуудсанд F12 → Network дээр нэг удаа нэвтэрч
-                                үзээд, хүсэлтийн хаяг болон талбарын нэрийг хуулж авна.
-                            </p>
-
-                            <div class="space-y-3">
+                        <div class="rounded-lg border border-brand-navy-100 bg-brand-navy-50 p-3 space-y-3">
+                            <div>
+                                <label class="mb-1 block text-xs font-medium text-brand-navy-700">Маягтын хаяг</label>
+                                <input v-model="form.login_form_action" type="url" class="w-full rounded-md border border-brand-navy-200 px-3 py-2 text-sm" />
+                            </div>
+                            <div class="grid gap-3 sm:grid-cols-2">
                                 <div>
-                                    <label class="mb-1 block text-xs font-medium text-brand-navy-700">Маягтын хаяг (form action)</label>
-                                    <input
-                                        v-model="form.login_form_action"
-                                        type="url"
-                                        placeholder="https://example.gov.mn/login"
-                                        class="w-full rounded-md border border-brand-navy-200 px-3 py-2 text-sm focus:border-brand-orange-500 focus:ring-brand-orange-500"
-                                    />
-                                    <InputError :message="form.errors.login_form_action" class="mt-1" />
+                                    <label class="mb-1 block text-xs font-medium text-brand-navy-700">Нэрийн талбар</label>
+                                    <input v-model="form.login_username_field" type="text" class="w-full rounded-md border border-brand-navy-200 px-3 py-2 text-sm" />
                                 </div>
-                                <div class="grid gap-3 sm:grid-cols-2">
-                                    <div>
-                                        <label class="mb-1 block text-xs font-medium text-brand-navy-700">Нэрийн талбар</label>
-                                        <input
-                                            v-model="form.login_username_field"
-                                            type="text"
-                                            placeholder="username"
-                                            class="w-full rounded-md border border-brand-navy-200 px-3 py-2 text-sm focus:border-brand-orange-500 focus:ring-brand-orange-500"
-                                        />
-                                        <InputError :message="form.errors.login_username_field" class="mt-1" />
-                                    </div>
-                                    <div>
-                                        <label class="mb-1 block text-xs font-medium text-brand-navy-700">Нууц үгийн талбар</label>
-                                        <input
-                                            v-model="form.login_password_field"
-                                            type="text"
-                                            placeholder="password"
-                                            class="w-full rounded-md border border-brand-navy-200 px-3 py-2 text-sm focus:border-brand-orange-500 focus:ring-brand-orange-500"
-                                        />
-                                        <InputError :message="form.errors.login_password_field" class="mt-1" />
-                                    </div>
+                                <div>
+                                    <label class="mb-1 block text-xs font-medium text-brand-navy-700">Нууц үгийн талбар</label>
+                                    <input v-model="form.login_password_field" type="text" class="w-full rounded-md border border-brand-navy-200 px-3 py-2 text-sm" />
                                 </div>
                             </div>
                         </div>
                     </template>
 
                     <label class="flex items-center gap-2 text-sm text-brand-navy-700">
-                        <input
-                            v-model="form.is_active"
-                            type="checkbox"
-                            class="rounded border-brand-navy-200 text-brand-orange-500 focus:ring-brand-orange-500"
-                        />
+                        <input v-model="form.is_active" type="checkbox" class="rounded border-brand-navy-200 text-brand-orange-500" />
                         Идэвхтэй
                     </label>
-
                     <label class="flex items-center gap-2 text-sm text-brand-navy-700">
-                        <input
-                            v-model="form.requires_login"
-                            type="checkbox"
-                            class="rounded border-brand-navy-200 text-brand-orange-500 focus:ring-brand-orange-500"
-                        />
+                        <input v-model="form.requires_login" type="checkbox" class="rounded border-brand-navy-200 text-brand-orange-500" />
                         Нэвтрэх мэдээлэл шаардана
-                        <span class="text-xs text-brand-navy-400">(тэмдэглээгүй бол "Нээх" товч гарна)</span>
                     </label>
-
                     <label class="flex items-center gap-2 text-sm text-brand-navy-700">
-                        <input
-                            v-model="form.is_internal"
-                            type="checkbox"
-                            class="rounded border-brand-navy-200 text-brand-orange-500 focus:ring-brand-orange-500"
-                        />
+                        <input v-model="form.is_internal" type="checkbox" class="rounded border-brand-navy-200 text-brand-orange-500" />
                         Дотоод ажил
-                        <span class="text-xs text-brand-navy-400">(хажуугийн цэсэнд "Дотоод ажил" бүлэгт харагдана)</span>
                     </label>
                 </div>
 
                 <div class="mt-6 flex justify-end gap-2">
-                    <button
-                        type="button"
-                        class="rounded-md border border-brand-navy-200 px-4 py-1.5 text-sm font-medium text-brand-navy-700 hover:bg-brand-navy-50"
-                        @click="modal = false"
-                    >
-                        Болих
-                    </button>
-                    <button
-                        type="submit"
-                        :disabled="form.processing"
-                        class="rounded-md bg-brand-orange-500 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-orange-600 disabled:opacity-50"
-                    >
-                        Хадгалах
-                    </button>
+                    <button type="button" class="rounded-md border border-brand-navy-200 px-4 py-1.5 text-sm" @click="modal = false">Болих</button>
+                    <button type="submit" :disabled="form.processing" class="rounded-md bg-brand-orange-500 px-4 py-1.5 text-sm font-medium text-white">Хадгалах</button>
                 </div>
             </form>
         </Modal>
