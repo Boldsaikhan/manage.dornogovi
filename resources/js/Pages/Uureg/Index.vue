@@ -139,10 +139,10 @@ const formatSize = (bytes) => {
 /** Үүрэг чиглэлийн бичвэрийг бүтэн харуулах мөрийн тоо */
 const textRows = (text) => {
     const value = String(text ?? '');
-    if (!value.trim()) return 3;
+    if (!value.trim()) return 2;
     const lines = value.split('\n');
     const estimated = lines.reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / 90)), 0);
-    return Math.max(3, Math.min(30, estimated));
+    return Math.max(2, Math.min(30, estimated));
 };
 
 const autoGrow = (event) => {
@@ -293,11 +293,11 @@ const autoGrow = (event) => {
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].text"
                                     :rows="textRows(drafts[task.id].text)"
-                                    class="ui-table-input max-h-none resize-none overflow-hidden whitespace-pre-wrap leading-relaxed"
+                                    class="ui-table-input max-h-none resize-none overflow-hidden whitespace-pre-wrap"
                                     @input="autoGrow"
                                     @change="saveField(task.id, 'text', drafts[task.id].text)"
                                 />
-                                <div v-else class="whitespace-pre-wrap px-1.5 py-1 leading-relaxed">{{ task.text || '—' }}</div>
+                                <div v-else class="whitespace-pre-wrap px-1 py-0.5 leading-snug">{{ task.text || '—' }}</div>
                             </td>
                             <td>
                                 <input
@@ -306,7 +306,7 @@ const autoGrow = (event) => {
                                     class="ui-table-input"
                                     @change="saveField(task.id, 'responsible', drafts[task.id].responsible)"
                                 />
-                                <span v-else class="block px-1.5 py-1">{{ task.responsible || '—' }}</span>
+                                <span v-else class="block px-1 py-0.5">{{ task.responsible || '—' }}</span>
                             </td>
                             <td>
                                 <input
@@ -315,19 +315,19 @@ const autoGrow = (event) => {
                                     class="ui-table-input"
                                     @change="saveField(task.id, 'collaborator', drafts[task.id].collaborator)"
                                 />
-                                <span v-else class="block px-1.5 py-1">{{ task.collaborator || '—' }}</span>
+                                <span v-else class="block px-1 py-0.5">{{ task.collaborator || '—' }}</span>
                             </td>
                             <td>
                                 <textarea
                                     v-if="canManage && drafts[task.id]"
                                     v-model="drafts[task.id].note"
                                     :rows="textRows(drafts[task.id].note)"
-                                    class="ui-table-input resize-none overflow-hidden whitespace-pre-wrap leading-relaxed"
+                                    class="ui-table-input resize-none overflow-hidden whitespace-pre-wrap"
                                     placeholder="Хэрэгжилт…"
                                     @input="autoGrow"
                                     @change="saveField(task.id, 'note', drafts[task.id].note)"
                                 />
-                                <div v-else class="whitespace-pre-wrap px-1.5 py-1 leading-relaxed">{{ task.note || '—' }}</div>
+                                <div v-else class="whitespace-pre-wrap px-1 py-0.5 leading-snug">{{ task.note || '—' }}</div>
                             </td>
                             <td class="text-center align-middle">
                                 <div v-if="canManage && drafts[task.id]" class="inline-flex items-center gap-0.5">
@@ -402,7 +402,7 @@ const autoGrow = (event) => {
                                     class="ui-table-input"
                                     @change="saveField(task.id, 'sector', drafts[task.id].sector)"
                                 />
-                                <span v-else class="block px-1.5 py-1">{{ task.sector || '—' }}</span>
+                                <span v-else class="block px-1 py-0.5">{{ task.sector || '—' }}</span>
                             </td>
                             <td class="min-w-[220px]">
                                 <textarea
@@ -412,7 +412,7 @@ const autoGrow = (event) => {
                                     class="ui-table-input resize-y"
                                     @change="saveField(task.id, 'text', drafts[task.id].text)"
                                 />
-                                <span v-else class="block whitespace-pre-wrap px-1.5 py-1 leading-relaxed">{{ task.text || '—' }}</span>
+                                <span v-else class="block whitespace-pre-wrap px-1 py-0.5 leading-snug">{{ task.text || '—' }}</span>
                             </td>
                             <td>
                                 <input
@@ -421,7 +421,7 @@ const autoGrow = (event) => {
                                     class="ui-table-input"
                                     @change="saveField(task.id, 'period', drafts[task.id].period)"
                                 />
-                                <span v-else class="block px-1.5 py-1">{{ task.period || '—' }}</span>
+                                <span v-else class="block px-1 py-0.5">{{ task.period || '—' }}</span>
                             </td>
                             <td>
                                 <input
@@ -430,7 +430,7 @@ const autoGrow = (event) => {
                                     class="ui-table-input"
                                     @change="saveField(task.id, 'responsible', drafts[task.id].responsible)"
                                 />
-                                <span v-else class="block px-1.5 py-1">{{ task.responsible || '—' }}</span>
+                                <span v-else class="block px-1 py-0.5">{{ task.responsible || '—' }}</span>
                             </td>
                             <td>
                                 <input
@@ -439,7 +439,7 @@ const autoGrow = (event) => {
                                     class="ui-table-input"
                                     @change="saveField(task.id, 'collaborator', drafts[task.id].collaborator)"
                                 />
-                                <span v-else class="block px-1.5 py-1">{{ task.collaborator || '—' }}</span>
+                                <span v-else class="block px-1 py-0.5">{{ task.collaborator || '—' }}</span>
                             </td>
                             <td>
                                 <textarea
@@ -450,7 +450,7 @@ const autoGrow = (event) => {
                                     placeholder="Хэрэгжилт…"
                                     @change="saveField(task.id, 'note', drafts[task.id].note)"
                                 />
-                                <span v-else class="block whitespace-pre-wrap px-1.5 py-1">{{ task.note || '—' }}</span>
+                                <span v-else class="block whitespace-pre-wrap px-1 py-0.5 leading-snug">{{ task.note || '—' }}</span>
                             </td>
                             <td class="text-center align-middle">
                                 <div v-if="canManage && drafts[task.id]" class="inline-flex items-center gap-0.5">
