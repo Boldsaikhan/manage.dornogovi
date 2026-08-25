@@ -67,6 +67,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/modules/decrees', [DecreeController::class, 'index'])->name('decrees.index');
     Route::post('/modules/decrees', [DecreeController::class, 'store'])->name('decrees.store');
     Route::patch('/modules/decrees/{decree}', [DecreeController::class, 'update'])->name('decrees.update');
+    Route::post('/modules/decrees/{decree}/image', [DecreeController::class, 'uploadImage'])->name('decrees.image.upload');
+    Route::get('/modules/decrees/{decree}/image', [DecreeController::class, 'showImage'])->name('decrees.image.show');
+    Route::delete('/modules/decrees/{decree}/image', [DecreeController::class, 'destroyImage'])->name('decrees.image.destroy');
     Route::delete('/modules/decrees/{decree}', [DecreeController::class, 'destroy'])->name('decrees.destroy');
     Route::get('/modules/contracts', [ModuleResourceController::class, 'index'])->name('contracts.index');
     Route::get('/modules/archives', [ModuleResourceController::class, 'index'])->name('archives.index');

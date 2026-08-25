@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Decree;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
@@ -227,5 +229,48 @@ class DecreeStandardColumnsTest extends TestCase
             ->get(route('decrees.index', ['tab' => 'zahiramj']))
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('tab', 'zahiramj_a'));
+    }
+
+    public function test_decree_image_can_be_uploaded_viewed_and_removed(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $decree = Decree::query()->create([
+            'category' => 'zahiramj',
+            'kind' => 'zahiramj_a',
+            'number' => '01',
+            'title' => 'Зурагтай',
+            'created_by' => $admin->id,
+        ]);
+
+        $file = UploadedFile::fake()->image('decree.jpg', 800, 600);
+
+        $this->actingAs($admin)
+            ->post(route('decrees.image.upload', $decree), ['image' => $file])
+            ->assertRedirect();
+
+        $decree->refresh();
+        $this->assertNotNull($decree->file_path);
+        Storage::disk('local')->assertExists($decree->file_path);
+
+        $this->actingAs($admin)
+            ->get(route('decrees.image.show', $decree))
+            ->assertOk();
+
+        $this->actingAs($admin)
+            ->get(route('decrees.index', ['tab' => 'zahiramj_a']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('rows.0.has_image', true));
+
+        $path = $decree->file_path;
+
+        $this->actingAs($admin)
+            ->delete(route('decrees.image.destroy', $decree))
+            ->assertRedirect();
+
+        $decree->refresh();
+        $this->assertNull($decree->file_path);
+        Storage::disk('local')->assertMissing($path);
     }
 }

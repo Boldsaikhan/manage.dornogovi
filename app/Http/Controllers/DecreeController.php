@@ -8,9 +8,11 @@ use App\Support\ModuleAccess;
 use App\Support\PersonName;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DecreeController extends Controller
 {
@@ -249,11 +251,61 @@ class DecreeController extends Controller
         abort_unless(ModuleAccess::canManage($request->user(), 'decrees'), 403);
 
         $tab = $this->tabForDecree($decree);
+        $this->deleteImageFile($decree);
         $decree->delete();
 
         return redirect()
             ->route('decrees.index', ['tab' => $tab])
             ->with('success', 'Устгалаа.');
+    }
+
+    public function uploadImage(Request $request, Decree $decree): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canManage($request->user(), 'decrees'), 403);
+        abort_if($decree->category === 'blank' || $decree->kind === 'blank', 422);
+
+        $request->validate([
+            'image' => ['required', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
+        ], [
+            'image.max' => 'Зургийн хэмжээ 2MB-аас хэтрэхгүй байх ёстой.',
+            'image.image' => 'Зөвхөн зураг файл оруулна уу.',
+        ]);
+
+        $this->deleteImageFile($decree);
+
+        $path = $request->file('image')->store('decrees/'.$decree->id, 'local');
+        $decree->update(['file_path' => $path]);
+
+        return back(303)->with('success', 'Зураг хадгаллаа.');
+    }
+
+    public function showImage(Request $request, Decree $decree): StreamedResponse
+    {
+        abort_unless(ModuleAccess::canView($request->user(), 'decrees'), 403);
+        abort_unless($decree->file_path && Storage::disk('local')->exists($decree->file_path), 404);
+
+        return Storage::disk('local')->response(
+            $decree->file_path,
+            basename($decree->file_path),
+            ['Content-Disposition' => 'inline']
+        );
+    }
+
+    public function destroyImage(Request $request, Decree $decree): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canManage($request->user(), 'decrees'), 403);
+
+        $this->deleteImageFile($decree);
+        $decree->update(['file_path' => null]);
+
+        return back(303)->with('success', 'Зураг устгалаа.');
+    }
+
+    private function deleteImageFile(Decree $decree): void
+    {
+        if ($decree->file_path && Storage::disk('local')->exists($decree->file_path)) {
+            Storage::disk('local')->delete($decree->file_path);
+        }
     }
 
     private function normalizeTab(string $tab): string
@@ -401,6 +453,10 @@ class DecreeController extends Controller
             'issued_on' => optional($d->issued_on)?->format('Y-m-d'),
             'issued_on_display' => optional($d->issued_on)?->format('Y.m.d'),
             'body' => $d->body,
+            'has_image' => (bool) $d->file_path,
+            'image_url' => $d->file_path
+                ? route('decrees.image.show', $d)
+                : null,
         ];
     }
 }

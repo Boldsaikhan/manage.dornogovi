@@ -1,8 +1,9 @@
 <script setup>
-import { computed, reactive, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import SheetCell from '@/Components/SheetCell.vue';
+import Modal from '@/Components/Modal.vue';
 
 const props = defineProps({
     tab: { type: String, default: 'zahiramj_a' },
@@ -63,6 +64,9 @@ const officialOptions = computed(() => {
 });
 
 const drafts = reactive({});
+const imageInput = ref(null);
+const uploadingId = ref(null);
+const preview = ref(null);
 
 const blankFields = [
     'person_name', 'issued_on',
@@ -156,11 +160,130 @@ const destroyRow = (id) => {
     router.delete(route('decrees.destroy', id), { preserveScroll: true });
 };
 
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+
+const loadImage = (file) => new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(img);
+    };
+    img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Зураг уншигдсангүй.'));
+    };
+    img.src = url;
+});
+
+const canvasToBlob = (canvas, quality) => new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), 'image/jpeg', quality);
+});
+
+/** 2MB-аас их бол JPEG-р шахаж 2MB дотор оруулна. */
+const compressImageToLimit = async (file) => {
+    if (file.size <= MAX_IMAGE_BYTES) {
+        return file;
+    }
+
+    const img = await loadImage(file);
+    let width = img.width;
+    let height = img.height;
+    const maxSide = 2400;
+
+    if (width > maxSide || height > maxSide) {
+        const scale = Math.min(maxSide / width, maxSide / height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height);
+
+    let quality = 0.85;
+    let blob = await canvasToBlob(canvas, quality);
+
+    while (blob && blob.size > MAX_IMAGE_BYTES && quality > 0.35) {
+        quality -= 0.1;
+        blob = await canvasToBlob(canvas, quality);
+    }
+
+    while (blob && blob.size > MAX_IMAGE_BYTES && (canvas.width > 800 || canvas.height > 800)) {
+        canvas.width = Math.round(canvas.width * 0.8);
+        canvas.height = Math.round(canvas.height * 0.8);
+        const c = canvas.getContext('2d');
+        c.fillStyle = '#ffffff';
+        c.fillRect(0, 0, canvas.width, canvas.height);
+        c.drawImage(img, 0, 0, canvas.width, canvas.height);
+        blob = await canvasToBlob(canvas, Math.max(quality, 0.5));
+    }
+
+    if (! blob || blob.size > MAX_IMAGE_BYTES) {
+        throw new Error('Зургийг 2MB хүртэл шахаж чадсангүй. Өөр зураг сонгоно уу.');
+    }
+
+    return new File([blob], (file.name.replace(/\.[^.]+$/, '') || 'decree') + '.jpg', {
+        type: 'image/jpeg',
+        lastModified: Date.now(),
+    });
+};
+
+const pickImage = (id) => {
+    uploadingId.value = id;
+    imageInput.value?.click();
+};
+
+const onImagePicked = async (event) => {
+    const file = event.target.files?.[0];
+    const id = uploadingId.value;
+    event.target.value = '';
+
+    if (! file || ! id) return;
+
+    if (! file.type.startsWith('image/')) {
+        alert('Зөвхөн зураг файл оруулна уу.');
+        return;
+    }
+
+    try {
+        const ready = await compressImageToLimit(file);
+        useForm({ image: ready }).post(route('decrees.image.upload', id), {
+            forceFormData: true,
+            preserveScroll: true,
+        });
+    } catch (err) {
+        alert(err?.message || 'Зураг оруулахад алдаа гарлаа.');
+    } finally {
+        uploadingId.value = null;
+    }
+};
+
+const openPreview = (row) => {
+    if (! row.image_url) return;
+    preview.value = {
+        url: row.image_url,
+        title: [row.number, row.title].filter(Boolean).join(' — ') || 'Захирамжийн зураг',
+    };
+};
+
+const closePreview = () => {
+    preview.value = null;
+};
+
+const removeImage = (id) => {
+    if (!confirm('Зургийг устгах уу?')) return;
+    router.delete(route('decrees.image.destroy', id), { preserveScroll: true });
+};
+
 const blankColCount = computed(() => 15 + (props.canManage ? 1 : 0));
 const docColumnCount = computed(() => {
-    let n = 8;
+    let n = 9; // always include actions (зураг/харах/устгах)
     if (isNiit.value) n += 1;
-    if (props.canManage) n += 1;
     return n;
 });
 
@@ -418,8 +541,16 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                 />
                             </td>
                             <td v-if="canManage" class="border border-slate-800 px-1 py-1">
-                                <button type="button" class="text-xs text-red-600 hover:underline" @click="destroyRow(row.id)">
-                                    Устгах
+                                <button
+                                    type="button"
+                                    class="ui-icon-btn mx-auto"
+                                    title="Устгах"
+                                    aria-label="Устгах"
+                                    @click="destroyRow(row.id)"
+                                >
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 7h12M10 11v6M14 11v6M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 7l1 14h12l1-14" />
+                                    </svg>
                                 </button>
                             </td>
                         </tr>
@@ -448,7 +579,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                         <col style="width: 4.5rem" />
                         <col style="width: 8rem" />
                         <col v-if="isNiit" style="width: 6.5rem" />
-                        <col v-if="canManage" style="width: 3.5rem" />
+                        <col style="width: 6.5rem" />
                     </colgroup>
                     <thead>
                         <tr class="bg-slate-50">
@@ -466,7 +597,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                 Боловсруулсан<br>албан тушаалтан
                             </th>
                             <th v-if="isNiit" rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold w-24">Төрөл</th>
-                            <th v-if="canManage" rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold w-16" />
+                            <th rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold w-24">Зураг</th>
                         </tr>
                         <tr class="bg-slate-50">
                             <th class="border border-slate-800 px-1.5 py-1.5 font-medium">Баримт бичгийн нэр</th>
@@ -482,7 +613,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                             <th class="border border-slate-800 py-0.5">7</th>
                             <th class="border border-slate-800 py-0.5">8</th>
                             <th v-if="isNiit" class="border border-slate-800 py-0.5">9</th>
-                            <th v-if="canManage" class="border border-slate-800 py-0.5" />
+                            <th class="border border-slate-800 py-0.5">{{ isNiit ? 10 : 9 }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -581,10 +712,62 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                 </select>
                                 <span v-else class="text-[11px]">{{ row.kind_label }}</span>
                             </td>
-                            <td v-if="canManage" class="border border-slate-800 px-1.5 py-1.5">
-                                <button type="button" class="text-xs text-red-600 hover:underline" @click="destroyRow(row.id)">
-                                    Устгах
-                                </button>
+                            <td class="border border-slate-800 px-1 py-1">
+                                <div class="flex items-center justify-center gap-0.5">
+                                    <button
+                                        v-if="canManage"
+                                        type="button"
+                                        class="inline-flex h-7 w-7 items-center justify-center rounded text-slate-500 transition hover:bg-brand-navy-50 hover:text-brand-navy-700"
+                                        title="Зураг оруулах"
+                                        aria-label="Зураг оруулах"
+                                        @click="pickImage(row.id)"
+                                    >
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.5-6 3.5 4.5L15 11l5 5M4 19h16a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1z" />
+                                            <circle cx="9" cy="8" r="1.5" />
+                                        </svg>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="inline-flex h-7 w-7 items-center justify-center rounded transition"
+                                        :class="row.has_image
+                                            ? 'text-brand-navy-600 hover:bg-brand-navy-50'
+                                            : 'cursor-not-allowed text-slate-300'"
+                                        :disabled="! row.has_image"
+                                        title="Зураг харах"
+                                        aria-label="Зураг харах"
+                                        @click="openPreview(row)"
+                                    >
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+                                            <circle cx="12" cy="12" r="3" />
+                                        </svg>
+                                    </button>
+                                    <button
+                                        v-if="canManage && row.has_image"
+                                        type="button"
+                                        class="inline-flex h-7 w-7 items-center justify-center rounded text-slate-400 transition hover:bg-amber-50 hover:text-amber-700"
+                                        title="Зураг устгах"
+                                        aria-label="Зураг устгах"
+                                        @click="removeImage(row.id)"
+                                    >
+                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18" />
+                                        </svg>
+                                    </button>
+                                    <button
+                                        v-if="canManage"
+                                        type="button"
+                                        class="ui-icon-btn"
+                                        title="Мөр устгах"
+                                        aria-label="Мөр устгах"
+                                        @click="destroyRow(row.id)"
+                                    >
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 7h12M10 11v6M14 11v6M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 7l1 14h12l1-14" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         <tr v-if="!rows.length">
@@ -596,5 +779,30 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                 </table>
             </div>
         </div>
+
+        <input
+            ref="imageInput"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/jpg"
+            class="hidden"
+            @change="onImagePicked"
+        />
+
+        <Modal :show="!! preview" max-width="4xl" @close="closePreview">
+            <div class="p-4">
+                <div class="mb-3 flex items-start justify-between gap-3">
+                    <h3 class="text-sm font-semibold text-brand-navy-900">{{ preview?.title }}</h3>
+                    <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" @click="closePreview">✕</button>
+                </div>
+                <div class="max-h-[75vh] overflow-auto rounded-lg bg-slate-100">
+                    <img
+                        v-if="preview?.url"
+                        :src="preview.url"
+                        alt="Захирамжийн зураг"
+                        class="mx-auto max-h-[75vh] w-auto max-w-full object-contain"
+                    />
+                </div>
+            </div>
+        </Modal>
     </AuthenticatedLayout>
 </template>
