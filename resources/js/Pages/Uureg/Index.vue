@@ -342,6 +342,7 @@ const prepTableMinWidth = computed(() => {
                                     v-model="drafts[task.id].responsible"
                                     :editable="canManage"
                                     :options="people"
+                                    multiple
                                     placeholder="Утасны жагсаалтаас сонгох…"
                                     @commit="(v) => saveField(task.id, 'responsible', v)"
                                 />
@@ -352,6 +353,7 @@ const prepTableMinWidth = computed(() => {
                                     v-model="drafts[task.id].collaborator"
                                     :editable="canManage"
                                     :options="people"
+                                    multiple
                                     placeholder="Утасны жагсаалтаас сонгох…"
                                     @commit="(v) => saveField(task.id, 'collaborator', v)"
                                 />
@@ -465,6 +467,7 @@ const prepTableMinWidth = computed(() => {
                                     v-model="drafts[task.id].responsible"
                                     :editable="canManage"
                                     :options="people"
+                                    multiple
                                     placeholder="Утасны жагсаалтаас сонгох…"
                                     @commit="(v) => saveField(task.id, 'responsible', v)"
                                 />
@@ -475,6 +478,7 @@ const prepTableMinWidth = computed(() => {
                                     v-model="drafts[task.id].collaborator"
                                     :editable="canManage"
                                     :options="people"
+                                    multiple
                                     placeholder="Утасны жагсаалтаас сонгох…"
                                     @commit="(v) => saveField(task.id, 'collaborator', v)"
                                 />

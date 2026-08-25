@@ -78,7 +78,7 @@ class TaskController extends Controller
     /**
      * Утасны жагсаалт + байгууллагын албан хаагчдын нэрсийн сонголт.
      *
-     * @return array<int, array{value: string, label: string, hint: string}>
+     * @return array<int, array{value: string, label: string, hint: string, org: string, category: string}>
      */
     private function phoneDirectoryPeople(): array
     {
@@ -88,20 +88,19 @@ class TaskController extends Controller
             ->orderBy('org_order')
             ->orderBy('sort_order')
             ->orderBy('id')
-            ->get(['person_name', 'position', 'org_name'])
+            ->get(['person_name', 'position', 'org_name', 'category'])
             ->each(function (PhoneDirectoryEntry $row) use (&$items) {
                 $name = trim((string) $row->person_name);
                 if ($name === '') {
                     return;
                 }
-                $hint = trim(implode(' · ', array_filter([
-                    $row->position,
-                    $row->org_name,
-                ])));
+                $category = $row->category ?: PhoneDirectoryEntry::guessCategory($row->org_name);
                 $items[$name] = [
                     'value' => $name,
                     'label' => $name,
-                    'hint' => $hint,
+                    'hint' => trim((string) $row->position),
+                    'org' => trim((string) $row->org_name),
+                    'category' => $category,
                 ];
             });
 
@@ -114,16 +113,15 @@ class TaskController extends Controller
                 if ($name === '') {
                     return;
                 }
-                $hint = trim(implode(' · ', array_filter([
-                    $row->position,
-                    $row->unit,
-                    $row->organization,
-                ])));
-                if (! isset($items[$name]) || ($hint !== '' && ($items[$name]['hint'] ?? '') === '')) {
+                $org = trim(implode(' · ', array_filter([(string) $row->unit, (string) $row->organization])));
+                $category = PhoneDirectoryEntry::guessCategory($row->organization ?: $row->unit);
+                if (! isset($items[$name])) {
                     $items[$name] = [
                         'value' => $name,
                         'label' => $name,
-                        'hint' => $hint,
+                        'hint' => trim((string) $row->position),
+                        'org' => $org,
+                        'category' => $category,
                     ];
                 }
             });

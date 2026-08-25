@@ -1,6 +1,12 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 
+const CATEGORY_FILTERS = [
+    { key: 'sum', label: 'Сум' },
+    { key: 'agentlag', label: 'Агентлаг' },
+    { key: 'baiguullaga', label: 'Байгууллага' },
+];
+
 const props = defineProps({
     modelValue: { type: [String, Number], default: '' },
     multiline: { type: Boolean, default: false },
@@ -9,8 +15,10 @@ const props = defineProps({
     editable: { type: Boolean, default: true },
     align: { type: String, default: 'left' },
     emptyLabel: { type: String, default: '—' },
-    /** Утасны жагсаалт гэх мэт сонголтууд: [{ value, label, hint? }] */
+    /** Утасны жагсаалт: [{ value, label, hint?, org?, category? }] */
     options: { type: Array, default: null },
+    /** Олон нэр сонгох (хадгалахдаа «/»-аар залгана) */
+    multiple: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:modelValue', 'commit']);
@@ -18,6 +26,12 @@ const emit = defineEmits(['update:modelValue', 'commit']);
 const editing = ref(false);
 const local = ref(props.modelValue ?? '');
 const search = ref('');
+const selected = ref([]);
+const categoryOn = ref({
+    sum: true,
+    agentlag: true,
+    baiguullaga: true,
+});
 const inputRef = ref(null);
 const rootRef = ref(null);
 const highlight = ref(0);
@@ -27,20 +41,35 @@ let blurTimer = null;
 
 const hasOptions = computed(() => Array.isArray(props.options) && props.options.length > 0);
 
+const parseSelected = (value) => String(value ?? '')
+    .split(/[/;,|]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+const selectedSet = computed(() => new Set(selected.value));
+
 const filteredOptions = computed(() => {
     if (! hasOptions.value) {
         return [];
     }
 
     const q = String(search.value ?? '').trim().toLowerCase();
-    const list = ! q
-        ? props.options
-        : props.options.filter((opt) => {
-            const label = String(opt.label ?? opt.value ?? '').toLowerCase();
-            const hint = String(opt.hint ?? '').toLowerCase();
+    const cats = categoryOn.value;
 
-            return label.includes(q) || hint.includes(q);
-        });
+    const list = props.options.filter((opt) => {
+        const cat = opt.category || 'baiguullaga';
+        if (! cats[cat]) {
+            return false;
+        }
+        if (! q) {
+            return true;
+        }
+        const label = String(opt.label ?? opt.value ?? '').toLowerCase();
+        const hint = String(opt.hint ?? '').toLowerCase();
+        const org = String(opt.org ?? '').toLowerCase();
+
+        return label.includes(q) || hint.includes(q) || org.includes(q);
+    });
 
     return list.slice(0, 200);
 });
@@ -51,7 +80,7 @@ const updateMenuPosition = () => {
         return;
     }
     const rect = el.getBoundingClientRect();
-    const width = Math.max(rect.width, 280);
+    const width = Math.max(rect.width, 320);
     let left = rect.left;
     if (left + width > window.innerWidth - 8) {
         left = Math.max(8, window.innerWidth - width - 8);
@@ -100,11 +129,12 @@ const startEdit = async () => {
 
     editing.value = true;
     highlight.value = 0;
+    categoryOn.value = { sum: true, agentlag: true, baiguullaga: true };
 
     if (hasOptions.value) {
-        // Хайлтыг хоосон эхлүүлнэ — бүх жагсаалт харагдана
         search.value = '';
         local.value = '';
+        selected.value = parseSelected(props.modelValue);
     } else {
         local.value = props.modelValue ?? '';
     }
@@ -148,8 +178,13 @@ const commitValue = (value) => {
     }
     local.value = next;
     search.value = '';
+    selected.value = [];
     emit('update:modelValue', next);
     emit('commit', next);
+};
+
+const commitMulti = () => {
+    commitValue(selected.value.join('/'));
 };
 
 const finish = () => {
@@ -157,12 +192,16 @@ const finish = () => {
         return;
     }
 
-    // Сонголттой горимд blur дээр хайлтын текстийг хадгалахгүй
     if (hasOptions.value) {
-        editing.value = false;
-        search.value = '';
-        local.value = props.modelValue ?? '';
-        stopListeners();
+        if (props.multiple) {
+            commitMulti();
+        } else {
+            editing.value = false;
+            search.value = '';
+            local.value = props.modelValue ?? '';
+            selected.value = [];
+            stopListeners();
+        }
 
         return;
     }
@@ -176,7 +215,7 @@ const onBlur = () => {
     }
     blurTimer = setTimeout(() => {
         finish();
-    }, 120);
+    }, 150);
 };
 
 const cancel = () => {
@@ -186,13 +225,45 @@ const cancel = () => {
     }
     local.value = props.modelValue ?? '';
     search.value = '';
+    selected.value = [];
     editing.value = false;
     stopListeners();
 };
 
+const isSelected = (opt) => selectedSet.value.has(String(opt.value ?? opt.label ?? ''));
+
 const pickOption = (opt) => {
     ignoreBlur.value = true;
-    commitValue(opt.value ?? opt.label ?? '');
+    const value = String(opt.value ?? opt.label ?? '');
+    if (! value) {
+        return;
+    }
+
+    if (props.multiple) {
+        const idx = selected.value.indexOf(value);
+        if (idx >= 0) {
+            selected.value.splice(idx, 1);
+        } else {
+            selected.value.push(value);
+        }
+        nextTick(() => {
+            ignoreBlur.value = false;
+            inputRef.value?.focus();
+        });
+
+        return;
+    }
+
+    commitValue(value);
+};
+
+const removeChip = (name) => {
+    ignoreBlur.value = true;
+    selected.value = selected.value.filter((n) => n !== name);
+    nextTick(() => {
+        ignoreBlur.value = false;
+        inputRef.value?.focus();
+    });
 };
 
 const onKeydown = (event) => {
@@ -308,30 +379,86 @@ onBeforeUnmount(() => {
         <Teleport to="body">
             <div
                 v-if="editing && hasOptions"
-                class="max-h-64 overflow-y-auto rounded-md border border-slate-200 bg-white py-1 shadow-xl"
+                class="flex max-h-[22rem] flex-col overflow-hidden rounded-md border border-slate-200 bg-white shadow-xl"
                 :style="menuStyle"
                 @mousedown.prevent="ignoreBlur = true"
             >
-                <p class="border-b border-slate-100 px-2.5 py-1.5 text-[11px] text-slate-500">
-                    {{ filteredOptions.length }} / {{ options.length }} хүн · нэрээр хайна уу
-                </p>
-                <button
-                    v-for="(opt, idx) in filteredOptions"
-                    :key="`${opt.value}-${idx}`"
-                    type="button"
-                    class="flex w-full flex-col items-start gap-0.5 px-2.5 py-1.5 text-left text-sm hover:bg-brand-navy-50"
-                    :class="[
-                        idx === highlight ? 'bg-brand-navy-50' : '',
-                        String(opt.value) === String(modelValue) ? 'font-semibold text-brand-navy-800' : '',
-                    ]"
-                    @mousedown.prevent="pickOption(opt)"
-                >
-                    <span class="text-slate-800">{{ opt.label ?? opt.value }}</span>
-                    <span v-if="opt.hint" class="text-[11px] font-normal text-slate-500">{{ opt.hint }}</span>
-                </button>
-                <p v-if="! filteredOptions.length" class="px-2.5 py-3 text-xs text-slate-400">
-                    Утасны жагсаалтад тохирох нэр олдсонгүй.
-                </p>
+                <div class="shrink-0 space-y-2 border-b border-slate-100 px-2.5 py-2">
+                    <div class="flex flex-wrap gap-3 text-xs text-slate-700">
+                        <label
+                            v-for="cat in CATEGORY_FILTERS"
+                            :key="cat.key"
+                            class="inline-flex cursor-pointer items-center gap-1.5"
+                        >
+                            <input
+                                v-model="categoryOn[cat.key]"
+                                type="checkbox"
+                                class="rounded border-slate-300 text-brand-navy-600 focus:ring-brand-navy-500"
+                            />
+                            {{ cat.label }}
+                        </label>
+                    </div>
+                    <p class="text-[11px] text-slate-500">
+                        {{ filteredOptions.length }} / {{ options.length }} хүн
+                        <span v-if="multiple"> · олон сонгох боломжтой</span>
+                    </p>
+                    <div v-if="multiple && selected.length" class="flex flex-wrap gap-1">
+                        <span
+                            v-for="name in selected"
+                            :key="name"
+                            class="inline-flex max-w-full items-center gap-1 rounded bg-brand-navy-50 px-1.5 py-0.5 text-[11px] font-medium text-brand-navy-800"
+                        >
+                            <span class="truncate">{{ name }}</span>
+                            <button type="button" class="text-brand-navy-500 hover:text-red-600" @mousedown.prevent="removeChip(name)">×</button>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="min-h-0 flex-1 overflow-y-auto py-1">
+                    <button
+                        v-for="(opt, idx) in filteredOptions"
+                        :key="`${opt.value}-${idx}`"
+                        type="button"
+                        class="flex w-full items-start gap-2 px-2.5 py-1.5 text-left text-sm hover:bg-brand-navy-50"
+                        :class="[
+                            idx === highlight ? 'bg-brand-navy-50' : '',
+                            isSelected(opt) ? 'bg-sky-50' : '',
+                        ]"
+                        @mousedown.prevent="pickOption(opt)"
+                    >
+                        <span
+                            v-if="multiple"
+                            class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px]"
+                            :class="isSelected(opt)
+                                ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
+                                : 'border-slate-300 text-transparent'"
+                        >
+                            ✓
+                        </span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block truncate font-medium text-slate-800">{{ opt.label ?? opt.value }}</span>
+                            <span
+                                v-if="opt.hint"
+                                class="block truncate text-[11px] font-normal text-slate-500"
+                                :title="opt.hint"
+                            >{{ opt.hint }}</span>
+                        </span>
+                    </button>
+                    <p v-if="! filteredOptions.length" class="px-2.5 py-3 text-xs text-slate-400">
+                        Утасны жагсаалтад тохирох нэр олдсонгүй.
+                    </p>
+                </div>
+
+                <div v-if="multiple" class="flex shrink-0 items-center justify-between gap-2 border-t border-slate-100 px-2.5 py-2">
+                    <span class="text-[11px] text-slate-500">Сонгосон: {{ selected.length }}</span>
+                    <button
+                        type="button"
+                        class="rounded-lg bg-brand-navy-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-navy-700"
+                        @mousedown.prevent="commitMulti"
+                    >
+                        Болсон
+                    </button>
+                </div>
             </div>
         </Teleport>
     </div>
