@@ -73,6 +73,13 @@ return [
             'icon' => 'plane',
         ],
         [
+            'key' => 'phone_directory',
+            'label' => 'Утасны жагсаалт',
+            'route' => 'phone-directory.index',
+            'group' => 'hr',
+            'icon' => 'phone',
+        ],
+        [
             'key' => 'agency_hr',
             'label' => 'Агентлаг дарга нар',
             'route' => 'agency-hr.index',

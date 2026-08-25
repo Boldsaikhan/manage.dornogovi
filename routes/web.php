@@ -8,6 +8,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DepartmentDashboardController;
 use App\Http\Controllers\LaunchController;
 use App\Http\Controllers\ModuleResourceController;
+use App\Http\Controllers\PhoneDirectoryController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SystemViewController;
 use App\Http\Controllers\TaskController;
@@ -42,6 +43,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/uureg/documents', [TaskController::class, 'storeDocument'])->name('tasks.documents.store');
     Route::get('/uureg/documents/{document}/download', [TaskController::class, 'downloadDocument'])->name('tasks.documents.download');
     Route::delete('/uureg/documents/{document}', [TaskController::class, 'destroyDocument'])->name('tasks.documents.destroy');
+
+    Route::get('/phone-directory', [PhoneDirectoryController::class, 'index'])->name('phone-directory.index');
+    Route::post('/phone-directory', [PhoneDirectoryController::class, 'store'])->name('phone-directory.store');
+    Route::post('/phone-directory/import', [PhoneDirectoryController::class, 'import'])->name('phone-directory.import');
+    Route::delete('/phone-directory/{entry}', [PhoneDirectoryController::class, 'destroy'])->name('phone-directory.destroy');
 
     Route::get('/modules/leaves', [ModuleResourceController::class, 'index'])->name('leaves.index');
     Route::get('/modules/assignments', [ModuleResourceController::class, 'index'])->name('assignments.index');
