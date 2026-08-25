@@ -32,7 +32,7 @@ class TaskController extends Controller
         $tasks = $source->tasks()
             ->get([
                 'id', 'task_source_id', 'text', 'period', 'responsible',
-                'collaborator', 'sector', 'sort_order',
+                'collaborator', 'sector', 'note', 'progress', 'sort_order',
             ])
             ->map(fn (Task $task, int $i) => [
                 'id' => $task->id,
@@ -42,6 +42,8 @@ class TaskController extends Controller
                 'responsible' => $task->responsible,
                 'collaborator' => $task->collaborator,
                 'sector' => $task->sector,
+                'note' => $task->note,
+                'progress' => (int) $task->progress,
                 'sort_order' => $task->sort_order,
             ]);
 
@@ -115,6 +117,8 @@ class TaskController extends Controller
             'responsible' => ['sometimes', 'nullable', 'string', 'max:255'],
             'collaborator' => ['sometimes', 'nullable', 'string', 'max:255'],
             'sector' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'note' => ['sometimes', 'nullable', 'string', 'max:5000'],
+            'progress' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100'],
         ]);
 
         $task->update($data);

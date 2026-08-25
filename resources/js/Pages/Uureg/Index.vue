@@ -45,6 +45,8 @@ watch(
                 responsible: t.responsible ?? '',
                 collaborator: t.collaborator ?? '',
                 sector: t.sector ?? '',
+                note: t.note ?? '',
+                progress: t.progress ?? 0,
             };
         });
     },
@@ -72,6 +74,15 @@ const saveField = (taskId, field, value) => {
         { [field]: value },
         { preserveScroll: true, preserveState: true },
     );
+};
+
+const saveProgress = (taskId) => {
+    const raw = drafts[taskId]?.progress;
+    let n = Number.parseInt(raw, 10);
+    if (Number.isNaN(n)) n = 0;
+    n = Math.min(100, Math.max(0, n));
+    drafts[taskId].progress = n;
+    saveField(taskId, 'progress', n);
 };
 
 const removeRow = (taskId) => {
@@ -236,13 +247,15 @@ const formatSize = (bytes) => {
 
             <!-- Үүрэг чиглэл -->
             <div v-if="isDirective" class="ui-table-wrap overflow-x-auto">
-                <table class="ui-table min-w-[720px]">
+                <table class="ui-table min-w-[980px]">
                     <thead>
                         <tr>
                             <th class="w-14">№</th>
                             <th>Үүрэг чиглэл</th>
-                            <th class="w-48">Хариуцах эзэн</th>
-                            <th class="w-56">Хяналт тавих албан тушаалтан</th>
+                            <th class="w-40">Хариуцах эзэн</th>
+                            <th class="w-48">Хяналт тавих албан тушаалтан</th>
+                            <th class="w-52">Хэрэгжилт</th>
+                            <th class="w-28 text-center">Биелэлтийн хувь</th>
                             <th v-if="canManage" class="w-20" />
                         </tr>
                     </thead>
@@ -277,12 +290,37 @@ const formatSize = (bytes) => {
                                 />
                                 <span v-else>{{ task.collaborator || '—' }}</span>
                             </td>
+                            <td>
+                                <textarea
+                                    v-if="canManage && drafts[task.id]"
+                                    v-model="drafts[task.id].note"
+                                    rows="2"
+                                    class="ui-input"
+                                    placeholder="Хэрэгжилтийн тэмдэглэл…"
+                                    @change="saveField(task.id, 'note', drafts[task.id].note)"
+                                />
+                                <span v-else class="whitespace-pre-wrap">{{ task.note || '—' }}</span>
+                            </td>
+                            <td class="text-center">
+                                <div v-if="canManage && drafts[task.id]" class="flex items-center justify-center gap-1">
+                                    <input
+                                        v-model.number="drafts[task.id].progress"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        class="ui-input !w-16 text-center"
+                                        @change="saveProgress(task.id)"
+                                    />
+                                    <span class="text-xs text-slate-500">%</span>
+                                </div>
+                                <span v-else>{{ task.progress ?? 0 }}%</span>
+                            </td>
                             <td v-if="canManage" class="text-right">
                                 <button type="button" class="ui-btn-danger !py-1 text-xs" @click="removeRow(task.id)">Устгах</button>
                             </td>
                         </tr>
                         <tr v-if="!tasks.length">
-                            <td :colspan="canManage ? 5 : 4" class="!py-14 text-center text-slate-400">
+                            <td :colspan="canManage ? 7 : 6" class="!py-14 text-center text-slate-400">
                                 Одоогоор мөр алга. «Мөр нэмэх» дарж эхлүүлнэ үү.
                             </td>
                         </tr>
@@ -292,15 +330,17 @@ const formatSize = (bytes) => {
 
             <!-- Бэлтгэл ажил хангах төлөвлөгөө -->
             <div v-else class="ui-table-wrap overflow-x-auto">
-                <table class="ui-table min-w-[960px]">
+                <table class="ui-table min-w-[1100px]">
                     <thead>
                         <tr>
                             <th class="w-14">№</th>
-                            <th class="w-44">Ажлын чиглэл</th>
+                            <th class="w-36">Ажлын чиглэл</th>
                             <th>Арга хэмжээ</th>
-                            <th class="w-36">Хугацаа</th>
-                            <th class="w-44">Хариуцах эзэн</th>
-                            <th class="w-52">Хамтран хэрэгжүүлэх албан тушаалтан</th>
+                            <th class="w-28">Хугацаа</th>
+                            <th class="w-36">Хариуцах эзэн</th>
+                            <th class="w-44">Хамтран хэрэгжүүлэх албан тушаалтан</th>
+                            <th class="w-44">Хэрэгжилт</th>
+                            <th class="w-28 text-center">Биелэлтийн хувь</th>
                             <th v-if="canManage" class="w-20" />
                         </tr>
                     </thead>
@@ -353,12 +393,37 @@ const formatSize = (bytes) => {
                                 />
                                 <span v-else>{{ task.collaborator || '—' }}</span>
                             </td>
+                            <td>
+                                <textarea
+                                    v-if="canManage && drafts[task.id]"
+                                    v-model="drafts[task.id].note"
+                                    rows="2"
+                                    class="ui-input"
+                                    placeholder="Хэрэгжилтийн тэмдэглэл…"
+                                    @change="saveField(task.id, 'note', drafts[task.id].note)"
+                                />
+                                <span v-else class="whitespace-pre-wrap">{{ task.note || '—' }}</span>
+                            </td>
+                            <td class="text-center">
+                                <div v-if="canManage && drafts[task.id]" class="flex items-center justify-center gap-1">
+                                    <input
+                                        v-model.number="drafts[task.id].progress"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        class="ui-input !w-16 text-center"
+                                        @change="saveProgress(task.id)"
+                                    />
+                                    <span class="text-xs text-slate-500">%</span>
+                                </div>
+                                <span v-else>{{ task.progress ?? 0 }}%</span>
+                            </td>
                             <td v-if="canManage" class="text-right">
                                 <button type="button" class="ui-btn-danger !py-1 text-xs" @click="removeRow(task.id)">Устгах</button>
                             </td>
                         </tr>
                         <tr v-if="!tasks.length">
-                            <td :colspan="canManage ? 7 : 6" class="!py-14 text-center text-slate-400">
+                            <td :colspan="canManage ? 9 : 8" class="!py-14 text-center text-slate-400">
                                 Одоогоор мөр алга. «Мөр нэмэх» дарж эхлүүлнэ үү.
                             </td>
                         </tr>
