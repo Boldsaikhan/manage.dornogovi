@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\OrgEmployeePhone;
 use App\Models\PhoneDirectoryEntry;
 use App\Support\ModuleAccess;
+use App\Support\OrgEmployeePhoneDocxParser;
 use App\Support\PhoneDirectoryDocxParser;
 use App\Support\PhoneDirectoryDocxWriter;
 use Illuminate\Http\RedirectResponse;
@@ -114,6 +115,106 @@ class PhoneDirectoryController extends Controller
             'Content-Disposition' => "attachment; filename=\"phone-directory.docx\"; filename*=UTF-8''".rawurlencode($fileName),
             'Content-Length' => (string) strlen($content),
         ]);
+    }
+
+    public function exportStaff(Request $request, PhoneDirectoryDocxWriter $writer): HttpResponse
+    {
+        abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
+
+        $staff = OrgEmployeePhone::query()
+            ->orderBy('organization')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (OrgEmployeePhone $row) => [
+                'organization' => $row->organization,
+                'unit' => $row->unit,
+                'position' => $row->position,
+                'last_name' => $row->last_name,
+                'first_name' => $row->first_name,
+                'room' => $row->room,
+                'work_phone' => $row->work_phone,
+                'mobile_phone' => $row->mobile_phone,
+                'email' => $row->email,
+            ])
+            ->all();
+
+        $tmp = tempnam(sys_get_temp_dir(), 'staff');
+        $writer->writeStaff($staff, $tmp);
+        $content = (string) file_get_contents($tmp);
+        @unlink($tmp);
+
+        $fileName = 'Байгууллагын албан хаагчид '.now()->format('Y-m-d').'.docx';
+
+        return response($content, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition' => "attachment; filename=\"org-employee-phones.docx\"; filename*=UTF-8''".rawurlencode($fileName),
+            'Content-Length' => (string) strlen($content),
+        ]);
+    }
+
+    public function importStaff(Request $request, OrgEmployeePhoneDocxParser $parser): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+
+        $request->validate([
+            'file' => ['required', 'file', 'max:10240'],
+            'replace' => ['nullable', 'boolean'],
+        ]);
+
+        $extension = strtolower((string) $request->file('file')->getClientOriginalExtension());
+
+        if (! in_array($extension, ['docx', 'docm'], true)) {
+            return back()->withErrors(['staff_file' => 'Зөвхөн .docx файл дэмжинэ. Word дээр «Save as → .docx» хийж оруулна уу.']);
+        }
+
+        try {
+            $rows = $parser->parse($request->file('file')->getRealPath());
+        } catch (RuntimeException $e) {
+            return back()->withErrors(['staff_file' => $e->getMessage()]);
+        } catch (Throwable) {
+            return back()->withErrors(['staff_file' => 'Word файлыг уншиж чадсангүй. .docx хэлбэрээр хадгалж дахин оруулна уу.']);
+        }
+
+        if (! $rows) {
+            return back()->withErrors([
+                'staff_file' => 'Файлаас хүснэгт олдсонгүй. Толгой нь № / Байгууллага / Нэгж / Албан тушаал / Овог / Нэр / Өрөө / Ажлын утас / Гар утас / И-мэйл хаяг байх ёстой.',
+            ]);
+        }
+
+        $replace = $request->boolean('replace');
+
+        DB::transaction(function () use ($rows, $replace) {
+            if ($replace) {
+                OrgEmployeePhone::query()->delete();
+                $offset = 0;
+            } else {
+                $offset = (int) OrgEmployeePhone::query()->max('sort_order');
+            }
+
+            foreach (array_chunk($rows, 200) as $chunk) {
+                $now = now();
+
+                OrgEmployeePhone::insert(array_map(fn (array $row) => [
+                    'organization' => $row['organization'],
+                    'unit' => $row['unit'],
+                    'position' => $row['position'],
+                    'last_name' => $row['last_name'],
+                    'first_name' => $row['first_name'],
+                    'room' => $row['room'],
+                    'work_phone' => $row['work_phone'],
+                    'mobile_phone' => $row['mobile_phone'],
+                    'email' => $row['email'],
+                    'sort_order' => $row['sort_order'] + $offset,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ], $chunk));
+            }
+        });
+
+        return redirect()
+            ->route('phone-directory.index', ['tab' => 'staff'])
+            ->with('success', count($rows).' мөр импортлолоо.');
     }
 
     public function store(Request $request): RedirectResponse

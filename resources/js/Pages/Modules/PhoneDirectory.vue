@@ -21,7 +21,9 @@ const search = ref('');
 const showForm = ref(false);
 const showImport = ref(false);
 const showStaffForm = ref(false);
+const showStaffImport = ref(false);
 const fileInput = ref(null);
+const staffFileInput = ref(null);
 
 const isDirectory = computed(() => props.tab !== 'staff');
 
@@ -50,6 +52,11 @@ const importForm = useForm({
     replace: false,
 });
 
+const staffImportForm = useForm({
+    file: null,
+    replace: false,
+});
+
 watch(
     () => props.tab,
     () => {
@@ -57,6 +64,7 @@ watch(
         showForm.value = false;
         showImport.value = false;
         showStaffForm.value = false;
+        showStaffImport.value = false;
     },
 );
 
@@ -133,6 +141,18 @@ const submitImport = () => {
     });
 };
 
+const submitStaffImport = () => {
+    staffImportForm.post(route('phone-directory.staff.import'), {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => {
+            staffImportForm.reset();
+            if (staffFileInput.value) staffFileInput.value.value = '';
+            showStaffImport.value = false;
+        },
+    });
+};
+
 const destroyRow = (id) => {
     if (!confirm('Устгах уу?')) return;
     router.delete(route('phone-directory.destroy', id), { preserveScroll: true });
@@ -180,6 +200,13 @@ const openAdd = () => {
                     >
                         Word татах
                     </a>
+                    <a
+                        v-if="!isDirectory && staffTotal"
+                        :href="route('phone-directory.staff.export')"
+                        class="ui-btn-ghost"
+                    >
+                        Word татах
+                    </a>
                     <button
                         v-if="canManage && isDirectory"
                         type="button"
@@ -187,6 +214,14 @@ const openAdd = () => {
                         @click="showImport = !showImport; showForm = false"
                     >
                         {{ showImport ? 'Хаах' : 'Word импорт' }}
+                    </button>
+                    <button
+                        v-if="canManage && !isDirectory"
+                        type="button"
+                        class="ui-btn-primary"
+                        @click="showStaffImport = !showStaffImport"
+                    >
+                        {{ showStaffImport ? 'Хаах' : 'Word импорт' }}
                     </button>
                     <button
                         v-if="canManage"
@@ -268,6 +303,51 @@ const openAdd = () => {
                         : 'Байгууллага, нэр, утас, и-мэйлээр хайх…'"
                 />
             </div>
+
+            <!-- Staff: import -->
+            <form
+                v-if="!isDirectory && showStaffImport && canManage"
+                class="ui-card grid gap-4 p-5"
+                @submit.prevent="submitStaffImport"
+            >
+                <div>
+                    <label class="ui-label">Word файл (.docx)</label>
+                    <input
+                        ref="staffFileInput"
+                        type="file"
+                        accept=".docx"
+                        class="ui-input"
+                        @change="staffImportForm.file = $event.target.files[0]"
+                    />
+                    <p class="mt-1 text-xs text-slate-500">
+                        Хүснэгтийн толгой: № / Байгууллага / Нэгж / Албан тушаал / Овог / Нэр / Өрөө /
+                        Ажлын утас / Гар утас / И-мэйл хаяг. Нийлүүлсэн ганц нүдтэй мөрийг байгууллагын нэр гэж уншина.
+                    </p>
+                    <p v-if="staffImportForm.errors.staff_file" class="mt-1 text-sm text-rose-600">
+                        {{ staffImportForm.errors.staff_file }}
+                    </p>
+                    <p v-if="staffImportForm.errors.file" class="mt-1 text-sm text-rose-600">
+                        {{ staffImportForm.errors.file }}
+                    </p>
+                </div>
+                <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <input
+                        v-model="staffImportForm.replace"
+                        type="checkbox"
+                        class="rounded border-slate-300 text-brand-navy-600 focus:ring-brand-navy-600"
+                    />
+                    Одоо байгаа жагсаалтыг устгаад шинээр оруулах
+                </label>
+                <div>
+                    <button
+                        type="submit"
+                        class="ui-btn-primary"
+                        :disabled="staffImportForm.processing || !staffImportForm.file"
+                    >
+                        {{ staffImportForm.processing ? 'Уншиж байна…' : 'Импортлох' }}
+                    </button>
+                </div>
+            </form>
 
             <!-- Tab 1: directory -->
             <div v-if="isDirectory" class="ui-table-wrap overflow-x-auto">
