@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\System;
 use App\Models\UserCredential;
+use App\Support\ModuleAccess;
 use App\Support\Vault;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -35,7 +36,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user()?->loadMissing('department:id,name'),
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
@@ -45,6 +46,7 @@ class HandleInertiaRequests extends Middleware
                 'until' => Vault::unlockedUntil($request),
             ],
             'nav' => fn () => $this->navigation($request),
+            'moduleNav' => fn () => ModuleAccess::navFor($request->user()),
         ];
     }
 

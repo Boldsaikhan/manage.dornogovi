@@ -15,8 +15,10 @@ class TaskController extends Controller
      * Үүрэг, чиглэлийн биелэлт — өмнө нь тусдаа статик сайт байсныг апп дотор
      * нэгтгэсэн модуль. Өгөгдөл нэг санд тул засвар бүх хэрэглэгчид харагдана.
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        abort_unless(\App\Support\ModuleAccess::canView($request->user(), 'tasks'), 403);
+
         return Inertia::render('Uureg/Index', [
             'sources' => TaskSource::orderBy('sort_order')->get(['id', 'name', 'period']),
             'tasks' => Task::orderBy('sort_order')->get([

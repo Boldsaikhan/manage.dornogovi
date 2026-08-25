@@ -5,6 +5,10 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import StateEmblem from '@/Components/StateEmblem.vue';
 
+defineProps({
+    title: { type: String, default: '' },
+});
+
 const page = usePage();
 const sidebarOpen = ref(false);
 
@@ -16,37 +20,29 @@ const iconPaths = {
     close: 'M6 6l12 12M18 6L6 18',
     lock: 'M5 11h14a1 1 0 011 1v8a1 1 0 01-1 1H5a1 1 0 01-1-1v-8a1 1 0 011-1zM8 11V7a4 4 0 018 0v4',
     external: 'M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3',
-    // Системийн дүрснүүд
     wallet: 'M3 7a2 2 0 012-2h11a2 2 0 012 2v1M3 7v10a2 2 0 002 2h14a2 2 0 002-2v-6a2 2 0 00-2-2H5a2 2 0 01-2-2zM17 13h.01',
     building: 'M4 21V5a2 2 0 012-2h8a2 2 0 012 2v16M4 21h16M16 9h2a2 2 0 012 2v10M8 7h2M8 11h2M8 15h2',
     globe: 'M12 21a9 9 0 100-18 9 9 0 000 18zM3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 010 18M12 3a15 15 0 000 18',
     mail: 'M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7zM3 7l9 6 9-6',
     chart: 'M4 20V10M10 20V4M16 20v-6M22 20H2',
     clipboard: 'M9 4h6a1 1 0 011 1v1H8V5a1 1 0 011-1zM8 6H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V8a2 2 0 00-2-2h-2M9 12h6M9 16h4',
+    users: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
+    calendar: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z',
+    plane: 'M10 21l-1-6-6-3 16-7-7 16-3-6z',
+    book: 'M4 19.5A2.5 2.5 0 016.5 17H20M4 19.5V6a2 2 0 012-2h14v15H6.5A2.5 2.5 0 004 19.5z',
+    file: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M8 13h8M8 17h5',
+    hash: 'M4 9h16M4 15h16M10 3L8 21M16 3l-2 18',
+    archive: 'M3 5h18v4H3zM5 9v10a2 2 0 002 2h10a2 2 0 002-2V9M10 13h4',
+    mic: 'M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3zM19 10a7 7 0 01-14 0M12 19v4M8 23h8',
+    graduation: 'M22 10L12 5 2 10l10 5 10-5zM6 12v5c0 2 3 3 6 3s6-1 6-3v-5',
 };
 
 const user = computed(() => page.props.auth.user);
+const moduleNav = computed(() => (page.props.moduleNav ?? []).filter((g) => g.key !== 'systems'));
 const navSystems = computed(() => page.props.nav ?? []);
-// Гадны төрийн системүүд ("Нэвтрэх") ба байгууллагын өөрийн системүүд ("Дотоод ажил")
 const externalSystems = computed(() => navSystems.value.filter((s) => !s.is_internal));
-const internalSystems = computed(() => navSystems.value.filter((s) => s.is_internal));
-// Апп дотор шууд байрлах дотоод модулиуд (гадаад холбоос биш)
-const internalPages = [
-    { label: 'Үүрэг, чиглэл', routeName: 'tasks.index', icon: 'clipboard' },
-];
-const navGroups = computed(() =>
-    [
-        { label: 'Дотоод ажил', pages: internalPages, items: internalSystems.value },
-        { label: 'Нэвтрэх', pages: [], items: externalSystems.value },
-    ].filter((group) => group.items.length || group.pages.length),
-);
 const vaultUnlocked = computed(() => page.props.vault?.unlocked ?? false);
 
-/**
- * Мэдээлэл хадгалсан бөгөөд сан нээлттэй бол шууд нэвтэрнэ. Үгүй бол Dashboard руу
- * очиж, тэнд байгаа хадгалах/нээх цонхыг гаргана.
- */
-/** Хулгана аваачихад гарах тайлбар — дарахад юу болохыг урьдчилж хэлнэ. */
 const systemHint = (system) => {
     if (!system.requires_login) return `${system.name} — нээх`;
     if (!system.has_credential) return `${system.name} — нэвтрэх мэдээлэл нэмнэ`;
@@ -56,8 +52,6 @@ const systemHint = (system) => {
 };
 
 const openSystem = (system) => {
-    // Нэвтрэх мэдээлэл шаарддаггүй систем (жишээ нь дотоод дашбоард) — санг
-    // нээх шаардлагагүй, шууд нээнэ.
     if (!system.requires_login) {
         if (system.is_embeddable) {
             router.get(route('systems.show', system.id));
@@ -76,11 +70,18 @@ const openSystem = (system) => {
 
     router.get(route('dashboard'), { focus: system.id });
 };
+
+const isCurrent = (routeName) => {
+    try {
+        return route().current(routeName);
+    } catch {
+        return false;
+    }
+};
 </script>
 
 <template>
     <div class="min-h-screen bg-brand-navy-50">
-        <!-- Sidebar -->
         <aside
             class="fixed inset-y-0 left-0 z-40 w-64 bg-brand-navy-800 text-brand-navy-100 transition-transform lg:translate-x-0"
             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
@@ -97,34 +98,37 @@ const openSystem = (system) => {
                 <Link
                     :href="route('dashboard')"
                     class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-white/5"
-                    :class="route().current('dashboard') ? 'bg-brand-orange-500 font-medium text-white hover:bg-brand-orange-500' : 'text-brand-navy-100'"
+                    :class="isCurrent('dashboard') ? 'bg-brand-orange-500 font-medium text-white hover:bg-brand-orange-500' : 'text-brand-navy-100'"
                 >
                     <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                         <path :d="iconPaths.grid" />
                     </svg>
-                    <span>Системүүд</span>
+                    <span>Холбосон системүүд</span>
                 </Link>
 
-                <template v-for="group in navGroups" :key="group.label">
-                <div class="!mt-3 px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-brand-navy-400">
-                    {{ group.label }}
+                <template v-for="group in moduleNav" :key="group.key">
+                    <div class="!mt-3 px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-brand-navy-400">
+                        {{ group.label }}
+                    </div>
+                    <Link
+                        v-for="item in group.items"
+                        :key="item.key"
+                        :href="route(item.route)"
+                        class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-white/5"
+                        :class="isCurrent(item.route) ? 'bg-brand-orange-500 font-medium text-white hover:bg-brand-orange-500' : 'text-brand-navy-100'"
+                    >
+                        <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                            <path :d="iconPaths[item.icon] || iconPaths.clipboard" />
+                        </svg>
+                        <span class="truncate">{{ item.label }}</span>
+                    </Link>
+                </template>
+
+                <div v-if="externalSystems.length" class="!mt-3 px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-brand-navy-400">
+                    Нэвтрэх
                 </div>
-
-                <Link
-                    v-for="page in group.pages"
-                    :key="page.routeName"
-                    :href="route(page.routeName)"
-                    class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-white/5"
-                    :class="route().current(page.routeName) ? 'bg-brand-orange-500 font-medium text-white hover:bg-brand-orange-500' : 'text-brand-navy-100'"
-                >
-                    <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                        <path :d="iconPaths[page.icon]" />
-                    </svg>
-                    <span>{{ page.label }}</span>
-                </Link>
-
                 <button
-                    v-for="system in group.items"
+                    v-for="system in externalSystems"
                     :key="system.id"
                     :title="systemHint(system)"
                     class="group flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-brand-navy-100 transition hover:bg-white/10 hover:text-white"
@@ -137,13 +141,7 @@ const openSystem = (system) => {
                         <path :d="iconPaths[system.icon] ?? iconPaths.globe" />
                     </svg>
                     <span class="flex-1 truncate text-left">{{ system.name }}</span>
-
-                    <!-- Хулгана аваачаагүй үед: мэдээлэл хадгалсан эсэхийн цэг -->
-                    <span
-                        v-if="system.has_credential"
-                        class="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-orange-500 group-hover:hidden"
-                    />
-                    <!-- Хулгана аваачихад: юу болохыг заасан тэмдэг -->
+                    <span v-if="system.has_credential" class="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-orange-500 group-hover:hidden" />
                     <svg
                         class="hidden h-4 w-4 shrink-0 text-brand-orange-500 group-hover:block"
                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"
@@ -151,7 +149,6 @@ const openSystem = (system) => {
                         <path :d="!system.requires_login || (system.has_credential && vaultUnlocked) ? iconPaths.external : iconPaths.lock" />
                     </svg>
                 </button>
-                </template>
 
                 <div class="!mt-4 space-y-1 border-t border-white/10 pt-3">
                     <div class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-brand-navy-300">
@@ -169,34 +166,33 @@ const openSystem = (system) => {
 
                     <Link
                         v-if="user.is_admin"
+                        :href="route('admin.users.index')"
+                        class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-white/5"
+                        :class="isCurrent('admin.users.*') ? 'bg-brand-orange-500 font-medium text-white' : 'text-brand-navy-100'"
+                    >
+                        <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                            <path :d="iconPaths.users" />
+                        </svg>
+                        <span>Хандах эрх</span>
+                    </Link>
+
+                    <Link
+                        v-if="user.is_admin"
                         :href="route('admin.systems.index')"
                         class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-white/5"
-                        :class="route().current('admin.systems.*') ? 'bg-brand-orange-500 font-medium text-white hover:bg-brand-orange-500' : 'text-brand-navy-100'"
+                        :class="isCurrent('admin.systems.*') ? 'bg-brand-orange-500 font-medium text-white' : 'text-brand-navy-100'"
                     >
                         <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                             <path :d="iconPaths.settings" />
                         </svg>
                         <span>Системийн тохиргоо</span>
                     </Link>
-
-                    <div class="flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm text-brand-navy-400">
-                        <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                            <path :d="iconPaths.sparkles" />
-                        </svg>
-                        <span>AI туслах</span>
-                        <span class="ml-auto rounded-full bg-white/10 px-2 py-0.5 text-[10px]">удахгүй</span>
-                    </div>
                 </div>
             </nav>
         </aside>
 
-        <div
-            v-if="sidebarOpen"
-            class="fixed inset-0 z-30 bg-black/50 lg:hidden"
-            @click="sidebarOpen = false"
-        />
+        <div v-if="sidebarOpen" class="fixed inset-0 z-30 bg-black/50 lg:hidden" @click="sidebarOpen = false" />
 
-        <!-- Main -->
         <div class="lg:pl-64">
             <header class="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-brand-navy-100 bg-white px-4 sm:px-6">
                 <button class="text-brand-navy-700 lg:hidden" @click="sidebarOpen = !sidebarOpen">
@@ -206,7 +202,7 @@ const openSystem = (system) => {
                 </button>
 
                 <h1 class="text-base font-semibold text-brand-navy-900">
-                    <slot name="header">Системүүд</slot>
+                    <slot name="header">{{ title || 'Системүүд' }}</slot>
                 </h1>
 
                 <div class="ml-auto">
@@ -222,7 +218,6 @@ const openSystem = (system) => {
                                 </svg>
                             </button>
                         </template>
-
                         <template #content>
                             <DropdownLink :href="route('profile.edit')">Профайл</DropdownLink>
                             <DropdownLink :href="route('logout')" method="post" as="button">Гарах</DropdownLink>

@@ -5,6 +5,8 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -14,8 +16,6 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
-     * The attributes that are mass assignable.
-     *
      * @var list<string>
      */
     protected $fillable = [
@@ -24,11 +24,12 @@ class User extends Authenticatable
         'phone',
         'password',
         'is_admin',
+        'department_id',
+        'position',
+        'is_department_head',
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
-     *
      * @var list<string>
      */
     protected $hidden = [
@@ -37,9 +38,7 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
+     * @return array<string, mixed>
      */
     protected function casts(): array
     {
@@ -47,15 +46,20 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
+            'is_department_head' => 'boolean',
         ];
     }
 
-    /**
-     * Утасны дугаарыг зөвхөн цифр болгож цэвэрлэнэ.
-     *
-     * Хэрэглэгч "9911 1234", "+976 9911-1234", "976 99111234" гэх мэтээр
-     * бичсэн ч бүгд "99111234" болж нэгдэнэ. Хоосон бол null буцаана.
-     */
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    public function modulePermissions(): HasMany
+    {
+        return $this->hasMany(UserModulePermission::class);
+    }
+
     public static function normalizePhone(?string $phone): ?string
     {
         if ($phone === null) {
@@ -64,7 +68,6 @@ class User extends Authenticatable
 
         $digits = preg_replace('/\D+/', '', $phone) ?? '';
 
-        // Монголын улсын код (976) урдаа бичигдсэн бол хасна.
         if (strlen($digits) === 11 && str_starts_with($digits, '976')) {
             $digits = substr($digits, 3);
         }
@@ -72,9 +75,6 @@ class User extends Authenticatable
         return $digits === '' ? null : $digits;
     }
 
-    /**
-     * Утасны дугаарыг үргэлж цэвэрлэсэн хэлбэрээр хадгална.
-     */
     public function setPhoneAttribute(?string $value): void
     {
         $this->attributes['phone'] = self::normalizePhone($value);

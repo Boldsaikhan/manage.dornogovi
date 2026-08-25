@@ -54,29 +54,6 @@ const submit = () => {
         onFinish: () => form.reset('password'),
     });
 };
-
-const features = [
-    {
-        title: 'Аюулгүй байдал',
-        text: 'Өндөр түвшний нууцлал, мэдээллийн хамгаалалт',
-        icon: 'shield',
-    },
-    {
-        title: 'Хурдан, хүртээмжтэй',
-        text: 'Хаанаас ч, хэзээ ч хандах боломжтой',
-        icon: 'clock',
-    },
-    {
-        title: 'Нэгдсэн систем',
-        text: 'Бүх үйл ажиллагааг нэгдсэн системд',
-        icon: 'grid',
-    },
-    {
-        title: 'Хамтын ажиллагаа',
-        text: 'Хэлтэс хоорондын уялдаа холбоог сайжруулна',
-        icon: 'users',
-    },
-];
 </script>
 
 <template>
@@ -432,137 +409,44 @@ const features = [
                 </div>
             </div>
 
-            <!-- ============================ Баруун тал — танилцуулга ============================ -->
+            <!-- ============================ Баруун тал — ордон ============================ -->
             <div
-                class="relative hidden overflow-hidden rounded-3xl bg-gradient-to-b from-brand-navy-600 via-brand-navy-700 to-brand-navy-900 lg:flex lg:flex-col"
+                class="relative hidden overflow-hidden rounded-3xl bg-brand-navy-800 lg:flex lg:flex-col"
             >
-                <!-- гоёл чимэглэлийн хээ -->
-                <div
-                    class="pointer-events-none absolute inset-0 opacity-[0.07]"
-                    aria-hidden="true"
-                >
-                    <svg class="h-full w-full" xmlns="http://www.w3.org/2000/svg">
-                        <defs>
-                            <pattern
-                                id="khee"
-                                width="56"
-                                height="56"
-                                patternUnits="userSpaceOnUse"
-                            >
-                                <path
-                                    d="M8 8h40v40H8z M16 16h24v24H16z"
-                                    fill="none"
-                                    stroke="white"
-                                    stroke-width="2"
-                                />
-                            </pattern>
-                        </defs>
-                        <rect width="100%" height="100%" fill="url(#khee)" />
-                    </svg>
-                </div>
-
-                <!--
-                    Нутгийн удирдлагын ордны зураг.
-                    public/images/building.jpg байхгүй бол зөвхөн градиент үлдэнэ.
-                -->
                 <img
                     v-if="!buildingMissing"
                     src="/images/building.jpg"
-                    alt=""
-                    aria-hidden="true"
-                    class="pointer-events-none absolute inset-x-0 bottom-0 h-[58%] w-full object-cover object-top opacity-45"
+                    alt="Нутгийн удирдлагын ордон"
+                    class="absolute inset-0 h-full w-full object-cover object-center"
                     @error="buildingMissing = true"
                 />
 
-                <!-- зургийг дээрээс нь бүдгэрүүлж, текстийг уншигдахуйц болгоно -->
+                <!-- Зураг байхгүй үед градиент -->
                 <div
-                    v-if="!buildingMissing"
-                    class="pointer-events-none absolute inset-0 bg-gradient-to-b from-brand-navy-600 via-brand-navy-700/85 to-brand-navy-900/95"
+                    v-if="buildingMissing"
+                    class="absolute inset-0 bg-gradient-to-b from-brand-navy-600 via-brand-navy-700 to-brand-navy-900"
                     aria-hidden="true"
                 ></div>
 
-                <!-- Уриа -->
+                <!-- Доод хэсэгт хөнгөн бүдгэрүүлэлт + уриа -->
                 <div
-                    class="relative flex flex-1 flex-col items-center justify-center px-10 pt-14 text-center"
-                >
-                    <SoyomboMark class="h-16 w-16 text-brand-orange-300" />
+                    class="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-navy-950/80 via-brand-navy-900/20 to-transparent"
+                    aria-hidden="true"
+                ></div>
 
-                    <h2
-                        class="mt-6 text-2xl font-bold leading-snug tracking-tight text-white xl:text-3xl"
-                    >
+                <div class="relative mt-auto px-8 pb-10 pt-24 text-center">
+                    <SoyomboMark class="mx-auto h-12 w-12 text-brand-orange-300 drop-shadow" />
+                    <h2 class="mt-4 text-2xl font-bold leading-snug tracking-tight text-white drop-shadow xl:text-3xl">
                         ТӨРИЙН ҮЙЛЧИЛГЭЭГ<br />ТАНЫГ ТӨЛӨӨ
                     </h2>
-
-                    <div class="mt-5 flex items-center gap-3">
-                        <span class="h-px w-16 bg-white/25"></span>
+                    <div class="mt-4 flex items-center justify-center gap-3">
+                        <span class="h-px w-12 bg-white/40"></span>
                         <OrnamentMark class="h-3 w-8 text-brand-orange-300" />
-                        <span class="h-px w-16 bg-white/25"></span>
+                        <span class="h-px w-12 bg-white/40"></span>
                     </div>
-
-                    <p
-                        class="mt-4 text-xs font-medium tracking-[0.2em] text-white/70"
-                    >
+                    <p class="mt-3 text-xs font-medium tracking-[0.2em] text-white/85">
                         НЭГДСЭН · ХУРДАН · ХЯЛБАР · АЮУЛГҮЙ
                     </p>
-                </div>
-
-                <!-- Онцлогууд -->
-                <div class="relative px-6 pb-6">
-                    <div
-                        class="grid grid-cols-2 gap-3 rounded-2xl bg-white/10 p-5 backdrop-blur-sm xl:grid-cols-4"
-                    >
-                        <div
-                            v-for="feature in features"
-                            :key="feature.title"
-                            class="text-center"
-                        >
-                            <div
-                                class="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-white"
-                            >
-                                <svg
-                                    class="h-5 w-5"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="1.7"
-                                >
-                                    <path
-                                        v-if="feature.icon === 'shield'"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751A11.959 11.959 0 0112 2.714z"
-                                    />
-                                    <path
-                                        v-else-if="feature.icon === 'clock'"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-                                    />
-                                    <path
-                                        v-else-if="feature.icon === 'grid'"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"
-                                    />
-                                    <path
-                                        v-else
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
-                                    />
-                                </svg>
-                            </div>
-
-                            <p
-                                class="mt-2.5 text-[11px] font-bold uppercase tracking-wide text-white"
-                            >
-                                {{ feature.title }}
-                            </p>
-                            <p class="mt-1 text-[11px] leading-snug text-white/65">
-                                {{ feature.text }}
-                            </p>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
