@@ -73,6 +73,8 @@ class DecreeController extends Controller
             ])->values()->all(),
             'rows' => $rows,
             'people' => PhoneDirectoryEntry::peopleOptions(),
+            'pendingOfficials' => $this->pendingOfficialsForTab($tab),
+            'nextNumber' => isset(self::KIND_TABS[$tab]) ? $this->nextDocumentNumber($tab) : null,
             'canManage' => ModuleAccess::canManage($request->user(), 'decrees'),
         ]);
     }
@@ -140,7 +142,7 @@ class DecreeController extends Controller
             Decree::query()->create([
                 'category' => $meta['category'],
                 'kind' => $meta['kind'],
-                'number' => $data['number'] ?? null,
+                'number' => ($data['number'] ?? null) ?: $this->nextDocumentNumber($tab),
                 'title' => $data['title'] ?? '',
                 'issued_on' => $data['issued_on'] ?? null,
                 'page_count' => $data['page_count'] ?? null,
@@ -276,6 +278,94 @@ class DecreeController extends Controller
         }
 
         return 'niit';
+    }
+
+    /**
+     * Тухайн төрлийн дараагийн дугаар (ж: 01, 02).
+     */
+    private function nextDocumentNumber(string $kind): string
+    {
+        $max = 0;
+
+        Decree::query()
+            ->where('kind', $kind)
+            ->whereNotNull('number')
+            ->where('number', '!=', '')
+            ->pluck('number')
+            ->each(function (string $number) use (&$max) {
+                if (preg_match('/^(\d+)/', trim($number), $matches)) {
+                    $max = max($max, (int) $matches[1]);
+                }
+            });
+
+        return str_pad((string) ($max + 1), 2, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Бланк авсан боловч тухайн төрлийн баримт гаргаагүй албан хаагчид.
+     *
+     * @return array<int, array{value: string, label: string, hint: string, org: string, category: string}>
+     */
+    private function pendingOfficialsForTab(string $tab): array
+    {
+        if ($tab === 'blank') {
+            return [];
+        }
+
+        $blankQuery = Decree::query()
+            ->where('category', 'blank')
+            ->whereNotNull('person_name')
+            ->where('person_name', '!=', '');
+
+        if (str_starts_with($tab, 'zahiramj')) {
+            $blankQuery->where(function ($query) {
+                $query->where('qty_zahiramj', '>', 0)
+                    ->orWhere('qty_zahiramj_mn', '>', 0)
+                    ->orWhere(function ($q) {
+                        $q->whereNotNull('num_zahiramj')->where('num_zahiramj', '!=', '');
+                    });
+            });
+        } elseif (str_starts_with($tab, 'tushaal')) {
+            $blankQuery->where(function ($query) {
+                $query->where('qty_tushaal', '>', 0)
+                    ->orWhere('qty_tushaal_mn', '>', 0)
+                    ->orWhere(function ($q) {
+                        $q->whereNotNull('num_tushaal')->where('num_tushaal', '!=', '');
+                    });
+            });
+        }
+
+        $blankNames = $blankQuery
+            ->pluck('person_name')
+            ->map(fn (?string $name) => PersonName::short(trim((string) $name)))
+            ->filter(fn (string $name) => $name !== '')
+            ->unique()
+            ->values();
+
+        $usedKinds = $tab === 'niit'
+            ? self::DOC_KINDS
+            : [$tab];
+
+        $usedNames = Decree::query()
+            ->whereIn('kind', $usedKinds)
+            ->whereNotNull('person_name')
+            ->where('person_name', '!=', '')
+            ->pluck('person_name')
+            ->map(fn (?string $name) => PersonName::short(trim((string) $name)))
+            ->filter(fn (string $name) => $name !== '')
+            ->unique();
+
+        return $blankNames
+            ->diff($usedNames)
+            ->values()
+            ->map(fn (string $name) => [
+                'value' => $name,
+                'label' => $name,
+                'hint' => 'Бланк авсан',
+                'org' => '',
+                'category' => 'baiguullaga',
+            ])
+            ->all();
     }
 
     /**

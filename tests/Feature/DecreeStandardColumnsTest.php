@@ -127,7 +127,66 @@ class DecreeStandardColumnsTest extends TestCase
                 ->where('tab', 'zahiramj_a')
                 ->where('rows.0.number', '01')
                 ->where('rows.0.page_count', 2)
-                ->where('rows.0.attachment_name', 'Арын бичилт'));
+                ->where('rows.0.attachment_name', 'Арын бичилт')
+                ->where('nextNumber', '02'));
+    }
+
+    public function test_new_doc_row_gets_auto_number_when_empty(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        Decree::query()->create([
+            'category' => 'zahiramj',
+            'kind' => 'zahiramj_a',
+            'number' => '05',
+            'title' => 'Өмнөх',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->post(route('decrees.store'), [
+            'tab' => 'zahiramj_a',
+            'issued_on' => '2026-08-25',
+        ])->assertRedirect(route('decrees.index', ['tab' => 'zahiramj_a']));
+
+        $decree = Decree::query()->orderByDesc('id')->firstOrFail();
+        $this->assertSame('06', $decree->number);
+    }
+
+    public function test_pending_officials_lists_blank_holders_without_decree(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        Decree::query()->create([
+            'category' => 'blank',
+            'kind' => 'blank',
+            'person_name' => 'Б.Гантөмөр',
+            'qty_zahiramj' => 3,
+            'title' => 'Б.Гантөмөр',
+            'created_by' => $admin->id,
+        ]);
+        Decree::query()->create([
+            'category' => 'blank',
+            'kind' => 'blank',
+            'person_name' => 'Б.Зоригтбаатар',
+            'qty_zahiramj' => 2,
+            'title' => 'Б.Зоригтбаатар',
+            'created_by' => $admin->id,
+        ]);
+        Decree::query()->create([
+            'category' => 'zahiramj',
+            'kind' => 'zahiramj_a',
+            'number' => '01',
+            'title' => 'Тест',
+            'person_name' => 'Б.Зоригтбаатар',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('decrees.index', ['tab' => 'zahiramj_a']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Modules/Decrees')
+                ->has('pendingOfficials', 1)
+                ->where('pendingOfficials.0.label', 'Б.Гантөмөр'));
     }
 
     public function test_niit_tab_lists_all_register_kinds(): void

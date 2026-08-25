@@ -9,6 +9,8 @@ const props = defineProps({
     tabs: { type: Array, default: () => [] },
     rows: { type: Array, default: () => [] },
     people: { type: Array, default: () => [] },
+    pendingOfficials: { type: Array, default: () => [] },
+    nextNumber: { type: String, default: null },
     canManage: { type: Boolean, default: false },
 });
 
@@ -38,6 +40,27 @@ const kindOptions = [
 ];
 
 const canAddRow = computed(() => props.canManage && ! isNiit.value);
+
+const officialOptions = computed(() => {
+    const pending = props.pendingOfficials ?? [];
+    const seen = new Set(pending.map((p) => p.value));
+    const extras = props.rows
+        .map((row) => row.person_name)
+        .filter((name) => name && ! seen.has(name))
+        .map((name) => {
+            seen.add(name);
+
+            return {
+                value: name,
+                label: name,
+                hint: '',
+                org: '',
+                category: 'baiguullaga',
+            };
+        });
+
+    return [...pending, ...extras];
+});
 
 const drafts = reactive({});
 
@@ -93,7 +116,6 @@ const addRow = () => {
 
     useForm({
         tab: props.tab,
-        number: '',
         title: '',
         issued_on: today(),
     }).post(route('decrees.store'), { preserveScroll: true });
@@ -539,10 +561,10 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].person_name"
                                     :editable="canManage"
-                                    :options="people"
+                                    :options="officialOptions"
                                     align="center"
                                     empty-label=""
-                                    placeholder="Нэр сонгох…"
+                                    placeholder="Бланк авсан…"
                                     @commit="(v) => saveField(row.id, 'person_name', v)"
                                 />
                             </td>
