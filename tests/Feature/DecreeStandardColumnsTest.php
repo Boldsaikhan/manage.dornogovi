@@ -50,6 +50,8 @@ class DecreeStandardColumnsTest extends TestCase
 
         $decree = Decree::query()->firstOrFail();
         $this->assertSame('blank', $decree->category);
+        $this->assertNull($decree->person_name);
+        $this->assertNull($decree->issued_on);
 
         $this->actingAs($admin)->patch(route('decrees.update', $decree), [
             'person_name' => 'А.Ариунболд',
@@ -62,6 +64,36 @@ class DecreeStandardColumnsTest extends TestCase
         $this->assertSame(3, $decree->qty_zahiramj);
         $this->assertSame('100-102', $decree->num_zahiramj);
         $this->assertSame('100-102', $decree->blank_number);
+
+        $this->actingAs($admin)->patch(route('decrees.update', $decree), [
+            'qty_zahiramj' => null,
+            'person_name' => '',
+        ])->assertRedirect();
+
+        $decree->refresh();
+        $this->assertNull($decree->person_name);
+        $this->assertSame(0, $decree->qty_zahiramj);
+    }
+
+    public function test_index_includes_phone_directory_people(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        \App\Models\PhoneDirectoryEntry::query()->create([
+            'org_name' => 'Удирдлага',
+            'category' => 'udirdlaga',
+            'person_name' => 'Очирпүрэв Батжаргал',
+            'position' => 'Засаг дарга',
+            'org_order' => 1,
+            'sort_order' => 1,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('decrees.index', ['tab' => 'blank']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Modules/Decrees')
+                ->has('people', 1)
+                ->where('people.0.label', 'О.Батжаргал'));
     }
 
     public function test_zahiramj_number_tab_stores_register_fields(): void

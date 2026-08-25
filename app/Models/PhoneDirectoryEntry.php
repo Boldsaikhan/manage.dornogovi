@@ -56,6 +56,39 @@ class PhoneDirectoryEntry extends Model
     }
 
     /**
+     * SheetCell / сонголтын жагсаалтад зориулсан богино нэрс.
+     *
+     * @return array<int, array{value: string, label: string, hint: string, org: string, category: string}>
+     */
+    public static function peopleOptions(): array
+    {
+        $items = [];
+
+        static::query()
+            ->orderBy('org_order')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get(['person_name', 'position', 'org_name', 'category'])
+            ->each(function (self $row) use (&$items) {
+                $name = \App\Support\PersonName::short(trim((string) $row->person_name));
+
+                if ($name === '') {
+                    return;
+                }
+
+                $items[$name] = [
+                    'value' => $name,
+                    'label' => $name,
+                    'hint' => trim((string) $row->position),
+                    'org' => trim((string) $row->org_name),
+                    'category' => $row->category ?: (self::guessCategory($row->org_name) ?: 'baiguullaga'),
+                ];
+            });
+
+        return array_values($items);
+    }
+
+    /**
      * config/agencies.php дахь аймгийн агентлагуудтай тулгана.
      */
     public static function isKnownAgency(?string $orgName): bool

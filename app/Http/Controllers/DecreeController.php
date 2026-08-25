@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Decree;
+use App\Models\PhoneDirectoryEntry;
 use App\Support\ModuleAccess;
+use App\Support\PersonName;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -54,6 +56,7 @@ class DecreeController extends Controller
                 'count' => $counts[$value] ?? 0,
             ])->values()->all(),
             'rows' => $rows,
+            'people' => PhoneDirectoryEntry::peopleOptions(),
             'canManage' => ModuleAccess::canManage($request->user(), 'decrees'),
         ]);
     }
@@ -89,12 +92,12 @@ class DecreeController extends Controller
                 'body' => ['nullable', 'string', 'max:5000'],
             ]);
 
-            $person = trim((string) ($data['person_name'] ?? ''));
+            $person = PersonName::short(trim((string) ($data['person_name'] ?? '')));
 
             Decree::query()->create([
                 ...$data,
                 'person_name' => $person !== '' ? $person : null,
-                'issued_on' => $data['issued_on'] ?? now()->toDateString(),
+                'issued_on' => $data['issued_on'] ?? null,
                 'category' => 'blank',
                 'kind' => 'blank',
                 'title' => $person !== '' ? $person : '',
@@ -119,16 +122,18 @@ class DecreeController extends Controller
                 'body' => ['nullable', 'string', 'max:20000'],
             ]);
 
+            $person = PersonName::short(trim((string) ($data['person_name'] ?? '')));
+
             Decree::query()->create([
                 'category' => $tab,
                 'kind' => $data['kind'] ?? $kinds[0],
                 'number' => $data['number'] ?? null,
                 'title' => $data['title'] ?? '',
-                'issued_on' => $data['issued_on'] ?? now()->toDateString(),
+                'issued_on' => $data['issued_on'] ?? null,
                 'page_count' => $data['page_count'] ?? null,
                 'attachment_name' => $data['attachment_name'] ?? null,
                 'attachment_pages' => $data['attachment_pages'] ?? null,
-                'person_name' => $data['person_name'] ?? null,
+                'person_name' => $person !== '' ? $person : null,
                 'body' => $data['body'] ?? null,
                 'created_by' => $request->user()->id,
             ]);
@@ -165,9 +170,13 @@ class DecreeController extends Controller
             ]);
 
             if (array_key_exists('person_name', $data)) {
-                $person = trim((string) ($data['person_name'] ?? ''));
+                $person = PersonName::short(trim((string) ($data['person_name'] ?? '')));
                 $data['person_name'] = $person !== '' ? $person : null;
                 $data['title'] = $data['person_name'] ?? '';
+            }
+
+            if (array_key_exists('issued_on', $data) && ($data['issued_on'] === '' || $data['issued_on'] === null)) {
+                $data['issued_on'] = null;
             }
 
             if (array_key_exists('num_zahiramj', $data) || array_key_exists('num_tushaal', $data)) {
@@ -178,6 +187,15 @@ class DecreeController extends Controller
                     ? $data['num_tushaal']
                     : $decree->num_tushaal;
                 $data['blank_number'] = $numZ ?: $numT ?: null;
+            }
+
+            foreach ([
+                'qty_zahiramj', 'qty_zahiramj_mn', 'qty_tushaal', 'qty_tushaal_mn',
+                'qty_assignment', 'qty_assignment_mn', 'qty_council', 'qty_council_mn',
+            ] as $qtyField) {
+                if (array_key_exists($qtyField, $data) && $data[$qtyField] === null) {
+                    $data[$qtyField] = 0;
+                }
             }
 
             $decree->update($data);
@@ -197,6 +215,15 @@ class DecreeController extends Controller
                 'person_name' => ['sometimes', 'nullable', 'string', 'max:255'],
                 'body' => ['sometimes', 'nullable', 'string', 'max:20000'],
             ]);
+
+            if (array_key_exists('person_name', $data)) {
+                $person = PersonName::short(trim((string) ($data['person_name'] ?? '')));
+                $data['person_name'] = $person !== '' ? $person : null;
+            }
+
+            if (array_key_exists('issued_on', $data) && ($data['issued_on'] === '' || $data['issued_on'] === null)) {
+                $data['issued_on'] = null;
+            }
 
             $decree->update($data);
         }

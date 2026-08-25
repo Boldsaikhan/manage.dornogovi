@@ -8,6 +8,7 @@ const props = defineProps({
     tab: { type: String, default: 'blank' },
     tabs: { type: Array, default: () => [] },
     rows: { type: Array, default: () => [] },
+    people: { type: Array, default: () => [] },
     canManage: { type: Boolean, default: false },
 });
 
@@ -63,7 +64,7 @@ const addRow = () => {
         useForm({
             tab: 'blank',
             person_name: '',
-            issued_on: new Date().toISOString().slice(0, 10),
+            issued_on: '',
         }).post(route('decrees.store'), { preserveScroll: true });
         return;
     }
@@ -73,24 +74,31 @@ const addRow = () => {
         kind: kindOptions.value[0]?.value ?? '',
         number: '',
         title: '',
-        issued_on: new Date().toISOString().slice(0, 10),
+        issued_on: '',
     }).post(route('decrees.store'), { preserveScroll: true });
 };
 
 const saveField = (id, field, value) => {
     let next = value;
-    if (['qty_zahiramj', 'qty_zahiramj_mn', 'qty_tushaal', 'qty_tushaal_mn',
+    const qtyFields = [
+        'qty_zahiramj', 'qty_zahiramj_mn', 'qty_tushaal', 'qty_tushaal_mn',
         'qty_assignment', 'qty_assignment_mn', 'qty_council', 'qty_council_mn',
-        'page_count', 'attachment_pages'].includes(field)) {
+        'page_count', 'attachment_pages',
+    ];
+
+    if (qtyFields.includes(field)) {
         if (next === '' || next === null || next === undefined) {
             next = null;
         } else {
             const n = Number.parseInt(next, 10);
             next = Number.isNaN(n) ? null : n;
         }
-        if (drafts[id]) {
-            drafts[id][field] = next ?? '';
-        }
+    } else if (typeof next === 'string') {
+        next = next.trim() === '' ? null : next;
+    }
+
+    if (drafts[id] && Object.prototype.hasOwnProperty.call(drafts[id], field)) {
+        drafts[id][field] = next ?? '';
     }
 
     router.patch(
@@ -108,7 +116,7 @@ const destroyRow = (id) => {
 const blankColCount = computed(() => 15 + (props.canManage ? 1 : 0));
 const docColumnCount = computed(() => 9 + (props.canManage ? 1 : 0));
 
-const cellClass = 'border border-slate-800 p-0 align-middle';
+const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
 </script>
 
 <template>
@@ -148,8 +156,17 @@ const cellClass = 'border border-slate-800 p-0 align-middle';
             </nav>
 
             <!-- Бланкны дугаар -->
-            <div v-if="isBlank" class="overflow-x-auto border border-slate-800 bg-white">
+            <div v-if="isBlank" class="decree-sheet overflow-x-auto border border-slate-800 bg-white">
                 <table class="w-full min-w-[1100px] border-collapse text-center text-[11px] leading-tight text-slate-900">
+                    <colgroup>
+                        <col style="width: 2.25rem" />
+                        <col style="width: 9.5rem" />
+                        <col style="width: 6.5rem" />
+                        <col v-for="n in 8" :key="`q-${n}`" style="width: 3.25rem" />
+                        <col v-for="n in 4" :key="`n-${n}`" style="width: 4.5rem" />
+                        <col style="width: 7rem" />
+                        <col v-if="canManage" style="width: 3.5rem" />
+                    </colgroup>
                     <thead>
                         <tr class="bg-slate-50">
                             <th rowspan="2" class="border border-slate-800 px-1 py-1.5 font-semibold">Д/д</th>
@@ -198,8 +215,9 @@ const cellClass = 'border border-slate-800 p-0 align-middle';
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].person_name"
                                     :editable="canManage"
+                                    :options="people"
                                     empty-label=""
-                                    placeholder="Нэр…"
+                                    placeholder="Нэр сонгох…"
                                     @commit="(v) => saveField(row.id, 'person_name', v)"
                                 />
                             </td>
@@ -367,11 +385,23 @@ const cellClass = 'border border-slate-800 p-0 align-middle';
             </div>
 
             <!-- Захирамж / Тушаалын дугаар -->
-            <div v-else class="overflow-x-auto border border-slate-800 bg-white">
+            <div v-else class="decree-sheet overflow-x-auto border border-slate-800 bg-white">
                 <div class="border-b border-slate-800 px-3 py-2 text-center text-sm font-semibold tracking-wide">
                     Аймгийн Засаг даргын {{ docLabel }}ийн бүртгэл
                 </div>
                 <table class="w-full min-w-[1000px] border-collapse text-center text-[12px] leading-tight text-slate-900">
+                    <colgroup>
+                        <col style="width: 2.5rem" />
+                        <col style="width: 5rem" />
+                        <col style="width: 6.5rem" />
+                        <col />
+                        <col style="width: 4.5rem" />
+                        <col style="width: 10rem" />
+                        <col style="width: 4.5rem" />
+                        <col style="width: 8rem" />
+                        <col style="width: 6.5rem" />
+                        <col v-if="canManage" style="width: 3.5rem" />
+                    </colgroup>
                     <thead>
                         <tr class="bg-slate-50">
                             <th rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold w-10">№</th>
@@ -482,9 +512,11 @@ const cellClass = 'border border-slate-800 p-0 align-middle';
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].person_name"
-                                    align="center"
                                     :editable="canManage"
+                                    :options="people"
+                                    align="center"
                                     empty-label=""
+                                    placeholder="Нэр сонгох…"
                                     @commit="(v) => saveField(row.id, 'person_name', v)"
                                 />
                             </td>

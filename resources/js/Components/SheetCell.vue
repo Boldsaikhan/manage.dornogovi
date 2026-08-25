@@ -43,6 +43,28 @@ let blurTimer = null;
 
 const hasOptions = computed(() => Array.isArray(props.options) && props.options.length > 0);
 
+// Нэрийн товчлол — «Н.Алдарбаяр» → «НА»
+const initials = (opt) => {
+    const text = String(opt?.label ?? opt?.value ?? '').replace(/\s+/g, ' ').trim();
+    if (! text) return '?';
+    const parts = text.split(/[.\s]+/).filter(Boolean);
+
+    return (parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '');
+};
+
+const allCategoriesOn = computed(() => CATEGORY_FILTERS.every((c) => categoryOn.value[c.key]));
+
+const toggleAllCategories = () => {
+    const next = ! allCategoriesOn.value;
+    CATEGORY_FILTERS.forEach((c) => {
+        categoryOn.value[c.key] = next;
+    });
+};
+
+const clearSelection = () => {
+    selected.value = [];
+};
+
 const parseSelected = (value) => String(value ?? '')
     .split(/[/;,|]+/)
     .map((s) => s.trim())
@@ -82,16 +104,23 @@ const updateMenuPosition = () => {
         return;
     }
     const rect = el.getBoundingClientRect();
-    const width = Math.max(rect.width, 320);
+    const width = Math.min(Math.max(rect.width, 380), window.innerWidth - 16);
     let left = rect.left;
     if (left + width > window.innerWidth - 8) {
         left = Math.max(8, window.innerWidth - width - 8);
     }
+    // Доор багтахгүй бол нүдний дээр талд гаргана.
+    const belowSpace = window.innerHeight - rect.bottom - 16;
+    const openUp = belowSpace < 260 && rect.top > belowSpace;
+
     menuStyle.value = {
         position: 'fixed',
         left: `${left}px`,
-        top: `${rect.bottom + 2}px`,
+        ...(openUp
+            ? { bottom: `${window.innerHeight - rect.top + 6}px` }
+            : { top: `${rect.bottom + 6}px` }),
         width: `${width}px`,
+        maxHeight: `${Math.max(240, (openUp ? rect.top : belowSpace) - 8)}px`,
         zIndex: 200,
     };
 };
@@ -175,8 +204,13 @@ const commitValue = (value) => {
 
     let next = value;
     if (props.type === 'number') {
-        const n = Number.parseInt(next, 10);
-        next = Number.isNaN(n) ? 0 : n;
+        const raw = String(next ?? '').trim();
+        if (raw === '') {
+            next = '';
+        } else {
+            const n = Number.parseInt(raw, 10);
+            next = Number.isNaN(n) ? '' : n;
+        }
     }
     local.value = next;
     search.value = '';
@@ -381,85 +415,142 @@ onBeforeUnmount(() => {
         <Teleport to="body">
             <div
                 v-if="editing && hasOptions"
-                class="flex max-h-[22rem] flex-col overflow-hidden rounded-md border border-slate-200 bg-white shadow-xl"
+                class="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl ring-1 ring-slate-900/5"
                 :style="menuStyle"
                 @mousedown.prevent="ignoreBlur = true"
             >
-                <div class="shrink-0 space-y-2 border-b border-slate-100 px-2.5 py-2">
-                    <div class="flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-slate-700">
-                        <label
+                <div class="shrink-0 space-y-2 border-b border-slate-100 bg-slate-50/70 px-3 py-2.5">
+                    <div class="flex items-center gap-2">
+                        <svg class="h-4 w-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <circle cx="11" cy="11" r="7" />
+                            <path d="M20 20l-3.5-3.5" stroke-linecap="round" />
+                        </svg>
+                        <span class="min-w-0 flex-1 truncate text-xs text-slate-500">
+                            <template v-if="search">«{{ search }}» — {{ filteredOptions.length }} илэрц</template>
+                            <template v-else>Нэрээр бичиж хайна · {{ filteredOptions.length }}/{{ options.length }} хүн</template>
+                        </span>
+                        <button
+                            type="button"
+                            class="shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-medium text-slate-500 transition hover:bg-white hover:text-brand-navy-700"
+                            @mousedown.prevent="toggleAllCategories"
+                        >
+                            {{ allCategoriesOn ? 'Шүүлт цэвэрлэх' : 'Бүгдийг сонгох' }}
+                        </button>
+                    </div>
+
+                    <div class="flex flex-wrap gap-1.5">
+                        <button
                             v-for="cat in CATEGORY_FILTERS"
                             :key="cat.key"
-                            class="inline-flex cursor-pointer items-center gap-1.5"
+                            type="button"
+                            class="rounded-full border px-2.5 py-1 text-[11px] font-medium transition"
+                            :class="categoryOn[cat.key]
+                                ? 'border-brand-navy-500 bg-brand-navy-600 text-white'
+                                : 'border-slate-200 bg-white text-slate-500 hover:border-brand-navy-300'"
+                            @mousedown.prevent="categoryOn[cat.key] = ! categoryOn[cat.key]"
                         >
-                            <input
-                                v-model="categoryOn[cat.key]"
-                                type="checkbox"
-                                class="rounded border-slate-300 text-brand-navy-600 focus:ring-brand-navy-500"
-                            />
                             {{ cat.label }}
-                        </label>
+                        </button>
                     </div>
-                    <p class="text-[11px] text-slate-500">
-                        {{ filteredOptions.length }} / {{ options.length }} хүн
-                        <span v-if="multiple"> · олон сонгох боломжтой</span>
-                    </p>
-                    <div v-if="multiple && selected.length" class="flex flex-wrap gap-1">
+
+                    <div v-if="multiple && selected.length" class="flex flex-wrap gap-1 pt-0.5">
                         <span
                             v-for="name in selected"
                             :key="name"
-                            class="inline-flex max-w-full items-center gap-1 rounded bg-brand-navy-50 px-1.5 py-0.5 text-[11px] font-medium text-brand-navy-800"
+                            class="inline-flex max-w-full items-center gap-1 rounded-full bg-brand-navy-600 px-2 py-0.5 text-[11px] font-medium text-white"
                         >
                             <span class="truncate">{{ name }}</span>
-                            <button type="button" class="text-brand-navy-500 hover:text-red-600" @mousedown.prevent="removeChip(name)">×</button>
+                            <button
+                                type="button"
+                                class="text-white/70 transition hover:text-white"
+                                title="Хасах"
+                                @mousedown.prevent="removeChip(name)"
+                            >
+                                ✕
+                            </button>
                         </span>
                     </div>
                 </div>
 
                 <div class="min-h-0 flex-1 overflow-y-auto py-1">
                     <button
+                        v-if="! multiple"
+                        type="button"
+                        class="flex w-full items-center gap-2 border-b border-slate-100 px-3 py-2 text-left text-sm text-slate-500 transition hover:bg-slate-50"
+                        @mousedown.prevent="commitValue('')"
+                    >
+                        Сонголтгүй
+                    </button>
+                    <button
                         v-for="(opt, idx) in filteredOptions"
                         :key="`${opt.value}-${idx}`"
                         type="button"
-                        class="flex w-full items-start gap-2 px-2.5 py-1.5 text-left text-sm hover:bg-brand-navy-50"
+                        class="flex w-full items-center gap-2.5 px-3 py-2 text-left transition"
                         :class="[
-                            idx === highlight ? 'bg-brand-navy-50' : '',
-                            isSelected(opt) ? 'bg-sky-50' : '',
+                            idx === highlight ? 'bg-brand-navy-50' : 'hover:bg-slate-50',
+                            isSelected(opt) ? 'bg-brand-navy-50/70' : '',
                         ]"
                         @mousedown.prevent="pickOption(opt)"
                     >
                         <span
-                            v-if="multiple"
-                            class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px]"
+                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold uppercase"
                             :class="isSelected(opt)
-                                ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
-                                : 'border-slate-300 text-transparent'"
+                                ? 'bg-brand-navy-600 text-white'
+                                : 'bg-slate-100 text-slate-500'"
+                        >
+                            {{ initials(opt) }}
+                        </span>
+
+                        <span class="min-w-0 flex-1">
+                            <span class="block truncate text-sm font-medium text-slate-800">{{ opt.label ?? opt.value }}</span>
+                            <span
+                                v-if="opt.hint"
+                                class="block truncate text-[11px] text-slate-500"
+                                :title="opt.hint"
+                            >{{ opt.hint }}</span>
+                            <span
+                                v-if="opt.org"
+                                class="block truncate text-[10px] uppercase tracking-wide text-slate-400"
+                                :title="opt.org"
+                            >{{ opt.org }}</span>
+                        </span>
+
+                        <span
+                            class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px]"
+                            :class="isSelected(opt)
+                                ? 'bg-brand-navy-600 text-white'
+                                : 'border border-slate-200 text-transparent'"
                         >
                             ✓
                         </span>
-                        <span class="min-w-0 flex-1">
-                            <span class="block truncate font-medium text-slate-800">{{ opt.label ?? opt.value }}</span>
-                            <span
-                                v-if="opt.hint"
-                                class="block truncate text-[11px] font-normal text-slate-500"
-                                :title="opt.hint"
-                            >{{ opt.hint }}</span>
-                        </span>
                     </button>
-                    <p v-if="! filteredOptions.length" class="px-2.5 py-3 text-xs text-slate-400">
-                        Утасны жагсаалтад тохирох нэр олдсонгүй.
+                    <p v-if="! filteredOptions.length" class="px-3 py-6 text-center text-xs text-slate-400">
+                        Тохирох нэр олдсонгүй.<br>
+                        <span class="text-[11px]">Ангиллын шүүлтээ өөрчилж эсвэл өөр нэр бичиж үзнэ үү.</span>
                     </p>
                 </div>
 
-                <div v-if="multiple" class="flex shrink-0 items-center justify-between gap-2 border-t border-slate-100 px-2.5 py-2">
-                    <span class="text-[11px] text-slate-500">Сонгосон: {{ selected.length }}</span>
-                    <button
-                        type="button"
-                        class="rounded-lg bg-brand-navy-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-navy-700"
-                        @mousedown.prevent="commitMulti"
-                    >
-                        Болсон
-                    </button>
+                <div v-if="multiple" class="flex shrink-0 items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/70 px-3 py-2">
+                    <span class="text-[11px] text-slate-500">
+                        Сонгосон: <b class="text-slate-700">{{ selected.length }}</b>
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <button
+                            v-if="selected.length"
+                            type="button"
+                            class="rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-white hover:text-red-600"
+                            @mousedown.prevent="clearSelection"
+                        >
+                            Цэвэрлэх
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-lg bg-brand-navy-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-navy-700"
+                            @mousedown.prevent="commitMulti"
+                        >
+                            Болсон
+                        </button>
+                    </span>
                 </div>
             </div>
         </Teleport>

@@ -168,6 +168,54 @@
         @apply block w-full min-h-[2.35rem] resize-none border-0 bg-transparent px-1.5 py-1
             text-sm leading-snug text-slate-800 shadow-none outline-none ring-0
             focus:border-0 focus:outline-none focus:ring-0;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
+    .ui-sheet-editor[type='date'],
+    .ui-sheet-editor[type='number'] {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .ui-sheet-editor[type='number']::-webkit-outer-spin-button,
+    .ui-sheet-editor[type='number']::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    .ui-sheet-editor[type='number'] {
+        -moz-appearance: textfield;
+        appearance: textfield;
+    }
+
+    /* Компакт бүртгэлийн хүснэгт — нүд дарахад багана/мөр тэлэхгүй */
+    .decree-sheet table {
+        table-layout: fixed;
+    }
+
+    .decree-sheet td,
+    .decree-sheet th {
+        overflow: hidden;
+    }
+
+    .decree-sheet .ui-sheet-cell {
+        min-height: 1.55rem;
+    }
+
+    .decree-sheet .ui-sheet-display {
+        @apply px-1 py-0.5 text-[11px] leading-tight;
+        min-height: 1.55rem;
+    }
+
+    .decree-sheet .ui-sheet-editor {
+        @apply px-1 py-0.5 text-[11px] leading-tight;
+        min-height: 1.55rem;
+    }
+
+    .decree-sheet .ui-sheet-cell.is-editing {
+        @apply ring-1 ring-inset ring-brand-navy-500/40;
     }
 
     .ui-icon-btn {

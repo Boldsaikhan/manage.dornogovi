@@ -82,30 +82,7 @@ class TaskController extends Controller
      */
     private function phoneDirectoryPeople(): array
     {
-        $items = [];
-
-        PhoneDirectoryEntry::query()
-            ->orderBy('org_order')
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get(['person_name', 'position', 'org_name', 'category'])
-            ->each(function (PhoneDirectoryEntry $row) use (&$items) {
-                $name = PersonName::short(trim((string) $row->person_name));
-
-                if ($name === '') {
-                    return;
-                }
-
-                $items[$name] = [
-                    'value' => $name,
-                    'label' => $name,
-                    'hint' => trim((string) $row->position),
-                    'org' => trim((string) $row->org_name),
-                    'category' => $row->category ?: PhoneDirectoryEntry::guessCategory($row->org_name),
-                ];
-            });
-
-        return array_values($items);
+        return PhoneDirectoryEntry::peopleOptions();
     }
 
     public function store(Request $request): RedirectResponse
