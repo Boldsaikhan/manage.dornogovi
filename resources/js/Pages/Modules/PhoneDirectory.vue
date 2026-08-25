@@ -41,25 +41,37 @@ const importForm = useForm({
     replace: false,
 });
 
-// Ангилал тус бүрийн байгууллагын тоо — «хэлтэс» сонголтыг харуулахгүй.
+// Ангилал тус бүрийн хүний тоо + ангилалгүй үлдсэн бүлгүүд.
 const categoryTabs = computed(() => {
     const counts = {};
+    let none = 0;
+
     props.groups.forEach((g) => {
-        const key = g.category && g.category !== 'heltes' ? g.category : '';
-        if (! key) return;
+        const key = g.category || '';
+
+        if (! key) {
+            none += g.rows.length;
+
+            return;
+        }
+
         counts[key] = (counts[key] ?? 0) + g.rows.length;
     });
 
-    return [
+    const tabs = [
         { value: 'all', label: 'Бүгд', count: props.total },
-        ...Object.entries(props.categories)
-            .filter(([value]) => value !== 'heltes')
-            .map(([value, label]) => ({
-                value,
-                label,
-                count: counts[value] ?? 0,
-            })),
+        ...Object.entries(props.categories).map(([value, label]) => ({
+            value,
+            label,
+            count: counts[value] ?? 0,
+        })),
     ];
+
+    if (none) {
+        tabs.push({ value: 'none', label: 'Ангилалгүй', count: none });
+    }
+
+    return tabs;
 });
 
 // Албан хаагчдын нэгжүүд (хэлтэс) — АЗДТГ хэсгийн сонголт.
@@ -67,7 +79,9 @@ const filteredGroups = computed(() => {
     const q = search.value.trim().toLowerCase();
     const scoped = categoryFilter.value === 'all'
         ? props.groups
-        : props.groups.filter((g) => g.category === categoryFilter.value);
+        : props.groups.filter((g) => (categoryFilter.value === 'none'
+            ? ! g.category
+            : g.category === categoryFilter.value));
 
     if (!q) return scoped;
 
