@@ -36,6 +36,7 @@ class UserAccessController extends Controller
                 'department' => $u->department?->name,
                 'position' => $u->position,
                 'is_department_head' => (bool) $u->is_department_head,
+                'is_specialist' => (bool) $u->is_specialist,
                 'permissions' => $u->modulePermissions
                     ->mapWithKeys(fn (UserModulePermission $p) => [$p->module_key => $p->level])
                     ->all(),
@@ -59,6 +60,7 @@ class UserAccessController extends Controller
             'position' => ['nullable', 'string', 'max:255'],
             'is_admin' => ['boolean'],
             'is_department_head' => ['boolean'],
+            'is_specialist' => ['boolean'],
         ]);
 
         User::create([
@@ -67,6 +69,7 @@ class UserAccessController extends Controller
             'email_verified_at' => now(),
             'is_admin' => $request->boolean('is_admin'),
             'is_department_head' => $request->boolean('is_department_head'),
+            'is_specialist' => $request->boolean('is_specialist'),
         ]);
 
         return back()->with('success', 'Албан хаагч нэмлээ.');
@@ -82,6 +85,7 @@ class UserAccessController extends Controller
             'position' => ['nullable', 'string', 'max:255'],
             'is_admin' => ['boolean'],
             'is_department_head' => ['boolean'],
+            'is_specialist' => ['boolean'],
             'password' => ['nullable', 'string', 'min:8'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['in:view,manage'],
@@ -95,6 +99,7 @@ class UserAccessController extends Controller
             'position' => $data['position'] ?? null,
             'is_admin' => $request->boolean('is_admin'),
             'is_department_head' => $request->boolean('is_department_head'),
+            'is_specialist' => $request->boolean('is_specialist'),
         ]);
 
         if (! empty($data['password'])) {

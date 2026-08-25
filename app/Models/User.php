@@ -27,6 +27,7 @@ class User extends Authenticatable
         'department_id',
         'position',
         'is_department_head',
+        'is_specialist',
     ];
 
     /**
@@ -47,6 +48,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_admin' => 'boolean',
             'is_department_head' => 'boolean',
+            'is_specialist' => 'boolean',
         ];
     }
 

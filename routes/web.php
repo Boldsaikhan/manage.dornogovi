@@ -36,8 +36,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/credentials/{system}/reveal', [CredentialController::class, 'reveal'])->name('credentials.reveal');
 
     Route::get('/uureg', [TaskController::class, 'index'])->name('tasks.index');
+    Route::post('/uureg', [TaskController::class, 'store'])->name('tasks.store');
     Route::patch('/uureg/{task}', [TaskController::class, 'update'])->name('tasks.update');
-    Route::post('/uureg/assign-department', [TaskController::class, 'assignDepartment'])->name('tasks.assign-department');
+    Route::delete('/uureg/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+    Route::post('/uureg/documents', [TaskController::class, 'storeDocument'])->name('tasks.documents.store');
+    Route::get('/uureg/documents/{document}/download', [TaskController::class, 'downloadDocument'])->name('tasks.documents.download');
+    Route::delete('/uureg/documents/{document}', [TaskController::class, 'destroyDocument'])->name('tasks.documents.destroy');
 
     Route::get('/modules/leaves', [ModuleResourceController::class, 'index'])->name('leaves.index');
     Route::get('/modules/assignments', [ModuleResourceController::class, 'index'])->name('assignments.index');

@@ -27,9 +27,36 @@ class ModuleResourceController extends Controller
             $query->with('user:id,name');
         }
 
+        // Хамрах хүрээгээр (агентлаг/сумд/байгууллага) тусад нь бүртгэх — 'all' үед бүгд.
+        $scopes = $config['scopes'] ?? [];
+        $scopeColumn = $config['scope_column'] ?? 'scope';
+        $activeScope = (string) $request->query('scope', 'all');
+
+        if (! $scopes || ! array_key_exists($activeScope, $scopes)) {
+            $activeScope = 'all';
+        } else {
+            $query->where($scopeColumn, $activeScope);
+        }
+
+        $scopeTabs = [];
+        if ($scopes) {
+            $counts = $modelClass::query()
+                ->selectRaw("{$scopeColumn} as scope_key, count(*) as aggregate")
+                ->groupBy($scopeColumn)
+                ->pluck('aggregate', 'scope_key');
+
+            $scopeTabs[] = ['value' => 'all', 'label' => 'Нийт', 'count' => (int) $counts->sum()];
+            foreach ($scopes as $value => $label) {
+                $scopeTabs[] = ['value' => $value, 'label' => $label, 'count' => (int) ($counts[$value] ?? 0)];
+            }
+        }
+
         $rows = $query->limit(200)->get()->map(fn (Model $row) => $this->serialize($row, $config));
 
         return Inertia::render('Modules/ResourceIndex', [
+            'scopeTabs' => $scopeTabs,
+            'activeScope' => $activeScope,
+            'scopeField' => $scopes ? $scopeColumn : null,
             'module' => $module,
             'title' => $config['title'],
             'description' => $config['description'] ?? '',
@@ -149,17 +176,26 @@ class ModuleResourceController extends Controller
 
         foreach ($config['columns'] as $col) {
             $key = $col['key'];
-            $out[$key] = match ($key) {
-                'user_name' => $row->user->name ?? '—',
-                'kind_label' => method_exists($row, 'kindLabel') ? $row->kindLabel() : ($row->kind ?? '—'),
-                'for_new_hires' => $row->for_new_hires ? 'Тийм' : 'Үгүй',
-                'published_at', 'held_at', 'start_date', 'end_date', 'issued_on', 'due_on' => optional($row->{$key})->format(
-                    str_contains($key, 'held') ? 'Y-m-d H:i' : 'Y-m-d'
-                ) ?? '—',
-                default => $row->{$key} ?? '—',
+            $out[$key] = match (true) {
+                $key === ($config['scope_column'] ?? 'scope') && ! empty($config['scopes'])
+                    => $config['scopes'][$row->{$key}] ?? ($row->{$key} ?? '—'),
+                default => $this->serializeValue($row, $key),
             };
         }
 
         return $out;
+    }
+
+    private function serializeValue(Model $row, string $key): string
+    {
+        return match ($key) {
+            'user_name' => $row->user->name ?? '—',
+            'kind_label' => method_exists($row, 'kindLabel') ? $row->kindLabel() : ($row->kind ?? '—'),
+            'for_new_hires' => $row->for_new_hires ? 'Тийм' : 'Үгүй',
+            'published_at', 'held_at', 'start_date', 'end_date', 'issued_on', 'due_on' => optional($row->{$key})->format(
+                str_contains($key, 'held') ? 'Y-m-d H:i' : 'Y-m-d'
+            ) ?? '—',
+            default => (string) ($row->{$key} ?? '—'),
+        };
     }
 }

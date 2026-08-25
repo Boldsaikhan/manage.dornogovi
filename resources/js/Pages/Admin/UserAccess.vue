@@ -21,6 +21,7 @@ const createForm = useForm({
     position: '',
     is_admin: false,
     is_department_head: false,
+    is_specialist: false,
 });
 
 const editState = reactive({
@@ -31,6 +32,7 @@ const editState = reactive({
     position: '',
     is_admin: false,
     is_department_head: false,
+    is_specialist: false,
     password: '',
     permissions: {},
 });
@@ -44,6 +46,7 @@ const loadSelected = () => {
     editState.position = selected.value.position || '';
     editState.is_admin = selected.value.is_admin;
     editState.is_department_head = selected.value.is_department_head;
+    editState.is_specialist = selected.value.is_specialist;
     editState.password = '';
     editState.permissions = { ...selected.value.permissions };
 };
@@ -111,6 +114,7 @@ const createUser = () => {
                     <div class="flex flex-wrap gap-4 text-sm font-medium text-slate-700">
                         <label class="flex items-center gap-2"><input v-model="editState.is_admin" type="checkbox" class="rounded text-brand-navy-600" /> Супер админ</label>
                         <label class="flex items-center gap-2"><input v-model="editState.is_department_head" type="checkbox" class="rounded text-brand-navy-600" /> Хэлтсийн дарга</label>
+                        <label class="flex items-center gap-2"><input v-model="editState.is_specialist" type="checkbox" class="rounded text-brand-navy-600" /> Мэргэжилтэн</label>
                     </div>
 
                     <div class="ui-table-wrap">

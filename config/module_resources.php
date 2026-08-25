@@ -8,14 +8,27 @@ return [
         'model' => App\Models\Leave::class,
         'title' => 'Чөлөөний бүртгэл',
         'description' => 'Албан хаагчдын чөлөө, амралтын бүртгэл.',
+        'scope_column' => 'scope',
+        'scope_label' => 'Хамрах хүрээ',
+        'scopes' => [
+            'agentlag' => 'Агентлаг',
+            'sum' => 'Сумд',
+            'baiguullaga' => 'Байгууллага',
+        ],
         'columns' => [
             ['key' => 'user_name', 'label' => 'Албан хаагч'],
+            ['key' => 'scope', 'label' => 'Хамрах хүрээ'],
+            ['key' => 'org_name', 'label' => 'Агентлаг / сум / байгууллага'],
             ['key' => 'type', 'label' => 'Төрөл'],
             ['key' => 'start_date', 'label' => 'Эхлэх'],
             ['key' => 'end_date', 'label' => 'Дуусах'],
             ['key' => 'status', 'label' => 'Төлөв'],
         ],
         'fields' => [
+            ['name' => 'scope', 'label' => 'Хамрах хүрээ', 'type' => 'select', 'required' => true, 'options' => [
+                'agentlag' => 'Агентлаг', 'sum' => 'Сумд', 'baiguullaga' => 'Байгууллага',
+            ]],
+            ['name' => 'org_name', 'label' => 'Агентлаг / сум / байгууллагын нэр', 'type' => 'text'],
             ['name' => 'type', 'label' => 'Төрөл', 'type' => 'select', 'options' => [
                 'chuluu' => 'Чөлөө', 'amralt' => 'Амралт', 'busad' => 'Бусад',
             ]],
@@ -27,7 +40,7 @@ return [
                 'pending' => 'Хүлээгдэж буй', 'approved' => 'Зөвшөөрсөн', 'rejected' => 'Татгалзсан',
             ]],
         ],
-        'defaults' => ['status' => 'pending', 'type' => 'chuluu'],
+        'defaults' => ['status' => 'pending', 'type' => 'chuluu', 'scope' => 'baiguullaga'],
         'on_create' => 'attach_user_department',
     ],
     'assignments' => [

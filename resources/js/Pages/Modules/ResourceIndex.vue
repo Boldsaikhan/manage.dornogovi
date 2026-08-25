@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
@@ -12,6 +12,9 @@ const props = defineProps({
     rows: Array,
     canManage: Boolean,
     storeUrl: String,
+    scopeTabs: { type: Array, default: () => [] },
+    activeScope: { type: String, default: 'all' },
+    scopeField: { type: String, default: null },
 });
 
 const showForm = ref(false);
@@ -21,7 +24,24 @@ props.fields.forEach((f) => {
     formState[f.name] = f.type === 'checkbox' ? false : '';
 });
 
+// Идэвхтэй таб дээр шинээр нэмэхэд хамрах хүрээ нь урьдчилан сонгогдоно.
+if (props.scopeField && props.activeScope !== 'all') {
+    formState[props.scopeField] = props.activeScope;
+}
+
 const form = useForm({ ...formState });
+
+const activeScopeLabel = computed(
+    () => props.scopeTabs.find((t) => t.value === props.activeScope)?.label ?? '',
+);
+
+const switchScope = (value) => {
+    router.get(
+        `/modules/${props.module}`,
+        value === 'all' ? {} : { scope: value },
+        { preserveState: false, preserveScroll: true },
+    );
+};
 
 const submit = () => {
     form.transform(() => ({ ...form.data() })).post(props.storeUrl, {
@@ -29,6 +49,9 @@ const submit = () => {
         onSuccess: () => {
             showForm.value = false;
             form.reset();
+            if (props.scopeField && props.activeScope !== 'all') {
+                form[props.scopeField] = props.activeScope;
+            }
         },
     });
 };
@@ -56,6 +79,24 @@ const destroyRow = (id) => {
                     {{ showForm ? 'Хаах' : 'Шинэ нэмэх' }}
                 </button>
             </div>
+
+            <nav v-if="scopeTabs.length" class="flex flex-wrap gap-2">
+                <button
+                    v-for="tab in scopeTabs"
+                    :key="tab.value"
+                    type="button"
+                    class="rounded-full border px-4 py-1.5 text-sm font-medium transition"
+                    :class="
+                        tab.value === activeScope
+                            ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
+                            : 'border-slate-200 bg-white text-slate-600 hover:border-brand-navy-300 hover:text-brand-navy-700'
+                    "
+                    @click="switchScope(tab.value)"
+                >
+                    {{ tab.label }}
+                    <span class="ml-1 text-xs opacity-70">{{ tab.count }}</span>
+                </button>
+            </nav>
 
             <form
                 v-if="showForm && canManage"
@@ -113,7 +154,7 @@ const destroyRow = (id) => {
                         </tr>
                         <tr v-if="!rows.length">
                             <td :colspan="columns.length + (canManage ? 1 : 0)" class="!py-12 text-center text-slate-400">
-                                Одоогоор бүртгэл алга.
+                                {{ activeScopeLabel && activeScope !== 'all' ? activeScopeLabel + '-ын бүртгэл алга.' : 'Одоогоор бүртгэл алга.' }}
                             </td>
                         </tr>
                     </tbody>
