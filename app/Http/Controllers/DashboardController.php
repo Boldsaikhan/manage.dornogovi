@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\System;
+use App\Support\ModuleAccess;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -11,6 +12,8 @@ class DashboardController extends Controller
 {
     public function index(Request $request): Response
     {
+        abort_unless(ModuleAccess::canView($request->user(), 'systems'), 403);
+
         $userId = $request->user()->id;
 
         $systems = System::query()

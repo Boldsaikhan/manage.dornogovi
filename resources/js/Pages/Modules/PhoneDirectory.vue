@@ -88,6 +88,13 @@ const flash = computed(() => page.props.flash?.success ?? null);
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
+                    <a
+                        v-if="total"
+                        :href="route('phone-directory.export')"
+                        class="ui-btn-ghost"
+                    >
+                        Word татах
+                    </a>
                     <button
                         v-if="canManage"
                         type="button"

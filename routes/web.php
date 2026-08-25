@@ -85,6 +85,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/systems/{system}', [SystemSettingsController::class, 'update'])->name('systems.update');
         Route::post('/systems/{system}/check-embed', [SystemSettingsController::class, 'checkEmbed'])->name('systems.check-embed');
         Route::patch('/ai-settings', [SystemSettingsController::class, 'updateAi'])->name('ai-settings.update');
+        Route::patch('/menu-settings', [SystemSettingsController::class, 'updateMenus'])->name('menu-settings.update');
 
         Route::get('/users', [UserAccessController::class, 'index'])->name('users.index');
         Route::post('/users', [UserAccessController::class, 'store'])->name('users.store');

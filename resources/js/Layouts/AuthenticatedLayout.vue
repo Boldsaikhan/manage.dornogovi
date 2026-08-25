@@ -42,7 +42,11 @@ const iconPaths = {
 const user = computed(() => page.props.auth.user);
 const moduleNav = computed(() => (page.props.moduleNav ?? []).filter((g) => g.key !== 'systems'));
 const navSystems = computed(() => page.props.nav ?? []);
-const externalSystems = computed(() => navSystems.value.filter((s) => !s.is_internal));
+const externalSystems = computed(() =>
+    page.props.systemsHubEnabled === false
+        ? []
+        : navSystems.value.filter((s) => !s.is_internal),
+);
 const vaultUnlocked = computed(() => page.props.vault?.unlocked ?? false);
 
 const systemHint = (system) => {

@@ -23,6 +23,11 @@ class ModuleAccess
             return false;
         }
 
+        // Глобал хаасан цэс — хэн ч (админ ч) харахгүй / нээхгүй.
+        if (! ModuleVisibility::isEnabled($moduleKey)) {
+            return false;
+        }
+
         if ($user->is_admin) {
             return true;
         }
@@ -41,6 +46,10 @@ class ModuleAccess
     public static function canManage(?User $user, string $moduleKey): bool
     {
         if (! $user) {
+            return false;
+        }
+
+        if (! ModuleVisibility::isEnabled($moduleKey)) {
             return false;
         }
 

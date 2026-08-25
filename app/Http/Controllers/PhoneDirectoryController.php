@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\PhoneDirectoryEntry;
 use App\Support\ModuleAccess;
 use App\Support\PhoneDirectoryDocxParser;
+use App\Support\PhoneDirectoryDocxWriter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -46,6 +48,42 @@ class PhoneDirectoryController extends Controller
             'total' => $entries->count(),
             'orgNames' => $entries->pluck('org_name')->unique()->values(),
             'canManage' => ModuleAccess::canManage($request->user(), self::MODULE),
+        ]);
+    }
+
+    public function export(Request $request, PhoneDirectoryDocxWriter $writer): HttpResponse
+    {
+        abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
+
+        $groups = PhoneDirectoryEntry::query()
+            ->orderBy('org_order')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->groupBy('org_name')
+            ->map(fn ($rows, $orgName) => [
+                'org_name' => $orgName,
+                'rows' => $rows->map(fn (PhoneDirectoryEntry $row) => [
+                    'person_name' => $row->person_name,
+                    'position' => $row->position,
+                    'office_phone' => $row->office_phone,
+                    'mobile_phone' => $row->mobile_phone,
+                ])->all(),
+            ])
+            ->values()
+            ->all();
+
+        $tmp = tempnam(sys_get_temp_dir(), 'phones');
+        $writer->write($groups, $tmp);
+        $content = (string) file_get_contents($tmp);
+        @unlink($tmp);
+
+        $fileName = 'Утасны жагсаалт '.now()->format('Y-m-d').'.docx';
+
+        return response($content, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition' => "attachment; filename=\"phone-directory.docx\"; filename*=UTF-8''".rawurlencode($fileName),
+            'Content-Length' => (string) strlen($content),
         ]);
     }
 

@@ -49,6 +49,7 @@ class HandleInertiaRequests extends Middleware
             'nav' => fn () => $this->navigation($request),
             'moduleNav' => fn () => ModuleAccess::navFor($request->user()),
             'aiAssistant' => fn () => $this->aiAssistantMeta($request),
+            'systemsHubEnabled' => fn () => ModuleAccess::canView($request->user(), 'systems'),
         ];
     }
 

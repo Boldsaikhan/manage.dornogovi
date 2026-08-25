@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\System;
 use App\Services\Ai\AiSettings;
 use App\Services\EmbedChecker;
+use App\Support\ModuleAccess;
+use App\Support\ModuleVisibility;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -33,7 +35,30 @@ class SystemSettingsController extends Controller
                 'can_auto_submit' => $system->canAutoSubmit(),
             ]),
             'ai' => $aiSettings->forAdmin(),
+            'menus' => ModuleVisibility::forAdmin(),
         ]);
+    }
+
+    public function updateMenus(Request $request): RedirectResponse
+    {
+        $allowed = ModuleAccess::definitions()->pluck('key')->all();
+
+        $data = $request->validate([
+            'enabled' => ['required', 'array'],
+            'enabled.*' => ['boolean'],
+        ]);
+
+        $disabled = [];
+        foreach ($allowed as $key) {
+            // Checkbox илгээгдээгүй эсвэл false бол хаасан гэж үзнэ.
+            if (empty($data['enabled'][$key])) {
+                $disabled[] = $key;
+            }
+        }
+
+        ModuleVisibility::setDisabled($disabled);
+
+        return back()->with('success', 'Цэсийн нээлттэй/хаалттай тохиргоо хадгалагдлаа.');
     }
 
     public function updateAi(Request $request, AiSettings $aiSettings): RedirectResponse

@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
@@ -8,6 +8,7 @@ import InputError from '@/Components/InputError.vue';
 const props = defineProps({
     systems: Array,
     ai: Object,
+    menus: { type: Array, default: () => [] },
 });
 
 const page = usePage();
@@ -37,6 +38,27 @@ const aiForm = useForm({
     clear_api_key: false,
 });
 
+const menuEnabled = ref(
+    Object.fromEntries((props.menus ?? []).map((m) => [m.key, m.enabled !== false])),
+);
+
+const menusByGroup = computed(() => {
+    const map = {};
+    for (const item of props.menus ?? []) {
+        if (!map[item.group]) {
+            map[item.group] = { label: item.group_label, items: [] };
+        }
+        map[item.group].items.push(item);
+    }
+    return Object.values(map);
+});
+
+const menuForm = useForm({ enabled: menuEnabled.value });
+
+const saveMenus = () => {
+    menuForm.enabled = { ...menuEnabled.value };
+    menuForm.patch(route('admin.menu-settings.update'), { preserveScroll: true });
+};
 const openEdit = (system) => {
     editing.value = system;
     form.clearErrors();
@@ -87,6 +109,54 @@ const saveAi = () => {
         >
             {{ page.props.flash.success }}
         </div>
+
+        <section class="mb-8 rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm">
+            <div class="mb-4">
+                <h2 class="text-base font-semibold text-brand-navy-900">Цэс нээх / хаах</h2>
+                <p class="mt-1 max-w-2xl text-sm text-brand-navy-400">
+                    Хаасан цэс бүх хэрэглэгчид харагдахгүй, шууд хаягаар ч нээгдэхгүй.
+                    Дахин нээхийн тулд эндээс асаана.
+                </p>
+            </div>
+
+            <form class="space-y-5" @submit.prevent="saveMenus">
+                <div
+                    v-for="group in menusByGroup"
+                    :key="group.label"
+                    class="rounded-xl border border-slate-100 bg-slate-50/80 p-4"
+                >
+                    <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {{ group.label }}
+                    </h3>
+                    <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        <label
+                            v-for="item in group.items"
+                            :key="item.key"
+                            class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"
+                        >
+                            <span class="font-medium text-slate-800">{{ item.label }}</span>
+                            <span class="flex items-center gap-2">
+                                <span
+                                    class="text-[11px] font-semibold"
+                                    :class="menuEnabled[item.key] ? 'text-emerald-600' : 'text-slate-400'"
+                                >
+                                    {{ menuEnabled[item.key] ? 'Нээлттэй' : 'Хаалттай' }}
+                                </span>
+                                <input
+                                    v-model="menuEnabled[item.key]"
+                                    type="checkbox"
+                                    class="h-4 w-4 rounded border-slate-300 text-brand-navy-600 focus:ring-brand-navy-500"
+                                />
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" class="ui-btn-primary" :disabled="menuForm.processing">
+                    Цэсийн тохиргоо хадгалах
+                </button>
+            </form>
+        </section>
 
         <section class="mb-8 rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm">
             <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
