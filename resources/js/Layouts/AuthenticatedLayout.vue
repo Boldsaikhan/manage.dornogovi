@@ -4,6 +4,7 @@ import { Link, router, usePage } from '@inertiajs/vue3';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import StateEmblem from '@/Components/StateEmblem.vue';
+import OrnamentMark from '@/Components/OrnamentMark.vue';
 
 defineProps({
     title: { type: String, default: '' },
@@ -81,139 +82,135 @@ const isCurrent = (routeName) => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-brand-navy-50">
+    <div class="min-h-screen bg-slate-100">
         <aside
-            class="fixed inset-y-0 left-0 z-40 w-64 bg-brand-navy-800 text-brand-navy-100 transition-transform lg:translate-x-0"
+            class="fixed inset-y-0 left-0 z-40 flex w-[17.5rem] flex-col border-r border-slate-200/80 bg-white shadow-soft transition-transform lg:translate-x-0"
             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
         >
-            <div class="flex h-16 items-center gap-3 border-b border-white/10 px-5">
-                <StateEmblem class="h-9 w-9 shrink-0" />
-                <div class="leading-tight">
-                    <div class="text-sm font-semibold text-white">Дорноговь</div>
-                    <div class="text-xs text-brand-navy-300">Нэгдсэн систем</div>
+            <div class="flex h-[4.5rem] items-center gap-3 border-b border-slate-100 px-5">
+                <StateEmblem class="h-10 w-10 shrink-0" />
+                <div class="min-w-0 leading-tight">
+                    <div class="truncate text-sm font-bold tracking-tight text-brand-navy-800">Дорноговь</div>
+                    <div class="text-[11px] font-medium tracking-wide text-slate-500">Нэгдсэн систем</div>
                 </div>
             </div>
 
-            <nav class="h-[calc(100vh-4rem)] space-y-1 overflow-y-auto p-3">
+            <nav class="flex-1 space-y-0.5 overflow-y-auto p-3">
                 <Link
                     :href="route('dashboard')"
-                    class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-white/5"
-                    :class="isCurrent('dashboard') ? 'bg-brand-orange-500 font-medium text-white hover:bg-brand-orange-500' : 'text-brand-navy-100'"
+                    class="ui-nav-link"
+                    :class="isCurrent('dashboard') ? 'ui-nav-link-active' : ''"
                 >
-                    <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                    <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                         <path :d="iconPaths.grid" />
                     </svg>
                     <span>Холбосон системүүд</span>
                 </Link>
 
                 <template v-for="group in moduleNav" :key="group.key">
-                    <div class="!mt-3 px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-brand-navy-400">
-                        {{ group.label }}
-                    </div>
+                    <div class="ui-section-label">{{ group.label }}</div>
                     <Link
                         v-for="item in group.items"
                         :key="item.key"
                         :href="route(item.route)"
-                        class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-white/5"
-                        :class="isCurrent(item.route) ? 'bg-brand-orange-500 font-medium text-white hover:bg-brand-orange-500' : 'text-brand-navy-100'"
+                        class="ui-nav-link"
+                        :class="isCurrent(item.route) ? 'ui-nav-link-active' : ''"
                     >
-                        <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                        <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                             <path :d="iconPaths[item.icon] || iconPaths.clipboard" />
                         </svg>
                         <span class="truncate">{{ item.label }}</span>
                     </Link>
                 </template>
 
-                <div v-if="externalSystems.length" class="!mt-3 px-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-brand-navy-400">
-                    Нэвтрэх
-                </div>
+                <div v-if="externalSystems.length" class="ui-section-label">Нэвтрэх</div>
                 <button
                     v-for="system in externalSystems"
                     :key="system.id"
+                    type="button"
                     :title="systemHint(system)"
-                    class="group flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-brand-navy-100 transition hover:bg-white/10 hover:text-white"
+                    class="ui-nav-link w-full text-left"
                     @click="openSystem(system)"
                 >
-                    <svg
-                        class="h-5 w-5 shrink-0 text-brand-navy-300 transition group-hover:text-brand-orange-500"
-                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"
-                    >
+                    <svg class="h-5 w-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                         <path :d="iconPaths[system.icon] ?? iconPaths.globe" />
                     </svg>
-                    <span class="flex-1 truncate text-left">{{ system.name }}</span>
-                    <span v-if="system.has_credential" class="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-orange-500 group-hover:hidden" />
-                    <svg
-                        class="hidden h-4 w-4 shrink-0 text-brand-orange-500 group-hover:block"
-                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"
-                    >
-                        <path :d="!system.requires_login || (system.has_credential && vaultUnlocked) ? iconPaths.external : iconPaths.lock" />
-                    </svg>
+                    <span class="flex-1 truncate">{{ system.name }}</span>
+                    <span v-if="system.has_credential" class="h-1.5 w-1.5 rounded-full bg-brand-orange-500" />
                 </button>
-
-                <div class="!mt-4 space-y-1 border-t border-white/10 pt-3">
-                    <div class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-brand-navy-300">
-                        <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                            <path :d="iconPaths.lock" />
-                        </svg>
-                        <span class="flex-1">Сан</span>
-                        <span
-                            class="rounded-full px-2 py-0.5 text-[10px]"
-                            :class="vaultUnlocked ? 'bg-green-500/20 text-green-300' : 'bg-white/10 text-brand-navy-300'"
-                        >
-                            {{ vaultUnlocked ? 'нээлттэй' : 'түгжээтэй' }}
-                        </span>
-                    </div>
-
-                    <Link
-                        v-if="user.is_admin"
-                        :href="route('admin.users.index')"
-                        class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-white/5"
-                        :class="isCurrent('admin.users.*') ? 'bg-brand-orange-500 font-medium text-white' : 'text-brand-navy-100'"
-                    >
-                        <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                            <path :d="iconPaths.users" />
-                        </svg>
-                        <span>Хандах эрх</span>
-                    </Link>
-
-                    <Link
-                        v-if="user.is_admin"
-                        :href="route('admin.systems.index')"
-                        class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-white/5"
-                        :class="isCurrent('admin.systems.*') ? 'bg-brand-orange-500 font-medium text-white' : 'text-brand-navy-100'"
-                    >
-                        <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                            <path :d="iconPaths.settings" />
-                        </svg>
-                        <span>Системийн тохиргоо</span>
-                    </Link>
-                </div>
             </nav>
+
+            <div class="space-y-1 border-t border-slate-100 p-3">
+                <div class="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-sm text-slate-600">
+                    <svg class="h-5 w-5 shrink-0 text-brand-navy-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path :d="iconPaths.lock" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <span class="flex-1 font-medium">Сан</span>
+                    <span
+                        class="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                        :class="vaultUnlocked ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'"
+                    >
+                        {{ vaultUnlocked ? 'нээлттэй' : 'түгжээтэй' }}
+                    </span>
+                </div>
+
+                <Link
+                    v-if="user.is_admin"
+                    :href="route('admin.users.index')"
+                    class="ui-nav-link"
+                    :class="isCurrent('admin.users.*') ? 'ui-nav-link-active' : ''"
+                >
+                    <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path :d="iconPaths.users" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <span>Хандах эрх</span>
+                </Link>
+
+                <Link
+                    v-if="user.is_admin"
+                    :href="route('admin.systems.index')"
+                    class="ui-nav-link"
+                    :class="isCurrent('admin.systems.*') ? 'ui-nav-link-active' : ''"
+                >
+                    <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path :d="iconPaths.settings" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <span>Системийн тохиргоо</span>
+                </Link>
+
+                <div class="flex items-center justify-center gap-2 px-2 pt-2">
+                    <span class="h-px flex-1 bg-slate-100" />
+                    <OrnamentMark class="h-2.5 w-6 text-brand-orange-500" />
+                    <span class="h-px flex-1 bg-slate-100" />
+                </div>
+            </div>
         </aside>
 
-        <div v-if="sidebarOpen" class="fixed inset-0 z-30 bg-black/50 lg:hidden" @click="sidebarOpen = false" />
+        <div v-if="sidebarOpen" class="fixed inset-0 z-30 bg-brand-navy-950/40 backdrop-blur-[2px] lg:hidden" @click="sidebarOpen = false" />
 
-        <div class="lg:pl-64">
-            <header class="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-brand-navy-100 bg-white px-4 sm:px-6">
-                <button class="text-brand-navy-700 lg:hidden" @click="sidebarOpen = !sidebarOpen">
+        <div class="lg:pl-[17.5rem]">
+            <header class="sticky top-0 z-20 flex h-[4.5rem] items-center gap-4 border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur-md sm:px-6">
+                <button class="rounded-xl p-2 text-brand-navy-700 hover:bg-slate-100 lg:hidden" @click="sidebarOpen = !sidebarOpen">
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24">
                         <path :d="sidebarOpen ? iconPaths.close : iconPaths.menu" />
                     </svg>
                 </button>
 
-                <h1 class="text-base font-semibold text-brand-navy-900">
-                    <slot name="header">{{ title || 'Системүүд' }}</slot>
-                </h1>
+                <div>
+                    <h1 class="text-base font-bold tracking-tight text-brand-navy-800">
+                        <slot name="header">{{ title || 'Системүүд' }}</slot>
+                    </h1>
+                </div>
 
                 <div class="ml-auto">
                     <Dropdown align="right" width="48">
                         <template #trigger>
-                            <button class="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-brand-navy-700 hover:bg-brand-navy-50">
-                                <span class="flex h-7 w-7 items-center justify-center rounded-full bg-brand-navy-100 text-xs font-semibold text-brand-navy-700">
+                            <button class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-sm transition hover:border-brand-navy-200 hover:bg-brand-navy-50">
+                                <span class="flex h-8 w-8 items-center justify-center rounded-full bg-brand-navy-600 text-xs font-bold text-white">
                                     {{ user.name.charAt(0) }}
                                 </span>
-                                <span class="hidden sm:inline">{{ user.name }}</span>
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <span class="hidden font-medium sm:inline">{{ user.name }}</span>
+                                <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
                                 </svg>
                             </button>
@@ -226,7 +223,7 @@ const isCurrent = (routeName) => {
                 </div>
             </header>
 
-            <main class="p-4 sm:p-6">
+            <main class="p-4 sm:p-6 lg:p-8">
                 <slot />
             </main>
         </div>

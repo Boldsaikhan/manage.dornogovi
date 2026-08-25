@@ -157,239 +157,190 @@ onMounted(() => {
     <Head title="Системүүд" />
 
     <AuthenticatedLayout>
-        <template #header>Системүүд</template>
+        <template #header>Холбосон системүүд</template>
 
-        <div
-            v-if="page.props.flash.success"
-            class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-700"
-        >
-            {{ page.props.flash.success }}
-        </div>
+        <div class="ui-page">
+            <div
+                v-if="page.props.flash.success"
+                class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700"
+            >
+                {{ page.props.flash.success }}
+            </div>
 
-        <!-- Тойм -->
-        <div class="mb-6 grid gap-4 sm:grid-cols-3">
-            <div class="rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm">
-                <div class="text-xs font-medium text-brand-navy-400">Нийт систем</div>
-                <div class="mt-1 text-2xl font-semibold text-brand-navy-900">{{ stats.total }}</div>
-            </div>
-            <div class="rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm">
-                <div class="text-xs font-medium text-brand-navy-400">Мэдээлэл хадгалсан</div>
-                <div class="mt-1 text-2xl font-semibold text-brand-orange-600">{{ stats.saved }}</div>
-            </div>
-            <div class="rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm">
-                <div class="text-xs font-medium text-brand-navy-400">Сангийн төлөв</div>
-                <div class="mt-1 flex items-center gap-2">
-                    <span
-                        class="text-sm font-semibold"
-                        :class="vaultUnlocked ? 'text-green-700' : 'text-brand-navy-700'"
-                    >
-                        {{ vaultUnlocked ? 'Нээлттэй' : 'Түгжээтэй' }}
-                    </span>
-                    <button
-                        v-if="vaultUnlocked"
-                        class="rounded-md border border-brand-navy-200 px-2 py-0.5 text-xs text-brand-navy-700 hover:bg-brand-navy-50"
-                        @click="router.post(route('vault.lock'), {}, { preserveScroll: true })"
-                    >
-                        Түгжих
-                    </button>
+            <div class="grid gap-4 sm:grid-cols-3">
+                <div class="ui-stat">
+                    <div class="ui-stat-label">Нийт систем</div>
+                    <div class="ui-stat-value">{{ stats.total }}</div>
+                </div>
+                <div class="ui-stat">
+                    <div class="ui-stat-label">Мэдээлэл хадгалсан</div>
+                    <div class="ui-stat-value text-brand-orange-600">{{ stats.saved }}</div>
+                </div>
+                <div class="ui-stat">
+                    <div class="ui-stat-label">Сангийн төлөв</div>
+                    <div class="mt-1 flex items-center gap-2">
+                        <span
+                            class="text-sm font-bold"
+                            :class="vaultUnlocked ? 'text-emerald-700' : 'text-brand-navy-800'"
+                        >
+                            {{ vaultUnlocked ? 'Нээлттэй' : 'Түгжээтэй' }}
+                        </span>
+                        <button
+                            v-if="vaultUnlocked"
+                            class="ui-btn-ghost !px-2 !py-1 text-xs"
+                            @click="router.post(route('vault.lock'), {}, { preserveScroll: true })"
+                        >
+                            Түгжих
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="mb-4">
             <input
                 v-model="search"
                 type="search"
                 placeholder="Систем хайх…"
-                class="w-full max-w-sm rounded-md border border-brand-navy-200 px-3 py-2 text-sm focus:border-brand-orange-500 focus:ring-brand-orange-500"
+                class="ui-input max-w-md"
             />
-        </div>
 
-        <!-- Системийн картууд -->
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <div
-                v-for="system in filteredSystems"
-                :key="system.id"
-                class="flex flex-col rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm"
-            >
-                <div class="flex items-start gap-3">
-                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-navy-50 text-brand-navy-600">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                            <path :d="iconPaths[system.icon] ?? iconPaths.globe" />
-                        </svg>
-                    </div>
-                    <div class="min-w-0 flex-1">
-                        <h3 class="truncate font-semibold text-brand-navy-800">{{ system.name }}</h3>
-                        <span class="mt-1 inline-block rounded-full bg-brand-navy-100 px-2 py-0.5 text-xs text-brand-navy-600">
-                            {{ system.category }}
+            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <div
+                    v-for="system in filteredSystems"
+                    :key="system.id"
+                    class="ui-card flex flex-col p-5 transition hover:-translate-y-0.5 hover:shadow-panel"
+                >
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-navy-50 text-brand-navy-600">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                <path :d="iconPaths[system.icon] ?? iconPaths.globe" />
+                            </svg>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="truncate font-bold text-brand-navy-800">{{ system.name }}</h3>
+                            <span class="mt-1 inline-block rounded-full bg-brand-navy-50 px-2.5 py-0.5 text-[11px] font-semibold text-brand-navy-600">
+                                {{ system.category }}
+                            </span>
+                        </div>
+                        <span
+                            v-if="system.has_credential"
+                            class="rounded-full bg-brand-orange-100 px-2.5 py-0.5 text-[11px] font-semibold text-brand-orange-700"
+                        >
+                            Хадгалсан
+                        </span>
+                        <span
+                            v-else-if="!system.requires_login"
+                            class="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700"
+                        >
+                            Нээлттэй
                         </span>
                     </div>
-                    <span
-                        v-if="system.has_credential"
-                        class="rounded-full bg-brand-orange-100 px-2 py-0.5 text-xs text-brand-orange-700"
-                    >
-                        Хадгалсан
-                    </span>
-                    <span
-                        v-else-if="!system.requires_login"
-                        class="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700"
-                    >
-                        Нээлттэй
-                    </span>
-                </div>
 
-                <p class="mt-3 flex-1 text-sm text-brand-navy-400">{{ system.description }}</p>
+                    <p class="mt-3 flex-1 text-sm leading-relaxed text-slate-500">{{ system.description }}</p>
 
-                <p v-if="system.last_used_at" class="mt-2 text-xs text-brand-navy-300">
-                    Сүүлд: {{ system.last_used_at }}
-                </p>
+                    <p v-if="system.last_used_at" class="mt-2 text-xs text-slate-400">
+                        Сүүлд: {{ system.last_used_at }}
+                    </p>
 
-                <div class="mt-4 flex flex-wrap gap-2">
-                    <button
-                        class="rounded-md bg-brand-orange-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-orange-600"
-                        @click="launch(system)"
-                    >
-                        {{ !system.requires_login ? 'Нээх' : system.has_credential ? 'Нэвтрэх' : 'Мэдээлэл нэмж нэвтрэх' }}
-                    </button>
+                    <div class="mt-5 flex flex-wrap gap-2">
+                        <button class="ui-btn-primary !py-2" @click="launch(system)">
+                            {{ !system.requires_login ? 'Нээх' : system.has_credential ? 'Нэвтрэх' : 'Мэдээлэл нэмж нэвтрэх' }}
+                        </button>
 
-                    <Link
-                        v-if="system.is_embeddable"
-                        :href="route('systems.show', system.id)"
-                        class="rounded-md border border-brand-navy-200 px-3 py-1.5 text-sm font-medium text-brand-navy-700 hover:bg-brand-navy-50"
-                    >
-                        Дотор нээх
-                    </Link>
-                    <a
-                        v-else
-                        :href="system.entry_url"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="rounded-md border border-brand-navy-200 px-3 py-1.5 text-sm font-medium text-brand-navy-700 hover:bg-brand-navy-50"
-                    >
-                        Зүгээр нээх
-                    </a>
+                        <Link
+                            v-if="system.is_embeddable"
+                            :href="route('systems.show', system.id)"
+                            class="ui-btn-ghost !py-2"
+                        >
+                            Дотор нээх
+                        </Link>
+                        <a
+                            v-else
+                            :href="system.entry_url"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="ui-btn-ghost !py-2"
+                        >
+                            Зүгээр нээх
+                        </a>
 
-                    <button
-                        v-if="system.has_credential"
-                        class="rounded-md border border-brand-navy-200 px-3 py-1.5 text-sm font-medium text-brand-navy-700 hover:bg-brand-navy-50"
-                        @click="openSave(system)"
-                    >
-                        Засах
-                    </button>
-                    <button
-                        v-if="system.has_credential"
-                        class="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-500 hover:bg-red-50"
-                        @click="removeCredential(system)"
-                    >
-                        Устгах
-                    </button>
+                        <button
+                            v-if="system.has_credential"
+                            class="ui-btn-ghost !py-2"
+                            @click="openSave(system)"
+                        >
+                            Засах
+                        </button>
+                        <button
+                            v-if="system.has_credential"
+                            class="ui-btn-danger !border-0 !px-3 !py-2"
+                            @click="removeCredential(system)"
+                        >
+                            Устгах
+                        </button>
+                    </div>
                 </div>
             </div>
+
+            <p v-if="filteredSystems.length === 0" class="py-12 text-center text-sm text-slate-400">
+                Илэрц олдсонгүй.
+            </p>
         </div>
 
-        <p v-if="filteredSystems.length === 0" class="py-10 text-center text-sm text-brand-navy-400">
-            Илэрц олдсонгүй.
-        </p>
-
-        <!-- Нэвтрэх мэдээлэл хадгалах -->
         <Modal :show="saveModal" @close="saveModal = false">
             <form class="p-6" @submit.prevent="submitSave">
-                <h2 class="text-base font-semibold text-brand-navy-900">
-                    {{ activeSystem?.name }} — нэвтрэх мэдээлэл
-                </h2>
-                <p class="mt-1 text-sm text-brand-navy-400">
-                    Мэдээлэл шифрлэгдэн хадгалагдана. Зөвхөн та өөрөө нээж чадна.
-                </p>
+                <h2 class="ui-title text-base">{{ activeSystem?.name }} — нэвтрэх мэдээлэл</h2>
+                <p class="ui-subtitle">Мэдээлэл шифрлэгдэн хадгалагдана. Зөвхөн та өөрөө нээж чадна.</p>
 
-                <div class="mt-4 space-y-3">
+                <div class="mt-5 space-y-4">
                     <div>
-                        <label class="mb-1 block text-xs font-medium text-brand-navy-700">Нэвтрэх нэр</label>
-                        <input
-                            v-model="form.username"
-                            type="text"
-                            autocomplete="off"
-                            class="w-full rounded-md border border-brand-navy-200 px-3 py-2 text-sm focus:border-brand-orange-500 focus:ring-brand-orange-500"
-                        />
+                        <label class="ui-label">Нэвтрэх нэр</label>
+                        <input v-model="form.username" type="text" autocomplete="off" class="ui-input" />
                         <InputError :message="form.errors.username" class="mt-1" />
                     </div>
                     <div>
-                        <label class="mb-1 block text-xs font-medium text-brand-navy-700">Нууц үг</label>
-                        <input
-                            v-model="form.password"
-                            type="password"
-                            autocomplete="new-password"
-                            class="w-full rounded-md border border-brand-navy-200 px-3 py-2 text-sm focus:border-brand-orange-500 focus:ring-brand-orange-500"
-                        />
+                        <label class="ui-label">Нууц үг</label>
+                        <input v-model="form.password" type="password" autocomplete="new-password" class="ui-input" />
                         <InputError :message="form.errors.password" class="mt-1" />
                     </div>
                     <div>
-                        <label class="mb-1 block text-xs font-medium text-brand-navy-700">Тэмдэглэл (заавал биш)</label>
-                        <textarea
-                            v-model="form.note"
-                            rows="2"
-                            class="w-full rounded-md border border-brand-navy-200 px-3 py-2 text-sm focus:border-brand-orange-500 focus:ring-brand-orange-500"
-                        />
+                        <label class="ui-label">Тэмдэглэл (заавал биш)</label>
+                        <textarea v-model="form.note" rows="2" class="ui-input" />
                         <InputError :message="form.errors.note" class="mt-1" />
                     </div>
                 </div>
 
                 <div class="mt-6 flex justify-end gap-2">
-                    <button
-                        type="button"
-                        class="rounded-md border border-brand-navy-200 px-4 py-1.5 text-sm font-medium text-brand-navy-700 hover:bg-brand-navy-50"
-                        @click="saveModal = false"
-                    >
-                        Болих
-                    </button>
-                    <button
-                        type="submit"
-                        :disabled="form.processing"
-                        class="rounded-md bg-brand-orange-500 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-orange-600 disabled:opacity-50"
-                    >
+                    <button type="button" class="ui-btn-ghost" @click="saveModal = false">Болих</button>
+                    <button type="submit" :disabled="form.processing" class="ui-btn-primary">
                         {{ launchAfterSave ? 'Хадгалаад нэвтрэх' : 'Хадгалах' }}
                     </button>
                 </div>
             </form>
         </Modal>
 
-        <!-- Санг нээх -->
         <Modal :show="unlockModal" @close="unlockModal = false">
             <form class="p-6" @submit.prevent="submitUnlock">
-                <h2 class="text-base font-semibold text-brand-navy-900">Нэвтрэх мэдээллийн санг нээх</h2>
-                <p class="mt-1 text-sm text-brand-navy-400">
+                <h2 class="ui-title text-base">Нэвтрэх мэдээллийн санг нээх</h2>
+                <p class="ui-subtitle">
                     Хадгалсан нууц үгсээ задлахын тулд өөрийгөө баталгаажуулна уу.
                     Нэг удаа нээвэл 2 цагийн турш дахин асуухгүй.
                 </p>
 
-                <label class="mt-4 block text-xs font-medium text-brand-navy-700">
-                    Энэ платформ руу нэвтрэх нууц үг
-                </label>
-                <p class="mb-1 text-xs text-brand-navy-300">
+                <label class="ui-label mt-5">Энэ платформ руу нэвтрэх нууц үг</label>
+                <p class="mb-2 text-xs text-slate-400">
                     {{ page.props.auth.user.email }} — бусад системийн нууц үг биш.
                 </p>
                 <input
                     v-model="accountPassword"
                     type="password"
                     autocomplete="current-password"
-                    class="w-full rounded-md border border-brand-navy-200 px-3 py-2 text-sm focus:border-brand-orange-500 focus:ring-brand-orange-500"
+                    class="ui-input"
                 />
                 <p v-if="unlockError" class="mt-1 text-sm text-red-500">{{ unlockError }}</p>
 
                 <div class="mt-6 flex justify-end gap-2">
-                    <button
-                        type="button"
-                        class="rounded-md border border-brand-navy-200 px-4 py-1.5 text-sm font-medium text-brand-navy-700 hover:bg-brand-navy-50"
-                        @click="unlockModal = false"
-                    >
-                        Болих
-                    </button>
-                    <button
-                        type="submit"
-                        :disabled="unlocking"
-                        class="rounded-md bg-brand-orange-500 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-orange-600 disabled:opacity-50"
-                    >
-                        Нээх
-                    </button>
+                    <button type="button" class="ui-btn-ghost" @click="unlockModal = false">Болих</button>
+                    <button type="submit" :disabled="unlocking" class="ui-btn-primary">Нээх</button>
                 </div>
             </form>
         </Modal>

@@ -13,21 +13,25 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['Manrope', 'Segoe UI', ...defaultTheme.fontFamily.sans],
+            },
+            boxShadow: {
+                panel: '0 20px 40px -20px rgb(28 85 165 / 0.18)',
+                soft: '0 10px 30px -12px rgb(15 23 42 / 0.12)',
             },
             colors: {
                 'brand-navy': {
-                    50: '#f4f6f9',
-                    100: '#e2e7ef',
-                    200: '#c5cdd8',
-                    300: '#9aa3b2',
-                    400: '#6c7382',
+                    50: '#f3f7fc',
+                    100: '#e4eef8',
+                    200: '#c5daf0',
+                    300: '#93b9e0',
+                    400: '#5a92cb',
                     500: '#3771b8',
                     600: '#1c55a5',
-                    700: '#2a3445',
-                    800: '#1d2533',
-                    900: '#11161f',
-                    950: '#070a10',
+                    700: '#164789',
+                    800: '#153b70',
+                    900: '#15335d',
+                    950: '#0e2140',
                 },
                 'brand-orange': {
                     50: '#fff7ed',

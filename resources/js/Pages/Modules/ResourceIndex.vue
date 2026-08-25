@@ -41,16 +41,16 @@ const destroyRow = (id) => {
 
 <template>
     <AuthenticatedLayout :title="title">
-        <div class="space-y-4">
+        <div class="ui-page">
             <div class="flex flex-wrap items-end justify-between gap-3">
                 <div>
-                    <h2 class="text-lg font-semibold text-brand-navy-900">{{ title }}</h2>
-                    <p class="mt-1 text-sm text-brand-navy-500">{{ description }}</p>
+                    <h2 class="ui-title">{{ title }}</h2>
+                    <p class="ui-subtitle">{{ description }}</p>
                 </div>
                 <button
                     v-if="canManage"
                     type="button"
-                    class="rounded-lg bg-brand-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-orange-600"
+                    class="ui-btn-accent"
                     @click="showForm = !showForm"
                 >
                     {{ showForm ? 'Хаах' : 'Шинэ нэмэх' }}
@@ -59,15 +59,15 @@ const destroyRow = (id) => {
 
             <form
                 v-if="showForm && canManage"
-                class="grid gap-3 rounded-xl border border-brand-navy-100 bg-white p-4 shadow-sm md:grid-cols-2"
+                class="ui-card grid gap-4 p-5 md:grid-cols-2"
                 @submit.prevent="submit"
             >
                 <div v-for="field in fields" :key="field.name" :class="field.type === 'textarea' ? 'md:col-span-2' : ''">
-                    <label class="mb-1 block text-xs font-medium text-brand-navy-600">{{ field.label }}</label>
+                    <label v-if="field.type !== 'checkbox'" class="ui-label">{{ field.label }}</label>
                     <select
                         v-if="field.type === 'select'"
                         v-model="form[field.name]"
-                        class="w-full rounded-md border-brand-navy-200 text-sm"
+                        class="ui-input"
                         :required="field.required"
                     >
                         <option value="">—</option>
@@ -77,44 +77,42 @@ const destroyRow = (id) => {
                         v-else-if="field.type === 'textarea'"
                         v-model="form[field.name]"
                         rows="3"
-                        class="w-full rounded-md border-brand-navy-200 text-sm"
+                        class="ui-input"
                     />
-                    <label v-else-if="field.type === 'checkbox'" class="flex items-center gap-2 text-sm">
-                        <input v-model="form[field.name]" type="checkbox" class="rounded border-brand-navy-200 text-brand-orange-500" />
+                    <label v-else-if="field.type === 'checkbox'" class="flex items-center gap-2 text-sm font-medium text-slate-700">
+                        <input v-model="form[field.name]" type="checkbox" class="rounded border-slate-300 text-brand-navy-600 focus:ring-brand-navy-600" />
                         {{ field.label }}
                     </label>
                     <input
                         v-else
                         v-model="form[field.name]"
                         :type="field.type === 'number' ? 'number' : field.type === 'datetime' ? 'datetime-local' : field.type"
-                        class="w-full rounded-md border-brand-navy-200 text-sm"
+                        class="ui-input"
                         :required="field.required"
                     />
                 </div>
                 <div class="md:col-span-2">
-                    <button type="submit" class="rounded-lg bg-brand-navy-700 px-4 py-2 text-sm font-medium text-white" :disabled="form.processing">
-                        Хадгалах
-                    </button>
+                    <button type="submit" class="ui-btn-primary" :disabled="form.processing">Хадгалах</button>
                 </div>
             </form>
 
-            <div class="overflow-hidden rounded-xl border border-brand-navy-100 bg-white shadow-sm">
-                <table class="min-w-full text-sm">
-                    <thead class="bg-brand-navy-50 text-left text-xs text-brand-navy-700">
+            <div class="ui-table-wrap">
+                <table class="ui-table">
+                    <thead>
                         <tr>
-                            <th v-for="col in columns" :key="col.key" class="px-3 py-2 font-medium">{{ col.label }}</th>
-                            <th v-if="canManage" class="px-3 py-2" />
+                            <th v-for="col in columns" :key="col.key">{{ col.label }}</th>
+                            <th v-if="canManage" />
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="(row, i) in rows" :key="row.id" class="border-t border-brand-navy-100" :class="i % 2 ? 'bg-brand-navy-50/50' : ''">
-                            <td v-for="col in columns" :key="col.key" class="px-3 py-2 text-brand-navy-700">{{ row[col.key] }}</td>
-                            <td v-if="canManage" class="px-3 py-2 text-right">
-                                <button type="button" class="text-xs text-red-600 hover:underline" @click="destroyRow(row.id)">Устгах</button>
+                        <tr v-for="row in rows" :key="row.id">
+                            <td v-for="col in columns" :key="col.key">{{ row[col.key] }}</td>
+                            <td v-if="canManage" class="text-right">
+                                <button type="button" class="ui-btn-danger !py-1 text-xs" @click="destroyRow(row.id)">Устгах</button>
                             </td>
                         </tr>
                         <tr v-if="!rows.length">
-                            <td :colspan="columns.length + (canManage ? 1 : 0)" class="px-3 py-10 text-center text-brand-navy-400">
+                            <td :colspan="columns.length + (canManage ? 1 : 0)" class="!py-12 text-center text-slate-400">
                                 Одоогоор бүртгэл алга.
                             </td>
                         </tr>

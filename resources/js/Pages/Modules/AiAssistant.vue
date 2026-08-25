@@ -29,34 +29,32 @@ const ask = () => {
 
 <template>
     <AuthenticatedLayout title="AI туслах">
-        <div class="mx-auto flex h-[calc(100vh-8rem)] max-w-3xl flex-col rounded-xl border border-brand-navy-100 bg-white shadow-sm">
-            <div class="border-b border-brand-navy-100 px-4 py-3">
-                <h2 class="font-semibold text-brand-navy-900">Хиймэл оюун ухаант туслах</h2>
-                <p class="text-xs text-brand-navy-500">Зөвхөн энэ системд байгаа мэдээлэл дээр суурилна.</p>
+        <div class="mx-auto flex h-[calc(100vh-9rem)] max-w-3xl flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-panel">
+            <div class="border-b border-slate-100 px-5 py-4">
+                <h2 class="ui-title text-base">Хиймэл оюун ухаант туслах</h2>
+                <p class="ui-subtitle !mt-0.5">Зөвхөн энэ системд байгаа мэдээлэл дээр суурилна.</p>
             </div>
-            <div ref="box" class="flex-1 space-y-3 overflow-y-auto p-4">
+            <div ref="box" class="flex-1 space-y-3 overflow-y-auto bg-slate-50/60 p-5">
                 <div
                     v-for="msg in messages"
                     :key="msg.id"
-                    class="max-w-[85%] rounded-2xl px-3 py-2 text-sm"
-                    :class="msg.role === 'user' ? 'ml-auto bg-brand-navy-700 text-white' : 'bg-brand-navy-50 text-brand-navy-800'"
+                    class="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm"
+                    :class="msg.role === 'user' ? 'ml-auto bg-brand-navy-600 text-white' : 'bg-white text-slate-800 ring-1 ring-slate-100'"
                 >
                     {{ msg.content }}
                 </div>
-                <p v-if="!messages.length" class="text-center text-sm text-brand-navy-400">
+                <p v-if="!messages.length" class="py-10 text-center text-sm text-slate-400">
                     Жишээ: «хүлээгдэж буй чөлөө хэд байна», «үүрэг», «журам»
                 </p>
             </div>
-            <form class="flex gap-2 border-t border-brand-navy-100 p-3" @submit.prevent="ask">
+            <form class="flex gap-2 border-t border-slate-100 bg-white p-4" @submit.prevent="ask">
                 <input
                     v-model="form.message"
                     required
                     placeholder="Асуултаа бичнэ үү…"
-                    class="flex-1 rounded-lg border-brand-navy-200 text-sm"
+                    class="ui-input flex-1"
                 />
-                <button class="rounded-lg bg-brand-orange-500 px-4 py-2 text-sm font-medium text-white" :disabled="form.processing">
-                    Илгээх
-                </button>
+                <button class="ui-btn-primary" :disabled="form.processing">Илгээх</button>
             </form>
         </div>
     </AuthenticatedLayout>

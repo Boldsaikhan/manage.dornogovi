@@ -1,3 +1,115 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    html {
+        @apply antialiased;
+    }
+
+    body {
+        @apply bg-slate-100 font-sans text-slate-800;
+    }
+}
+
+@layer components {
+    .ui-page {
+        @apply space-y-5;
+    }
+
+    .ui-card {
+        @apply rounded-2xl border border-slate-200/80 bg-white shadow-soft;
+    }
+
+    .ui-card-pad {
+        @apply ui-card p-5;
+    }
+
+    .ui-title {
+        @apply text-lg font-bold tracking-tight text-brand-navy-800;
+    }
+
+    .ui-subtitle {
+        @apply mt-1 text-sm text-slate-500;
+    }
+
+    .ui-label {
+        @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500;
+    }
+
+    .ui-input {
+        @apply w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800
+            transition placeholder:text-slate-400
+            focus:border-brand-navy-600 focus:ring-4 focus:ring-brand-navy-600/10;
+    }
+
+    .ui-btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold
+            transition focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60;
+    }
+
+    .ui-btn-primary {
+        @apply ui-btn bg-brand-navy-600 text-white shadow-lg shadow-brand-navy-600/20
+            hover:bg-brand-navy-700 focus:ring-brand-navy-600/30;
+    }
+
+    .ui-btn-accent {
+        @apply ui-btn bg-brand-orange-500 text-white shadow-lg shadow-brand-orange-500/20
+            hover:bg-brand-orange-600 focus:ring-brand-orange-500/30;
+    }
+
+    .ui-btn-ghost {
+        @apply ui-btn border-2 border-slate-200 bg-white text-slate-700
+            hover:border-brand-navy-300 hover:bg-slate-50 focus:ring-brand-navy-600/10;
+    }
+
+    .ui-btn-danger {
+        @apply ui-btn text-red-600 hover:bg-red-50 focus:ring-red-500/20;
+    }
+
+    .ui-stat {
+        @apply ui-card flex flex-col gap-1 p-4;
+    }
+
+    .ui-stat-label {
+        @apply text-xs font-medium text-slate-500;
+    }
+
+    .ui-stat-value {
+        @apply text-2xl font-bold tracking-tight text-brand-navy-800;
+    }
+
+    .ui-table-wrap {
+        @apply ui-card overflow-hidden;
+    }
+
+    .ui-table {
+        @apply min-w-full text-sm;
+    }
+
+    .ui-table thead {
+        @apply bg-brand-navy-50 text-left text-xs font-semibold uppercase tracking-wide text-brand-navy-700;
+    }
+
+    .ui-table th {
+        @apply px-4 py-3;
+    }
+
+    .ui-table td {
+        @apply border-t border-slate-100 px-4 py-3 text-slate-700;
+    }
+
+    .ui-nav-link {
+        @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600
+            transition hover:bg-brand-navy-50 hover:text-brand-navy-700;
+    }
+
+    .ui-nav-link-active {
+        @apply bg-brand-navy-600 text-white shadow-md shadow-brand-navy-600/25
+            hover:bg-brand-navy-600 hover:text-white;
+    }
+
+    .ui-section-label {
+        @apply !mt-4 px-3 pb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400;
+    }
+}
