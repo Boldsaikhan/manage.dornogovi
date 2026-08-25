@@ -8,6 +8,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DecreeController;
 use App\Http\Controllers\DepartmentDashboardController;
 use App\Http\Controllers\DocumentStandardController;
+use App\Http\Controllers\ExtensionController;
 use App\Http\Controllers\LaunchController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\LeaveSlipController;
@@ -98,6 +99,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/ai/confirm', [AiAssistantController::class, 'confirm'])->name('ai.confirm');
     Route::post('/ai/conversations', [AiAssistantController::class, 'newConversation'])->name('ai.conversations.store');
 
+    Route::get('/extension/download', [ExtensionController::class, 'download'])->name('extension.download');
     Route::get('/systems/{system}/launch', LaunchController::class)->name('systems.launch');
     Route::get('/systems/{system}', [SystemViewController::class, 'show'])->name('systems.show');
 

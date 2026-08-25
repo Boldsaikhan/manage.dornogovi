@@ -84,7 +84,12 @@
             <button type="button" id="stay">Энд байх</button>
         </div>
 
-        <p class="hint">Нэвтрэх хуудсанд нууц үгийн талбар дээр Ctrl+V дарна.</p>
+        <p class="hint" id="hint">
+            Нэвтрэх хуудсанд нууц үгийн талбар дээр Ctrl+V дарна.
+            <br>
+            <a href="{{ route('extension.download') }}">Автомат нэвтрэлтийн өргөтгөл татах</a> —
+            суулгасны дараа нэр, нууц үг өөрөө бөглөгдөж нэвтэрнэ.
+        </p>
     </div>
 
     <script>
@@ -122,6 +127,7 @@
         if (hasExtension) {
             // Өргөтгөл суусан: мэдээллийг түүнд шилжүүлээд, тэр нь маягтыг өөрөө бөглөнө.
             status.textContent = 'Нэвтэрч байна…';
+            document.getElementById('hint').style.display = 'none';
 
             window.addEventListener('message', (event) => {
                 if (event.origin === window.location.origin && event.data?.type === 'md-autologin-ready') {
