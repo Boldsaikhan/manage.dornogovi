@@ -70,6 +70,15 @@ const switchTab = (value) => {
     router.get(route('decrees.index'), { tab: value }, { preserveState: false, preserveScroll: true });
 };
 
+const today = () => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+
+    return `${y}-${m}-${day}`;
+};
+
 const addRow = () => {
     if (isNiit.value) return;
 
@@ -77,7 +86,7 @@ const addRow = () => {
         useForm({
             tab: 'blank',
             person_name: '',
-            issued_on: '',
+            issued_on: today(),
         }).post(route('decrees.store'), { preserveScroll: true });
         return;
     }
@@ -86,7 +95,7 @@ const addRow = () => {
         tab: props.tab,
         number: '',
         title: '',
-        issued_on: '',
+        issued_on: today(),
     }).post(route('decrees.store'), { preserveScroll: true });
 };
 
