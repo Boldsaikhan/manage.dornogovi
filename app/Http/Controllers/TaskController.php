@@ -114,14 +114,14 @@ class TaskController extends Controller
                     return;
                 }
                 $org = trim(implode(' · ', array_filter([(string) $row->unit, (string) $row->organization])));
-                $category = PhoneDirectoryEntry::guessCategory($row->organization ?: $row->unit);
+                // АЗДТГ-ын албан хаагчид — тусдаа шүүлтүүрт харагдана.
                 if (! isset($items[$name])) {
                     $items[$name] = [
                         'value' => $name,
                         'label' => $name,
                         'hint' => trim((string) $row->position),
                         'org' => $org,
-                        'category' => $category,
+                        'category' => 'azdtg',
                     ];
                 }
             });

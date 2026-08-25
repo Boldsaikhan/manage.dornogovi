@@ -60,10 +60,12 @@ const showDashboard = ref(true);
 const filter = ref(null); // { type: 'category' | 'org', value, label }
 
 const CATEGORY_LABELS = {
+    udirdlaga: 'Аймгийн удирдлагууд',
+    azdtg: 'АЗДТГ-ын албан хаагчид',
+    heltes: 'Хэлтэс',
     agentlag: 'Агентлаг',
     sum: 'Сумд',
     baiguullaga: 'Байгууллага',
-    heltes: 'Хэлтэс',
     unknown: 'Тодорхойгүй',
 };
 

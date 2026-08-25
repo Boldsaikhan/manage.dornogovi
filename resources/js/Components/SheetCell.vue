@@ -2,7 +2,8 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 
 const CATEGORY_FILTERS = [
-    { key: 'udirdlaga', label: 'Удирдлагууд' },
+    { key: 'udirdlaga', label: 'Аймгийн удирдлагууд' },
+    { key: 'azdtg', label: 'АЗДТГ-ын албан хаагчид' },
     { key: 'heltes', label: 'Хэлтэс' },
     { key: 'sum', label: 'Сум' },
     { key: 'agentlag', label: 'Агентлаг' },
@@ -31,6 +32,7 @@ const search = ref('');
 const selected = ref([]);
 const categoryOn = ref({
     udirdlaga: true,
+    azdtg: true,
     heltes: true,
     sum: true,
     agentlag: true,
@@ -133,7 +135,7 @@ const startEdit = async () => {
 
     editing.value = true;
     highlight.value = 0;
-    categoryOn.value = { udirdlaga: true, heltes: true, sum: true, agentlag: true, baiguullaga: true };
+    categoryOn.value = { udirdlaga: true, azdtg: true, heltes: true, sum: true, agentlag: true, baiguullaga: true };
 
     if (hasOptions.value) {
         search.value = '';
@@ -388,7 +390,7 @@ onBeforeUnmount(() => {
                 @mousedown.prevent="ignoreBlur = true"
             >
                 <div class="shrink-0 space-y-2 border-b border-slate-100 px-2.5 py-2">
-                    <div class="flex flex-wrap gap-3 text-xs text-slate-700">
+                    <div class="flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-slate-700">
                         <label
                             v-for="cat in CATEGORY_FILTERS"
                             :key="cat.key"
