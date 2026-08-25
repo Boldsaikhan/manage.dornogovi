@@ -63,10 +63,11 @@ class TaskModuleTest extends TestCase
         $this->assertSame('Тэжээл нөөцлөх', $task->text);
 
         $this->actingAs($admin)
-            ->patch(route('tasks.update', $task), ['responsible' => 'Шинэ эзэн'])
+            ->patch(route('tasks.update', $task), ['responsible' => 'Батбаярын Дулмаа'])
             ->assertRedirect();
 
-        $this->assertSame('Шинэ эзэн', $task->fresh()->responsible);
+        // Нэрийг «овгийн эхний үсэг + нэр» хэлбэрт оруулж хадгална.
+        $this->assertSame('Б.Дулмаа', $task->fresh()->responsible);
     }
 
     public function test_admin_can_upload_and_download_word_document(): void
