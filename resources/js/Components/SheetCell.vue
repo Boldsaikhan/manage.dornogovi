@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 
 const CATEGORY_FILTERS = [
+    { key: 'udirdlaga', label: 'Удирдлагууд' },
     { key: 'heltes', label: 'Хэлтэс' },
     { key: 'sum', label: 'Сум' },
     { key: 'agentlag', label: 'Агентлаг' },
@@ -29,6 +30,7 @@ const local = ref(props.modelValue ?? '');
 const search = ref('');
 const selected = ref([]);
 const categoryOn = ref({
+    udirdlaga: true,
     heltes: true,
     sum: true,
     agentlag: true,
@@ -131,7 +133,7 @@ const startEdit = async () => {
 
     editing.value = true;
     highlight.value = 0;
-    categoryOn.value = { heltes: true, sum: true, agentlag: true, baiguullaga: true };
+    categoryOn.value = { udirdlaga: true, heltes: true, sum: true, agentlag: true, baiguullaga: true };
 
     if (hasOptions.value) {
         search.value = '';
