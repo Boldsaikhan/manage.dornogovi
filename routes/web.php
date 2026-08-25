@@ -54,11 +54,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/phone-directory/export', [PhoneDirectoryController::class, 'export'])->name('phone-directory.export');
     Route::post('/phone-directory/import', [PhoneDirectoryController::class, 'import'])->name('phone-directory.import');
     Route::patch('/phone-directory/category', [PhoneDirectoryController::class, 'updateCategory'])->name('phone-directory.category');
-    Route::get('/phone-directory/staff/export', [PhoneDirectoryController::class, 'exportStaff'])->name('phone-directory.staff.export');
-    Route::post('/phone-directory/staff/import', [PhoneDirectoryController::class, 'importStaff'])->name('phone-directory.staff.import');
-    Route::post('/phone-directory/staff', [PhoneDirectoryController::class, 'storeStaff'])->name('phone-directory.staff.store');
-    Route::patch('/phone-directory/staff/unit-type', [PhoneDirectoryController::class, 'updateUnitType'])->name('phone-directory.staff.unit-type');
-    Route::delete('/phone-directory/staff/{staff}', [PhoneDirectoryController::class, 'destroyStaff'])->name('phone-directory.staff.destroy');
     // Parameterized routes last — otherwise "category"/"export" match as {entry}.
     Route::patch('/phone-directory/{entry}', [PhoneDirectoryController::class, 'update'])->name('phone-directory.update');
     Route::delete('/phone-directory/{entry}', [PhoneDirectoryController::class, 'destroy'])->name('phone-directory.destroy');
@@ -71,6 +66,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/modules/regulations', [ModuleResourceController::class, 'index'])->name('regulations.index');
     Route::get('/modules/decrees', [DecreeController::class, 'index'])->name('decrees.index');
     Route::post('/modules/decrees', [DecreeController::class, 'store'])->name('decrees.store');
+    Route::patch('/modules/decrees/{decree}', [DecreeController::class, 'update'])->name('decrees.update');
     Route::delete('/modules/decrees/{decree}', [DecreeController::class, 'destroy'])->name('decrees.destroy');
     Route::get('/modules/contracts', [ModuleResourceController::class, 'index'])->name('contracts.index');
     Route::get('/modules/archives', [ModuleResourceController::class, 'index'])->name('archives.index');

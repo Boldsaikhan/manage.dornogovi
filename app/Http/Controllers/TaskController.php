@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\OrgEmployeePhone;
 use App\Models\PhoneDirectoryEntry;
 use App\Models\Task;
 use App\Models\TaskDocument;
@@ -71,32 +70,13 @@ class TaskController extends Controller
             'tasks' => $tasks,
             'documents' => $documents,
             'people' => $this->phoneDirectoryPeople(),
-            'azdtgUnits' => $this->azdtgUnits(),
             'canManage' => ModuleAccess::canManage($request->user(), 'tasks')
                 || (bool) $request->user()->is_admin,
         ]);
     }
 
     /**
-     * АЗДТГ-ын бүх нэгж (хэлтэс) — үүрэггүй нэгж ч дашбоардад харагдана.
-     *
-     * @return array<int, string>
-     */
-    private function azdtgUnits(): array
-    {
-        return OrgEmployeePhone::query()
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->pluck('unit')
-            ->map(fn (?string $unit) => trim((string) $unit))
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
-    }
-
-    /**
-     * Утасны жагсаалт + АЗДТГ-н албан хаагчдын нэрсийн сонголт.
+     * Утасны жагсаалтын нэрсийн сонголт.
      *
      * @return array<int, array{value: string, label: string, hint: string, org: string, category: string}>
      */
@@ -110,68 +90,22 @@ class TaskController extends Controller
             ->orderBy('id')
             ->get(['person_name', 'position', 'org_name', 'category'])
             ->each(function (PhoneDirectoryEntry $row) use (&$items) {
-                $name = trim((string) $row->person_name);
+                $name = PersonName::short(trim((string) $row->person_name));
+
                 if ($name === '') {
                     return;
                 }
-                $category = $row->category ?: PhoneDirectoryEntry::guessCategory($row->org_name);
-                $name = PersonName::short($name);
+
                 $items[$name] = [
                     'value' => $name,
                     'label' => $name,
                     'hint' => trim((string) $row->position),
                     'org' => trim((string) $row->org_name),
-                    'category' => $category,
+                    'category' => $row->category ?: PhoneDirectoryEntry::guessCategory($row->org_name),
                 ];
             });
 
-        OrgEmployeePhone::query()
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get(['last_name', 'first_name', 'position', 'organization', 'unit'])
-            ->each(function (OrgEmployeePhone $row) use (&$items) {
-                $name = PersonName::short($this->formatEmployeeName($row->last_name, $row->first_name));
-                if ($name === '') {
-                    return;
-                }
-                // Дашбоардад АЗДТГ-ын нэгж (хэлтэс)-ээр бүлэглэнэ.
-                $org = trim((string) $row->unit) ?: trim((string) $row->organization);
-                // АЗДТГ-ын албан хаагчид — тусдаа шүүлтүүрт харагдана.
-                if (! isset($items[$name])) {
-                    $items[$name] = [
-                        'value' => $name,
-                        'label' => $name,
-                        'hint' => trim((string) $row->position),
-                        'org' => $org,
-                        'category' => 'azdtg',
-                    ];
-                }
-            });
-
         return array_values($items);
-    }
-
-    private function formatEmployeeName(?string $lastName, ?string $firstName): string
-    {
-        $last = trim((string) $lastName);
-        $first = trim((string) $firstName);
-
-        if ($last === '' && $first === '') {
-            return '';
-        }
-        if ($last === '') {
-            return $first;
-        }
-        if ($first === '') {
-            return $last;
-        }
-
-        // Богино овог (жишээ: «Ц») → «Ц.Мөнх-Эрдэнэ»
-        if (mb_strlen($last) <= 3) {
-            return $last.'.'.$first;
-        }
-
-        return $last.' '.$first;
     }
 
     public function store(Request $request): RedirectResponse

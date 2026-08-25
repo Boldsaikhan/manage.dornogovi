@@ -6,14 +6,10 @@ import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
 
 const props = defineProps({
-    tab: { type: String, default: 'directory' },
     groups: { type: Array, default: () => [] },
     total: { type: Number, default: 0 },
     orgNames: { type: Array, default: () => [] },
     categories: { type: Object, default: () => ({}) },
-    staff: { type: Array, default: () => [] },
-    staffTotal: { type: Number, default: 0 },
-    staffOrganizations: { type: Array, default: () => [] },
     departmentUnits: { type: Array, default: () => [] },
     unitTypes: { type: Object, default: () => ({}) },
     canManage: Boolean,
@@ -22,16 +18,11 @@ const props = defineProps({
 const page = usePage();
 const search = ref('');
 const categoryFilter = ref('all');
-const unitFilter = ref('all');
-const unitTypeFilter = ref('all');
 const showForm = ref(false);
 const showImport = ref(false);
-const showStaffForm = ref(false);
-const showStaffImport = ref(false);
 const fileInput = ref(null);
-const staffFileInput = ref(null);
 
-const isDirectory = computed(() => props.tab !== 'staff');
+const isDirectory = computed(() => true);
 
 const form = useForm({
     org_name: '',
@@ -45,42 +36,10 @@ const form = useForm({
 const editingId = ref(null);
 const isEditing = computed(() => editingId.value !== null);
 
-const staffForm = useForm({
-    organization: 'Дорноговь аймгийн Засаг даргын Тамгын газар',
-    unit: '',
-    unit_type: '',
-    position: '',
-    last_name: '',
-    first_name: '',
-    room: '',
-    work_phone: '',
-    mobile_phone: '',
-    email: '',
-});
-
 const importForm = useForm({
     file: null,
     replace: false,
 });
-
-const staffImportForm = useForm({
-    file: null,
-    replace: false,
-});
-
-watch(
-    () => props.tab,
-    () => {
-        search.value = '';
-        showForm.value = false;
-        showImport.value = false;
-        showStaffForm.value = false;
-        showStaffImport.value = false;
-        categoryFilter.value = 'all';
-        unitFilter.value = 'all';
-        unitTypeFilter.value = 'all';
-    },
-);
 
 // Ангилал тус бүрийн байгууллагын тоо — «хэлтэс» сонголтыг харуулахгүй.
 const categoryTabs = computed(() => {
@@ -104,14 +63,6 @@ const categoryTabs = computed(() => {
 });
 
 // Албан хаагчдын нэгжүүд (хэлтэс) — АЗДТГ хэсгийн сонголт.
-const unitOptions = computed(() => {
-    const fromStaff = props.staff.map((r) => r.unit).filter(Boolean);
-    const fromDepartments = (props.departmentUnits || []).filter(Boolean);
-    const all = [...new Set([...fromStaff, ...fromDepartments])];
-
-    return all.sort((a, b) => a.localeCompare(b, 'mn'));
-});
-
 const filteredGroups = computed(() => {
     const q = search.value.trim().toLowerCase();
     const scoped = categoryFilter.value === 'all'
@@ -131,57 +82,6 @@ const filteredGroups = computed(() => {
         }))
         .filter((g) => g.rows.length);
 });
-
-const filteredStaff = computed(() => {
-    const q = search.value.trim().toLowerCase();
-    let scoped = unitFilter.value === 'all'
-        ? props.staff
-        : props.staff.filter((r) => (r.unit || '—') === unitFilter.value);
-
-    if (unitTypeFilter.value !== 'all') {
-        scoped = scoped.filter((r) => (r.unit_type || '') === unitTypeFilter.value);
-    }
-
-    if (!q) return scoped;
-
-    return scoped.filter((r) =>
-        [
-            r.unit,
-            r.position,
-            r.last_name,
-            r.first_name,
-            r.mobile_phone,
-            r.email,
-        ]
-            .filter(Boolean)
-            .some((v) => String(v).toLowerCase().includes(q)),
-    );
-});
-
-/** Нэгжээр бүлэглэсэн жагсаалт — нэгж нь бүлгийн мөр болно. */
-const staffGroups = computed(() => {
-    const map = new Map();
-
-    filteredStaff.value.forEach((row) => {
-        const key = row.unit || 'Бусад';
-        if (! map.has(key)) {
-            map.set(key, { unit: key, unit_type: row.unit_type || '', rows: [] });
-        }
-        map.get(key).rows.push(row);
-    });
-
-    return [...map.values()];
-});
-
-const staffColumnCount = computed(() => 6 + (props.canManage ? 1 : 0));
-
-const changeUnitType = (unit, unitType) => {
-    router.patch(
-        route('phone-directory.staff.unit-type'),
-        { unit, unit_type: unitType },
-        { preserveScroll: true },
-    );
-};
 
 const submit = () => {
     if (isEditing.value) {
@@ -209,23 +109,6 @@ const submit = () => {
     });
 };
 
-const submitStaff = () => {
-    if (! staffForm.organization) {
-        staffForm.organization = 'Дорноговь аймгийн Засаг даргын Тамгын газар';
-    }
-    staffForm.post(route('phone-directory.staff.store'), {
-        preserveScroll: true,
-        onSuccess: () => {
-            const unit = staffForm.unit;
-            staffForm.reset();
-            staffForm.organization = 'Дорноговь аймгийн Засаг даргын Тамгын газар';
-            staffForm.unit = unit;
-            staffForm.unit_type = '';
-            showStaffForm.value = false;
-        },
-    });
-};
-
 const submitImport = () => {
     importForm.post(route('phone-directory.import'), {
         preserveScroll: true,
@@ -238,19 +121,6 @@ const submitImport = () => {
     });
 };
 
-const submitStaffImport = () => {
-    staffImportForm.post(route('phone-directory.staff.import'), {
-        preserveScroll: true,
-        forceFormData: true,
-        onSuccess: () => {
-            staffImportForm.reset();
-            if (staffFileInput.value) staffFileInput.value.value = '';
-            showStaffImport.value = false;
-        },
-    });
-};
-
-// Байгууллагын ангиллыг (хэлтэс/агентлаг/сум/байгууллага) бүлгээр нь солино.
 const changeCategory = (orgName, category) => {
     router.patch(
         route('phone-directory.category'),
@@ -264,11 +134,6 @@ const destroyRow = (id) => {
     router.delete(route('phone-directory.destroy', id), { preserveScroll: true });
 };
 
-const destroyStaff = (id) => {
-    if (!confirm('Устгах уу?')) return;
-    router.delete(route('phone-directory.staff.destroy', id), { preserveScroll: true });
-};
-
 const flash = computed(() => page.props.flash?.success ?? null);
 
 const resetDirectoryForm = () => {
@@ -278,13 +143,9 @@ const resetDirectoryForm = () => {
 };
 
 const openAdd = () => {
-    if (isDirectory.value) {
-        resetDirectoryForm();
-        showForm.value = true;
-        showImport.value = false;
-    } else {
-        showStaffForm.value = true;
-    }
+    resetDirectoryForm();
+    showForm.value = true;
+    showImport.value = false;
 };
 
 const openEdit = (row, group) => {
@@ -313,27 +174,14 @@ const closeDirectoryForm = () => {
                 <div>
                     <h2 class="ui-title">Утасны жагсаалт</h2>
                     <p class="ui-subtitle">
-                        <template v-if="isDirectory">
-                            Байгууллага, албан хаагчдын ажлын өрөө болон гар утасны нэгдсэн жагсаалт.
-                            Нийт {{ total }} бүртгэл.
-                        </template>
-                        <template v-else>
-                            АЗДТГ-н албан хаагчдын дэлгэрэнгүй утасны бүртгэл.
-                            Нийт {{ staffTotal }} бүртгэл.
-                        </template>
+                        Байгууллага, албан хаагчдын ажлын өрөө болон гар утасны нэгдсэн жагсаалт.
+                        Нийт {{ total }} бүртгэл.
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <a
                         v-if="isDirectory && total"
                         :href="route('phone-directory.export')"
-                        class="ui-btn-ghost"
-                    >
-                        Word татах
-                    </a>
-                    <a
-                        v-if="!isDirectory && staffTotal"
-                        :href="route('phone-directory.staff.export')"
                         class="ui-btn-ghost"
                     >
                         Word татах
@@ -345,14 +193,6 @@ const closeDirectoryForm = () => {
                         @click="showImport = !showImport; showForm = false"
                     >
                         {{ showImport ? 'Хаах' : 'Word импорт' }}
-                    </button>
-                    <button
-                        v-if="canManage && !isDirectory"
-                        type="button"
-                        class="ui-btn-primary"
-                        @click="showStaffImport = !showStaffImport"
-                    >
-                        {{ showStaffImport ? 'Хаах' : 'Word импорт' }}
                     </button>
                     <button
                         v-if="canManage"
@@ -367,30 +207,6 @@ const closeDirectoryForm = () => {
 
             <div v-if="flash" class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
                 {{ flash }}
-            </div>
-
-            <!-- Tabs -->
-            <div class="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
-                <Link
-                    :href="route('phone-directory.index', { tab: 'directory' })"
-                    class="rounded-xl px-4 py-2.5 text-sm font-semibold transition"
-                    :class="isDirectory
-                        ? 'bg-brand-navy-600 text-white shadow-md shadow-brand-navy-600/20'
-                        : 'text-slate-600 hover:bg-slate-50'"
-                >
-                    Утасны жагсаалт
-                    <span class="ml-1 opacity-70">{{ total }}</span>
-                </Link>
-                <Link
-                    :href="route('phone-directory.index', { tab: 'staff' })"
-                    class="rounded-xl px-4 py-2.5 text-sm font-semibold transition"
-                    :class="!isDirectory
-                        ? 'bg-brand-navy-600 text-white shadow-md shadow-brand-navy-600/20'
-                        : 'text-slate-600 hover:bg-slate-50'"
-                >
-                    АЗДТГ-н албан хаагчид
-                    <span class="ml-1 opacity-70">{{ staffTotal }}</span>
-                </Link>
             </div>
 
             <!-- Directory: import -->
@@ -453,72 +269,7 @@ const closeDirectoryForm = () => {
                     </button>
                 </div>
 
-                <!-- Нэгжээр шүүх (албан хаагчид) -->
-                <select
-                    v-else
-                    v-model="unitFilter"
-                    class="ui-input md:max-w-xs"
-                    title="Хэлтэс / нэгжээр шүүх"
-                >
-                    <option value="all">Бүх хэлтэс / нэгж ({{ staffTotal }})</option>
-                    <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
-                </select>
-                <select
-                    v-if="!isDirectory"
-                    v-model="unitTypeFilter"
-                    class="ui-input md:max-w-[12rem]"
-                    title="Нэгжийн төрлөөр шүүх"
-                >
-                    <option value="all">Бүх төрөл</option>
-                    <option value="">Сонголтгүй</option>
-                    <option v-for="(label, value) in unitTypes" :key="value" :value="value">{{ label }}</option>
-                </select>
             </div>
-
-            <!-- Staff: import -->
-            <form
-                v-if="!isDirectory && showStaffImport && canManage"
-                class="ui-card grid gap-4 p-5"
-                @submit.prevent="submitStaffImport"
-            >
-                <div>
-                    <label class="ui-label">Word, Excel эсвэл PDF файл</label>
-                    <input
-                        ref="staffFileInput"
-                        type="file"
-                        accept=".docx,.docm,.xlsx,.xlsm,.pdf"
-                        class="ui-input"
-                        @change="staffImportForm.file = $event.target.files[0]"
-                    />
-                    <p class="mt-1 text-xs text-slate-500">
-                        .docx, .xlsx, .pdf (20 MB хүртэл). Баганууд: № / Нэгж / Албан тушаал /
-                        Овог / Нэр / Гар утас / И-мэйл хаяг (хуучин файл дахь байгууллага, өрөө, ажлын утас ч уншигдана).
-                    </p>
-                    <p v-if="staffImportForm.errors.staff_file" class="mt-1 text-sm text-rose-600">
-                        {{ staffImportForm.errors.staff_file }}
-                    </p>
-                    <p v-if="staffImportForm.errors.file" class="mt-1 text-sm text-rose-600">
-                        {{ staffImportForm.errors.file }}
-                    </p>
-                </div>
-                <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
-                    <input
-                        v-model="staffImportForm.replace"
-                        type="checkbox"
-                        class="rounded border-slate-300 text-brand-navy-600 focus:ring-brand-navy-600"
-                    />
-                    Одоо байгаа жагсаалтыг устгаад шинээр оруулах
-                </label>
-                <div>
-                    <button
-                        type="submit"
-                        class="ui-btn-primary"
-                        :disabled="staffImportForm.processing || !staffImportForm.file"
-                    >
-                        {{ staffImportForm.processing ? 'Уншиж байна…' : 'Импортлох' }}
-                    </button>
-                </div>
-            </form>
 
             <!-- Tab 1: directory -->
             <div v-if="isDirectory" class="ui-table-wrap overflow-x-auto">
@@ -582,85 +333,6 @@ const closeDirectoryForm = () => {
                     </tbody>
                 </table>
             </div>
-
-            <!-- Tab 2: staff — нэгжээр бүлэглэсэн -->
-            <div v-else class="ui-table-wrap overflow-x-auto">
-                <table class="ui-table min-w-[720px]">
-                    <thead>
-                        <tr>
-                            <th class="w-14 text-center">№</th>
-                            <th>Албан тушаал</th>
-                            <th>Овог</th>
-                            <th>Нэр</th>
-                            <th class="text-center">Гар утас</th>
-                            <th>И-Мэйл хаяг</th>
-                            <th v-if="canManage" class="w-20" />
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <template v-for="group in staffGroups" :key="group.unit">
-                            <tr class="bg-brand-navy-50">
-                                <td
-                                    :colspan="staffColumnCount"
-                                    class="text-center font-semibold italic text-brand-navy-800"
-                                >
-                                    {{ group.unit }}
-                                    <select
-                                        v-if="canManage"
-                                        :value="group.unit_type || ''"
-                                        class="ml-2 rounded-lg border-slate-300 bg-white py-0.5 pl-2 pr-7 text-xs font-medium not-italic text-slate-600"
-                                        title="Нэгжийн төрөл"
-                                        @change="changeUnitType(group.unit, $event.target.value)"
-                                    >
-                                        <option value="">Сонголтгүй</option>
-                                        <option v-for="(label, value) in unitTypes" :key="value" :value="value">
-                                            {{ label }}
-                                        </option>
-                                    </select>
-                                    <span
-                                        v-else-if="group.unit_type && unitTypes[group.unit_type]"
-                                        class="ml-2 rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-medium not-italic text-slate-500"
-                                    >
-                                        {{ unitTypes[group.unit_type] }}
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr v-for="(row, index) in group.rows" :key="row.id">
-                                <td class="text-center">{{ index + 1 }}</td>
-                                <td>
-                                    <span class="ui-clamp-2" :title="row.position || ''">{{ row.position || '—' }}</span>
-                                </td>
-                                <td>
-                                    <span class="ui-clamp-2" :title="row.last_name">{{ row.last_name }}</span>
-                                </td>
-                                <td>
-                                    <span class="ui-clamp-2" :title="row.first_name">{{ row.first_name }}</span>
-                                </td>
-                                <td class="text-center">{{ row.mobile_phone || '—' }}</td>
-                                <td>
-                                    <a
-                                        v-if="row.email"
-                                        :href="`mailto:${row.email}`"
-                                        class="ui-clamp-2 break-all text-brand-navy-600 hover:underline"
-                                        :title="row.email"
-                                    >
-                                        {{ row.email }}
-                                    </a>
-                                    <span v-else>—</span>
-                                </td>
-                                <td v-if="canManage" class="text-right">
-                                    <button type="button" class="ui-btn-danger !py-1 text-xs" @click="destroyStaff(row.id)">Устгах</button>
-                                </td>
-                            </tr>
-                        </template>
-                        <tr v-if="!staffGroups.length">
-                            <td :colspan="staffColumnCount" class="!py-12 text-center text-slate-400">
-                                {{ search ? 'Хайлтад тохирох бүртгэл алга.' : 'Одоогоор бүртгэл алга. «Шинэ нэмэх» дарж оруулна уу.' }}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
         </div>
 
         <!-- Modal: directory add / edit -->
@@ -719,62 +391,5 @@ const closeDirectoryForm = () => {
             </form>
         </Modal>
 
-        <!-- Modal: staff add -->
-        <Modal :show="showStaffForm && canManage && !isDirectory" max-width="2xl" @close="showStaffForm = false">
-            <form class="p-6" @submit.prevent="submitStaff">
-                <div class="mb-5 flex items-start justify-between gap-3">
-                    <div>
-                        <h3 class="text-base font-semibold text-brand-navy-900">Шинэ бүртгэл</h3>
-                        <p class="mt-0.5 text-sm text-slate-500">АЗДТГ-н албан хаагч</p>
-                    </div>
-                    <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" @click="showStaffForm = false">✕</button>
-                </div>
-                <div class="grid max-h-[65vh] gap-4 overflow-y-auto pr-1 md:grid-cols-2">
-                    <div class="md:col-span-2">
-                        <label class="ui-label">Хэлтэс / нэгж</label>
-                        <input v-model="staffForm.unit" list="staff-unit-names" class="ui-input" />
-                        <datalist id="staff-unit-names">
-                            <option v-for="unit in unitOptions" :key="unit" :value="unit" />
-                        </datalist>
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="ui-label">Төрөл</label>
-                        <select v-model="staffForm.unit_type" class="ui-input">
-                            <option value="">Сонголтгүй / автомат</option>
-                            <option v-for="(label, value) in unitTypes" :key="value" :value="value">
-                                {{ label }}
-                            </option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="ui-label">Албан тушаал</label>
-                        <input v-model="staffForm.position" class="ui-input" />
-                    </div>
-                    <div>
-                        <label class="ui-label">Овог</label>
-                        <input v-model="staffForm.last_name" class="ui-input" required />
-                        <InputError :message="staffForm.errors.last_name" class="mt-1" />
-                    </div>
-                    <div>
-                        <label class="ui-label">Нэр</label>
-                        <input v-model="staffForm.first_name" class="ui-input" required />
-                        <InputError :message="staffForm.errors.first_name" class="mt-1" />
-                    </div>
-                    <div>
-                        <label class="ui-label">Гар утас</label>
-                        <input v-model="staffForm.mobile_phone" class="ui-input" />
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="ui-label">И-Мэйл хаяг</label>
-                        <input v-model="staffForm.email" type="email" class="ui-input" />
-                        <InputError :message="staffForm.errors.email" class="mt-1" />
-                    </div>
-                </div>
-                <div class="mt-6 flex justify-end gap-2 border-t border-slate-100 pt-4">
-                    <button type="button" class="ui-btn-ghost" @click="showStaffForm = false">Болих</button>
-                    <button type="submit" class="ui-btn-primary" :disabled="staffForm.processing">Хадгалах</button>
-                </div>
-            </form>
-        </Modal>
     </AuthenticatedLayout>
 </template>

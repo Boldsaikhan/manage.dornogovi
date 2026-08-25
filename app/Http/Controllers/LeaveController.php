@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Leave;
-use App\Models\OrgEmployeePhone;
 use App\Models\PhoneDirectoryEntry;
 use App\Support\ModuleAccess;
 use Illuminate\Http\RedirectResponse;
@@ -19,7 +18,6 @@ class LeaveController extends Controller
 
     private const SCOPES = [
         'udirdlaga' => 'Аймгийн удирдлагууд',
-        'azdtg' => 'АЗДТГ-ын албан хаагчид',
         'agentlag' => 'Агентлаг',
         'sum' => 'Сумд',
         'baiguullaga' => 'Байгууллага',
@@ -151,55 +149,14 @@ class LeaveController extends Controller
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function directory(): array
-    {
-        return array_merge($this->phoneDirectoryGroups(), $this->azdtgGroups());
-    }
-
     /**
-     * АЗДТГ-ын албан хаагчид — нэгжээр нь бүлэглэнэ.
+     * Утасны жагсаалтаас байгууллага, хүмүүсийн сонголт.
      *
      * @return array<int, array<string, mixed>>
      */
-    private function azdtgGroups(): array
+    private function directory(): array
     {
-        return OrgEmployeePhone::query()
-            ->orderBy('organization')
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get(['organization', 'unit', 'position', 'last_name', 'first_name'])
-            ->groupBy(fn (OrgEmployeePhone $row) => trim((string) ($row->unit ?: $row->organization)) ?: 'Бусад')
-            ->map(fn ($rows, $groupName) => [
-                'org_name' => $groupName,
-                'category' => 'azdtg',
-                'people' => $rows
-                    ->map(fn (OrgEmployeePhone $row) => [
-                        'name' => $this->employeeName($row),
-                        'position' => $row->position,
-                    ])
-                    ->filter(fn (array $person) => $person['name'] !== '')
-                    ->values()
-                    ->all(),
-            ])
-            ->values()
-            ->all();
-    }
-
-    private function employeeName(OrgEmployeePhone $row): string
-    {
-        $last = trim((string) $row->last_name);
-        $first = trim((string) $row->first_name);
-
-        if ($last === '') {
-            return $first;
-        }
-
-        if ($first === '') {
-            return $last;
-        }
-
-        // Богино овог «Ц» → «Ц.Мөнх-Эрдэнэ»
-        return mb_strlen($last) <= 3 ? $last.'.'.$first : $last.' '.$first;
+        return $this->phoneDirectoryGroups();
     }
 
     /**

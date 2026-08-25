@@ -10,7 +10,6 @@ const props = defineProps({
     tasks: { type: Array, default: () => [] },
     documents: { type: Array, default: () => [] },
     people: { type: Array, default: () => [] },
-    azdtgUnits: { type: Array, default: () => [] },
     canManage: { type: Boolean, default: false },
 });
 
@@ -59,13 +58,12 @@ watch(
 // ── Дашбоард: хэрэгжилтийг хэлтэс, ангиллаар нэгтгэнэ ──────────────────────────
 const showDashboard = ref(false); // дэлгэц дүүрэн дашбоард
 
-const CATEGORY_ORDER = ['udirdlaga', 'heltes', 'azdtg', 'agentlag', 'sum', 'baiguullaga', 'unknown'];
+const CATEGORY_ORDER = ['udirdlaga', 'heltes', 'agentlag', 'sum', 'baiguullaga', 'unknown'];
 const filter = ref(null); // { type: 'category' | 'org', value, label }
 
 const CATEGORY_LABELS = {
     udirdlaga: 'Аймгийн удирдлагууд',
     heltes: 'Хэлтэс',
-    azdtg: 'АЗДТГ-ын албан хаагчид',
     agentlag: 'Агентлаг',
     sum: 'Сумд',
     baiguullaga: 'Байгууллага',
@@ -138,35 +136,6 @@ const buildStats = (keyFn, labelFn) => {
         .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'mn'));
 };
 
-// АЗДТГ-ын нэгжүүд (хэлтэс) — үүрэггүй нэгжийг ч 0%-иар харуулна.
-const azdtgStats = computed(() => {
-    const groups = new Map();
-
-    props.azdtgUnits.forEach((unit) => {
-        groups.set(unit, { key: unit, label: unit, tasks: [] });
-    });
-
-    props.tasks.forEach((task) => {
-        taskOwners(task)
-            .filter((owner) => owner.category === 'azdtg')
-            .forEach((owner) => {
-                const key = owner.org || 'Тодорхойгүй';
-                if (!groups.has(key)) groups.set(key, { key, label: key, tasks: [] });
-                if (!groups.get(key).tasks.includes(task)) groups.get(key).tasks.push(task);
-            });
-    });
-
-    return [...groups.values()]
-        .map((g) => ({
-            key: g.key,
-            label: g.label,
-            count: g.tasks.length,
-            done: g.tasks.filter((t) => Number(t.progress) >= 100).length,
-            progress: average(g.tasks),
-        }))
-        .sort((a, b) => b.progress - a.progress || b.count - a.count || a.label.localeCompare(b.label, 'mn'));
-});
-
 // Дугуй диаграмын тойрог
 const donut = (value, radius = 52) => {
     const circumference = 2 * Math.PI * radius;
@@ -186,12 +155,7 @@ const statusSegments = computed(() => {
 });
 
 // Ангиллын хэсэгт: бусад ангилал + АЗДТГ-ын нэгж бүр (албан хаагчид гэсэн нэгдсэн карт байхгүй).
-const dashboardCards = computed(() => [
-    ...categoryStats.value
-        .filter((item) => item.key !== 'azdtg')
-        .map((item) => ({ ...item, type: 'category' })),
-    ...azdtgStats.value.map((item) => ({ ...item, type: 'org' })),
-]);
+const dashboardCards = computed(() => categoryStats.value.map((item) => ({ ...item, type: 'category' })));
 
 // Ангиллын картуудыг тогтмол дарааллаар харуулна.
 const categoryStats = computed(() => buildStats(
@@ -828,7 +792,7 @@ const prepTableMinWidth = computed(() => {
                 </div>
 
                 <section class="ui-card-pad mt-4">
-                    <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Ангиллаар · АЗДТГ-ын хэлтсүүд</p>
+                    <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Ангиллаар</p>
                     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <button
                             v-for="item in dashboardCards"

@@ -12,7 +12,6 @@ return [
         'scope_label' => 'Хамрах хүрээ',
         'scopes' => [
             'udirdlaga' => 'Аймгийн удирдлагууд',
-            'azdtg' => 'АЗДТГ-ын албан хаагчид',
             'agentlag' => 'Агентлаг',
             'sum' => 'Сумд',
             'baiguullaga' => 'Байгууллага',
@@ -29,7 +28,6 @@ return [
         'fields' => [
             ['name' => 'scope', 'label' => 'Хамрах хүрээ', 'type' => 'select', 'required' => true, 'options' => [
                 'udirdlaga' => 'Аймгийн удирдлагууд',
-                'azdtg' => 'АЗДТГ-ын албан хаагчид',
                 'agentlag' => 'Агентлаг',
                 'sum' => 'Сумд',
                 'baiguullaga' => 'Байгууллага',

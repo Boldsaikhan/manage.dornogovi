@@ -2,13 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\OrgEmployeePhone;
 use App\Models\PhoneDirectoryEntry;
 use App\Support\ModuleAccess;
-use App\Support\OrgEmployeePhoneDocxParser;
 use App\Support\PhoneDirectoryDocxParser;
 use App\Support\PhoneDirectoryDocxWriter;
-use App\Support\TabularFileReader;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -27,10 +24,6 @@ class PhoneDirectoryController extends Controller
     {
         abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
 
-        $tab = $request->string('tab')->toString();
-        if (! in_array($tab, ['directory', 'staff'], true)) {
-            $tab = 'directory';
-        }
 
         $entries = PhoneDirectoryEntry::query()
             ->orderBy('org_order')
@@ -53,25 +46,6 @@ class PhoneDirectoryController extends Controller
             ])
             ->values();
 
-        $staff = OrgEmployeePhone::query()
-            ->orderBy('organization')
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get()
-            ->map(fn (OrgEmployeePhone $row, int $i) => [
-                'id' => $row->id,
-                'no' => $i + 1,
-                'organization' => $row->organization,
-                'unit' => $row->unit,
-                'unit_type' => $row->unit_type ?: OrgEmployeePhone::guessUnitType($row->unit),
-                'position' => $row->position,
-                'last_name' => $row->last_name,
-                'first_name' => $row->first_name,
-                'room' => $row->room,
-                'work_phone' => $row->work_phone,
-                'mobile_phone' => $row->mobile_phone,
-                'email' => $row->email,
-            ]);
 
         $departmentUnits = $entries
             ->groupBy('org_name')
@@ -83,18 +57,12 @@ class PhoneDirectoryController extends Controller
             ->all();
 
         return Inertia::render('Modules/PhoneDirectory', [
-            'tab' => $tab,
             'groups' => $groups,
             'total' => $entries->count(),
             'orgNames' => $entries->pluck('org_name')->unique()->values(),
             'categories' => collect(PhoneDirectoryEntry::CATEGORIES)
                 ->except(['heltes'])
                 ->all(),
-            'staff' => $staff,
-            'staffTotal' => $staff->count(),
-            'staffOrganizations' => $staff->pluck('organization')->unique()->values(),
-            'departmentUnits' => $departmentUnits,
-            'unitTypes' => OrgEmployeePhone::UNIT_TYPES,
             'canManage' => ModuleAccess::canManage($request->user(), self::MODULE),
         ]);
     }
@@ -135,114 +103,6 @@ class PhoneDirectoryController extends Controller
         ]);
     }
 
-    public function exportStaff(Request $request, PhoneDirectoryDocxWriter $writer): HttpResponse
-    {
-        abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
-
-        $staff = OrgEmployeePhone::query()
-            ->orderBy('organization')
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get()
-            ->map(fn (OrgEmployeePhone $row) => [
-                'organization' => $row->organization,
-                'unit' => $row->unit,
-                'position' => $row->position,
-                'last_name' => $row->last_name,
-                'first_name' => $row->first_name,
-                'room' => $row->room,
-                'work_phone' => $row->work_phone,
-                'mobile_phone' => $row->mobile_phone,
-                'email' => $row->email,
-            ])
-            ->all();
-
-        $tmp = tempnam(sys_get_temp_dir(), 'staff');
-        $writer->writeStaff($staff, $tmp);
-        $content = (string) file_get_contents($tmp);
-        @unlink($tmp);
-
-        $fileName = 'АЗДТГ-н албан хаагчид '.now()->format('Y-m-d').'.docx';
-
-        return response($content, 200, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'Content-Disposition' => "attachment; filename=\"org-employee-phones.docx\"; filename*=UTF-8''".rawurlencode($fileName),
-            'Content-Length' => (string) strlen($content),
-        ]);
-    }
-
-    public function importStaff(
-        Request $request,
-        OrgEmployeePhoneDocxParser $parser,
-        TabularFileReader $reader,
-    ): RedirectResponse {
-        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
-
-        $request->validate([
-            'file' => ['required', 'file', 'max:20480'],
-            'replace' => ['nullable', 'boolean'],
-        ]);
-
-        $extension = strtolower((string) $request->file('file')->getClientOriginalExtension());
-
-        if (! in_array($extension, TabularFileReader::EXTENSIONS, true)) {
-            return back()->withErrors([
-                'staff_file' => 'Зөвхөн Word (.docx), Excel (.xlsx), PDF файл дэмжинэ.',
-            ]);
-        }
-
-        try {
-            $rows = $parser->fromRows(
-                $reader->rows($request->file('file')->getRealPath(), $extension)
-            );
-        } catch (RuntimeException $e) {
-            return back()->withErrors(['staff_file' => $e->getMessage()]);
-        } catch (Throwable) {
-            return back()->withErrors(['staff_file' => 'Файлыг уншиж чадсангүй. Word (.docx), Excel (.xlsx) эсвэл текст агуулсан PDF оруулна уу.']);
-        }
-
-        if (! $rows) {
-            return back()->withErrors([
-                'staff_file' => 'Файлаас хүснэгт олдсонгүй. Баганын дараалал: № / Байгууллага / Нэгж / Албан тушаал / Овог / Нэр / Өрөө / Ажлын утас / Гар утас / И-мэйл хаяг. (Сканнердсан зурган PDF уншигдахгүй.)',
-            ]);
-        }
-
-        $replace = $request->boolean('replace');
-
-        DB::transaction(function () use ($rows, $replace) {
-            if ($replace) {
-                OrgEmployeePhone::query()->delete();
-                $offset = 0;
-            } else {
-                $offset = (int) OrgEmployeePhone::query()->max('sort_order');
-            }
-
-            foreach (array_chunk($rows, 200) as $chunk) {
-                $now = now();
-
-                OrgEmployeePhone::insert(array_map(fn (array $row) => [
-                    'organization' => $row['organization'],
-                    'unit' => $row['unit'],
-                    'unit_type' => OrgEmployeePhone::guessUnitType($row['unit'] ?? null),
-                    'position' => $row['position'],
-                    'last_name' => $row['last_name'],
-                    'first_name' => $row['first_name'],
-                    'room' => $row['room'],
-                    'work_phone' => $row['work_phone'],
-                    'mobile_phone' => $row['mobile_phone'],
-                    'email' => $row['email'],
-                    'sort_order' => $row['sort_order'] + $offset,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ], $chunk));
-            }
-        });
-
-        return redirect()
-            ->route('phone-directory.index', ['tab' => 'staff'])
-            ->with('success', count($rows).' мөр импортлолоо.');
-    }
-
     public function store(Request $request): RedirectResponse
     {
         abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
@@ -273,7 +133,7 @@ class PhoneDirectoryController extends Controller
         PhoneDirectoryEntry::create($data);
 
         return redirect()
-            ->route('phone-directory.index', ['tab' => 'directory'])
+            ->route('phone-directory.index')
             ->with('success', 'Бүртгэл нэмэгдлээ.');
     }
 
@@ -311,127 +171,8 @@ class PhoneDirectoryController extends Controller
             ->update(['category' => $data['category']]);
 
         return redirect()
-            ->route('phone-directory.index', ['tab' => 'directory'])
+            ->route('phone-directory.index')
             ->with('success', 'Бүртгэл шинэчлэгдлээ.');
-    }
-
-    /**
-     * Байгууллагын ангиллыг бүлгээр нь солино. Хоосон = сонголтгүй.
-     */
-    public function updateCategory(Request $request): RedirectResponse
-    {
-        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
-
-        $request->merge([
-            'category' => $request->input('category') === '' || $request->input('category') === null
-                ? null
-                : $request->input('category'),
-        ]);
-
-        $data = $request->validate([
-            'org_name' => ['required', 'string', 'max:255'],
-            'category' => ['nullable', 'string', Rule::in(array_keys(PhoneDirectoryEntry::CATEGORIES))],
-        ]);
-
-        PhoneDirectoryEntry::query()
-            ->where('org_name', $data['org_name'])
-            ->update(['category' => $data['category'] ?? null]);
-
-        $label = isset($data['category'])
-            ? (PhoneDirectoryEntry::CATEGORIES[$data['category']] ?? $data['category'])
-            : 'Сонголтгүй';
-
-        return back(303)->with('success', $data['org_name'].' — '.$label);
-    }
-
-    public function destroy(Request $request, PhoneDirectoryEntry $entry): RedirectResponse
-    {
-        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
-
-        $entry->delete();
-
-        return redirect()
-            ->route('phone-directory.index', ['tab' => 'directory'])
-            ->with('success', 'Устгалаа.');
-    }
-
-    public function storeStaff(Request $request): RedirectResponse
-    {
-        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
-
-        $data = $request->validate([
-            'organization' => ['nullable', 'string', 'max:255'],
-            'unit' => ['nullable', 'string', 'max:255'],
-            'unit_type' => ['nullable', 'string', Rule::in(array_keys(OrgEmployeePhone::UNIT_TYPES))],
-            'position' => ['nullable', 'string', 'max:255'],
-            'last_name' => ['required', 'string', 'max:255'],
-            'first_name' => ['required', 'string', 'max:255'],
-            'room' => ['nullable', 'string', 'max:64'],
-            'work_phone' => ['nullable', 'string', 'max:64'],
-            'mobile_phone' => ['nullable', 'string', 'max:64'],
-            'email' => ['nullable', 'email', 'max:255'],
-        ]);
-
-        $data['organization'] = $data['organization']
-            ?: 'Дорноговь аймгийн Засаг даргын Тамгын газар';
-
-        if (($data['unit_type'] ?? '') === '') {
-            $data['unit_type'] = OrgEmployeePhone::query()
-                ->where('unit', $data['unit'] ?? '')
-                ->whereNotNull('unit_type')
-                ->value('unit_type')
-                ?? OrgEmployeePhone::guessUnitType($data['unit'] ?? null);
-        }
-
-        $data['sort_order'] = (int) OrgEmployeePhone::query()
-            ->where('unit', $data['unit'] ?? '')
-            ->max('sort_order') + 1;
-
-        OrgEmployeePhone::create($data);
-
-        return redirect()
-            ->route('phone-directory.index', ['tab' => 'staff'])
-            ->with('success', 'Албан хаагчийн бүртгэл нэмэгдлээ.');
-    }
-
-    /**
-     * Нэгжийн төрлийг бүлгээр нь солино (ж: хэлтэс).
-     */
-    public function updateUnitType(Request $request): RedirectResponse
-    {
-        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
-
-        $request->merge([
-            'unit_type' => $request->input('unit_type') === '' || $request->input('unit_type') === null
-                ? null
-                : $request->input('unit_type'),
-        ]);
-
-        $data = $request->validate([
-            'unit' => ['required', 'string', 'max:255'],
-            'unit_type' => ['nullable', 'string', Rule::in(array_keys(OrgEmployeePhone::UNIT_TYPES))],
-        ]);
-
-        OrgEmployeePhone::query()
-            ->where('unit', $data['unit'])
-            ->update(['unit_type' => $data['unit_type'] ?? null]);
-
-        $label = isset($data['unit_type'])
-            ? (OrgEmployeePhone::UNIT_TYPES[$data['unit_type']] ?? $data['unit_type'])
-            : 'Сонголтгүй';
-
-        return back(303)->with('success', $data['unit'].' — '.$label);
-    }
-
-    public function destroyStaff(Request $request, OrgEmployeePhone $staff): RedirectResponse
-    {
-        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
-
-        $staff->delete();
-
-        return redirect()
-            ->route('phone-directory.index', ['tab' => 'staff'])
-            ->with('success', 'Устгалаа.');
     }
 
     public function import(Request $request, PhoneDirectoryDocxParser $parser): RedirectResponse
@@ -490,7 +231,7 @@ class PhoneDirectoryController extends Controller
         });
 
         return redirect()
-            ->route('phone-directory.index', ['tab' => 'directory'])
+            ->route('phone-directory.index')
             ->with('success', count($rows).' мөр импортлолоо.');
     }
 
