@@ -1,7 +1,9 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -10,6 +12,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Багана NOT NULL бол эхлээд nullable болгоно (эс бөгөөс update унана).
+        Schema::table('phone_directory_entries', function (Blueprint $table) {
+            $table->string('category', 16)->nullable()->default(null)->change();
+        });
+
         DB::table('phone_directory_entries')
             ->where('category', 'heltes')
             ->update(['category' => null]);

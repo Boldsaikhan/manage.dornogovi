@@ -60,9 +60,7 @@ class PhoneDirectoryController extends Controller
             'groups' => $groups,
             'total' => $entries->count(),
             'orgNames' => $entries->pluck('org_name')->unique()->values(),
-            'categories' => collect(PhoneDirectoryEntry::CATEGORIES)
-                ->except(['heltes'])
-                ->all(),
+            'categories' => PhoneDirectoryEntry::CATEGORIES,
             'canManage' => ModuleAccess::canManage($request->user(), self::MODULE),
         ]);
     }
@@ -273,10 +271,10 @@ class PhoneDirectoryController extends Controller
             ->with('success', count($rows).' мөр импортлолоо.');
     }
 
-    /** «хэлтэс» төлвийг UI дээр сонголтгүй гэж харуулна. */
+    /** Танигдахгүй төлвийг «сонголтгүй» гэж харуулна. */
     private function normalizeDirectoryCategory(?string $category): string
     {
-        if ($category === null || $category === '' || $category === 'heltes') {
+        if ($category === null || $category === '') {
             return '';
         }
 
