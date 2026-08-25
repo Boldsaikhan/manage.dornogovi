@@ -8,6 +8,7 @@ use App\Models\Task;
 use App\Models\TaskDocument;
 use App\Models\TaskSource;
 use App\Support\ModuleAccess;
+use App\Support\PersonName;
 use App\Support\TaskDocxParser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -41,8 +42,8 @@ class TaskController extends Controller
                 'no' => $i + 1,
                 'text' => $task->text,
                 'period' => $task->period,
-                'responsible' => $task->responsible,
-                'collaborator' => $task->collaborator,
+                'responsible' => PersonName::shortList($task->responsible),
+                'collaborator' => PersonName::shortList($task->collaborator),
                 'sector' => $task->sector,
                 'note' => $task->note,
                 'progress' => (int) $task->progress,
@@ -95,6 +96,7 @@ class TaskController extends Controller
                     return;
                 }
                 $category = $row->category ?: PhoneDirectoryEntry::guessCategory($row->org_name);
+                $name = PersonName::short($name);
                 $items[$name] = [
                     'value' => $name,
                     'label' => $name,
@@ -109,7 +111,7 @@ class TaskController extends Controller
             ->orderBy('id')
             ->get(['last_name', 'first_name', 'position', 'organization', 'unit'])
             ->each(function (OrgEmployeePhone $row) use (&$items) {
-                $name = $this->formatEmployeeName($row->last_name, $row->first_name);
+                $name = PersonName::short($this->formatEmployeeName($row->last_name, $row->first_name));
                 if ($name === '') {
                     return;
                 }
@@ -174,8 +176,8 @@ class TaskController extends Controller
         $source->tasks()->create([
             'text' => $data['text'] ?? '',
             'period' => $data['period'] ?? null,
-            'responsible' => $data['responsible'] ?? null,
-            'collaborator' => $data['collaborator'] ?? null,
+            'responsible' => PersonName::shortList($data['responsible'] ?? null) ?: null,
+            'collaborator' => PersonName::shortList($data['collaborator'] ?? null) ?: null,
             'sector' => $data['sector'] ?? null,
             'sort_order' => $next,
             'progress' => 0,
@@ -200,6 +202,13 @@ class TaskController extends Controller
             'note' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'progress' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100'],
         ]);
+
+        // Нэрийг «Ц.Мөнхбат» хэлбэрт оруулж хадгална.
+        foreach (['responsible', 'collaborator'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $data[$field] = PersonName::shortList($data[$field]) ?: null;
+            }
+        }
 
         $task->update($data);
 
