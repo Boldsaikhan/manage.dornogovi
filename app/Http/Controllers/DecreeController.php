@@ -130,6 +130,117 @@ class DecreeController extends Controller
         };
     }
 
+    /**
+     * Хэвлэмэл хуудасны бүлгүүд — нэг мөрд зөвхөн нэг бүлэг бөглөгдөнө.
+     */
+    private const BLANK_GROUPS = [
+        'zahiramj' => ['qty_zahiramj', 'qty_zahiramj_mn'],
+        'tushaal' => ['qty_tushaal', 'qty_tushaal_mn'],
+        'assignment' => ['qty_assignment', 'qty_assignment_mn'],
+        'council' => ['qty_council', 'qty_council_mn'],
+    ];
+
+    /**
+     * Бөглөгдсөн бүлгийг тогтооно (аль нэг тоо > 0 байвал).
+     *
+     * @param  array<string, mixed>  $values
+     */
+    private function activeBlankGroup(array $values): ?string
+    {
+        foreach (self::BLANK_GROUPS as $group => $fields) {
+            foreach ($fields as $field) {
+                if ((int) ($values[$field] ?? 0) > 0) {
+                    return $group;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * «1402-1408» гэх мэт мужаас хамгийн сүүлийн дугаарыг гаргана.
+     */
+    private function rangeEnd(?string $range): int
+    {
+        preg_match_all('/\d+/', (string) $range, $matches);
+
+        $numbers = array_map('intval', $matches[0] ?? []);
+
+        return $numbers ? max($numbers) : 0;
+    }
+
+    /**
+     * Тухайн төрлийн дараагийн чөлөөтэй дугаараас эхлэх мужийг тооцно.
+     */
+    private function nextBlankRange(string $column, int $count, ?int $ignoreId): ?string
+    {
+        if ($count < 1) {
+            return null;
+        }
+
+        $used = Decree::query()
+            ->where('category', 'blank')
+            ->when($ignoreId, fn ($q) => $q->whereKeyNot($ignoreId))
+            ->pluck($column)
+            ->map(fn (?string $range) => $this->rangeEnd($range))
+            ->max();
+
+        $start = ((int) $used) + 1;
+        $end = $start + $count - 1;
+
+        return $count === 1 ? (string) $start : $start.'-'.$end;
+    }
+
+    /**
+     * Тоо ширхэгээс хамааруулж хэвлэмэл хуудасны дугаарыг бодож бичнэ.
+     *
+     * @param  array<string, mixed>  $data  Хадгалагдах утгууд (өөрчлөгдөнө)
+     */
+    private function applyBlankNumbering(array $data, ?Decree $decree = null): array
+    {
+        $values = [];
+
+        foreach (self::BLANK_GROUPS as $fields) {
+            foreach ($fields as $field) {
+                $values[$field] = array_key_exists($field, $data)
+                    ? (int) ($data[$field] ?? 0)
+                    : (int) ($decree->{$field} ?? 0);
+            }
+        }
+
+        // Нэг мөрд нэг бүлэг — бусад бүлгийг цэвэрлэнэ.
+        $group = $this->activeBlankGroup($values);
+
+        foreach (self::BLANK_GROUPS as $name => $fields) {
+            foreach ($fields as $field) {
+                if ($group !== null && $name !== $group) {
+                    $values[$field] = 0;
+                }
+
+                $data[$field] = $values[$field];
+            }
+        }
+
+        $countZ = $values['qty_zahiramj'] + $values['qty_zahiramj_mn'];
+        $countT = $values['qty_tushaal'] + $values['qty_tushaal_mn'];
+
+        // Гараар дугаар оруулсан бол хүндэтгэнэ (эхлэх дугаарыг тохируулах боломж).
+        $manualZ = filled($data['num_zahiramj'] ?? null);
+        $manualT = filled($data['num_tushaal'] ?? null);
+
+        if (! $manualZ) {
+            $data['num_zahiramj'] = $this->nextBlankRange('num_zahiramj', $countZ, $decree?->id);
+        }
+
+        if (! $manualT) {
+            $data['num_tushaal'] = $this->nextBlankRange('num_tushaal', $countT, $decree?->id);
+        }
+        $data['blank_number'] = $data['num_zahiramj'] ?: $data['num_tushaal'] ?: null;
+
+        return $data;
+    }
+
     public function store(Request $request): RedirectResponse
     {
         abort_unless(ModuleAccess::canManage($request->user(), 'decrees'), 403);
@@ -163,6 +274,9 @@ class DecreeController extends Controller
 
             $person = PersonName::short(trim((string) ($data['person_name'] ?? '')));
 
+            // Тоо ширхэгээс хамааруулж хэвлэмэл хуудасны дугаарыг бодно.
+            $data = $this->applyBlankNumbering($data);
+
             Decree::query()->create([
                 ...$data,
                 'person_name' => $person !== '' ? $person : null,
@@ -170,7 +284,6 @@ class DecreeController extends Controller
                 'category' => 'blank',
                 'kind' => 'blank',
                 'title' => $person !== '' ? $person : '',
-                'blank_number' => ($data['num_zahiramj'] ?? null) ?: ($data['num_tushaal'] ?? null) ?: null,
                 'number' => null,
                 'created_by' => $request->user()->id,
             ]);
@@ -243,15 +356,7 @@ class DecreeController extends Controller
                 $data['issued_on'] = null;
             }
 
-            if (array_key_exists('num_zahiramj', $data) || array_key_exists('num_tushaal', $data)) {
-                $numZ = array_key_exists('num_zahiramj', $data)
-                    ? $data['num_zahiramj']
-                    : $decree->num_zahiramj;
-                $numT = array_key_exists('num_tushaal', $data)
-                    ? $data['num_tushaal']
-                    : $decree->num_tushaal;
-                $data['blank_number'] = $numZ ?: $numT ?: null;
-            }
+
 
             foreach ([
                 'qty_zahiramj', 'qty_zahiramj_mn', 'qty_tushaal', 'qty_tushaal_mn',
@@ -260,6 +365,17 @@ class DecreeController extends Controller
                 if (array_key_exists($qtyField, $data) && $data[$qtyField] === null) {
                     $data[$qtyField] = 0;
                 }
+            }
+
+            // Тоо ширхэг өөрчлөгдвөл бүлгийн онцгой байдал болон дугаарлалтыг дахин бодно.
+            $qtyTouched = (bool) array_intersect(array_keys($data), [
+                'qty_zahiramj', 'qty_zahiramj_mn', 'qty_tushaal', 'qty_tushaal_mn',
+                'qty_assignment', 'qty_assignment_mn', 'qty_council', 'qty_council_mn',
+                'num_zahiramj', 'num_tushaal',
+            ]);
+
+            if ($qtyTouched) {
+                $data = $this->applyBlankNumbering($data, $decree);
             }
 
             $decree->update($data);

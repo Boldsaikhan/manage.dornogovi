@@ -63,7 +63,36 @@ const officialOptions = computed(() => {
     return [...pending, ...extras];
 });
 
+const canManage = computed(() => props.canManage);
+
 const drafts = reactive({});
+
+// Хэвлэмэл хуудасны бүлгүүд — нэг мөрд зөвхөн нэгийг нь бөглөнө.
+const BLANK_GROUPS = {
+    zahiramj: ['qty_zahiramj', 'qty_zahiramj_mn'],
+    tushaal: ['qty_tushaal', 'qty_tushaal_mn'],
+    assignment: ['qty_assignment', 'qty_assignment_mn'],
+    council: ['qty_council', 'qty_council_mn'],
+};
+
+const activeGroup = (rowId) => {
+    const draft = drafts[rowId];
+    if (! draft) return null;
+
+    return Object.keys(BLANK_GROUPS).find(
+        (group) => BLANK_GROUPS[group].some((field) => Number(draft[field]) > 0),
+    ) ?? null;
+};
+
+// Тухайн бүлгийн нүд засварлаж болох эсэх (өөр бүлэг бөглөгдсөн бол үгүй).
+const groupEditable = (rowId, group) => {
+    if (! canManage.value) return false;
+
+    const active = activeGroup(rowId);
+
+    return active === null || active === group;
+};
+
 const imageInput = ref(null);
 const uploadingId = ref(null);
 const preview = ref(null);
@@ -419,7 +448,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     v-model="drafts[row.id].qty_zahiramj"
                                     type="number"
                                     align="center"
-                                    :editable="canManage"
+                                    :editable="groupEditable(row.id, 'zahiramj')"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'qty_zahiramj', v)"
                                 />
@@ -430,7 +459,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     v-model="drafts[row.id].qty_zahiramj_mn"
                                     type="number"
                                     align="center"
-                                    :editable="canManage"
+                                    :editable="groupEditable(row.id, 'zahiramj')"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'qty_zahiramj_mn', v)"
                                 />
@@ -441,7 +470,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     v-model="drafts[row.id].qty_tushaal"
                                     type="number"
                                     align="center"
-                                    :editable="canManage"
+                                    :editable="groupEditable(row.id, 'tushaal')"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'qty_tushaal', v)"
                                 />
@@ -452,7 +481,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     v-model="drafts[row.id].qty_tushaal_mn"
                                     type="number"
                                     align="center"
-                                    :editable="canManage"
+                                    :editable="groupEditable(row.id, 'tushaal')"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'qty_tushaal_mn', v)"
                                 />
@@ -463,7 +492,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     v-model="drafts[row.id].qty_assignment"
                                     type="number"
                                     align="center"
-                                    :editable="canManage"
+                                    :editable="groupEditable(row.id, 'assignment')"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'qty_assignment', v)"
                                 />
@@ -474,7 +503,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     v-model="drafts[row.id].qty_assignment_mn"
                                     type="number"
                                     align="center"
-                                    :editable="canManage"
+                                    :editable="groupEditable(row.id, 'assignment')"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'qty_assignment_mn', v)"
                                 />
@@ -485,7 +514,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     v-model="drafts[row.id].qty_council"
                                     type="number"
                                     align="center"
-                                    :editable="canManage"
+                                    :editable="groupEditable(row.id, 'council')"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'qty_council', v)"
                                 />
@@ -496,7 +525,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     v-model="drafts[row.id].qty_council_mn"
                                     type="number"
                                     align="center"
-                                    :editable="canManage"
+                                    :editable="groupEditable(row.id, 'council')"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'qty_council_mn', v)"
                                 />
@@ -508,6 +537,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     align="center"
                                     :editable="canManage"
                                     empty-label=""
+                                    placeholder="авто"
                                     @commit="(v) => saveField(row.id, 'num_zahiramj', v)"
                                 />
                             </td>
@@ -518,6 +548,7 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                                     align="center"
                                     :editable="canManage"
                                     empty-label=""
+                                    placeholder="авто"
                                     @commit="(v) => saveField(row.id, 'num_tushaal', v)"
                                 />
                             </td>
