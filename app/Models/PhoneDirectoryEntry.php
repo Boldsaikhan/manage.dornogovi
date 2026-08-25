@@ -47,7 +47,7 @@ class PhoneDirectoryEntry extends Model
             return false;
         }
 
-        foreach ((array) config('agencies.names', []) as $agency) {
+        foreach (self::agencyNames() as $agency) {
             $candidate = self::normalizeName($agency);
 
             if ($candidate === '' ) {
@@ -61,6 +61,32 @@ class PhoneDirectoryEntry extends Model
         }
 
         return false;
+    }
+
+    /**
+     * Агентлагуудын жагсаалт.
+     *
+     * config:cache хуучирсан үед (deploy-ийн үед тохиолдож болно) файлаас шууд уншина.
+     *
+     * @return array<int, string>
+     */
+    private static function agencyNames(): array
+    {
+        $names = (array) config('agencies.names', []);
+
+        if ($names) {
+            return $names;
+        }
+
+        $path = config_path('agencies.php');
+
+        if (! is_file($path)) {
+            return [];
+        }
+
+        $loaded = require $path;
+
+        return (array) ($loaded['names'] ?? []);
     }
 
     /**
