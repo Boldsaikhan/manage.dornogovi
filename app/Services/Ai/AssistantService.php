@@ -193,6 +193,14 @@ class AssistantService
         if ($type === 'CREATE_LEAVE_REQUEST') {
             abort_unless(ModuleAccess::canManage($user, 'leaves') || ModuleAccess::canView($user, 'leaves'), 403);
 
+            // Админаас Manage AI-д бичих эрх өгсөн эсэх.
+            if (! $this->settings->canWrite('leaves')) {
+                return [
+                    'ok' => false,
+                    'message' => 'Чөлөөний бүртгэл үүсгэх эрхийг Manage AI-д өгөөгүй байна.',
+                ];
+            }
+
             $validated = validator($data, [
                 'type' => ['nullable', 'string', 'max:32'],
                 'start_date' => ['required', 'date'],

@@ -22,6 +22,24 @@ class AiSettings
 
     public const DEFAULT_DISPLAY_NAME = 'Manage AI';
 
+    public const KEY_MODULE_ACCESS = 'ai.module_access';
+
+    /** Хандалтын түвшин. */
+    public const ACCESS_NONE = 'none';
+
+    public const ACCESS_READ = 'read';
+
+    public const ACCESS_WRITE = 'write';
+
+    public const ACCESS_LABELS = [
+        self::ACCESS_NONE => 'Хаалттай',
+        self::ACCESS_READ => 'Зөвхөн харах',
+        self::ACCESS_WRITE => 'Харах + бүртгэл үүсгэх',
+    ];
+
+    /** Модульд хамаарахгүй ерөнхий хэрэгслүүд (самбар, ажилтны хайлт). */
+    public const GENERAL_MODULE = 'general';
+
     public function get(string $key, ?string $default = null): ?string
     {
         $value = Cache::remember("app_setting:{$key}", 60, function () use ($key) {
@@ -105,6 +123,57 @@ class AiSettings
      *
      * @return array<string, mixed>
      */
+    /**
+     * AI аль цэсэд ямар эрхтэй болох тохиргоо.
+     *
+     * @return array<string, string>
+     */
+    public function moduleAccess(): array
+    {
+        $raw = $this->get(self::KEY_MODULE_ACCESS);
+        $decoded = $raw ? json_decode($raw, true) : null;
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * @param  array<string, string>  $access
+     */
+    public function setModuleAccess(array $access): void
+    {
+        $clean = [];
+
+        foreach ($access as $module => $level) {
+            if (! is_string($module) || $module === '') {
+                continue;
+            }
+
+            $clean[$module] = in_array($level, array_keys(self::ACCESS_LABELS), true)
+                ? $level
+                : self::ACCESS_READ;
+        }
+
+        $this->set(self::KEY_MODULE_ACCESS, json_encode($clean, JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * Тохируулаагүй бол анхдагчаар зөвхөн харна.
+     */
+    public function accessFor(string $module): string
+    {
+        return $this->moduleAccess()[$module] ?? self::ACCESS_READ;
+    }
+
+    public function canRead(string $module): bool
+    {
+        return $this->accessFor($module) !== self::ACCESS_NONE;
+    }
+
+    public function canWrite(string $module): bool
+    {
+        return $this->accessFor($module) === self::ACCESS_WRITE;
+    }
+
     public function forAdmin(): array
     {
         $key = $this->openaiApiKey();
@@ -117,6 +186,8 @@ class AiSettings
             'daily_question_limit' => $this->dailyQuestionLimit(),
             'has_api_key' => filled($key),
             'api_key_hint' => filled($key) ? $this->maskKey($key) : null,
+            'module_access' => $this->moduleAccess(),
+            'access_labels' => self::ACCESS_LABELS,
         ];
     }
 

@@ -9,6 +9,7 @@ const props = defineProps({
     systems: Array,
     ai: Object,
     menus: { type: Array, default: () => [] },
+    aiModules: { type: Array, default: () => [] },
 });
 
 const page = usePage();
@@ -37,7 +38,31 @@ const aiForm = useForm({
     daily_question_limit: props.ai?.daily_question_limit ?? 30,
     openai_api_key: '',
     clear_api_key: false,
+    // Цэс бүрд AI ямар эрхтэй байхыг тохируулна.
+    module_access: Object.fromEntries((props.aiModules ?? []).map((m) => [m.key, m.level ?? 'read'])),
 });
+
+const accessLevels = [
+    { value: 'none', label: 'Хаалттай' },
+    { value: 'read', label: 'Зөвхөн харах' },
+    { value: 'write', label: 'Харах + бүртгэл үүсгэх' },
+];
+
+const aiModulesByGroup = computed(() => {
+    const map = {};
+    for (const item of props.aiModules ?? []) {
+        if (!map[item.group]) map[item.group] = { label: item.group, items: [] };
+        map[item.group].items.push(item);
+    }
+
+    return Object.values(map);
+});
+
+const setAllAccess = (level) => {
+    (props.aiModules ?? []).forEach((m) => {
+        aiForm.module_access[m.key] = level;
+    });
+};
 
 const menuEnabled = ref(
     Object.fromEntries((props.menus ?? []).map((m) => [m.key, m.enabled !== false])),
@@ -241,6 +266,55 @@ const saveAi = () => {
                         <input v-model="aiForm.clear_api_key" type="checkbox" class="rounded border-red-200 text-red-600" />
                         Одоогийн түлхүүрийг устгах
                     </label>
+                </div>
+
+                <!-- Цэс бүрийн хандалт -->
+                <div class="md:col-span-2">
+                    <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <h3 class="text-sm font-semibold text-brand-navy-800">Аль цэс рүү хандах, ямар үйлдэл хийх вэ</h3>
+                            <p class="mt-0.5 text-xs text-slate-500">
+                                «Хаалттай» бол AI тухайн цэсийн мэдээллийг огт үзэхгүй. «Харах + бүртгэл үүсгэх»
+                                сонговол шинэ бүртгэл үүсгэхийг зөвшөөрнө (хэрэглэгчийн эрхээс давахгүй).
+                            </p>
+                        </div>
+                        <div class="flex gap-1.5">
+                            <button
+                                v-for="level in accessLevels"
+                                :key="level.value"
+                                type="button"
+                                class="rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-600 hover:border-brand-navy-300"
+                                @click="setAllAccess(level.value)"
+                            >
+                                Бүгд: {{ level.label }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 rounded-xl border border-slate-200 p-4">
+                        <div v-for="group in aiModulesByGroup" :key="group.label">
+                            <p class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                {{ group.label }}
+                            </p>
+                            <div class="grid gap-2 md:grid-cols-2">
+                                <label
+                                    v-for="item in group.items"
+                                    :key="item.key"
+                                    class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2"
+                                >
+                                    <span class="truncate text-sm text-slate-700" :title="item.label">{{ item.label }}</span>
+                                    <select
+                                        v-model="aiForm.module_access[item.key]"
+                                        class="ui-input w-48 shrink-0 py-1 text-xs"
+                                    >
+                                        <option v-for="level in accessLevels" :key="level.value" :value="level.value">
+                                            {{ level.label }}
+                                        </option>
+                                    </select>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="md:col-span-2">

@@ -3,6 +3,7 @@
 namespace App\Services\Ai\Tools;
 
 use App\Models\User;
+use App\Services\Ai\AiSettings;
 use App\Support\ModuleAccess;
 use InvalidArgumentException;
 
@@ -14,11 +15,15 @@ class ToolRegistry
     /** @var array<string, string|null> module key required for view, null = any auth */
     private array $permissions = [];
 
+    /** @var array<string, string> Хэрэгсэл бүрийн шаардах түвшин: read | write */
+    private array $levels = [];
+
     public function __construct(
         private SystemTools $system,
         private TaskTools $tasks,
         private LeaveTools $leaves,
         private DocumentTools $documents,
+        private AiSettings $settings,
     ) {
         $this->register('get_dashboard_briefing', null, fn (User $u, array $a) => $this->system->dashboardBriefing($u, $a));
         $this->register('get_system_statistics', null, fn (User $u, array $a) => $this->system->statistics($u, $a));
@@ -32,7 +37,8 @@ class ToolRegistry
 
         $this->register('get_my_leave', 'leaves', fn (User $u, array $a) => $this->leaves->mine($u, $a));
         $this->register('search_leaves', 'leaves', fn (User $u, array $a) => $this->leaves->search($u, $a));
-        $this->register('prepare_leave_request', 'leaves', fn (User $u, array $a) => $this->leaves->prepareCreate($u, $a));
+        // Бүртгэл үүсгэхэд бэлддэг тул бичих эрх шаардана.
+        $this->register('prepare_leave_request', 'leaves', fn (User $u, array $a) => $this->leaves->prepareCreate($u, $a), AiSettings::ACCESS_WRITE);
 
         $this->register('search_orders', 'decrees', fn (User $u, array $a) => $this->documents->searchDecrees($u, $a));
         $this->register('search_directives', 'decrees', fn (User $u, array $a) => $this->documents->searchDecrees($u, $a));
@@ -45,10 +51,15 @@ class ToolRegistry
         $this->register('get_my_business_trips', 'assignments', fn (User $u, array $a) => $this->documents->myTrips($u, $a));
     }
 
-    public function register(string $name, ?string $module, callable $handler): void
-    {
+    public function register(
+        string $name,
+        ?string $module,
+        callable $handler,
+        string $level = AiSettings::ACCESS_READ,
+    ): void {
         $this->tools[$name] = $handler;
         $this->permissions[$name] = $module;
+        $this->levels[$name] = $level;
     }
 
     public function has(string $name): bool
@@ -71,6 +82,26 @@ class ToolRegistry
                 'ok' => false,
                 'denied' => true,
                 'error' => 'Энэ мэдээллийг харах эрх танд байхгүй байна.',
+            ];
+        }
+
+        // Админаас тохируулсан Manage AI-ийн цэсийн хандалт.
+        $settingsKey = $module ?: AiSettings::GENERAL_MODULE;
+        $level = $this->levels[$name] ?? AiSettings::ACCESS_READ;
+
+        if (! $this->settings->canRead($settingsKey)) {
+            return [
+                'ok' => false,
+                'denied' => true,
+                'error' => 'Энэ цэс рүү хандахыг Manage AI-д зөвшөөрөөгүй байна.',
+            ];
+        }
+
+        if ($level === AiSettings::ACCESS_WRITE && ! $this->settings->canWrite($settingsKey)) {
+            return [
+                'ok' => false,
+                'denied' => true,
+                'error' => 'Энэ цэст бүртгэл үүсгэх эрхийг Manage AI-д өгөөгүй байна.',
             ];
         }
 

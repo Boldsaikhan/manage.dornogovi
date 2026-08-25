@@ -36,7 +36,37 @@ class SystemSettingsController extends Controller
             ]),
             'ai' => $aiSettings->forAdmin(),
             'menus' => ModuleVisibility::forAdmin(),
+            // AI аль цэсэд ямар эрхтэйг тохируулах жагсаалт.
+            'aiModules' => $this->aiModules($aiSettings),
         ]);
+    }
+
+    /**
+     * Manage AI-ийн хандах боломжтой цэсүүд, одоогийн түвшин.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function aiModules(AiSettings $aiSettings): array
+    {
+        $groups = config('modules.groups', []);
+
+        $rows = [[
+            'key' => AiSettings::GENERAL_MODULE,
+            'label' => 'Ерөнхий (самбар, ажилтны хайлт)',
+            'group' => 'Ерөнхий',
+            'level' => $aiSettings->accessFor(AiSettings::GENERAL_MODULE),
+        ]];
+
+        foreach (ModuleAccess::definitions() as $item) {
+            $rows[] = [
+                'key' => $item['key'],
+                'label' => $item['label'],
+                'group' => $groups[$item['group']] ?? $item['group'],
+                'level' => $aiSettings->accessFor($item['key']),
+            ];
+        }
+
+        return $rows;
     }
 
     public function updateMenus(Request $request): RedirectResponse
@@ -70,6 +100,8 @@ class SystemSettingsController extends Controller
             'openai_model' => ['required', 'string', 'max:100'],
             'daily_question_limit' => ['required', 'integer', 'min:0', 'max:1000'],
             'openai_api_key' => ['nullable', 'string', 'max:500'],
+            'module_access' => ['nullable', 'array'],
+            'module_access.*' => [Rule::in(array_keys(AiSettings::ACCESS_LABELS))],
             'clear_api_key' => ['boolean'],
         ]);
 
@@ -78,6 +110,7 @@ class SystemSettingsController extends Controller
         $aiSettings->set(AiSettings::KEY_PROVIDER, $data['provider']);
         $aiSettings->set(AiSettings::KEY_OPENAI_MODEL, $data['openai_model']);
         $aiSettings->set(AiSettings::KEY_DAILY_LIMIT, (string) $data['daily_question_limit']);
+        $aiSettings->setModuleAccess($data['module_access'] ?? []);
 
         if (! empty($data['clear_api_key'])) {
             $aiSettings->setOpenAiApiKey(null);
