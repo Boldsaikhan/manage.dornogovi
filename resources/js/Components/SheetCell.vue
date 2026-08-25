@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 
 const props = defineProps({
     modelValue: { type: [String, Number], default: '' },
@@ -17,25 +17,13 @@ const emit = defineEmits(['update:modelValue', 'commit']);
 
 const editing = ref(false);
 const local = ref(props.modelValue ?? '');
+const search = ref('');
 const inputRef = ref(null);
 const rootRef = ref(null);
 const highlight = ref(0);
 const menuStyle = ref({});
-
-const updateMenuPosition = () => {
-    const el = rootRef.value;
-    if (! el) {
-        return;
-    }
-    const rect = el.getBoundingClientRect();
-    menuStyle.value = {
-        position: 'fixed',
-        left: `${rect.left}px`,
-        top: `${rect.bottom}px`,
-        width: `${Math.max(rect.width, 220)}px`,
-        zIndex: 80,
-    };
-};
+const ignoreBlur = ref(false);
+let blurTimer = null;
 
 const hasOptions = computed(() => Array.isArray(props.options) && props.options.length > 0);
 
@@ -43,20 +31,39 @@ const filteredOptions = computed(() => {
     if (! hasOptions.value) {
         return [];
     }
-    const q = String(local.value ?? '').trim().toLowerCase();
-    if (! q) {
-        return props.options.slice(0, 80);
-    }
 
-    return props.options
-        .filter((opt) => {
+    const q = String(search.value ?? '').trim().toLowerCase();
+    const list = ! q
+        ? props.options
+        : props.options.filter((opt) => {
             const label = String(opt.label ?? opt.value ?? '').toLowerCase();
             const hint = String(opt.hint ?? '').toLowerCase();
 
             return label.includes(q) || hint.includes(q);
-        })
-        .slice(0, 80);
+        });
+
+    return list.slice(0, 200);
 });
+
+const updateMenuPosition = () => {
+    const el = rootRef.value;
+    if (! el) {
+        return;
+    }
+    const rect = el.getBoundingClientRect();
+    const width = Math.max(rect.width, 280);
+    let left = rect.left;
+    if (left + width > window.innerWidth - 8) {
+        left = Math.max(8, window.innerWidth - width - 8);
+    }
+    menuStyle.value = {
+        position: 'fixed',
+        left: `${left}px`,
+        top: `${rect.bottom + 2}px`,
+        width: `${width}px`,
+        zIndex: 200,
+    };
+};
 
 watch(
     () => props.modelValue,
@@ -69,6 +76,12 @@ watch(
 
 watch(filteredOptions, () => {
     highlight.value = 0;
+});
+
+watch(search, () => {
+    if (editing.value && hasOptions.value) {
+        nextTick(updateMenuPosition);
+    }
 });
 
 const displayText = () => {
@@ -86,10 +99,21 @@ const startEdit = async () => {
     }
 
     editing.value = true;
-    local.value = props.modelValue ?? '';
     highlight.value = 0;
+
+    if (hasOptions.value) {
+        // Хайлтыг хоосон эхлүүлнэ — бүх жагсаалт харагдана
+        search.value = '';
+        local.value = '';
+    } else {
+        local.value = props.modelValue ?? '';
+    }
+
     await nextTick();
     updateMenuPosition();
+    window.addEventListener('scroll', updateMenuPosition, true);
+    window.addEventListener('resize', updateMenuPosition);
+
     const el = inputRef.value;
     if (! el) {
         return;
@@ -103,14 +127,27 @@ const startEdit = async () => {
     }
 };
 
+const stopListeners = () => {
+    window.removeEventListener('scroll', updateMenuPosition, true);
+    window.removeEventListener('resize', updateMenuPosition);
+};
+
 const commitValue = (value) => {
+    if (blurTimer) {
+        clearTimeout(blurTimer);
+        blurTimer = null;
+    }
     editing.value = false;
+    ignoreBlur.value = false;
+    stopListeners();
+
     let next = value;
     if (props.type === 'number') {
         const n = Number.parseInt(next, 10);
         next = Number.isNaN(n) ? 0 : n;
     }
     local.value = next;
+    search.value = '';
     emit('update:modelValue', next);
     emit('commit', next);
 };
@@ -119,15 +156,42 @@ const finish = () => {
     if (! editing.value) {
         return;
     }
+
+    // Сонголттой горимд blur дээр хайлтын текстийг хадгалахгүй
+    if (hasOptions.value) {
+        editing.value = false;
+        search.value = '';
+        local.value = props.modelValue ?? '';
+        stopListeners();
+
+        return;
+    }
+
     commitValue(local.value);
 };
 
+const onBlur = () => {
+    if (ignoreBlur.value) {
+        return;
+    }
+    blurTimer = setTimeout(() => {
+        finish();
+    }, 120);
+};
+
 const cancel = () => {
+    if (blurTimer) {
+        clearTimeout(blurTimer);
+        blurTimer = null;
+    }
     local.value = props.modelValue ?? '';
+    search.value = '';
     editing.value = false;
+    stopListeners();
 };
 
 const pickOption = (opt) => {
+    ignoreBlur.value = true;
     commitValue(opt.value ?? opt.label ?? '');
 };
 
@@ -160,7 +224,7 @@ const onKeydown = (event) => {
         }
     }
 
-    if (! props.multiline && event.key === 'Enter') {
+    if (! props.multiline && ! hasOptions.value && event.key === 'Enter') {
         event.preventDefault();
         finish();
     }
@@ -174,6 +238,13 @@ const onInput = (event) => {
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
 };
+
+onBeforeUnmount(() => {
+    stopListeners();
+    if (blurTimer) {
+        clearTimeout(blurTimer);
+    }
+});
 </script>
 
 <template>
@@ -196,9 +267,22 @@ const onInput = (event) => {
             class="ui-sheet-editor"
             :placeholder="placeholder"
             rows="2"
-            @blur="finish"
+            @blur="onBlur"
             @keydown="onKeydown"
             @input="onInput"
+        />
+        <input
+            v-else-if="editing && hasOptions"
+            ref="inputRef"
+            v-model="search"
+            type="text"
+            class="ui-sheet-editor"
+            :class="{ 'text-center': align === 'center' }"
+            :placeholder="placeholder || 'Нэрээр хайх…'"
+            autocomplete="off"
+            @blur="onBlur"
+            @keydown="onKeydown"
+            @input="updateMenuPosition"
         />
         <input
             v-else-if="editing"
@@ -207,11 +291,10 @@ const onInput = (event) => {
             :type="type === 'number' ? 'number' : 'text'"
             class="ui-sheet-editor"
             :class="{ 'text-center': align === 'center' }"
-            :placeholder="hasOptions ? (placeholder || 'Хайлт / сонгох…') : placeholder"
+            :placeholder="placeholder"
             autocomplete="off"
-            @blur="finish"
+            @blur="onBlur"
             @keydown="onKeydown"
-            @input="updateMenuPosition"
         />
         <div
             v-else
@@ -225,22 +308,28 @@ const onInput = (event) => {
         <Teleport to="body">
             <div
                 v-if="editing && hasOptions"
-                class="max-h-56 overflow-y-auto border border-slate-200 bg-white shadow-lg"
+                class="max-h-64 overflow-y-auto rounded-md border border-slate-200 bg-white py-1 shadow-xl"
                 :style="menuStyle"
-                @mousedown.prevent
+                @mousedown.prevent="ignoreBlur = true"
             >
+                <p class="border-b border-slate-100 px-2.5 py-1.5 text-[11px] text-slate-500">
+                    {{ filteredOptions.length }} / {{ options.length }} хүн · нэрээр хайна уу
+                </p>
                 <button
                     v-for="(opt, idx) in filteredOptions"
                     :key="`${opt.value}-${idx}`"
                     type="button"
                     class="flex w-full flex-col items-start gap-0.5 px-2.5 py-1.5 text-left text-sm hover:bg-brand-navy-50"
-                    :class="idx === highlight ? 'bg-brand-navy-50' : ''"
+                    :class="[
+                        idx === highlight ? 'bg-brand-navy-50' : '',
+                        String(opt.value) === String(modelValue) ? 'font-semibold text-brand-navy-800' : '',
+                    ]"
                     @mousedown.prevent="pickOption(opt)"
                 >
-                    <span class="font-medium text-slate-800">{{ opt.label ?? opt.value }}</span>
-                    <span v-if="opt.hint" class="text-[11px] text-slate-500">{{ opt.hint }}</span>
+                    <span class="text-slate-800">{{ opt.label ?? opt.value }}</span>
+                    <span v-if="opt.hint" class="text-[11px] font-normal text-slate-500">{{ opt.hint }}</span>
                 </button>
-                <p v-if="! filteredOptions.length" class="px-2.5 py-2 text-xs text-slate-400">
+                <p v-if="! filteredOptions.length" class="px-2.5 py-3 text-xs text-slate-400">
                     Утасны жагсаалтад тохирох нэр олдсонгүй.
                 </p>
             </div>
