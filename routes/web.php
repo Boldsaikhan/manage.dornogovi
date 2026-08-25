@@ -72,6 +72,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/ai', [AiAssistantController::class, 'index'])->name('ai.index');
     Route::post('/ai/ask', [AiAssistantController::class, 'ask'])->name('ai.ask');
+    Route::post('/ai/confirm', [AiAssistantController::class, 'confirm'])->name('ai.confirm');
+    Route::post('/ai/conversations', [AiAssistantController::class, 'newConversation'])->name('ai.conversations.store');
 
     Route::get('/systems/{system}/launch', LaunchController::class)->name('systems.launch');
     Route::get('/systems/{system}', [SystemViewController::class, 'show'])->name('systems.show');
@@ -80,6 +82,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/systems', [SystemSettingsController::class, 'index'])->name('systems.index');
         Route::patch('/systems/{system}', [SystemSettingsController::class, 'update'])->name('systems.update');
         Route::post('/systems/{system}/check-embed', [SystemSettingsController::class, 'checkEmbed'])->name('systems.check-embed');
+        Route::patch('/ai-settings', [SystemSettingsController::class, 'updateAi'])->name('ai-settings.update');
 
         Route::get('/users', [UserAccessController::class, 'index'])->name('users.index');
         Route::post('/users', [UserAccessController::class, 'store'])->name('users.store');

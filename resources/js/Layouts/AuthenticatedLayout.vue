@@ -88,26 +88,18 @@ const isCurrent = (routeName) => {
             class="fixed inset-y-0 left-0 z-40 flex w-[17.5rem] flex-col border-r border-slate-200/80 bg-white shadow-soft transition-transform lg:translate-x-0"
             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
         >
-            <div class="flex h-[4.5rem] items-center gap-3 border-b border-slate-100 px-5">
+            <Link
+                :href="route('dashboard')"
+                class="flex h-[4.5rem] items-center gap-3 border-b border-slate-100 px-5 transition hover:bg-slate-50"
+            >
                 <StateEmblem class="h-10 w-10 shrink-0" />
                 <div class="min-w-0 leading-tight">
                     <div class="truncate text-sm font-bold tracking-tight text-brand-navy-800">Дорноговь</div>
                     <div class="text-[11px] font-medium tracking-wide text-slate-500">Нэгдсэн систем</div>
                 </div>
-            </div>
+            </Link>
 
             <nav class="flex-1 space-y-0.5 overflow-y-auto p-3">
-                <Link
-                    :href="route('dashboard')"
-                    class="ui-nav-link"
-                    :class="isCurrent('dashboard') ? 'ui-nav-link-active' : ''"
-                >
-                    <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                        <path :d="iconPaths.grid" />
-                    </svg>
-                    <span>Холбосон системүүд</span>
-                </Link>
-
                 <template v-for="group in moduleNav" :key="group.key">
                     <div class="ui-section-label">{{ group.label }}</div>
                     <Link
@@ -124,7 +116,7 @@ const isCurrent = (routeName) => {
                     </Link>
                 </template>
 
-                <div v-if="externalSystems.length" class="ui-section-label">Нэвтрэх</div>
+                <div v-if="externalSystems.length" class="ui-section-label">Холбосон системүүд</div>
                 <button
                     v-for="system in externalSystems"
                     :key="system.id"

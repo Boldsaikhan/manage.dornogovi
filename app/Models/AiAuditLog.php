@@ -5,30 +5,32 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class AiMessage extends Model
+class AiAuditLog extends Model
 {
     protected $fillable = [
         'user_id',
         'conversation_id',
-        'role',
-        'content',
-        'meta',
+        'question',
+        'intent',
+        'tools',
+        'sources',
+        'provider',
+        'success',
+        'error',
+        'latency_ms',
     ];
 
     protected function casts(): array
     {
         return [
-            'meta' => 'array',
+            'tools' => 'array',
+            'sources' => 'array',
+            'success' => 'boolean',
         ];
     }
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function conversation(): BelongsTo
-    {
-        return $this->belongsTo(AiConversation::class, 'conversation_id');
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\System;
 use App\Models\UserCredential;
+use App\Services\Ai\AiSettings;
 use App\Support\ModuleAccess;
 use App\Support\Vault;
 use Illuminate\Http\Request;
@@ -47,6 +48,25 @@ class HandleInertiaRequests extends Middleware
             ],
             'nav' => fn () => $this->navigation($request),
             'moduleNav' => fn () => ModuleAccess::navFor($request->user()),
+            'aiAssistant' => fn () => $this->aiAssistantMeta($request),
+        ];
+    }
+
+    /**
+     * @return array{available: bool}|null
+     */
+    private function aiAssistantMeta(Request $request): ?array
+    {
+        $user = $request->user();
+        if (! $user || ! ModuleAccess::canView($user, 'ai')) {
+            return null;
+        }
+
+        $settings = app(AiSettings::class);
+
+        return [
+            'available' => $settings->enabled(),
+            'href' => route('ai.index'),
         ];
     }
 

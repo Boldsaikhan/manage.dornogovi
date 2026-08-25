@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AiConversation;
 use App\Models\AiMessage;
-use App\Models\Decree;
-use App\Models\Leave;
-use App\Models\Plan;
-use App\Models\Regulation;
-use App\Models\Task;
+use App\Services\Ai\AiRateLimiter;
+use App\Services\Ai\AiSettings;
+use App\Services\Ai\AssistantService;
 use App\Support\ModuleAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,89 +15,98 @@ use Inertia\Response;
 
 class AiAssistantController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, AssistantService $assistant, AiRateLimiter $limiter, AiSettings $settings): Response
     {
         abort_unless(ModuleAccess::canView($request->user(), 'ai'), 403);
 
-        $messages = AiMessage::query()
+        $conversationId = $request->integer('conversation_id') ?: null;
+
+        $conversations = AiConversation::query()
             ->where('user_id', $request->user()->id)
+            ->orderByDesc('last_message_at')
+            ->limit(30)
+            ->get(['id', 'title', 'last_message_at', 'created_at']);
+
+        $messagesQuery = AiMessage::query()->where('user_id', $request->user()->id);
+        if ($conversationId) {
+            $messagesQuery->where('conversation_id', $conversationId);
+        } else {
+            $latest = $conversations->first();
+            $conversationId = $latest?->id;
+            if ($conversationId) {
+                $messagesQuery->where('conversation_id', $conversationId);
+            }
+        }
+
+        $messages = $messagesQuery
             ->orderBy('id')
             ->limit(100)
-            ->get(['id', 'role', 'content', 'created_at']);
+            ->get(['id', 'role', 'content', 'meta', 'conversation_id', 'created_at']);
 
         return Inertia::render('Modules/AiAssistant', [
             'messages' => $messages,
+            'conversations' => $conversations,
+            'conversationId' => $conversationId,
+            'briefing' => $assistant->briefing($request->user()),
+            'usage' => [
+                'limit' => $settings->dailyQuestionLimit(),
+                'used' => $limiter->usedToday($request->user()),
+                'remaining' => $limiter->remaining($request->user()),
+            ],
+            'aiEnabled' => $settings->enabled(),
+            'providerReady' => $settings->provider() !== 'openai' || $settings->hasOpenAiKey(),
             'canManage' => ModuleAccess::canManage($request->user(), 'ai'),
         ]);
     }
 
-    public function ask(Request $request): RedirectResponse
+    public function ask(Request $request, AssistantService $assistant): RedirectResponse
     {
         abort_unless(ModuleAccess::canView($request->user(), 'ai'), 403);
 
         $data = $request->validate([
             'message' => ['required', 'string', 'max:4000'],
+            'conversation_id' => ['nullable', 'integer', 'exists:ai_conversations,id'],
         ]);
 
-        AiMessage::create([
-            'user_id' => $request->user()->id,
-            'role' => 'user',
-            'content' => $data['message'],
-        ]);
+        $result = $assistant->ask(
+            $request->user(),
+            $data['message'],
+            $data['conversation_id'] ?? null,
+        );
 
-        $answer = $this->answerFromSystemData($data['message']);
+        if (! empty($result['limited'])) {
+            return back()->with('success', $result['message']);
+        }
 
-        AiMessage::create([
-            'user_id' => $request->user()->id,
-            'role' => 'assistant',
-            'content' => $answer,
-            'meta' => ['source' => 'local_index'],
-        ]);
-
-        return back();
+        return redirect()
+            ->route('ai.index', ['conversation_id' => $result['conversation_id']])
+            ->with('success', 'Хариулт бэлэн.');
     }
 
-    /**
-     * Системийн дотоод өгөгдлөөс энгийн хариу бүтээнэ (гадны LLM шаардлагагүй).
-     */
-    private function answerFromSystemData(string $question): string
+    public function confirm(Request $request, AssistantService $assistant): RedirectResponse
     {
-        $q = mb_strtolower($question);
-        $parts = [];
+        abort_unless(ModuleAccess::canView($request->user(), 'ai'), 403);
 
-        if (str_contains($q, 'чөлөө') || str_contains($q, 'амралт')) {
-            $count = Leave::query()->where('status', 'pending')->count();
-            $parts[] = "Хүлээгдэж буй чөлөө/амралтын бүртгэл: {$count}.";
-        }
+        $data = $request->validate([
+            'type' => ['required', 'string', 'max:64'],
+            'payload' => ['required', 'array'],
+        ]);
 
-        if (str_contains($q, 'үүрэг') || str_contains($q, 'даалгавар')) {
-            $open = Task::query()->where('progress', '<', 100)->count();
-            $parts[] = "Дуусаагүй үүрэг даалгавар: {$open}.";
-        }
+        $result = $assistant->confirmAction($request->user(), $data['type'], $data['payload']);
 
-        if (str_contains($q, 'журам')) {
-            $n = Regulation::query()->count();
-            $parts[] = "Бүртгэлтэй журам: {$n}.";
-            $latest = Regulation::query()->latest('id')->value('title');
-            if ($latest) {
-                $parts[] = "Сүүлийн журам: «{$latest}».";
-            }
-        }
+        return back()->with('success', $result['message'] ?? 'Дууслаа.');
+    }
 
-        if (str_contains($q, 'захирамж') || str_contains($q, 'тушаал')) {
-            $n = Decree::query()->count();
-            $parts[] = "Захирамж/тушаалын бүртгэл: {$n}.";
-        }
+    public function newConversation(Request $request): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canView($request->user(), 'ai'), 403);
 
-        if (str_contains($q, 'төлөвлөгөө')) {
-            $n = Plan::query()->where('status', 'active')->count();
-            $parts[] = "Идэвхтэй төлөвлөгөө: {$n}.";
-        }
+        $conversation = AiConversation::create([
+            'user_id' => $request->user()->id,
+            'title' => 'Шинэ яриа',
+            'last_message_at' => now(),
+        ]);
 
-        if ($parts === []) {
-            return "Би зөвхөн энэ системийн өгөгдөл дээр ажиллана. Жишээ: «хүлээгдэж буй чөлөө», «үүрэг», «журам», «захирамж», «төлөвлөгөө» гэж асууна уу.";
-        }
-
-        return implode(' ', $parts);
+        return redirect()->route('ai.index', ['conversation_id' => $conversation->id]);
     }
 }
