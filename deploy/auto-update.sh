@@ -52,15 +52,31 @@ fix_ownership() {
         find "${WEB_ROOT}/storage" "${WEB_ROOT}/bootstrap/cache" -type d -exec chmod 775 {} \; 2>/dev/null || true
     fi
 }
-trap fix_ownership EXIT
+maintenance_off() {
+    (cd "${WEB_ROOT}" 2>/dev/null && php artisan up >/dev/null 2>&1) || true
+}
+
+# Алдаа гарсан ч эзэмшигчийг буцааж, засварын горимоос гаргана.
+trap 'fix_ownership; maintenance_off' EXIT
 
 echo "==> $(date '+%F %T') шинэчлэл: ${LOCAL:0:7} -> ${REMOTE:0:7}"
 git reset --hard --quiet "origin/${BRANCH}"
 
+# Шинэчлэлтийн үед 500 биш, засварын хуудас харагдана.
+(cd "${WEB_ROOT}" 2>/dev/null && php artisan down --retry=60 >/dev/null 2>&1) || true
+
+# ⚠️ storage/ болон bootstrap/cache-ийг ХЭЗЭЭ Ч синк хийхгүй:
+#   - storage/app дотор хэрэглэгчийн оруулсан файлууд байна (rsync --delete устгачихна),
+#   - storage/framework, bootstrap/cache нь root эзэмшилтэй болбол PHP-FPM бичиж чадахгүй
+#     (compiled view бичих гэж tempnam уначихаад бүх хуудас 500 өгдөг).
 rsync -a --delete \
     --exclude '.git' --exclude '.github' --exclude 'node_modules' \
-    --exclude '.env' --exclude 'storage/logs/*' --exclude 'public/build' \
+    --exclude '.env' --exclude 'storage' --exclude 'bootstrap/cache' \
+    --exclude 'public/build' --exclude 'public/storage' \
     "${SRC_DIR}/" "${WEB_ROOT}/"
+
+# rsync root-оор бичдэг тул эзэмшигчийг тэр дор нь буцаана.
+fix_ownership
 
 cd "${WEB_ROOT}"
 
@@ -75,5 +91,7 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
+fix_ownership
 systemctl reload "${PHP_FPM}" 2>/dev/null || true
+maintenance_off
 echo "==> $(date '+%F %T') дууслаа."
