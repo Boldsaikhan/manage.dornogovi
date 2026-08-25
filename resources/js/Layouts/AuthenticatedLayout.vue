@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
+import StateEmblem from '@/Components/StateEmblem.vue';
 
 const page = usePage();
 const sidebarOpen = ref(false);
@@ -85,9 +86,7 @@ const openSystem = (system) => {
             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
         >
             <div class="flex h-16 items-center gap-3 border-b border-white/10 px-5">
-                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-orange-500 font-bold text-white">
-                    Д
-                </div>
+                <StateEmblem class="h-9 w-9 shrink-0" />
                 <div class="leading-tight">
                     <div class="text-sm font-semibold text-white">Дорноговь</div>
                     <div class="text-xs text-brand-navy-300">Нэгдсэн систем</div>
