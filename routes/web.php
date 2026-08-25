@@ -66,6 +66,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/modules/assignments', [ModuleResourceController::class, 'index'])->name('assignments.index');
     Route::get('/modules/regulations', [ModuleResourceController::class, 'index'])->name('regulations.index');
     Route::get('/modules/decrees', [DecreeController::class, 'index'])->name('decrees.index');
+    Route::get('/modules/decrees/print', [DecreeController::class, 'print'])->name('decrees.print');
     Route::post('/modules/decrees', [DecreeController::class, 'store'])->name('decrees.store');
     Route::patch('/modules/decrees/{decree}', [DecreeController::class, 'update'])->name('decrees.update');
     Route::post('/modules/decrees/{decree}/image', [DecreeController::class, 'uploadImage'])->name('decrees.image.upload');

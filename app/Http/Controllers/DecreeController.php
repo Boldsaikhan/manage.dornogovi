@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Decree;
+use App\Models\DocumentFormat;
 use App\Models\PhoneDirectoryEntry;
 use App\Support\ModuleAccess;
 use App\Support\PersonName;
@@ -11,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Illuminate\Contracts\View\View;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -79,6 +81,53 @@ class DecreeController extends Controller
             'nextNumber' => isset(self::KIND_TABS[$tab]) ? $this->nextDocumentNumber($tab) : null,
             'canManage' => ModuleAccess::canManage($request->user(), 'decrees'),
         ]);
+    }
+
+    /**
+     * Харагдаж байгаа хүснэгтийг хэвлэх хуудас.
+     */
+    public function print(Request $request): View
+    {
+        abort_unless(ModuleAccess::canView($request->user(), 'decrees'), 403);
+
+        $tab = $this->normalizeTab((string) $request->query('tab', 'zahiramj_a'));
+
+        $query = Decree::query()->orderBy('id');
+
+        if ($tab === 'blank') {
+            $query->where('category', 'blank');
+        } elseif ($tab === 'niit') {
+            $query->whereIn('kind', self::DOC_KINDS);
+        } else {
+            $query->where('kind', $tab);
+        }
+
+        $rows = $query->limit(1000)->get()->values()
+            ->map(fn (Decree $d, int $i) => $this->serialize($d, $i + 1));
+
+        return view('decrees.print', [
+            'tab' => $tab,
+            'rows' => $rows,
+            'title' => $this->printTitle($tab),
+            'titleLabel' => match (true) {
+                $tab === 'niit' => 'Гарчиг / тэргүү',
+                str_starts_with($tab, 'zahiramj') => 'Захирамжийн тэргүү',
+                default => 'Тушаалын гарчиг',
+            },
+            'format' => DocumentFormat::defaultFormat(),
+        ]);
+    }
+
+    private function printTitle(string $tab): string
+    {
+        return match ($tab) {
+            'blank' => 'Хэвлэмэл хуудасны бүртгэл',
+            'zahiramj_a' => 'Аймгийн Засаг даргын Захирамжийн бүртгэл (А)',
+            'zahiramj_b' => 'Аймгийн Засаг даргын Захирамжийн бүртгэл (Б)',
+            'tushaal_a' => 'Тамгын газрын даргын Тушаалын бүртгэл (А)',
+            'tushaal_b' => 'Тамгын газрын даргын Тушаалын бүртгэл (Б)',
+            default => 'Захирамж, тушаалын нэгдсэн бүртгэл',
+        };
     }
 
     public function store(Request $request): RedirectResponse

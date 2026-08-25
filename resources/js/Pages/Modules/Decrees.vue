@@ -300,14 +300,24 @@ const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
                         Мөрийг нэмээд нүдэн дээр дарж шууд бөглөнө.
                     </p>
                 </div>
-                <button
-                    v-if="canAddRow"
-                    type="button"
-                    class="ui-btn-accent"
-                    @click="addRow"
-                >
-                    Шинэ мөр
-                </button>
+                <div class="flex flex-wrap gap-2">
+                    <a
+                        :href="route('decrees.print', { tab })"
+                        target="_blank"
+                        class="ui-btn-ghost"
+                        title="Харагдаж байгаа хүснэгтийг хэвлэх"
+                    >
+                        Хэвлэх
+                    </a>
+                    <button
+                        v-if="canAddRow"
+                        type="button"
+                        class="ui-btn-accent"
+                        @click="addRow"
+                    >
+                        Шинэ мөр
+                    </button>
+                </div>
             </div>
 
             <nav class="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
