@@ -42,11 +42,15 @@ class DecreePrintTest extends TestCase
             ->assertSee('Б.Гантөмөр')
             ->assertDontSee('Өөр табын тушаал');
 
-        // Бланкны таб — өөр толгойтой
+        // Бланкны таб — өөр толгойтой + цаасны тохиргоо
         $this->actingAs($admin)
             ->get(route('decrees.print', ['tab' => 'blank']))
             ->assertOk()
             ->assertSee('Хэвлэмэл хуудасны бүртгэл')
-            ->assertSee('Үрэгдүүлсэн хуудасны дугаар');
+            ->assertSee('Үрэгдүүлсэн хуудасны дугаар')
+            ->assertSee('Цаасны хэмжээ')
+            ->assertSee('Захын зай (мм)')
+            ->assertSee('id="paperSize"', false)
+            ->assertSee('id="marginTop"', false);
     }
 }
