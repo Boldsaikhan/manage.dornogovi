@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PhoneDirectoryEntry;
 use App\Support\ModuleAccess;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
@@ -62,6 +63,7 @@ class ModuleResourceController extends Controller
             'description' => $config['description'] ?? '',
             'columns' => $config['columns'],
             'fields' => $config['fields'],
+            'directory' => $this->directoryFor($config),
             'rows' => $rows,
             'canManage' => ModuleAccess::canManage($request->user(), $module),
             'storeUrl' => route('modules.store', $module),
@@ -128,7 +130,7 @@ class ModuleResourceController extends Controller
                 'datetime' => 'date',
                 'checkbox' => 'boolean',
                 'select' => Rule::in(array_keys($field['options'] ?? [])),
-                'textarea', 'text' => 'string',
+                'textarea', 'text', 'directory_org', 'directory_person' => 'string',
                 default => 'string',
             };
 
@@ -170,6 +172,37 @@ class ModuleResourceController extends Controller
         };
     }
 
+    /**
+     * Утасны жагсаалтад бүртгэлтэй байгууллага, хүмүүсийг сонголт болгож дамжуулна.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function directoryFor(array $config): array
+    {
+        $needed = collect($config['fields'] ?? [])
+            ->contains(fn (array $f) => in_array($f['type'] ?? '', ['directory_org', 'directory_person'], true));
+
+        if (! $needed) {
+            return [];
+        }
+
+        return PhoneDirectoryEntry::query()
+            ->orderBy('org_order')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get(['org_name', 'person_name', 'position'])
+            ->groupBy('org_name')
+            ->map(fn ($rows, $orgName) => [
+                'org_name' => $orgName,
+                'people' => $rows->map(fn (PhoneDirectoryEntry $row) => [
+                    'name' => $row->person_name,
+                    'position' => $row->position,
+                ])->values()->all(),
+            ])
+            ->values()
+            ->all();
+    }
+
     private function serialize(Model $row, array $config): array
     {
         $out = ['id' => $row->getKey()];
@@ -190,6 +223,7 @@ class ModuleResourceController extends Controller
     {
         return match ($key) {
             'user_name' => $row->user->name ?? '—',
+            'person_label' => $row->person_name ?: ($row->user->name ?? '—'),
             'kind_label' => method_exists($row, 'kindLabel') ? $row->kindLabel() : ($row->kind ?? '—'),
             'for_new_hires' => $row->for_new_hires ? 'Тийм' : 'Үгүй',
             'published_at', 'held_at', 'start_date', 'end_date', 'issued_on', 'due_on' => optional($row->{$key})->format(

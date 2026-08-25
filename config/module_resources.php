@@ -16,7 +16,7 @@ return [
             'baiguullaga' => 'Байгууллага',
         ],
         'columns' => [
-            ['key' => 'user_name', 'label' => 'Албан хаагч'],
+            ['key' => 'person_label', 'label' => 'Албан хаагч'],
             ['key' => 'scope', 'label' => 'Хамрах хүрээ'],
             ['key' => 'org_name', 'label' => 'Агентлаг / сум / байгууллага'],
             ['key' => 'type', 'label' => 'Төрөл'],
@@ -28,7 +28,8 @@ return [
             ['name' => 'scope', 'label' => 'Хамрах хүрээ', 'type' => 'select', 'required' => true, 'options' => [
                 'agentlag' => 'Агентлаг', 'sum' => 'Сумд', 'baiguullaga' => 'Байгууллага',
             ]],
-            ['name' => 'org_name', 'label' => 'Агентлаг / сум / байгууллагын нэр', 'type' => 'text'],
+            ['name' => 'org_name', 'label' => 'Агентлаг / сум / байгууллага', 'type' => 'directory_org'],
+            ['name' => 'person_name', 'label' => 'Дарга / албан хаагч', 'type' => 'directory_person', 'depends_on' => 'org_name'],
             ['name' => 'type', 'label' => 'Төрөл', 'type' => 'select', 'options' => [
                 'chuluu' => 'Чөлөө', 'amralt' => 'Амралт', 'busad' => 'Бусад',
             ]],

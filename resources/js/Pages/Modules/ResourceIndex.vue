@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
@@ -17,6 +17,7 @@ const props = defineProps({
     scopeTabs: { type: Array, default: () => [] },
     activeScope: { type: String, default: 'all' },
     scopeField: { type: String, default: null },
+    directory: { type: Array, default: () => [] },
 });
 
 const showForm = ref(false);
@@ -31,6 +32,82 @@ if (props.scopeField && props.activeScope !== 'all') {
 }
 
 const form = useForm({ ...formState });
+
+const fieldNames = computed(() => props.fields.map((f) => f.name));
+const hasField = (name) => fieldNames.value.includes(name);
+
+// Утасны жагсаалтын байгууллага, хүмүүс.
+const orgOptions = computed(() => props.directory.map((d) => d.org_name));
+
+const peopleFor = (orgName) => {
+    if (!orgName) return props.directory.flatMap((d) => d.people);
+
+    return props.directory.find((d) => d.org_name === orgName)?.people ?? [];
+};
+
+const personOptions = (field) => peopleFor(field.depends_on ? form[field.depends_on] : null);
+
+// Байгууллага солигдоход өмнөх хүн тухайн байгууллагад байхгүй бол цэвэрлэнэ.
+watch(
+    () => (hasField('org_name') ? form.org_name : null),
+    (org) => {
+        if (!hasField('person_name')) return;
+        const names = peopleFor(org).map((p) => p.name);
+        if (form.person_name && !names.includes(form.person_name)) {
+            form.person_name = '';
+        }
+    },
+);
+
+// Огноо ↔ хоногийн харилцан тооцоо (эхлэх/дуусах өдрийг оруулж тооцно).
+const dayMs = 24 * 60 * 60 * 1000;
+const syncing = ref(false);
+
+const toDate = (value) => {
+    if (!value) return null;
+    // UTC-ээр тооцно — цагийн бүсээс болж огноо гулсахаас сэргийлнэ.
+    const d = new Date(`${value}T00:00:00Z`);
+
+    return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const toInput = (date) => date.toISOString().slice(0, 10);
+
+const hasDateFields = computed(() => hasField('start_date') && hasField('end_date') && hasField('days'));
+
+const recalcDays = () => {
+    if (!hasDateFields.value || syncing.value) return;
+    const start = toDate(form.start_date);
+    const end = toDate(form.end_date);
+    if (!start || !end || end < start) return;
+
+    syncing.value = true;
+    form.days = Math.round((end - start) / dayMs) + 1;
+    syncing.value = false;
+};
+
+const recalcEndDate = () => {
+    if (!hasDateFields.value || syncing.value) return;
+    const start = toDate(form.start_date);
+    const days = parseInt(form.days, 10);
+    if (!start || !days || days < 1) return;
+
+    syncing.value = true;
+    form.end_date = toInput(new Date(start.getTime() + (days - 1) * dayMs));
+    syncing.value = false;
+};
+
+const onFieldInput = (field) => {
+    if (!hasDateFields.value) return;
+    if (field.name === 'start_date') {
+        // Эхлэх огноо солигдоход хоног мэдэгдэж байвал дуусахыг, эсрэг тохиолдолд хоногийг бодно.
+        form.days ? recalcEndDate() : recalcDays();
+
+        return;
+    }
+    if (field.name === 'end_date') recalcDays();
+    if (field.name === 'days') recalcEndDate();
+};
 
 const activeScopeLabel = computed(
     () => props.scopeTabs.find((t) => t.value === props.activeScope)?.label ?? '',
@@ -179,6 +256,38 @@ const destroyRow = (id) => {
                                 {{ label }}
                             </option>
                         </select>
+                        <select
+                            v-else-if="field.type === 'directory_org' && orgOptions.length"
+                            v-model="form[field.name]"
+                            class="ui-input"
+                            :required="field.required"
+                        >
+                            <option value="">—</option>
+                            <option v-for="name in orgOptions" :key="name" :value="name">{{ name }}</option>
+                        </select>
+                        <select
+                            v-else-if="field.type === 'directory_person' && personOptions(field).length"
+                            v-model="form[field.name]"
+                            class="ui-input"
+                            :required="field.required"
+                        >
+                            <option value="">—</option>
+                            <option
+                                v-for="person in personOptions(field)"
+                                :key="person.name + (person.position || '')"
+                                :value="person.name"
+                            >
+                                {{ person.name }}{{ person.position ? ' — ' + person.position : '' }}
+                            </option>
+                        </select>
+                        <input
+                            v-else-if="field.type === 'directory_org' || field.type === 'directory_person'"
+                            v-model="form[field.name]"
+                            type="text"
+                            class="ui-input"
+                            :required="field.required"
+                            :placeholder="directory.length ? 'Утасны жагсаалтад бүртгэлгүй — гараар бичнэ' : 'Утасны жагсаалт хоосон байна'"
+                        />
                         <textarea
                             v-else-if="field.type === 'textarea'"
                             v-model="form[field.name]"
@@ -202,7 +311,15 @@ const destroyRow = (id) => {
                             :type="field.type === 'number' ? 'number' : field.type === 'datetime' ? 'datetime-local' : field.type"
                             class="ui-input"
                             :required="field.required"
+                            :min="field.type === 'number' && field.name === 'days' ? 1 : undefined"
+                            @change="onFieldInput(field)"
                         />
+                        <p
+                            v-if="hasDateFields && field.name === 'days'"
+                            class="mt-1 text-xs text-slate-500"
+                        >
+                            Эхлэх, дуусах огноог оруулбал хоног автоматаар бодогдоно. Хоногийг өөрчилвөл дуусах огноо шинэчлэгдэнэ.
+                        </p>
                         <InputError :message="form.errors[field.name]" class="mt-1" />
                     </div>
                 </div>

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Leave extends Model
 {
     protected $fillable = [
-        'user_id', 'department_id', 'scope', 'org_name', 'type', 'start_date', 'end_date', 'days',
+        'user_id', 'department_id', 'scope', 'org_name', 'person_name', 'type', 'start_date', 'end_date', 'days',
         'reason', 'status', 'approved_by',
     ];
 
