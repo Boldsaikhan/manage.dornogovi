@@ -68,6 +68,7 @@ class HandleInertiaRequests extends Middleware
         return [
             'available' => $settings->enabled(),
             'href' => route('ai.index'),
+            'name' => $settings->displayName(),
         ];
     }
 

@@ -130,7 +130,7 @@ return [
         ],
         [
             'key' => 'ai',
-            'label' => 'AI туслах',
+            'label' => 'Manage AI',
             'route' => 'ai.index',
             'group' => 'knowledge',
             'icon' => 'sparkles',

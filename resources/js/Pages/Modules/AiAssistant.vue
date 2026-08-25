@@ -8,6 +8,7 @@ const props = defineProps({
     conversations: { type: Array, default: () => [] },
     conversationId: { type: Number, default: null },
     briefing: { type: Object, default: null },
+    displayName: { type: String, default: 'Manage AI' },
     usage: { type: Object, default: () => ({}) },
     aiEnabled: { type: Boolean, default: true },
     providerReady: { type: Boolean, default: true },
@@ -16,6 +17,7 @@ const props = defineProps({
 
 const page = usePage();
 const userName = computed(() => page.props.auth?.user?.name ?? '');
+const assistantName = computed(() => props.displayName || 'Manage AI');
 const form = useForm({
     message: '',
     conversation_id: props.conversationId,
@@ -79,7 +81,7 @@ const usageLabel = computed(() => {
 </script>
 
 <template>
-    <AuthenticatedLayout title="AI туслах">
+    <AuthenticatedLayout :title="assistantName">
         <div class="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
             <!-- History -->
             <aside class="ui-card-pad hidden space-y-3 lg:block">
@@ -110,7 +112,7 @@ const usageLabel = computed(() => {
             <div class="flex h-[calc(100vh-9rem)] flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-panel">
                 <div class="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
                     <div>
-                        <h2 class="ui-title text-base">Хиймэл оюун ухаант туслах</h2>
+                        <h2 class="ui-title text-base">{{ assistantName }}</h2>
                         <p class="ui-subtitle !mt-0.5">
                             ДЗДТГ-ын дотоод мэдээлэл дээр ажиллана · {{ usageLabel }}
                         </p>
@@ -127,7 +129,7 @@ const usageLabel = computed(() => {
                 <div ref="box" class="flex-1 space-y-3 overflow-y-auto bg-slate-50/60 p-5">
                     <div class="max-w-[90%] rounded-2xl bg-white px-4 py-3 text-sm leading-relaxed text-slate-800 ring-1 ring-slate-100">
                         Сайн байна уу{{ userName ? `, ${userName}` : '' }}.
-                        Би ДЗДТГ-ын дотоод мэдээлэл дээр ажиллах AI туслах.
+                        Би ДЗДТГ-ын дотоод мэдээлэл дээр ажиллах {{ assistantName }}.
                     </div>
 
                     <div
@@ -175,7 +177,7 @@ const usageLabel = computed(() => {
                     </div>
 
                     <p v-if="!aiEnabled" class="py-6 text-center text-sm text-amber-700">
-                        AI туслах идэвхгүй байна. Админ тохиргооноос асаана уу.
+                        {{ assistantName }} идэвхгүй байна. Админ тохиргооноос асаана уу.
                     </p>
                     <p v-else-if="!providerReady" class="py-2 text-center text-xs text-amber-700">
                         OpenAI горим сонгосон боловч API түлхүүр алга — локал tool горимоор ажиллана.

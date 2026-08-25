@@ -3,13 +3,20 @@
 namespace App\Support;
 
 use App\Models\User;
+use App\Services\Ai\AiSettings;
 use Illuminate\Support\Collection;
 
 class ModuleAccess
 {
     public static function definitions(): Collection
     {
-        return collect(config('modules.items', []));
+        return collect(config('modules.items', []))->map(function (array $item) {
+            if (($item['key'] ?? null) === 'ai') {
+                $item['label'] = app(AiSettings::class)->displayName();
+            }
+
+            return $item;
+        });
     }
 
     public static function find(string $key): ?array

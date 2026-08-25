@@ -59,6 +59,7 @@ class AiAssistantTest extends TestCase
         $this->actingAs($admin)
             ->patch(route('admin.ai-settings.update'), [
                 'enabled' => true,
+                'display_name' => 'Manage AI',
                 'provider' => 'openai',
                 'openai_model' => 'gpt-4o-mini',
                 'daily_question_limit' => 20,
@@ -73,6 +74,7 @@ class AiAssistantTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Admin/Systems')
                 ->where('ai.has_api_key', true)
+                ->where('ai.display_name', 'Manage AI')
                 ->where('ai.daily_question_limit', 20)
                 ->where('ai.provider', 'openai')
                 ->missing('ai.openai_api_key')

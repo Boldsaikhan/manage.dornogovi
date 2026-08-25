@@ -18,6 +18,10 @@ class AiSettings
 
     public const KEY_ENABLED = 'ai.enabled';
 
+    public const KEY_DISPLAY_NAME = 'ai.display_name';
+
+    public const DEFAULT_DISPLAY_NAME = 'Manage AI';
+
     public function get(string $key, ?string $default = null): ?string
     {
         $value = Cache::remember("app_setting:{$key}", 60, function () use ($key) {
@@ -35,6 +39,13 @@ class AiSettings
         );
 
         Cache::forget("app_setting:{$key}");
+    }
+
+    public function displayName(): string
+    {
+        $name = trim((string) ($this->get(self::KEY_DISPLAY_NAME, self::DEFAULT_DISPLAY_NAME) ?? ''));
+
+        return $name !== '' ? $name : self::DEFAULT_DISPLAY_NAME;
     }
 
     public function enabled(): bool
@@ -100,6 +111,7 @@ class AiSettings
 
         return [
             'enabled' => $this->enabled(),
+            'display_name' => $this->displayName(),
             'provider' => $this->provider(),
             'openai_model' => $this->openaiModel(),
             'daily_question_limit' => $this->dailyQuestionLimit(),

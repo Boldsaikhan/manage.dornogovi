@@ -230,12 +230,12 @@ const isCurrent = (routeName) => {
             v-if="page.props.aiAssistant?.available"
             :href="page.props.aiAssistant.href"
             class="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-2xl bg-brand-navy-700 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-navy-700/30 transition hover:-translate-y-0.5 hover:bg-brand-navy-800"
-            title="AI туслах"
+            :title="page.props.aiAssistant?.name || 'Manage AI'"
         >
             <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                 <path :d="iconPaths.sparkles" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
-            <span class="hidden sm:inline">AI туслах</span>
+            <span class="hidden sm:inline">{{ page.props.aiAssistant?.name || 'Manage AI' }}</span>
         </Link>
     </div>
 </template>

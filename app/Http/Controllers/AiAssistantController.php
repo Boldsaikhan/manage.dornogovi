@@ -48,6 +48,7 @@ class AiAssistantController extends Controller
             'conversations' => $conversations,
             'conversationId' => $conversationId,
             'briefing' => $assistant->briefing($request->user()),
+            'displayName' => $settings->displayName(),
             'usage' => [
                 'limit' => $settings->dailyQuestionLimit(),
                 'used' => $limiter->usedToday($request->user()),

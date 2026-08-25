@@ -65,6 +65,7 @@ class SystemSettingsController extends Controller
     {
         $data = $request->validate([
             'enabled' => ['boolean'],
+            'display_name' => ['required', 'string', 'max:80'],
             'provider' => ['required', Rule::in(['local', 'openai'])],
             'openai_model' => ['required', 'string', 'max:100'],
             'daily_question_limit' => ['required', 'integer', 'min:0', 'max:1000'],
@@ -73,6 +74,7 @@ class SystemSettingsController extends Controller
         ]);
 
         $aiSettings->set(AiSettings::KEY_ENABLED, ! empty($data['enabled']) ? '1' : '0');
+        $aiSettings->set(AiSettings::KEY_DISPLAY_NAME, trim($data['display_name']));
         $aiSettings->set(AiSettings::KEY_PROVIDER, $data['provider']);
         $aiSettings->set(AiSettings::KEY_OPENAI_MODEL, $data['openai_model']);
         $aiSettings->set(AiSettings::KEY_DAILY_LIMIT, (string) $data['daily_question_limit']);
@@ -83,7 +85,7 @@ class SystemSettingsController extends Controller
             $aiSettings->setOpenAiApiKey($data['openai_api_key']);
         }
 
-        return back()->with('success', 'AI туслахын тохиргоо хадгалагдлаа.');
+        return back()->with('success', 'Manage AI тохиргоо хадгалагдлаа.');
     }
 
     public function update(Request $request, System $system): RedirectResponse

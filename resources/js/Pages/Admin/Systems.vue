@@ -31,6 +31,7 @@ const form = useForm({
 
 const aiForm = useForm({
     enabled: props.ai?.enabled ?? true,
+    display_name: props.ai?.display_name ?? 'Manage AI',
     provider: props.ai?.provider ?? 'local',
     openai_model: props.ai?.openai_model ?? 'gpt-4o-mini',
     daily_question_limit: props.ai?.daily_question_limit ?? 30,
@@ -161,9 +162,9 @@ const saveAi = () => {
         <section class="mb-8 rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm">
             <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <h2 class="text-base font-semibold text-brand-navy-900">AI туслах</h2>
+                    <h2 class="text-base font-semibold text-brand-navy-900">{{ ai?.display_name || 'Manage AI' }}</h2>
                     <p class="mt-1 max-w-2xl text-sm text-brand-navy-400">
-                        API түлхүүр зөвхөн серверт шифрлэгдэнэ. Frontend руу илгээгдэхгүй.
+                        Нэр, API түлхүүр, өдрийн лимитийг энд тохируулна. API түлхүүр зөвхөн серверт шифрлэгдэнэ.
                     </p>
                 </div>
                 <span
@@ -181,8 +182,21 @@ const saveAi = () => {
                         type="checkbox"
                         class="rounded border-brand-navy-200 text-brand-orange-500 focus:ring-brand-orange-500"
                     />
-                    AI туслахыг идэвхжүүлэх
+                    {{ aiForm.display_name || 'Manage AI' }}-г идэвхжүүлэх
                 </label>
+
+                <div class="md:col-span-2">
+                    <label class="mb-1 block text-xs font-medium text-brand-navy-700">Харуулах нэр</label>
+                    <input
+                        v-model="aiForm.display_name"
+                        type="text"
+                        class="ui-input max-w-md"
+                        placeholder="Manage AI"
+                        required
+                    />
+                    <p class="mt-1 text-xs text-slate-500">Цэс, товч, хуудасны гарчигт энэ нэр харагдана.</p>
+                    <InputError :message="aiForm.errors.display_name" class="mt-1" />
+                </div>
 
                 <div>
                     <label class="mb-1 block text-xs font-medium text-brand-navy-700">Provider</label>
@@ -231,7 +245,7 @@ const saveAi = () => {
 
                 <div class="md:col-span-2">
                     <button type="submit" class="ui-btn-primary" :disabled="aiForm.processing">
-                        AI тохиргоо хадгалах
+                        Тохиргоо хадгалах
                     </button>
                 </div>
             </form>

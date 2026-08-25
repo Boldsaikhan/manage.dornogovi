@@ -41,7 +41,7 @@ class AssistantService
         $started = hrtime(true);
 
         if (! $this->settings->enabled()) {
-            abort(403, 'AI туслах түр идэвхгүй байна.');
+            abort(403, $this->settings->displayName().' түр идэвхгүй байна.');
         }
 
         if (! ModuleAccess::canView($user, 'ai')) {
@@ -289,8 +289,10 @@ class AssistantService
 
     private function systemPrompt(User $user): string
     {
+        $name = $this->settings->displayName();
+
         return <<<PROMPT
-Та Дорноговь аймгийн Засаг даргын Тамгын газрын дотоод нэгдсэн системийн AI туслах.
+Та Дорноговь аймгийн Засаг даргын Тамгын газрын дотоод нэгдсэн системийн {$name}.
 Зөвхөн монгол хэлээр хариулна.
 Зөвхөн өгсөн tool үр дүнг ашиглана. Зохиож болохгүй.
 Мэдээлэл байхгүй бол: «Системийн мэдээллийн сангаас баталгаатай мэдээлэл олдсонгүй.»
