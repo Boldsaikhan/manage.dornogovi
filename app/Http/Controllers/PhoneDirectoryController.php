@@ -42,7 +42,7 @@ class PhoneDirectoryController extends Controller
             ->groupBy('org_name')
             ->map(fn ($rows, $orgName) => [
                 'org_name' => $orgName,
-                'category' => $rows->first()->category ?? '',
+                'category' => $this->normalizeDirectoryCategory($rows->first()->category ?? null),
                 'rows' => $rows->map(fn (PhoneDirectoryEntry $row) => [
                     'id' => $row->id,
                     'person_name' => $row->person_name,
@@ -86,7 +86,9 @@ class PhoneDirectoryController extends Controller
             'groups' => $groups,
             'total' => $entries->count(),
             'orgNames' => $entries->pluck('org_name')->unique()->values(),
-            'categories' => PhoneDirectoryEntry::CATEGORIES,
+            'categories' => collect(PhoneDirectoryEntry::CATEGORIES)
+                ->except(['heltes'])
+                ->all(),
             'staff' => $staff,
             'staffTotal' => $staff->count(),
             'staffOrganizations' => $staff->pluck('organization')->unique()->values(),
@@ -449,5 +451,17 @@ class PhoneDirectoryController extends Controller
         return redirect()
             ->route('phone-directory.index', ['tab' => 'directory'])
             ->with('success', count($rows).' мөр импортлолоо.');
+    }
+
+    /** «хэлтэс» төлвийг UI дээр сонголтгүй гэж харуулна. */
+    private function normalizeDirectoryCategory(?string $category): string
+    {
+        if ($category === null || $category === '' || $category === 'heltes') {
+            return '';
+        }
+
+        return array_key_exists($category, PhoneDirectoryEntry::CATEGORIES)
+            ? $category
+            : '';
     }
 }

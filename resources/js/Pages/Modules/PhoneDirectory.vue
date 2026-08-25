@@ -78,20 +78,24 @@ watch(
     },
 );
 
-// Ангилал тус бүрийн байгууллагын тоо.
+// Ангилал тус бүрийн байгууллагын тоо — «хэлтэс» сонголтыг харуулахгүй.
 const categoryTabs = computed(() => {
     const counts = {};
     props.groups.forEach((g) => {
-        counts[g.category] = (counts[g.category] ?? 0) + g.rows.length;
+        const key = g.category && g.category !== 'heltes' ? g.category : '';
+        if (! key) return;
+        counts[key] = (counts[key] ?? 0) + g.rows.length;
     });
 
     return [
         { value: 'all', label: 'Бүгд', count: props.total },
-        ...Object.entries(props.categories).map(([value, label]) => ({
-            value,
-            label,
-            count: counts[value] ?? 0,
-        })),
+        ...Object.entries(props.categories)
+            .filter(([value]) => value !== 'heltes')
+            .map(([value, label]) => ({
+                value,
+                label,
+                count: counts[value] ?? 0,
+            })),
     ];
 });
 
