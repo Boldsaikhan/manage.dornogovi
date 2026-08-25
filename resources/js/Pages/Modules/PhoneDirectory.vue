@@ -489,11 +489,12 @@ const closeDirectoryForm = () => {
                                     {{ group.org_name }}
                                     <select
                                         v-if="canManage"
-                                        :value="group.category"
+                                        :value="group.category || ''"
                                         class="ml-2 rounded-lg border-slate-300 bg-white py-0.5 pl-2 pr-7 text-xs font-medium not-italic text-slate-600"
                                         title="Чөлөөний бүртгэлд ямар хамрах хүрээнд харагдахыг тодорхойлно"
                                         @change="changeCategory(group.org_name, $event.target.value)"
                                     >
+                                        <option value="">Сонголтгүй</option>
                                         <option v-for="(label, value) in categories" :key="value" :value="value">
                                             {{ label }}
                                         </option>
@@ -502,7 +503,7 @@ const closeDirectoryForm = () => {
                                         v-else
                                         class="ml-2 rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-medium not-italic text-slate-500"
                                     >
-                                        {{ categories[group.category] || '' }}
+                                        {{ categories[group.category] || 'Сонголтгүй' }}
                                     </span>
                                 </td>
                             </tr>
@@ -619,7 +620,7 @@ const closeDirectoryForm = () => {
                     <div>
                         <label class="ui-label">Ангилал</label>
                         <select v-model="form.category" class="ui-input">
-                            <option value="">Автомат (нэрээр)</option>
+                            <option value="">Сонголтгүй</option>
                             <option v-for="(label, value) in categories" :key="value" :value="value">
                                 {{ label }}
                             </option>

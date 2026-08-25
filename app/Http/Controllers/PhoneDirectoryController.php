@@ -42,7 +42,7 @@ class PhoneDirectoryController extends Controller
             ->groupBy('org_name')
             ->map(fn ($rows, $orgName) => [
                 'org_name' => $orgName,
-                'category' => $rows->first()->category ?? 'baiguullaga',
+                'category' => $rows->first()->category ?? '',
                 'rows' => $rows->map(fn (PhoneDirectoryEntry $row) => [
                     'id' => $row->id,
                     'person_name' => $row->person_name,
@@ -242,13 +242,12 @@ class PhoneDirectoryController extends Controller
         ]);
 
         if (($data['category'] ?? '') === '') {
-            $data['category'] = null;
+            // Формоос «Сонголтгүй» — байгууллагын одоогийн ангиллыг авна (байхгүй бол null).
+            $data['category'] = PhoneDirectoryEntry::query()
+                ->where('org_name', $data['org_name'])
+                ->whereNotNull('category')
+                ->value('category');
         }
-
-        // Ангилал заагаагүй бол тухайн байгууллагын одоогийн ангиллыг, эсвэл нэрээр таамаглана.
-        $data['category'] = $data['category']
-            ?? PhoneDirectoryEntry::query()->where('org_name', $data['org_name'])->value('category')
-            ?? PhoneDirectoryEntry::guessCategory($data['org_name']);
 
         $sibling = PhoneDirectoryEntry::query()->where('org_name', $data['org_name']);
 
@@ -282,11 +281,6 @@ class PhoneDirectoryController extends Controller
 
         $orgChanged = $data['org_name'] !== $entry->org_name;
 
-        $data['category'] = $data['category']
-            ?? PhoneDirectoryEntry::query()->where('org_name', $data['org_name'])->value('category')
-            ?? $entry->category
-            ?? PhoneDirectoryEntry::guessCategory($data['org_name']);
-
         if ($orgChanged) {
             $sibling = PhoneDirectoryEntry::query()->where('org_name', $data['org_name']);
             $data['org_order'] = (int) ((clone $sibling)->value('org_order')
@@ -307,22 +301,32 @@ class PhoneDirectoryController extends Controller
     }
 
     /**
-     * Байгууллагын ангиллыг (хэлтэс/агентлаг/сум/байгууллага) бүлгээр нь солино.
+     * Байгууллагын ангиллыг бүлгээр нь солино. Хоосон = сонголтгүй.
      */
     public function updateCategory(Request $request): RedirectResponse
     {
         abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
 
+        $request->merge([
+            'category' => $request->input('category') === '' || $request->input('category') === null
+                ? null
+                : $request->input('category'),
+        ]);
+
         $data = $request->validate([
             'org_name' => ['required', 'string', 'max:255'],
-            'category' => ['required', 'string', Rule::in(array_keys(PhoneDirectoryEntry::CATEGORIES))],
+            'category' => ['nullable', 'string', Rule::in(array_keys(PhoneDirectoryEntry::CATEGORIES))],
         ]);
 
         PhoneDirectoryEntry::query()
             ->where('org_name', $data['org_name'])
-            ->update(['category' => $data['category']]);
+            ->update(['category' => $data['category'] ?? null]);
 
-        return back(303)->with('success', $data['org_name'].' — ангилал шинэчлэгдлээ.');
+        $label = isset($data['category'])
+            ? (PhoneDirectoryEntry::CATEGORIES[$data['category']] ?? $data['category'])
+            : 'Сонголтгүй';
+
+        return back(303)->with('success', $data['org_name'].' — '.$label);
     }
 
     public function destroy(Request $request, PhoneDirectoryEntry $entry): RedirectResponse
