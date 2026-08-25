@@ -163,7 +163,13 @@ const switchScope = (value) => {
 };
 
 const submit = () => {
-    form.transform(() => ({ ...form.data() })).post(props.storeUrl, {
+    form.transform(() => {
+        const data = { ...form.data() };
+        if (props.scopeField && props.activeScope && props.activeScope !== 'all') {
+            data[props.scopeField] = props.activeScope;
+        }
+        return data;
+    }).post(props.storeUrl, {
         preserveScroll: true,
         onSuccess: () => {
             closeForm();
@@ -196,16 +202,16 @@ const destroyRow = (id) => {
                 </button>
             </div>
 
-            <nav v-if="scopeTabs.length" class="flex flex-wrap gap-2">
+            <nav v-if="scopeTabs.length" class="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
                 <button
                     v-for="tab in scopeTabs"
                     :key="tab.value"
                     type="button"
-                    class="rounded-full border px-4 py-1.5 text-sm font-medium transition"
+                    class="rounded-xl px-4 py-2.5 text-sm font-semibold transition"
                     :class="
                         tab.value === activeScope
-                            ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
-                            : 'border-slate-200 bg-white text-slate-600 hover:border-brand-navy-300 hover:text-brand-navy-700'
+                            ? 'bg-brand-navy-600 text-white shadow-md shadow-brand-navy-600/20'
+                            : 'text-slate-600 hover:bg-slate-50'
                     "
                     @click="switchScope(tab.value)"
                 >

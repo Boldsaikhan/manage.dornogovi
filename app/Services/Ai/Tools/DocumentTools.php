@@ -26,6 +26,7 @@ class DocumentTools
             $query->where(function ($w) use ($q) {
                 $w->where('title', 'like', "%{$q}%")
                     ->orWhere('number', 'like', "%{$q}%")
+                    ->orWhere('blank_number', 'like', "%{$q}%")
                     ->orWhere('body', 'like', "%{$q}%")
                     ->orWhere('kind', 'like', "%{$q}%");
             });

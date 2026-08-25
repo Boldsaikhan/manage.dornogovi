@@ -91,7 +91,52 @@ return [
     'decrees' => [
         'model' => App\Models\Decree::class,
         'title' => 'Захирамж, тушаал',
-        'description' => 'Бланкны дугаар, захирамж А/Б, тушаал А/Б бүртгэл.',
+        'description' => 'Бланкны дугаар олгох, захирамж/тушаалын дугаар бүртгэх.',
+        'scope_column' => 'category',
+        'default_scope' => 'blank',
+        'hide_all_scope' => true,
+        'scopes' => [
+            'blank' => 'Бланкны дугаар',
+            'decree' => 'Захирамжийн дугаар',
+        ],
+        'scope_views' => [
+            'blank' => [
+                'columns' => [
+                    ['key' => 'blank_number', 'label' => 'Бланкны дугаар'],
+                    ['key' => 'title', 'label' => 'Хэнэд / зориулалт'],
+                    ['key' => 'issued_on', 'label' => 'Олгосон огноо'],
+                    ['key' => 'body', 'label' => 'Тэмдэглэл'],
+                ],
+                'fields' => [
+                    ['name' => 'blank_number', 'label' => 'Бланкны дугаар', 'type' => 'text', 'required' => true],
+                    ['name' => 'title', 'label' => 'Хэнэд олгосон / зориулалт', 'type' => 'text'],
+                    ['name' => 'issued_on', 'label' => 'Олгосон огноо', 'type' => 'date', 'required' => true],
+                    ['name' => 'body', 'label' => 'Тэмдэглэл', 'type' => 'textarea'],
+                ],
+            ],
+            'decree' => [
+                'columns' => [
+                    ['key' => 'kind_label', 'label' => 'Төрөл'],
+                    ['key' => 'number', 'label' => 'Дугаар'],
+                    ['key' => 'title', 'label' => 'Гарчиг'],
+                    ['key' => 'blank_number', 'label' => 'Бланк №'],
+                    ['key' => 'issued_on', 'label' => 'Огноо'],
+                ],
+                'fields' => [
+                    ['name' => 'kind', 'label' => 'Төрөл', 'type' => 'select', 'options' => [
+                        'zahiramj_a' => 'Захирамж А',
+                        'zahiramj_b' => 'Захирамж Б',
+                        'tushaal_a' => 'Тушаал А',
+                        'tushaal_b' => 'Тушаал Б',
+                    ], 'required' => true],
+                    ['name' => 'number', 'label' => 'Захирамж / тушаалын дугаар', 'type' => 'text', 'required' => true],
+                    ['name' => 'title', 'label' => 'Гарчиг', 'type' => 'text', 'required' => true],
+                    ['name' => 'blank_number', 'label' => 'Бланкны дугаар', 'type' => 'text'],
+                    ['name' => 'issued_on', 'label' => 'Огноо', 'type' => 'date'],
+                    ['name' => 'body', 'label' => 'Агуулга', 'type' => 'textarea'],
+                ],
+            ],
+        ],
         'columns' => [
             ['key' => 'kind_label', 'label' => 'Төрөл'],
             ['key' => 'blank_number', 'label' => 'Бланк №'],
@@ -112,7 +157,7 @@ return [
             ['name' => 'issued_on', 'label' => 'Огноо', 'type' => 'date'],
             ['name' => 'body', 'label' => 'Агуулга', 'type' => 'textarea'],
         ],
-        'defaults' => [],
+        'defaults' => ['category' => 'blank'],
         'on_create' => 'attach_creator',
     ],
     'contracts' => [

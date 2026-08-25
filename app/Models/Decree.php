@@ -7,6 +7,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Decree extends Model
 {
+    public const CATEGORIES = [
+        'blank' => 'Бланкны дугаар',
+        'decree' => 'Захирамжийн дугаар',
+    ];
+
     public const KINDS = [
         'zahiramj_a' => 'Захирамж А',
         'zahiramj_b' => 'Захирамж Б',
@@ -15,7 +20,7 @@ class Decree extends Model
     ];
 
     protected $fillable = [
-        'kind', 'blank_number', 'number', 'title', 'issued_on', 'body', 'file_path', 'created_by',
+        'category', 'kind', 'blank_number', 'number', 'title', 'issued_on', 'body', 'file_path', 'created_by',
     ];
 
     protected function casts(): array
@@ -32,6 +37,10 @@ class Decree extends Model
 
     public function kindLabel(): string
     {
-        return self::KINDS[$this->kind] ?? $this->kind;
+        if ($this->kind === 'blank' || $this->category === 'blank') {
+            return 'Бланк';
+        }
+
+        return self::KINDS[$this->kind] ?? ($this->kind ?: '—');
     }
 }

@@ -31,12 +31,25 @@ class ModuleResourceController extends Controller
         // Хамрах хүрээгээр (агентлаг/сумд/байгууллага) тусад нь бүртгэх — 'all' үед бүгд.
         $scopes = $config['scopes'] ?? [];
         $scopeColumn = $config['scope_column'] ?? 'scope';
-        $activeScope = (string) $request->query('scope', 'all');
+        $hideAll = (bool) ($config['hide_all_scope'] ?? false);
+        $defaultScope = (string) ($config['default_scope'] ?? ($scopes ? array_key_first($scopes) : 'all'));
+        $activeScope = (string) $request->query('scope', $hideAll ? $defaultScope : 'all');
 
-        if (! $scopes || ! array_key_exists($activeScope, $scopes)) {
-            $activeScope = 'all';
-        } else {
+        if (! $scopes || (! $hideAll && $activeScope === 'all')) {
+            $activeScope = $hideAll ? $defaultScope : 'all';
+        } elseif (! array_key_exists($activeScope, $scopes)) {
+            $activeScope = $hideAll ? $defaultScope : 'all';
+        }
+
+        if ($scopes && $activeScope !== 'all') {
             $query->where($scopeColumn, $activeScope);
+        }
+
+        // Таб бүрт өөр багана/талбар
+        if ($activeScope !== 'all' && ! empty($config['scope_views'][$activeScope])) {
+            $view = $config['scope_views'][$activeScope];
+            $config['columns'] = $view['columns'] ?? $config['columns'];
+            $config['fields'] = $view['fields'] ?? $config['fields'];
         }
 
         $scopeTabs = [];
@@ -46,7 +59,9 @@ class ModuleResourceController extends Controller
                 ->groupBy($scopeColumn)
                 ->pluck('aggregate', 'scope_key');
 
-            $scopeTabs[] = ['value' => 'all', 'label' => 'Нийт', 'count' => (int) $counts->sum()];
+            if (! $hideAll) {
+                $scopeTabs[] = ['value' => 'all', 'label' => 'Нийт', 'count' => (int) $counts->sum()];
+            }
             foreach ($scopes as $value => $label) {
                 $scopeTabs[] = ['value' => $value, 'label' => $label, 'count' => (int) ($counts[$value] ?? 0)];
             }
@@ -76,9 +91,13 @@ class ModuleResourceController extends Controller
         $config = $this->configOrFail($module);
         abort_unless(ModuleAccess::canManage($request->user(), $module), 403);
 
+        $config = $this->applyActiveScopeView($request, $config);
+
         $data = $this->validated($request, $config);
         $data = array_merge($config['defaults'] ?? [], $data);
+        $data = $this->applyScopeToData($request, $config, $data);
         $data = $this->applyCreateHooks($request, $config, $data);
+        $data = $this->normalizeDecreeData($config, $data);
 
         $config['model']::create($data);
 
@@ -143,6 +162,74 @@ class ModuleResourceController extends Controller
             if (($field['type'] ?? '') === 'checkbox') {
                 $data[$field['name']] = $request->boolean($field['name']);
             }
+        }
+
+        return $data;
+    }
+
+    private function applyActiveScopeView(Request $request, array $config): array
+    {
+        $scopes = $config['scopes'] ?? [];
+        if (! $scopes || empty($config['scope_views'])) {
+            return $config;
+        }
+
+        $hideAll = (bool) ($config['hide_all_scope'] ?? false);
+        $defaultScope = (string) ($config['default_scope'] ?? array_key_first($scopes));
+        $scope = (string) ($request->input($config['scope_column'] ?? 'scope')
+            ?: $request->query('scope', $hideAll ? $defaultScope : ''));
+
+        if ($scope === '' || $scope === 'all' || ! array_key_exists($scope, $scopes)) {
+            return $config;
+        }
+
+        $view = $config['scope_views'][$scope] ?? null;
+        if ($view) {
+            $config['columns'] = $view['columns'] ?? $config['columns'];
+            $config['fields'] = $view['fields'] ?? $config['fields'];
+        }
+
+        return $config;
+    }
+
+    private function applyScopeToData(Request $request, array $config, array $data): array
+    {
+        $scopes = $config['scopes'] ?? [];
+        $scopeColumn = $config['scope_column'] ?? null;
+        if (! $scopes || ! $scopeColumn) {
+            return $data;
+        }
+
+        $scope = (string) ($data[$scopeColumn] ?? $request->input($scopeColumn) ?? $request->query('scope', ''));
+        if ($scope === '' || $scope === 'all' || ! array_key_exists($scope, $scopes)) {
+            $scope = (string) ($config['default_scope'] ?? array_key_first($scopes));
+        }
+
+        $data[$scopeColumn] = $scope;
+
+        return $data;
+    }
+
+    /**
+     * Бланк / захирамжийн бүртгэлийн заавал талбаруудыг бөглөнө.
+     *
+     * @param  array<string, mixed>  $config
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function normalizeDecreeData(array $config, array $data): array
+    {
+        if (($config['model'] ?? null) !== \App\Models\Decree::class) {
+            return $data;
+        }
+
+        if (($data['category'] ?? '') === 'blank') {
+            $data['kind'] = $data['kind'] ?? 'blank';
+            $blank = trim((string) ($data['blank_number'] ?? ''));
+            $data['title'] = filled($data['title'] ?? null)
+                ? $data['title']
+                : ($blank !== '' ? 'Бланк '.$blank : 'Бланк');
+            $data['number'] = $data['number'] ?? null;
         }
 
         return $data;
