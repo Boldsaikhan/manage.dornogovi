@@ -96,10 +96,6 @@ const submit = () => {
                         НЭВТРЭХ
                     </h2>
 
-                    <p class="mt-2 text-xs text-slate-500">
-                        Эхлээд утас/и-мэйл + нууц үг. Гар утсанд дараа нь хуруу / нүүр асууна; компьютерээс зөвхөн нууц үг.
-                    </p>
-
                     <div
                         v-if="status"
                         class="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700"
