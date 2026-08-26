@@ -268,7 +268,8 @@ const unitStats = computed(() => {
 });
 
 const heltesStats = computed(() => {
-    // Утасны жагсаалтад «Хэлтэс» гэж тэмдэглэсэн бүх нэгж — үүрэггүй байсан ч гарна.
+    // Утасны жагсаалтад «Хэлтэс» гэж тэмдэглэсэн нэгжүүдээс
+    // зөвхөн үүрэг даалгаварт орсон хэлтсүүдийг харуулна.
     const directoryOrgs = new Map();
 
     props.people.forEach((p) => {
@@ -280,39 +281,12 @@ const heltesStats = computed(() => {
         directoryOrgs.get(p.org).add(p.value);
     });
 
-    const withTasks = new Map(
-        unitStats.value
-            .filter((u) => u.category === 'heltes')
-            .map((u) => [u.key, u]),
-    );
-
-    const keys = new Set([...directoryOrgs.keys(), ...withTasks.keys()]);
-
-    return [...keys]
-        .map((org) => {
-            const existing = withTasks.get(org);
-            const directoryCount = directoryOrgs.get(org)?.size ?? 0;
-
-            if (existing) {
-                return {
-                    ...existing,
-                    directoryPeopleCount: directoryCount || existing.peopleCount,
-                };
-            }
-
-            return {
-                key: org,
-                label: org,
-                category: 'heltes',
-                categoryLabel: CATEGORY_LABELS.heltes,
-                people: [],
-                peopleCount: 0,
-                directoryPeopleCount: directoryCount,
-                count: 0,
-                done: 0,
-                progress: 0,
-            };
-        })
+    return unitStats.value
+        .filter((u) => u.category === 'heltes' && u.count > 0)
+        .map((u) => ({
+            ...u,
+            directoryPeopleCount: directoryOrgs.get(u.key)?.size || u.peopleCount,
+        }))
         .sort((a, b) => a.label.localeCompare(b.label, 'mn'));
 });
 
@@ -1068,7 +1042,7 @@ const prepTableMinWidth = computed(() => {
                         Хэлтэс бүрийн үзүүлэлт
                     </p>
                     <p class="mb-3 text-xs text-slate-500">
-                        Утасны жагсаалтад «Хэлтэс» гэж тэмдэглэсэн бүх нэгж · хувь = албан хаагчдын дундаж хэрэгжилт.
+                        Үүрэг даалгаварт орсон хэлтсүүд · хувь = албан хаагчдын дундаж хэрэгжилт.
                     </p>
                     <div class="flex flex-nowrap items-stretch gap-3 overflow-x-auto pb-1">
                         <button
