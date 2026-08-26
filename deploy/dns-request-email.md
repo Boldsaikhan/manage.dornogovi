@@ -146,3 +146,83 @@ manage.dornogovi.gov.mn — DNS-ийн A бичлэг өөрчлүүлэх хү�
 | Chrome | `chrome://net-internals/#dns` → **Clear host cache** |
 | Android/iPhone | Wi-Fi унтрааж асаах, эсвэл нисэх горим 10 сек |
 | Шалгаагүй бол туслах | DNS-ийг **8.8.8.8** / **1.1.1.1** болгож тохируулах |
+
+---
+
+# ❗ 2026-08-26 (шинэчлэсэн онош) — ns4.gov.mn бичлэгийг мэдэхгүй байна
+
+## Асуудал
+
+Хэрэглэгчдийн ойролцоогоор **дөрөвний нэг** нь `ERR_NAME_NOT_RESOLVED` алдаа авч байна.
+Шалтгаан: `gov.mn` бүсийн 4 нэрийн сервэрээс **ns4.gov.mn ганцаараа** уг бичлэгийг
+мэдэхгүй, NXDOMAIN буцааж байна.
+
+## Шалгасан баримт (2026-08-26, сервэрээс dig)
+
+```
+dig @ns.gov.mn   manage.dornogovi.gov.mn A  -> NOERROR  202.37.109.67
+dig @ns1.gov.mn  manage.dornogovi.gov.mn A  -> NOERROR  202.37.109.67
+dig @ns3.gov.mn  manage.dornogovi.gov.mn A  -> NOERROR  202.37.109.67
+dig @ns4.gov.mn  manage.dornogovi.gov.mn A  -> NXDOMAIN   ← АСУУДАЛ
+```
+
+Нэмэлт шалгалт:
+
+| Үзүүлэлт | Дүн |
+|---|---|
+| ns4.gov.mn дээрх `dornogovi.gov.mn` SOA serial | **2022112701** (хуучин) |
+| ns.gov.mn дээрх `manage.dornogovi.gov.mn` SOA | **a.misconfigured.dns.server.invalid.** serial 2026082401 |
+| ns4.gov.mn → `www.dornogovi.gov.mn` | NOERROR (тус сервэр ажиллаж байна) |
+| A бичлэгийн TTL | 60 сек |
+| Үүрсэн бүсийн negative TTL | 86400 сек (1 хоног) |
+
+## Тайлбар
+
+`manage.dornogovi.gov.mn` нь `dornogovi.gov.mn` бүсийн доторх бичлэг биш, **тусдаа бүс (zone)**
+болгож үүсгэгдсэн байна (SOA нь тохируулаагүй — `a.misconfigured.dns.server.invalid`).
+Тус бүс нь ns, ns1, ns3 руу тараагдсан боловч **ns4 руу тараагдаагүй**.
+Resolver-үүд нэрийн сервэрийг санамсаргүй сонгодог тул ns4 руу таарсан хэрэглэгч
+«домайн байхгүй» гэсэн албан ёсны хариу аваад, түүнийгээ 1 хоног хадгалдаг.
+
+## НДТ-д илгээх текст (хуулж илгээх)
+
+**Гарчиг:** `manage.dornogovi.gov.mn — ns4.gov.mn дээр A бичлэг дутуу байна`
+
+> Эрхэм хүндэт Үндэсний дата төвийн хамт олон,
+>
+> `manage.dornogovi.gov.mn` хаягаар албан хаагчид хандахад зарим төхөөрөмжөөс
+> `ERR_NAME_NOT_RESOLVED` алдаа гарч байна. Шалгахад `gov.mn` бүсийн
+> дөрөвөн нэрийн сервэрээс **ns4.gov.mn (103.43.117.102)** тус бичлэгийг
+> мэдэхгүй, NXDOMAIN буцааж байгаа нь тогтоогдлоо:
+>
+> ```
+> dig @ns.gov.mn   manage.dornogovi.gov.mn A  -> NOERROR  202.37.109.67
+> dig @ns1.gov.mn  manage.dornogovi.gov.mn A  -> NOERROR  202.37.109.67
+> dig @ns3.gov.mn  manage.dornogovi.gov.mn A  -> NOERROR  202.37.109.67
+> dig @ns4.gov.mn  manage.dornogovi.gov.mn A  -> NXDOMAIN
+> ```
+>
+> ns4.gov.mn дээрх `dornogovi.gov.mn` бүсийн SOA serial нь **2022112701** буюу
+> 2022 оны хэвээрээ байна. Мөн `manage.dornogovi.gov.mn` нь тусдаа бүс болж
+> үүссэн бөгөөд түүний SOA нь `a.misconfigured.dns.server.invalid` байна.
+>
+> Дараах засварыг хийж өгнө үү:
+>
+> 1. `manage.dornogovi.gov.mn` A бичлэгийг (202.37.109.67) **ns4.gov.mn** руу тараах
+>    — шаардлагатай бол `dornogovi.gov.mn` бүсийн дотор енгийн A бичлэг болгож үүсгэж,
+>    бүсийн serial-ыг шинэчлээд бүх нэрийн сервэрт синк хийж өгнө үү.
+> 2. Аль бол тусдаа бүс үүсгэхгүйгээр `dornogovi.gov.mn` бүсийн доторх бичлэг байлгах.
+> 3. A бичлэгийн **TTL-ийг 60 сек → 3600 сек** болгох.
+> 4. Бүсийн **SOA minimum (negative TTL) 86400 → 300 сек** болгох.
+>
+> Тус системийг аймгийн 100 гаруй албан хаагч өдөр тутам ашиглаж байгаа тул
+> яаралтай шийдвэрлэж өгнө үү.
+
+## Засагдтал хүртэлх түр шийд
+
+| Аль төхөөрөмж | Шийд |
+|---|---|
+| Албаны компьютер | `deploy/add-host-client.ps1` — hosts файлд шууд бичнэ (DNS-ээс бүрэн хамааралгүй) |
+| Mac | `sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder` |
+| Утас | Wi-Fi/нисэх горимыг 10 сек асааж унтраах |
+| Сүлжээний router | DNS-ийг **8.8.8.8 / 1.1.1.1** болгож тохируулах |
