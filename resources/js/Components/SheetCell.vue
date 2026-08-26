@@ -25,17 +25,22 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'commit']);
 
-const editing = ref(false);
-const local = ref(props.modelValue ?? '');
-const search = ref('');
-const selected = ref([]);
-const categoryOn = ref({
+// Бүх SheetCell хуваалцах — өөр нүд нээхэд сүүлийн ангиллын шүүлт үлдэнэ.
+const defaultCategoryFilters = () => ({
     udirdlaga: true,
     heltes: true,
     sum: true,
     agentlag: true,
     baiguullaga: true,
 });
+
+let sharedCategoryFilters = defaultCategoryFilters();
+
+const editing = ref(false);
+const local = ref(props.modelValue ?? '');
+const search = ref('');
+const selected = ref([]);
+const categoryOn = ref({ ...sharedCategoryFilters });
 const inputRef = ref(null);
 const rootRef = ref(null);
 const menuRef = ref(null);
@@ -43,6 +48,10 @@ const highlight = ref(0);
 const menuStyle = ref({});
 const ignoreBlur = ref(false);
 let blurTimer = null;
+
+watch(categoryOn, (val) => {
+    sharedCategoryFilters = { ...val };
+}, { deep: true });
 
 const hasOptions = computed(() => Array.isArray(props.options) && props.options.length > 0);
 
@@ -163,7 +172,8 @@ const startEdit = async () => {
 
     editing.value = true;
     highlight.value = 0;
-    categoryOn.value = { udirdlaga: true, sum: true, agentlag: true, baiguullaga: true };
+    // Сүүлийн шүүлтийг хадгална (өөр нүд/хүснэгт рүү шилжихэд идэвхтэй үлдэнэ).
+    categoryOn.value = { ...sharedCategoryFilters };
 
     if (hasOptions.value) {
         search.value = '';
