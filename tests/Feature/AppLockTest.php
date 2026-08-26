@@ -47,6 +47,44 @@ class AppLockTest extends TestCase
         $this->assertFalse((bool) session(AppLock::SESSION_KEY));
     }
 
+    public function test_app_lock_uses_biometric_mode_when_webauthn_exists(): void
+    {
+        $user = User::factory()->create();
+        $user->webauthnCredentials()->create([
+            'credential_id' => 'cred-biometric-mode',
+            'public_key' => 'pk',
+            'sign_count' => 0,
+            'device_name' => 'Phone',
+        ]);
+
+        $this->actingAs($user)
+            ->postJson(route('app.lock'))
+            ->assertOk()
+            ->assertJson([
+                'locked' => true,
+                'mode' => AppLock::MODE_BIOMETRIC,
+            ]);
+    }
+
+    public function test_pwa_cookie_locks_on_full_page_load(): void
+    {
+        $user = User::factory()->create();
+        $user->webauthnCredentials()->create([
+            'credential_id' => 'cred-pwa-load',
+            'public_key' => 'pk',
+            'sign_count' => 0,
+            'device_name' => 'Phone',
+        ]);
+
+        $this->actingAs($user)
+            ->withCookie('pwa_standalone', '1')
+            ->get(route('dept.dashboard'))
+            ->assertOk();
+
+        $this->assertTrue(session(AppLock::SESSION_KEY));
+        $this->assertSame(AppLock::MODE_BIOMETRIC, session(AppLock::MODE_KEY));
+    }
+
     public function test_app_lock_and_password_unlock(): void
     {
         $user = User::factory()->create([

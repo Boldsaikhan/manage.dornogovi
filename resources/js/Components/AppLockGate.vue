@@ -12,6 +12,10 @@ const hint = ref('');
 const showPasswordFallback = ref(false);
 const webauthnOk = ref(false);
 
+/** Энэ удаагийн «харагдах» циклд биометрик баталгаажсан эсэх */
+let unlockedThisVisibleCycle = false;
+let locking = false;
+
 const lock = computed(() => page.props.appLock ?? {
     locked: false,
     mode: null,
@@ -31,54 +35,91 @@ const title = computed(() => (
 
 const subtitle = computed(() => (
     isBiometricOnly.value
-        ? 'Нууц үг зөв — одоо хурууны хээ эсвэл царайгаар баталгаажуулна.'
-        : 'Апп-аас гараад буцаж орсон тул нэвтрэх нэр/нууц үг болон биометрикийг асууна.'
+        ? 'Апп нээх бүрт хурууны хээ эсвэл царайгаар баталгаажуулна.'
+        : 'Апп-аас гараад буцаж орсон тул нэвтрэх нууц үг болон биометрикийг асууна.'
 ));
 
 const isStandaloneApp = () => (
     window.matchMedia('(display-mode: standalone)').matches
+    || window.matchMedia('(display-mode: fullscreen)').matches
     || window.navigator.standalone === true
 );
 
-let hiddenAt = 0;
-let locking = false;
+const shouldGuard = () => (
+    isStandaloneApp()
+    && !! page.props.auth?.user
+    && !! lock.value.hasWebAuthn
+);
+
+const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+
+/** Далдлахад сүлжээ тасарсан ч түгжих — sendBeacon ашиглана */
+const requestLockBeacon = () => {
+    if (! shouldGuard()) return;
+
+    const body = new FormData();
+    const token = csrfToken();
+    if (token) body.append('_token', token);
+
+    const url = route('app.lock');
+    if (navigator.sendBeacon?.(url, body)) return;
+
+    // sendBeacon боломжгүй бол синхрон fetch (pagehide-д)
+    fetch(url, { method: 'POST', body, credentials: 'same-origin', keepalive: true }).catch(() => {});
+};
 
 const engageLock = async () => {
-    if (locking || ! page.props.auth?.user) return;
+    if (locking || ! shouldGuard() || unlockedThisVisibleCycle) return;
+
     locking = true;
     try {
         await window.axios.post(route('app.lock'));
         router.reload({ only: ['appLock', 'vault'] });
     } catch {
-        // ignore network blips while backgrounded
+        // Дахин оролдоно
     } finally {
         locking = false;
     }
 };
 
-const onVisibility = () => {
-    if (! isStandaloneApp() || ! page.props.auth?.user) return;
+const onAppHidden = () => {
+    unlockedThisVisibleCycle = false;
+    requestLockBeacon();
+};
 
-    if (document.hidden) {
-        hiddenAt = Date.now();
+const onAppVisible = () => {
+    if (document.hidden || ! shouldGuard()) return;
+
+    // Апп бүр дахин нээгдэхэд биометрик асууна
+    if (! unlockedThisVisibleCycle) {
         engageLock();
-        return;
     }
+};
 
-    // Буцаж ирэхэд props шинэчилнэ (түгжээ идэвхэжсэн эсэх).
-    if (hiddenAt && Date.now() - hiddenAt >= 1500) {
-        router.reload({ only: ['appLock', 'vault'] });
-    }
-    hiddenAt = 0;
+const promptBiometricIfLocked = () => {
+    if (! locked.value || busy.value) return;
+    if (! isBiometricOnly.value || ! hasWebAuthn.value) return;
+
+    setTimeout(() => {
+        if (locked.value && ! busy.value && ! unlockedThisVisibleCycle) {
+            unlock();
+        }
+    }, 400);
 };
 
 onMounted(() => {
     webauthnOk.value = isWebAuthnSupported();
-    document.addEventListener('visibilitychange', onVisibility);
+    document.addEventListener('visibilitychange', onAppVisible);
+    window.addEventListener('pagehide', onAppHidden);
+    window.addEventListener('pageshow', onAppVisible);
+
+    onAppVisible();
 });
 
 onBeforeUnmount(() => {
-    document.removeEventListener('visibilitychange', onVisibility);
+    document.removeEventListener('visibilitychange', onAppVisible);
+    window.removeEventListener('pagehide', onAppHidden);
+    window.removeEventListener('pageshow', onAppVisible);
 });
 
 watch(locked, (v) => {
@@ -87,13 +128,7 @@ watch(locked, (v) => {
         error.value = '';
         hint.value = '';
         showPasswordFallback.value = false;
-
-        // Нууц үгээр нэвтэрсний дараах биометрик алхам — шууд асууна.
-        if (isBiometricOnly.value && hasWebAuthn.value) {
-            setTimeout(() => {
-                if (locked.value && ! busy.value) unlock();
-            }, 350);
-        }
+        promptBiometricIfLocked();
     }
 });
 
@@ -125,7 +160,6 @@ const unlock = async () => {
                     showPasswordFallback.value = true;
                     return;
                 }
-                // Апп устгасны дараа төхөөрөмжийн credential алга болсон байж болно.
                 showPasswordFallback.value = true;
                 error.value = e?.response?.data?.message
                     || e?.message
@@ -138,6 +172,7 @@ const unlock = async () => {
 
         await window.axios.post(route('app.unlock'), payload);
         password.value = '';
+        unlockedThisVisibleCycle = true;
         router.reload({ only: ['appLock', 'vault'] });
     } catch (e) {
         error.value = e?.response?.data?.errors?.password?.[0]
@@ -167,6 +202,7 @@ const unlockPasswordOnly = async () => {
         });
         hint.value = data?.hint || '';
         password.value = '';
+        unlockedThisVisibleCycle = true;
         router.reload({ only: ['appLock', 'vault'] });
     } catch (e) {
         error.value = e?.response?.data?.errors?.password?.[0]

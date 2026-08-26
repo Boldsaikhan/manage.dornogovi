@@ -16,7 +16,11 @@ class AppLockController extends Controller
     /** Апп-аас гарах / дэлгэц нуугдахад түгжинэ. */
     public function lock(Request $request): JsonResponse
     {
-        AppLock::lock($request, AppLock::MODE_FULL);
+        $mode = $request->user()->webauthnCredentials()->exists()
+            ? AppLock::MODE_BIOMETRIC
+            : AppLock::MODE_FULL;
+
+        AppLock::lock($request, $mode);
 
         return response()->json([
             'locked' => true,
