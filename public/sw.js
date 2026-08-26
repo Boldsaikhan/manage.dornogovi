@@ -5,7 +5,7 @@
  * Build файлууд: сүлжээ эхлээд, дараа нь кэш (шинэ deploy эвдэрэхгүй).
  */
 
-const VERSION = 'v8-20260826-notify';
+const VERSION = 'v9-20260826-net-retry';
 const SHELL_CACHE = `shell-${VERSION}`;
 const ASSET_CACHE = `assets-${VERSION}`;
 
@@ -22,6 +22,9 @@ button{background:#1c55a5;color:#fff;border:0;border-radius:.5rem;padding:.6rem 
 Хэрэв холболт байгаа бол доорх товчоор кэш цэвэрлээд дахин нээнэ үү.</p>
 <button onclick="location.reload()">Дахин оролдох</button>
 <button class="ghost" onclick="navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.map(x=>x.unregister()))).then(()=>caches.keys().then(k=>Promise.all(k.map(caches.delete.bind(caches)))).then(()=>location.href='/'))">Кэш цэвэрлэж нээх</button>
+<script>
+setTimeout(function(){ location.reload(); }, 5000);
+</script>
 </div></body></html>`;
 
 const MAINT_HTML = `<!DOCTYPE html><html lang="mn"><head><meta charset="utf-8">
@@ -105,22 +108,32 @@ async function networkFirstPage(request) {
 
         return response;
     } catch {
-        // Богино завсарлагатай дахин оролдоно (утсан дээр түр зуурын тасалдал)
-        try {
-            await new Promise((r) => setTimeout(r, 400));
-            const url = new URL(request.url);
-            return await fetch(url.pathname + url.search, {
-                credentials: 'same-origin',
-                redirect: 'follow',
-                cache: 'no-store',
-                headers: { Accept: 'text/html' },
-            });
-        } catch {
-            return (await caches.match('/offline')) || new Response(OFFLINE_HTML, {
-                headers: { 'Content-Type': 'text/html; charset=utf-8' },
-                status: 503,
-            });
+        // DNS/сүлжээ түр доголдлыг давахын тулд хэд хэдэн удаа дахин оролдоно.
+        const url = new URL(request.url);
+        const retries = [450, 1200, 2200];
+
+        for (const delay of retries) {
+            await new Promise((r) => setTimeout(r, delay));
+            try {
+                const retry = await fetch(url.pathname + url.search, {
+                    credentials: 'same-origin',
+                    redirect: 'follow',
+                    cache: 'no-store',
+                    headers: { Accept: 'text/html' },
+                });
+
+                if (retry) {
+                    return retry;
+                }
+            } catch {
+                // дараагийн оролдлого руу шилжинэ
+            }
         }
+
+        return (await caches.match('/offline')) || new Response(OFFLINE_HTML, {
+            headers: { 'Content-Type': 'text/html; charset=utf-8' },
+            status: 503,
+        });
     }
 }
 
