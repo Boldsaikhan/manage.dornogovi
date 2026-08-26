@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from 'vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import StateEmblem from '@/Components/StateEmblem.vue';
-import SoyomboMark from '@/Components/SoyomboMark.vue';
 import OrnamentMark from '@/Components/OrnamentMark.vue';
 import { isWebAuthnSupported, loginWithBiometric } from '@/utils/webauthn';
 
@@ -471,11 +470,7 @@ onMounted(() => {
                 ></div>
 
                 <div class="relative mt-auto px-8 pb-10 pt-24 text-center">
-                    <SoyomboMark class="mx-auto h-12 w-12 text-brand-orange-300 drop-shadow" />
-                    <h2 class="mt-4 text-2xl font-bold leading-snug tracking-tight text-white drop-shadow xl:text-3xl">
-                        ТӨРИЙН ҮЙЛЧИЛГЭЭГ<br />ТАНЫГ ТӨЛӨӨ
-                    </h2>
-                    <div class="mt-4 flex items-center justify-center gap-3">
+                    <div class="flex items-center justify-center gap-3">
                         <span class="h-px w-12 bg-white/40"></span>
                         <OrnamentMark class="h-3 w-8 text-brand-orange-300" />
                         <span class="h-px w-12 bg-white/40"></span>
