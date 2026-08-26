@@ -28,7 +28,7 @@ const form = useForm({
 
 const isPhone = computed(() => mode.value === 'phone');
 
-/** Утасны дугаарыг "9911 1234" хэлбэрээр харуулна (хадгалахдаа цифр л явна). */
+/** Утасны дугаарыг "8923 9655" хэлбэрээр харуулна (хадгалахдаа цифр л явна). */
 const phoneDisplay = computed({
     get: () => {
         const digits = form.login.replace(/\D/g, '').slice(0, 8);
@@ -163,7 +163,7 @@ const submit = () => {
                                     type="tel"
                                     inputmode="numeric"
                                     autocomplete="tel"
-                                    placeholder="9911 1234"
+                                    placeholder="8923 9655"
                                     required
                                     autofocus
                                     class="w-full border-0 bg-transparent pb-2.5 pl-12 pr-4 pt-6 text-base tracking-wide text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-0"
@@ -192,11 +192,11 @@ const submit = () => {
                         <!-- Нууц үг -->
                         <div>
                             <div
-                                class="group relative rounded-xl border-2 bg-slate-50 transition focus-within:border-brand-navy-600 focus-within:bg-white focus-within:ring-4 focus-within:ring-brand-navy-600/10"
+                                class="group relative rounded-xl border-2 bg-white transition focus-within:border-brand-navy-600 focus-within:ring-4 focus-within:ring-brand-navy-600/10"
                                 :class="
                                     form.errors.password
                                         ? 'border-red-400'
-                                        : 'border-transparent'
+                                        : 'border-slate-200'
                                 "
                             >
                                 <span
