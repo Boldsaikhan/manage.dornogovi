@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\PhoneDirectoryEntry;
+use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\User;
 use App\Models\UserModulePermission;
@@ -49,13 +50,13 @@ class UserAccessController extends Controller
             'departments' => Department::query()->where('is_active', true)->orderBy('sort_order')->get(['id', 'name']),
             'modules' => $modules,
             'people' => PhoneDirectoryEntry::accountPeopleOptions(),
-            'roles' => collect(RolePermission::ROLES)
-                ->map(fn (string $label, string $key) => [
-                    'key' => $key,
-                    'label' => $label,
-                    'field' => RolePermission::ROLE_FIELDS[$key],
-                ])
-                ->values(),
+            'roles' => Role::ordered()->map(fn (Role $role) => [
+                'key' => $role->key,
+                'label' => $role->label,
+                // Зөвхөн суурь роль хэрэглэгчийн чагттай холбоотой.
+                'field' => Role::SYSTEM_FIELDS[$role->key] ?? null,
+                'is_system' => $role->is_system,
+            ])->values(),
             'rolePermissions' => RolePermission::map(),
         ]);
     }
@@ -65,24 +66,77 @@ class UserAccessController extends Controller
      */
     public function updateRole(Request $request, string $role): RedirectResponse
     {
-        abort_unless(array_key_exists($role, RolePermission::ROLES), 404);
+        $model = Role::query()->where('key', $role)->firstOrFail();
 
         $data = $request->validate([
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['in:view,manage'],
+            'label' => ['nullable', 'string', 'max:60'],
         ]);
+
+        // Суурь ролийн нэрийг өөрчлөхгүй.
+        if (! $model->is_system && filled($data['label'] ?? null)) {
+            $model->update(['label' => trim($data['label'])]);
+        }
 
         $permissions = collect($data['permissions'] ?? [])
             ->filter(fn ($level, $key) => ModuleAccess::find($key) !== null)
             ->all();
 
-        RolePermission::replaceFor($role, $permissions);
+        RolePermission::replaceFor($model->key, $permissions);
 
         return back()->with('success', sprintf(
             '«%s» ролийн загвар хадгалагдлаа (%d модуль).',
-            RolePermission::ROLES[$role],
+            $model->label,
             count($permissions),
         ));
+    }
+
+    /**
+     * Шинэ роль нэмнэ.
+     */
+    public function storeRole(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'label' => ['required', 'string', 'max:60'],
+            'copy_from' => ['nullable', 'string', 'exists:roles,key'],
+        ]);
+
+        $label = trim($data['label']);
+
+        if (Role::query()->where('label', $label)->exists()) {
+            return back()->with('warning', 'Ийм нэртэй роль аль хэдийн байна.');
+        }
+
+        $role = Role::create([
+            'key' => Role::keyFor($label),
+            'label' => $label,
+            'is_system' => false,
+            'sort_order' => (int) Role::query()->max('sort_order') + 1,
+        ]);
+
+        // Хүсвэл өөр ролийн эрхийг хуулж эхлэнэ.
+        if (filled($data['copy_from'] ?? null)) {
+            RolePermission::replaceFor($role->key, RolePermission::map()[$data['copy_from']] ?? []);
+        }
+
+        return back()->with('success', sprintf('«%s» роль нэмэгдлээ.', $role->label));
+    }
+
+    /**
+     * Өөрийн үүсгэсэн ролийг устгана (суурь роль устахгүй).
+     */
+    public function destroyRole(string $role): RedirectResponse
+    {
+        $model = Role::query()->where('key', $role)->firstOrFail();
+
+        abort_if($model->is_system, 403, 'Суурь ролийг устгах боломжгүй.');
+
+        RolePermission::query()->where('role', $model->key)->delete();
+        $label = $model->label;
+        $model->delete();
+
+        return back()->with('success', sprintf('«%s» роль устгагдлаа.', $label));
     }
 
     public function store(Request $request): RedirectResponse

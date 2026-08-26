@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -45,5 +46,32 @@ class RolePermissionTemplateTest extends TestCase
         $this->actingAs($this->admin())
             ->patch(route('admin.roles.update', 'guest'), ['permissions' => []])
             ->assertNotFound();
+    }
+
+    public function test_admin_can_add_and_remove_a_custom_role(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)
+            ->post(route('admin.roles.store'), ['label' => 'Архивч', 'copy_from' => 'specialist'])
+            ->assertRedirect();
+
+        $role = Role::query()->where('label', 'Архивч')->firstOrFail();
+        $this->assertFalse($role->is_system);
+        $this->assertSame(RolePermission::map()['specialist'], RolePermission::map()[$role->key]);
+
+        $this->actingAs($admin)
+            ->delete(route('admin.roles.destroy', $role->key))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('roles', ['key' => $role->key]);
+        $this->assertDatabaseMissing('role_permissions', ['role' => $role->key]);
+    }
+
+    public function test_system_roles_cannot_be_deleted(): void
+    {
+        $this->actingAs($this->admin())
+            ->delete(route('admin.roles.destroy', 'specialist'))
+            ->assertForbidden();
     }
 }

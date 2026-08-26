@@ -128,7 +128,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/users', [UserAccessController::class, 'index'])->name('users.index');
         Route::post('/users', [UserAccessController::class, 'store'])->name('users.store');
         Route::patch('/users/{user}', [UserAccessController::class, 'update'])->name('users.update');
+        Route::post('/roles', [UserAccessController::class, 'storeRole'])->name('roles.store');
         Route::patch('/roles/{role}', [UserAccessController::class, 'updateRole'])->name('roles.update');
+        Route::delete('/roles/{role}', [UserAccessController::class, 'destroyRole'])->name('roles.destroy');
     });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

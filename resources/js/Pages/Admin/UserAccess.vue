@@ -91,6 +91,7 @@ const selectUser = (id) => {
 
 // ── Ролийн загвар ──
 const roleTab = ref(props.roles?.[0]?.key ?? 'specialist');
+const roleLabel = ref('');
 const roleState = reactive({});
 
 const loadRoles = () => {
@@ -105,6 +106,10 @@ watch(() => props.rolePermissions, loadRoles, { deep: true });
 
 const activeRole = computed(() => props.roles?.find((r) => r.key === roleTab.value) ?? null);
 
+watch(activeRole, (role) => {
+    roleLabel.value = role?.label ?? '';
+}, { immediate: true });
+
 const setRoleLevel = (roleKey, moduleKey, level) => {
     if (!level) {
         delete roleState[roleKey][moduleKey];
@@ -117,7 +122,39 @@ const saveRole = () => {
     if (!activeRole.value) return;
     router.patch(route('admin.roles.update', activeRole.value.key), {
         permissions: { ...roleState[activeRole.value.key] },
+        label: activeRole.value.is_system ? null : roleLabel.value,
     }, { preserveScroll: true });
+};
+
+// ── Шинэ роль ──
+const newRole = reactive({ open: false, label: '', copy_from: '' });
+
+const addRole = () => {
+    if (!newRole.label.trim()) return;
+
+    router.post(route('admin.roles.store'), {
+        label: newRole.label.trim(),
+        copy_from: newRole.copy_from || null,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            newRole.open = false;
+            newRole.label = '';
+            newRole.copy_from = '';
+        },
+    });
+};
+
+const removeRole = () => {
+    if (!activeRole.value || activeRole.value.is_system) return;
+    if (!confirm(`«${activeRole.value.label}» ролийг устгах уу?`)) return;
+
+    router.delete(route('admin.roles.destroy', activeRole.value.key), {
+        preserveScroll: true,
+        onSuccess: () => {
+            roleTab.value = props.roles?.[0]?.key ?? '';
+        },
+    });
 };
 
 // Тухайн ролийн загварыг сонгосон албан хаагчид хэрэглэнэ.
@@ -230,7 +267,7 @@ const pickFromDirectory = (value) => {
                     </div>
                     <div class="space-y-2">
                         <div class="flex flex-wrap gap-4 text-sm font-medium text-slate-700">
-                            <label v-for="r in roles" :key="r.key" class="flex items-center gap-2">
+                            <label v-for="r in roles.filter((x) => x.field)" :key="r.key" class="flex items-center gap-2">
                                 <input
                                     type="checkbox"
                                     class="rounded text-brand-navy-600"
@@ -304,7 +341,37 @@ const pickFromDirectory = (value) => {
                             >
                                 {{ r.label }}
                             </button>
+                            <button
+                                type="button"
+                                class="rounded-full border border-dashed border-brand-navy-300 px-3 py-1.5 text-xs font-semibold text-brand-navy-600 transition hover:bg-brand-navy-50"
+                                @click="newRole.open = ! newRole.open"
+                            >
+                                + Роль нэмэх
+                            </button>
                         </div>
+                    </div>
+
+                    <div v-if="newRole.open" class="rounded-xl border border-brand-navy-100 bg-slate-50/70 p-3">
+                        <div class="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                            <input
+                                v-model="newRole.label"
+                                class="ui-input"
+                                placeholder="Ролийн нэр (жишээ: Архивч)"
+                                @keyup.enter="addRole"
+                            />
+                            <select v-model="newRole.copy_from" class="ui-input">
+                                <option value="">Хоосоноос эхлэх</option>
+                                <option v-for="r in roles" :key="`copy-${r.key}`" :value="r.key">
+                                    «{{ r.label }}»-г хуулах
+                                </option>
+                            </select>
+                            <button type="button" class="ui-btn-accent whitespace-nowrap" @click="addRole">Нэмэх</button>
+                        </div>
+                    </div>
+
+                    <div v-if="activeRole && ! activeRole.is_system" class="flex flex-wrap items-center gap-2">
+                        <label class="text-xs font-medium text-slate-500">Ролийн нэр</label>
+                        <input v-model="roleLabel" class="ui-input max-w-xs !py-1.5 text-sm" />
                     </div>
 
                     <p v-if="activeRole" class="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
@@ -347,6 +414,14 @@ const pickFromDirectory = (value) => {
                             @click="applyRoleToUser(activeRole.key)"
                         >
                             «{{ selected.name }}»-д хэрэглэх
+                        </button>
+                        <button
+                            v-if="activeRole && ! activeRole.is_system"
+                            type="button"
+                            class="ui-btn-danger"
+                            @click="removeRole"
+                        >
+                            Ролийг устгах
                         </button>
                     </div>
                 </section>

@@ -10,18 +10,18 @@ use Illuminate\Database\Eloquent\Model;
  */
 class RolePermission extends Model
 {
-    public const ROLES = [
-        'super_admin' => 'Супер админ',
-        'department_head' => 'Хэлтсийн дарга',
-        'specialist' => 'Мэргэжилтэн',
-    ];
+    /** Хэрэглэгчийн талбар ↔ суурь роль. */
+    public const ROLE_FIELDS = Role::SYSTEM_FIELDS;
 
-    /** Хэрэглэгчийн талбар ↔ роль. */
-    public const ROLE_FIELDS = [
-        'super_admin' => 'is_admin',
-        'department_head' => 'is_department_head',
-        'specialist' => 'is_specialist',
-    ];
+    /**
+     * Бүртгэлтэй бүх роль: {түлхүүр: нэр}.
+     *
+     * @return array<string, string>
+     */
+    public static function roles(): array
+    {
+        return Role::ordered()->pluck('label', 'key')->all();
+    }
 
     /**
      * Тохиргоо хийгээгүй үед хэрэглэх анхны загвар.
@@ -64,7 +64,7 @@ class RolePermission extends Model
      */
     public static function map(): array
     {
-        $stored = array_fill_keys(array_keys(self::ROLES), []);
+        $stored = array_fill_keys(array_keys(self::roles()), []);
         $configured = [];
 
         foreach (static::query()->get(['role', 'module_key', 'level']) as $row) {
