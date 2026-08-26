@@ -4,27 +4,46 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 /**
  * Утасны апп (PWA) болон нэвтрэлтийн өргөтгөлийг суулгах / устгах хэсэг.
  */
+const props = defineProps({
+    /** true бол зөвхөн өргөтгөл суугаагүй үеийн мэдэгдэл (бүтэн удирдлага биш). */
+    notifyOnly: { type: Boolean, default: false },
+});
+
 const extensionReady = ref(false);
+const extensionChecked = ref(false);
 const extensionId = ref('');
 const appInstalled = ref(false);
 const message = ref('');
 const showHelp = ref(false);
 const showAppHelp = ref(false);
+const bannerDismissed = ref(false);
 
 const isIos = () => /iphone|ipad|ipod/i.test(window.navigator.userAgent);
 
+/** Chrome/Edge дээр өргөтгөл суулгах боломжтой эсэх (утас/PWA-д шаардлагагүй). */
+const extensionApplicable = ref(false);
+
 // Манифестын key-ээс хамаарах тогтмол ID — dataset алга бол энэгээр шалгана.
 const FALLBACK_ID = 'hoiannpahebnneonhkjianfpmjfhpdmm';
+const DISMISS_KEY = 'md_extension_missing_dismissed';
 
 /**
  * Өргөтгөл үнэхээр амьд эсэхийг шалгана. Устгасны дараа хуудсан дээрх
  * data-тэмдэг хэвээрээ үлддэг тул зөвхөн түүнд найдвал «татах» товч дахин гарч ирэхгүй.
  */
 const verifyExtension = () => {
+    if (! extensionApplicable.value) {
+        extensionReady.value = false;
+        extensionChecked.value = true;
+
+        return;
+    }
+
     const id = document.documentElement.dataset.mdExtensionId || extensionId.value || FALLBACK_ID;
 
     if (! window.chrome?.runtime?.sendMessage) {
         extensionReady.value = false;
+        extensionChecked.value = true;
 
         return;
     }
@@ -35,6 +54,7 @@ const verifyExtension = () => {
 
             extensionReady.value = alive;
             extensionId.value = alive ? id : '';
+            extensionChecked.value = true;
 
             if (! alive) {
                 // Хуучин тэмдэгийг цэвэрлэнэ — бусад хуудас бас зөв төлөв харна.
@@ -44,14 +64,46 @@ const verifyExtension = () => {
         });
     } catch {
         extensionReady.value = false;
+        extensionChecked.value = true;
+    }
+};
+
+const showMissingNotice = computed(() => (
+    extensionChecked.value
+    && extensionApplicable.value
+    && ! extensionReady.value
+    && ! bannerDismissed.value
+));
+
+const dismissMissingNotice = () => {
+    bannerDismissed.value = true;
+    try {
+        localStorage.setItem(DISMISS_KEY, String(Date.now()));
+    } catch {
+        // ignore
     }
 };
 
 onMounted(() => {
+    const standalone = window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone === true;
+    const mobile = /Android|iPhone|iPad|iPod/i.test(window.navigator.userAgent);
+
+    extensionApplicable.value = !! window.chrome?.runtime?.sendMessage && ! standalone && ! mobile;
+
     extensionId.value = document.documentElement.dataset.mdExtensionId ?? '';
     extensionReady.value = document.documentElement.dataset.mdExtension === '1';
-    appInstalled.value = window.matchMedia('(display-mode: standalone)').matches
-        || window.navigator.standalone === true;
+    appInstalled.value = standalone;
+
+    try {
+        const raw = localStorage.getItem(DISMISS_KEY);
+        // Нэг өдөр хаасныг сануулна — дараа нь дахин мэдэгдэнэ.
+        if (raw && Date.now() - Number(raw) < 24 * 60 * 60 * 1000) {
+            bannerDismissed.value = true;
+        }
+    } catch {
+        // ignore
+    }
 
     verifyExtension();
 
@@ -116,7 +168,64 @@ const appHelp = computed(() => (isIos()
 </script>
 
 <template>
-    <section class="ui-card-pad space-y-4">
+    <!-- Зөвхөн мэдэгдэл (layout) -->
+    <div
+        v-if="props.notifyOnly && showMissingNotice"
+        class="mb-4 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 shadow-sm"
+        role="status"
+    >
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="min-w-0">
+                <p class="text-sm font-semibold text-amber-900">
+                    Автомат нэвтрэлтийн өргөтгөл суугаагүй байна
+                </p>
+                <p class="mt-0.5 text-xs text-amber-800/90">
+                    Холбосон систем рүү ороход нэр, нууц үгээ гараар оруулах болно. Суулгавал автоматаар бөглөгдөнө.
+                </p>
+            </div>
+            <div class="flex shrink-0 flex-wrap items-center gap-2">
+                <a :href="route('extension.download')" class="ui-btn-primary !py-1.5 text-xs">
+                    Өргөтгөл татах
+                </a>
+                <button type="button" class="ui-btn-ghost !py-1.5 text-xs" @click="verifyExtension">
+                    Шалгах
+                </button>
+                <button
+                    type="button"
+                    class="rounded-lg px-2 py-1 text-xs font-medium text-amber-800/70 hover:bg-amber-100 hover:text-amber-900"
+                    @click="dismissMissingNotice"
+                >
+                    Хаах
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <section v-else-if="! props.notifyOnly" class="ui-card-pad space-y-4">
+        <div
+            v-if="showMissingNotice"
+            class="rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-3"
+            role="status"
+        >
+            <div class="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                    <p class="text-sm font-semibold text-amber-900">
+                        Өргөтгөл суугаагүй — автомат нэвтрэлт идэвхгүй
+                    </p>
+                    <p class="mt-0.5 text-xs text-amber-800/90">
+                        Доорх «Өргөтгөл татах» товчоор суулгана уу. Суулгасны дараа «Төлөв шалгах» дарна.
+                    </p>
+                </div>
+                <button
+                    type="button"
+                    class="shrink-0 text-xs font-medium text-amber-800/70 hover:text-amber-900"
+                    @click="dismissMissingNotice"
+                >
+                    Хаах
+                </button>
+            </div>
+        </div>
+
         <div>
             <h3 class="text-base font-semibold text-slate-800">Апп ба өргөтгөл</h3>
             <p class="mt-0.5 text-sm text-slate-500">
@@ -130,25 +239,38 @@ const appHelp = computed(() => (isIos()
 
         <div class="grid gap-3 lg:grid-cols-2">
             <!-- Өргөтгөл -->
-            <div class="rounded-2xl border p-4" :class="extensionReady ? 'border-emerald-200 bg-emerald-50/60' : 'border-slate-200'">
+            <div
+                class="rounded-2xl border p-4"
+                :class="extensionReady
+                    ? 'border-emerald-200 bg-emerald-50/60'
+                    : extensionApplicable
+                        ? 'border-amber-200 bg-amber-50/40'
+                        : 'border-slate-200'"
+            >
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <p class="text-sm font-semibold text-slate-800">Автомат нэвтрэлтийн өргөтгөл</p>
                         <p class="mt-0.5 text-xs text-slate-500">
-                            {{ extensionReady
-                                ? 'Суусан — систем дээр дарахад нэр, нууц үг автоматаар бөглөгдөнө.'
-                                : 'Суугаагүй — систем дээр дарахад нууц үгээ гараар оруулна.' }}
+                            {{ ! extensionApplicable
+                                ? 'Энэ төхөөрөмж дээр өргөтгөл шаардлагагүй (утас/апп).'
+                                : extensionReady
+                                    ? 'Суусан — систем дээр дарахад нэр, нууц үг автоматаар бөглөгдөнө.'
+                                    : 'Суугаагүй — систем дээр дарахад нууц үгээ гараар оруулна.' }}
                         </p>
                     </div>
                     <span
                         class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-                        :class="extensionReady ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'"
+                        :class="extensionReady
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : extensionApplicable
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-slate-100 text-slate-600'"
                     >
-                        {{ extensionReady ? 'идэвхтэй' : 'суугаагүй' }}
+                        {{ ! extensionApplicable ? 'шаардлагагүй' : (extensionReady ? 'идэвхтэй' : 'суугаагүй') }}
                     </span>
                 </div>
 
-                <div class="mt-3 flex flex-wrap gap-2">
+                <div v-if="extensionApplicable" class="mt-3 flex flex-wrap gap-2">
                     <a
                         :href="route('extension.download')"
                         class="!py-1.5 text-xs"
@@ -172,7 +294,7 @@ const appHelp = computed(() => (isIos()
                     </button>
                 </div>
 
-                <ol v-if="showHelp" class="mt-3 list-decimal space-y-1 pl-5 text-xs leading-relaxed text-slate-600">
+                <ol v-if="showHelp && extensionApplicable" class="mt-3 list-decimal space-y-1 pl-5 text-xs leading-relaxed text-slate-600">
                     <li v-if="! extensionReady">ZIP-ийг татаад задлана — <b>manage-dornogovi-extension</b> хавтас үүснэ.</li>
                     <li v-if="! extensionReady"><b>chrome://extensions</b> нээж, <b>Developer mode</b>-ыг асаана.</li>
                     <li v-if="! extensionReady"><b>Load unpacked</b> дарж тэр хавтсыг сонгоод, энэ хуудсыг сэргээнэ.</li>

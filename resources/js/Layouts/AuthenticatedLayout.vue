@@ -10,6 +10,7 @@ import MobileAppGate from '@/Components/MobileAppGate.vue';
 import AiPanel from '@/Components/AiPanel.vue';
 import AppLockGate from '@/Components/AppLockGate.vue';
 import BiometricSetupGate from '@/Components/BiometricSetupGate.vue';
+import AppExtensionManager from '@/Components/AppExtensionManager.vue';
 
 defineProps({
     title: { type: String, default: '' },
@@ -22,6 +23,13 @@ const SIDEBAR_COLLAPSE_KEY = 'sidebar_collapsed';
 const AI_PANEL_KEY = 'ai_panel_open';
 const aiOpen = ref(false);
 const navTip = ref({ show: false, text: '', x: 0, y: 0 });
+
+/** Апп/өргөтгөлийн бүтэн хэсэгтэй хуудас — layout-ийн мэдэгдэл давтахгүй. */
+const hasExtensionManagerPage = computed(() => {
+    const path = (page.url || '').split('?')[0];
+
+    return path === '/dept-dashboard' || path === '/dashboard';
+});
 
 onMounted(() => {
     try {
@@ -434,6 +442,8 @@ const isCurrent = (routeName) => {
                 class="p-4 sm:p-6 lg:p-8"
                 :class="page.props.aiAssistant?.available ? 'pb-28' : ''"
             >
+                <!-- Өргөтгөл суугаагүй үед мэдэгдэнэ (нүүр/систем хуудсанд бүтэн хэсэг байгаа тул алгасна). -->
+                <AppExtensionManager v-if="! hasExtensionManagerPage" notify-only class="mb-4 block" />
                 <slot />
             </main>
         </div>
