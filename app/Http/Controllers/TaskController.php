@@ -278,6 +278,17 @@ class TaskController extends Controller
             'progress' => 0,
         ]);
 
+        $snippet = mb_substr(trim((string) ($data['text'] ?? '')), 0, 80);
+        app(\App\Services\Push\EmployeePushNotifier::class)->notifyNamed(
+            [$data['responsible'] ?? null, $data['collaborator'] ?? null],
+            [
+                'title' => 'Шинэ үүрэг даалгавар',
+                'body' => $snippet !== '' ? $snippet : 'Танд холбоотой үүрэг нэмэгдлээ.',
+                'url' => '/uureg',
+                'tag' => 'task',
+            ],
+        );
+
         return back(303)->with('success', 'Мөр нэмлээ.');
     }
 
@@ -306,6 +317,21 @@ class TaskController extends Controller
         }
 
         $task->update($data);
+
+        if (array_key_exists('responsible', $data) || array_key_exists('collaborator', $data)) {
+            app(\App\Services\Push\EmployeePushNotifier::class)->notifyNamed(
+                [
+                    $data['responsible'] ?? $task->responsible,
+                    $data['collaborator'] ?? $task->collaborator,
+                ],
+                [
+                    'title' => 'Үүрэг шинэчлэгдлээ',
+                    'body' => mb_substr(trim((string) $task->text), 0, 80) ?: 'Танд холбоотой үүрэг шинэчлэгдлээ.',
+                    'url' => '/uureg',
+                    'tag' => 'task-'.$task->id,
+                ],
+            );
+        }
 
         return back(303);
     }

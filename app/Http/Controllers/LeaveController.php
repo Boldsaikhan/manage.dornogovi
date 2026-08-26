@@ -92,6 +92,16 @@ class LeaveController extends Controller
             'department_id' => $request->user()->department_id,
         ]);
 
+        app(\App\Services\Push\EmployeePushNotifier::class)->notifyNamed(
+            $data['person_name'],
+            [
+                'title' => 'Чөлөөний бүртгэл',
+                'body' => ($data['person_name'] ?? '').' — '.($data['type'] ?? 'чөлөө').' ('.$start->format('Y-m-d').', '.$days.' хоног)',
+                'url' => '/modules/leaves',
+                'tag' => 'leave',
+            ],
+        );
+
         return redirect()
             ->route('leaves.index', ['scope' => $data['scope']])
             ->with('success', 'Чөлөөний бүртгэл хадгалагдлаа.');

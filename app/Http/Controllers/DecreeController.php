@@ -498,6 +498,15 @@ class DecreeController extends Controller
                 'number' => null,
                 'created_by' => $request->user()->id,
             ]);
+
+            if ($person !== '') {
+                app(\App\Services\Push\EmployeePushNotifier::class)->notifyNamed($person, [
+                    'title' => 'Бланк олгогдлоо',
+                    'body' => $person.' — бланкын бүртгэл хийгдлээ.',
+                    'url' => '/modules/decrees?tab=blank',
+                    'tag' => 'decree-blank',
+                ]);
+            }
         } else {
             $meta = self::KIND_TABS[$tab];
 

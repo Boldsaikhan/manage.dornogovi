@@ -71,6 +71,19 @@ class HandleInertiaRequests extends Middleware
             'navBadges' => fn () => NavBadges::for($request->user()),
             'aiAssistant' => fn () => $this->aiAssistantMeta($request),
             'systemsHubEnabled' => fn () => ModuleAccess::canView($request->user(), 'systems'),
+            'webPush' => function () use ($request) {
+                if (! $request->user()) {
+                    return ['enabled' => false, 'publicKey' => null];
+                }
+
+                $push = app(\App\Services\Push\WebPushNotifier::class);
+
+                return [
+                    'enabled' => $push->enabled(),
+                    'publicKey' => $push->publicKey(),
+                    'subscribed' => $request->user()->pushSubscriptions()->exists(),
+                ];
+            },
         ];
     }
 

@@ -256,7 +256,15 @@ class UserAccessController extends Controller
             ? 'success'
             : ($permissionChanges !== [] ? 'warning' : 'success');
 
-        return back()->with($flashKey, implode('. ', $parts).'.');
+        $summary = implode('. ', $parts).'.';
+        app(\App\Services\Push\EmployeePushNotifier::class)->notifyUsers([$user], [
+            'title' => 'Хандах эрх / бүртгэл шинэчлэгдлээ',
+            'body' => $summary,
+            'url' => '/dept-dashboard',
+            'tag' => 'access',
+        ]);
+
+        return back()->with($flashKey, $summary);
     }
 
     /**

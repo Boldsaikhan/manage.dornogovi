@@ -100,9 +100,52 @@ class ModuleResourceController extends Controller
         $data = $this->applyCreateHooks($request, $config, $data);
         $data = $this->normalizeDecreeData($config, $data);
 
-        $config['model']::create($data);
+        $row = $config['model']::create($data);
+
+        $this->notifyRelatedEmployees($module, $row, $data);
 
         return back()->with('success', 'Амжилттай хадгаллаа.');
+    }
+
+    /**
+     * Модулийн бүртгэлээс холбоотой албан хаагчдад push мэдэгдэнэ.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function notifyRelatedEmployees(string $module, Model $row, array $data): void
+    {
+        $notifier = app(\App\Services\Push\EmployeePushNotifier::class);
+
+        match ($module) {
+            'assignments' => $notifier->notifyUsers(
+                array_filter([(int) ($row->user_id ?? 0)]),
+                [
+                    'title' => 'Томилолт бүртгэгдлээ',
+                    'body' => trim(($data['destination'] ?? '').' · '.($data['start_date'] ?? '')),
+                    'url' => '/modules/assignments',
+                    'tag' => 'assignment',
+                ],
+            ),
+            'meetings' => $notifier->notifyUsers(
+                array_filter([(int) ($row->created_by ?? 0)]),
+                [
+                    'title' => 'Хурлын тэмдэглэл',
+                    'body' => (string) ($data['title'] ?? 'Шинэ хурал'),
+                    'url' => '/modules/meetings',
+                    'tag' => 'meeting',
+                ],
+            ),
+            'plans' => $notifier->notifyUsers(
+                array_filter([(int) ($row->created_by ?? 0)]),
+                [
+                    'title' => 'Төлөвлөгөө бүртгэгдлээ',
+                    'body' => (string) ($data['title'] ?? 'Шинэ төлөвлөгөө'),
+                    'url' => '/modules/plans',
+                    'tag' => 'plan',
+                ],
+            ),
+            default => null,
+        };
     }
 
     public function destroy(Request $request, string $module, int $id): RedirectResponse

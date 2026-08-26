@@ -20,6 +20,7 @@ use App\Http\Controllers\SystemViewController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UndoController;
 use App\Http\Controllers\VaultController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\WorkGroupController;
 use App\Support\HomeRedirect;
 use Illuminate\Support\Facades\Route;
@@ -39,6 +40,10 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/vault/unlock', [VaultController::class, 'unlock'])->name('vault.unlock');
     Route::post('/vault/lock', [VaultController::class, 'lock'])->name('vault.lock');
+
+    Route::get('/push/vapid-public-key', [PushSubscriptionController::class, 'publicKey'])->name('push.vapid');
+    Route::post('/push/subscribe', [PushSubscriptionController::class, 'store'])->name('push.subscribe');
+    Route::delete('/push/subscribe', [PushSubscriptionController::class, 'destroy'])->name('push.unsubscribe');
 
     Route::post('/app-lock', [AppLockController::class, 'lock'])->name('app.lock');
     Route::post('/app-unlock', [AppLockController::class, 'unlock'])->name('app.unlock');

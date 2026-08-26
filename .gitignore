@@ -24,3 +24,6 @@ Homestead.yaml
 Thumbs.db
 /composer.phar
 /composer-setup.php
+/generate-vapid.php
+/storage/app/webpush-vapid.json
+/storage/app/vapid-keys.txt

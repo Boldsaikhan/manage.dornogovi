@@ -5,7 +5,7 @@
  * Build файлууд: сүлжээ эхлээд, дараа нь кэш (шинэ deploy эвдэрэхгүй).
  */
 
-const VERSION = 'v6-20260826-redirect';
+const VERSION = 'v7-20260826-push';
 const SHELL_CACHE = `shell-${VERSION}`;
 const ASSET_CACHE = `assets-${VERSION}`;
 
@@ -177,4 +177,63 @@ self.addEventListener('fetch', (event) => {
             ),
         );
     }
+});
+
+/** Push мэдэгдэл — албан хаагчид холбоотой мэдээлэл */
+self.addEventListener('push', (event) => {
+    let data = {
+        title: 'Дорноговь',
+        body: 'Шинэ мэдэгдэл байна.',
+        url: '/dept-dashboard',
+        tag: 'manage-dornogovi',
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-192.png',
+    };
+
+    try {
+        if (event.data) {
+            data = { ...data, ...event.data.json() };
+        }
+    } catch {
+        try {
+            data.body = event.data?.text() || data.body;
+        } catch {
+            // ignore
+        }
+    }
+
+    event.waitUntil(
+        self.registration.showNotification(data.title || 'Дорноговь', {
+            body: data.body || '',
+            icon: data.icon || '/icons/icon-192.png',
+            badge: data.badge || '/icons/icon-192.png',
+            tag: data.tag || 'manage-dornogovi',
+            data: { url: data.url || '/dept-dashboard' },
+            renotify: true,
+        }),
+    );
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const target = event.notification.data?.url || '/dept-dashboard';
+    const abs = new URL(target, self.location.origin).href;
+
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            for (const client of clientList) {
+                if ('focus' in client) {
+                    client.navigate?.(abs);
+
+                    return client.focus();
+                }
+            }
+
+            if (self.clients.openWindow) {
+                return self.clients.openWindow(abs);
+            }
+
+            return undefined;
+        }),
+    );
 });

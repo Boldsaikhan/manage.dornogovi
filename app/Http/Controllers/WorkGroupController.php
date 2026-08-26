@@ -84,6 +84,23 @@ class WorkGroupController extends Controller
             'status' => 'open',
         ]);
 
+        $recipients = collect([$workGroup->lead_user_id])->filter();
+        $notifier = app(\App\Services\Push\EmployeePushNotifier::class);
+        $notifier->notifyNamed($data['owner'] ?? null, [
+            'title' => 'Ажлын хэсгийн үүрэг',
+            'body' => ($workGroup->name ?? 'Ажлын хэсэг').': '.($data['title'] ?? ''),
+            'url' => '/modules/work-groups',
+            'tag' => 'work-group',
+        ]);
+        if ($recipients->isNotEmpty()) {
+            $notifier->notifyUsers($recipients, [
+                'title' => 'Ажлын хэсгийн үүрэг',
+                'body' => ($workGroup->name ?? 'Ажлын хэсэг').': '.($data['title'] ?? ''),
+                'url' => '/modules/work-groups',
+                'tag' => 'work-group',
+            ]);
+        }
+
         return back()->with('success', 'Үүрэг нэмлээ.');
     }
 

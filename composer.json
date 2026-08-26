@@ -12,6 +12,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
         "lbuchs/webauthn": "^2.2",
+        "minishlink/web-push": "^11.0",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {

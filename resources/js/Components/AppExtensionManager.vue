@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import PushSubscribe from '@/Components/PushSubscribe.vue';
 
 /**
  * Утасны апп (PWA) болон нэвтрэлтийн өргөтгөлийг суулгах / устгах хэсэг.
@@ -337,6 +338,8 @@ const appHelp = computed(() => (isIos()
                     Устгасны дараа систем хөтчөөр хэвийн ажиллана — мэдээлэл алдагдахгүй.
                 </p>
             </div>
+
+            <PushSubscribe class="lg:col-span-2" />
         </div>
     </section>
 </template>
