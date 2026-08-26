@@ -5,7 +5,7 @@
  * Build файлууд: сүлжээ эхлээд, дараа нь кэш (шинэ deploy эвдэрэхгүй).
  */
 
-const VERSION = 'v5-20260826-maint';
+const VERSION = 'v6-20260826-redirect';
 const SHELL_CACHE = `shell-${VERSION}`;
 const ASSET_CACHE = `assets-${VERSION}`;
 
@@ -65,8 +65,22 @@ self.addEventListener('activate', (event) => {
 
 /** Navigate: сүлжээ → дахин оролдох → офлайн */
 async function networkFirstPage(request) {
+    // АНХААР: navigate хүсэлтэд дагасан (redirected) хариуг буцаавал Chrome
+    // ERR_FAILED өгдөг. Төрийн системд байнгын шилжилт (/ → /login) байдаг тул
+    // redirect: 'manual' ашиглаж, шилжилтийг хөтөчтөө өөрт нь дагуулна.
+    const load = () => fetch(request, {
+        credentials: 'same-origin',
+        redirect: 'manual',
+        cache: 'no-store',
+    });
+
     try {
-        const response = await fetch(request, { credentials: 'same-origin', redirect: 'follow', cache: 'no-store' });
+        const response = await load();
+
+        // Шилжилт (opaqueredirect) — шууд буцаана, хөтөч дагана.
+        if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400)) {
+            return response;
+        }
 
         // Deploy явагдаж байгаа үе (503) — нэг удаа дахин оролдоод,
         // болохгүй бол ойлгомжтой хуудас үзүүлнэ (ERR_FAILED гаргахгүй).
@@ -74,7 +88,7 @@ async function networkFirstPage(request) {
             await new Promise((r) => setTimeout(r, 1500));
 
             try {
-                const retry = await fetch(request, { credentials: 'same-origin', redirect: 'follow', cache: 'no-store' });
+                const retry = await load();
 
                 if (retry.status !== 503) {
                     return retry;
