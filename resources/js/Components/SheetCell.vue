@@ -1,5 +1,13 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import {
+    SOUM_GOVERNORS_LABEL,
+    expandPersonNames,
+    filterSoumGovernors,
+    formatPersonNamesDisplay,
+    serializePersonNames,
+    soumGovernorNames as namesFromPeople,
+} from '@/utils/soumGovernors';
 
 const CATEGORY_FILTERS = [
     { key: 'udirdlaga', label: 'Аймгийн удирдлагууд', short: 'Удирдлага' },
@@ -9,19 +17,7 @@ const CATEGORY_FILTERS = [
     { key: 'baiguullaga', label: 'Байгууллага', short: 'Байгууллага' },
 ];
 
-/** 14 сумын Засаг дарга нарыг нэгтгэсэн харагдах нэр */
-const SOUM_GOVERNORS_LABEL = 'Сумдын Засаг дарга нар';
 const SOUM_GOVERNORS_KEY = '__soum_governors__';
-
-const isGovernorTitle = (text) => {
-    const t = String(text ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
-
-    // «Засаг дарга», «сумын Засаг дарга» — орлогч/түр орлон гүйцэтгэгчийг оруулахгүй.
-    if (! t.includes('засаг дарга')) return false;
-    if (t.includes('орлогч') || t.includes('түр орлон') || t.includes('үүрэг гүйцэтгэгч')) return false;
-
-    return true;
-};
 
 const props = defineProps({
     modelValue: { type: [String, Number], default: '' },
@@ -91,27 +87,13 @@ const clearSelection = () => {
     selected.value = [];
 };
 
-const parseSelected = (value) => String(value ?? '')
-    .split(/[/;,|]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-
 const selectedSet = computed(() => new Set(selected.value));
 
-// Утасны жагсаалтаас сумын Засаг дарга нарыг олж авна.
-const soumGovernors = computed(() => {
-    if (! hasOptions.value) return [];
-
-    return props.options.filter((opt) => {
-        if ((opt.category || '') !== 'sum') return false;
-
-        return isGovernorTitle(opt.hint) || isGovernorTitle(opt.label);
-    });
-});
-
-const soumGovernorNames = computed(() => (
-    soumGovernors.value.map((o) => String(o.value ?? o.label ?? '')).filter(Boolean)
+const soumGovernors = computed(() => (
+    hasOptions.value ? filterSoumGovernors(props.options) : []
 ));
+
+const soumGovernorNames = computed(() => namesFromPeople(hasOptions.value ? props.options : []));
 
 const isSoumGovernorsSelected = computed(() => {
     const names = soumGovernorNames.value;
@@ -159,28 +141,6 @@ const selectedChips = computed(() => {
 
     return selected.value.map((n) => ({ key: n, label: n, group: false }));
 });
-
-const formatGovernorsDisplay = (value) => {
-    const names = parseSelected(value);
-    if (! names.length) return '';
-
-    // Шууд бүлгийн нэр хадгалагдсан бол
-    if (names.length === 1 && names[0] === SOUM_GOVERNORS_LABEL) {
-        return SOUM_GOVERNORS_LABEL;
-    }
-
-    const govs = soumGovernorNames.value;
-    if (! govs.length) return names.join(' / ');
-
-    const govSet = new Set(govs);
-    const hasAll = govs.every((n) => names.includes(n));
-    if (! hasAll) return names.join(' / ');
-
-    const extras = names.filter((n) => ! govSet.has(n) && n !== SOUM_GOVERNORS_LABEL);
-    if (! extras.length) return SOUM_GOVERNORS_LABEL;
-
-    return [SOUM_GOVERNORS_LABEL, ...extras].join(' / ');
-};
 
 const filteredOptions = computed(() => {
     if (! hasOptions.value) {
@@ -261,7 +221,7 @@ const displayText = () => {
     }
 
     if (hasOptions.value) {
-        return formatGovernorsDisplay(value) || String(value);
+        return formatPersonNamesDisplay(value, props.options) || String(value);
     }
 
     return String(value);
@@ -280,13 +240,7 @@ const startEdit = async () => {
     if (hasOptions.value) {
         search.value = '';
         local.value = '';
-        const parsed = parseSelected(props.modelValue);
-        // Бүлгийн нэрээр хадгалсан бол сумын дарга нарын жагсаалт руу задална.
-        if (parsed.length === 1 && parsed[0] === SOUM_GOVERNORS_LABEL && soumGovernorNames.value.length) {
-            selected.value = [...soumGovernorNames.value];
-        } else {
-            selected.value = parsed;
-        }
+        selected.value = expandPersonNames(props.modelValue, props.options);
     } else {
         local.value = props.modelValue ?? '';
     }
@@ -382,7 +336,7 @@ const clearCell = () => {
 };
 
 const commitMulti = () => {
-    commitValue(selected.value.join('/'));
+    commitValue(serializePersonNames(selected.value, props.options));
 };
 
 const finish = () => {
@@ -580,7 +534,7 @@ onBeforeUnmount(() => {
             v-if="! editing"
             class="ui-sheet-display ui-clamp-2"
             :class="{ 'text-center': align === 'center', 'text-slate-400': ! modelValue && !! placeholder }"
-            :title="modelValue ? formatGovernorsDisplay(modelValue) || String(modelValue) : ''"
+            :title="modelValue ? (formatPersonNamesDisplay(modelValue, options) || String(modelValue)) : ''"
         >
             <slot>{{ displayText() }}</slot>
         </div>

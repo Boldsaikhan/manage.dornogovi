@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import SheetCell from '@/Components/SheetCell.vue';
+import { expandPersonNames, SOUM_GOVERNORS_LABEL } from '@/utils/soumGovernors';
 
 const props = defineProps({
     kind: { type: String, required: true },
@@ -102,10 +103,7 @@ const peopleIndex = computed(() => {
     return map;
 });
 
-const splitNames = (value) => String(value ?? '')
-    .split(/[/;,|]+/)
-    .map((v) => v.trim())
-    .filter(Boolean);
+const splitNames = (value) => expandPersonNames(value, props.people);
 
 // Нэг үүрэг олон хариуцагчтай байж болно.
 const taskOwners = (task) => {
@@ -116,6 +114,10 @@ const taskOwners = (task) => {
     }
 
     return names.map((name) => {
+        if (name === SOUM_GOVERNORS_LABEL) {
+            return { value: name, org: 'Сумд', category: 'sum' };
+        }
+
         const person = peopleIndex.value[name];
 
         return {
