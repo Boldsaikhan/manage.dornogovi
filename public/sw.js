@@ -5,7 +5,7 @@
  * Build файлууд: сүлжээ эхлээд, дараа нь кэш (шинэ deploy эвдэрэхгүй).
  */
 
-const VERSION = 'v4-20260826-lock';
+const VERSION = 'v5-20260826-maint';
 const SHELL_CACHE = `shell-${VERSION}`;
 const ASSET_CACHE = `assets-${VERSION}`;
 
@@ -22,6 +22,19 @@ button{background:#1c55a5;color:#fff;border:0;border-radius:.5rem;padding:.6rem 
 Хэрэв холболт байгаа бол доорх товчоор кэш цэвэрлээд дахин нээнэ үү.</p>
 <button onclick="location.reload()">Дахин оролдох</button>
 <button class="ghost" onclick="navigator.serviceWorker.getRegistrations().then(r=>Promise.all(r.map(x=>x.unregister()))).then(()=>caches.keys().then(k=>Promise.all(k.map(caches.delete.bind(caches)))).then(()=>location.href='/'))">Кэш цэвэрлэж нээх</button>
+</div></body></html>`;
+
+const MAINT_HTML = `<!DOCTYPE html><html lang="mn"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Шинэчлэлт хийгдэж байна</title>
+<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+font-family:Manrope,Arial,sans-serif;background:#f1f5f9;color:#15335d;padding:1.5rem;text-align:center}
+.card{background:#fff;border-radius:1rem;padding:2rem;box-shadow:0 6px 24px rgba(15,23,42,.12);max-width:22rem}
+h1{font-size:1.05rem;margin:0 0 .5rem}p{font-size:.875rem;color:#64748b;margin:0 0 1rem;line-height:1.45}
+button{background:#1c55a5;color:#fff;border:0;border-radius:.5rem;padding:.6rem 1.2rem;font:inherit;cursor:pointer}</style>
+</head><body><div class="card"><h1>Систем шинэчлэгдэж байна</h1>
+<p>Хэдэн секундын дараа бэлэн болно. Хуудас өөрөө сэргэнэ.</p>
+<button onclick="location.reload()">Дахин оролдох</button>
+<script>setTimeout(function(){location.reload()},8000)<\/script>
 </div></body></html>`;
 
 self.addEventListener('install', (event) => {
@@ -53,7 +66,30 @@ self.addEventListener('activate', (event) => {
 /** Navigate: сүлжээ → дахин оролдох → офлайн */
 async function networkFirstPage(request) {
     try {
-        return await fetch(request, { credentials: 'same-origin', redirect: 'follow', cache: 'no-store' });
+        const response = await fetch(request, { credentials: 'same-origin', redirect: 'follow', cache: 'no-store' });
+
+        // Deploy явагдаж байгаа үе (503) — нэг удаа дахин оролдоод,
+        // болохгүй бол ойлгомжтой хуудас үзүүлнэ (ERR_FAILED гаргахгүй).
+        if (response.status === 503) {
+            await new Promise((r) => setTimeout(r, 1500));
+
+            try {
+                const retry = await fetch(request, { credentials: 'same-origin', redirect: 'follow', cache: 'no-store' });
+
+                if (retry.status !== 503) {
+                    return retry;
+                }
+            } catch {
+                // доорх хуудсаар хариулна
+            }
+
+            return new Response(MAINT_HTML, {
+                headers: { 'Content-Type': 'text/html; charset=utf-8' },
+                status: 503,
+            });
+        }
+
+        return response;
     } catch {
         // Богино завсарлагатай дахин оролдоно (утсан дээр түр зуурын тасалдал)
         try {
