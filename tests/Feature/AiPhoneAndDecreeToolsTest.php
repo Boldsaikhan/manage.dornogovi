@@ -126,5 +126,8 @@ class AiPhoneAndDecreeToolsTest extends TestCase
         $this->assertNotNull($assistant);
         $this->assertStringNotContainsString('олдсонгүй', $assistant->content);
         $this->assertStringContainsString('07', $assistant->content);
+        $this->assertStringNotContainsString('issued_on', $assistant->content);
+        $this->assertStringNotContainsString('number:', $assistant->content);
+        $this->assertStringNotContainsString('kind:', $assistant->content);
     }
 }
