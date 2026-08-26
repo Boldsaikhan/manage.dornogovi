@@ -90,6 +90,67 @@ class PhoneDirectoryEntry extends Model
     }
 
     /**
+     * Хандах эрх өгөхөд утасны жагсаалтаас сонгох (нэр + утас + албан тушаал).
+     *
+     * @return array<int, array{id: int, value: string, label: string, hint: string, org: string, category: string, phone: ?string, position: string, full_name: string}>
+     */
+    public static function accountPeopleOptions(): array
+    {
+        return static::query()
+            ->orderBy('org_order')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get(['id', 'person_name', 'position', 'org_name', 'category', 'office_phone', 'mobile_phone'])
+            ->map(function (self $row) {
+                $full = trim((string) $row->person_name);
+                $short = \App\Support\PersonName::short($full) ?: $full;
+
+                if ($short === '') {
+                    return null;
+                }
+
+                $phone = self::preferredPhone($row->mobile_phone, $row->office_phone);
+                $position = trim((string) $row->position);
+                $org = trim((string) $row->org_name);
+
+                return [
+                    'id' => $row->id,
+                    'value' => $short,
+                    'label' => $short,
+                    'hint' => $position !== '' ? $position : ($phone ?? ''),
+                    'org' => $org,
+                    'category' => $row->category ?: (self::guessCategory($row->org_name) ?: 'baiguullaga'),
+                    'phone' => $phone,
+                    'position' => $position,
+                    'full_name' => $full,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    public static function preferredPhone(?string $mobile, ?string $office): ?string
+    {
+        foreach ([$mobile, $office] as $raw) {
+            $raw = trim((string) $raw);
+            if ($raw === '') {
+                continue;
+            }
+
+            // Зөвхөн цифр / + үлдээнэ — users.phone max 20.
+            $clean = preg_replace('/[^\d+]/', '', $raw) ?: $raw;
+            $clean = mb_substr($clean, 0, 20);
+
+            if ($clean !== '') {
+                return $clean;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * config/agencies.php дахь аймгийн агентлагуудтай тулгана.
      */
     public static function isKnownAgency(?string $orgName): bool

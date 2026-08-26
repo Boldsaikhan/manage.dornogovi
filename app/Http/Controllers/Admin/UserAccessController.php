@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Department;
+use App\Models\PhoneDirectoryEntry;
 use App\Models\RolePermission;
 use App\Models\User;
 use App\Models\UserModulePermission;
@@ -47,6 +48,7 @@ class UserAccessController extends Controller
             'users' => $users,
             'departments' => Department::query()->where('is_active', true)->orderBy('sort_order')->get(['id', 'name']),
             'modules' => $modules,
+            'people' => PhoneDirectoryEntry::accountPeopleOptions(),
             'roles' => collect(RolePermission::ROLES)
                 ->map(fn (string $label, string $key) => [
                     'key' => $key,

@@ -2,6 +2,7 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useForm, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import SheetCell from '@/Components/SheetCell.vue';
 
 const props = defineProps({
     users: Array,
@@ -9,6 +10,7 @@ const props = defineProps({
     modules: Array,
     roles: Array,
     rolePermissions: Object,
+    people: { type: Array, default: () => [] },
 });
 
 const page = usePage();
@@ -165,6 +167,28 @@ const createUser = () => {
         preserveScroll: true,
         onSuccess: () => createForm.reset(),
     });
+};
+
+/** Утасны жагсаалтаас сонгоход нэр, утас, албан тушаал, хэлтэс бөглөнө. */
+const pickFromDirectory = (value) => {
+    const person = props.people.find((p) => p.value === value);
+    if (! person) {
+        createForm.name = value || '';
+        return;
+    }
+
+    createForm.name = person.full_name || person.label || value;
+    createForm.phone = person.phone || '';
+    createForm.position = person.position || '';
+
+    const org = String(person.org || '').toLowerCase();
+    if (org) {
+        const dept = props.departments.find((d) => {
+            const name = String(d.name || '').toLowerCase();
+            return name && (org === name || org.includes(name) || name.includes(org));
+        });
+        createForm.department_id = dept?.id ?? '';
+    }
 };
 </script>
 
@@ -329,13 +353,37 @@ const createUser = () => {
 
                 <form class="ui-card space-y-3 border-dashed p-5" @submit.prevent="createUser">
                     <h3 class="ui-title text-base">Шинэ албан хаагч</h3>
+                    <p class="text-xs text-slate-500">
+                        Утасны жагсаалтад бүртгэлтэй албан хаагчийг сонгоод нэвтрэх эрх өгнө.
+                    </p>
                     <div class="grid gap-3 md:grid-cols-2">
-                        <input v-model="createForm.name" required placeholder="Нэр" class="ui-input" />
+                        <div class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50/60 p-2">
+                            <label class="mb-1 block text-xs font-medium text-slate-600">Албан хаагч (утасны жагсаалт)</label>
+                            <SheetCell
+                                v-model="createForm.name"
+                                :editable="true"
+                                :options="people"
+                                placeholder="Нэрээр хайж сонгох…"
+                                @commit="pickFromDirectory"
+                            />
+                        </div>
+                        <input
+                            v-model="createForm.phone"
+                            placeholder="Утас (жагсаалтаас автоматаар)"
+                            class="ui-input"
+                        />
+                        <input v-model="createForm.position" placeholder="Албан тушаал" class="ui-input" />
                         <input v-model="createForm.email" type="email" required placeholder="И-мэйл" class="ui-input" />
-                        <input v-model="createForm.phone" placeholder="Утас" class="ui-input" />
                         <input v-model="createForm.password" type="password" required placeholder="Нууц үг" class="ui-input" />
+                        <select v-model="createForm.department_id" class="ui-input md:col-span-2">
+                            <option value="">Хэлтэсгүй</option>
+                            <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
+                        </select>
                     </div>
-                    <button class="ui-btn-accent">Нэмэх</button>
+                    <p v-if="createForm.errors.name" class="text-xs text-rose-600">{{ createForm.errors.name }}</p>
+                    <p v-if="createForm.errors.phone" class="text-xs text-rose-600">{{ createForm.errors.phone }}</p>
+                    <p v-if="createForm.errors.email" class="text-xs text-rose-600">{{ createForm.errors.email }}</p>
+                    <button class="ui-btn-accent" :disabled="createForm.processing || !createForm.name">Нэмэх</button>
                 </form>
             </div>
         </div>
