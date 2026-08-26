@@ -95,16 +95,15 @@ class WebAuthnService
             ->map(fn (string $id) => self::b64urlDecode($id))
             ->all();
 
-        // Android: residentKey/UV «preferred» — «required» үед Google Passkey цуцлагдах нь элбэг.
-        // platform = утсны хуруу/нүүр (cross-platform USB түлхүүр биш).
+        // Google Passkey UI-г багасгах: residentKey discouraged = зөвхөн утсны хуруу/нүүр.
         $args = $webauthn->getCreateArgs(
             self::userHandle($user),
             $user->email ?: ($user->phone ?: 'user-'.$user->id),
             $user->name ?: 'Хэрэглэгч',
             60,
-            'preferred',  // residentKey
-            'preferred',  // userVerification
-            false,        // platform authenticator
+            'discouraged', // discoverable passkey биш — локал биометрик
+            'required',    // хуруу/нүүр заавал
+            false,         // platform only
             $exclude
         );
 
@@ -206,15 +205,16 @@ class WebAuthnService
             throw new RuntimeException('Биометрик бүртгэл олдсонгүй.');
         }
 
+        // Зөвхөн төхөөрөмжийн дотоод биометрик (Google Passkey/hybrid биш).
         $args = $webauthn->getGetArgs(
             $ids,
-            120,
-            false,
-            false,
-            false,
-            true,
-            true,
-            true
+            60,
+            false, // usb
+            false, // nfc
+            false, // ble
+            false, // hybrid (Google phone-link)
+            true,  // internal
+            'preferred'
         );
 
         $challenge = $webauthn->getChallenge();

@@ -1,8 +1,10 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import { isWebAuthnSupported, registerBiometric } from '@/utils/webauthn';
 import { isMobileDevice } from '@/utils/mobileClient';
+
+const SKIP_KEY = 'biometric_setup_done';
 
 const page = usePage();
 
@@ -14,38 +16,56 @@ const webauthnOk = ref(typeof window !== 'undefined' && isWebAuthnSupported());
 
 const hasWebAuthn = computed(() => !! page.props.appLock?.hasWebAuthn);
 const isLoggedIn = computed(() => !! page.props.auth?.user);
+const userId = computed(() => page.props.auth?.user?.id ?? null);
+
+const skipKey = () => `${SKIP_KEY}:${userId.value || 0}`;
+
+const isSkipped = () => {
+    try {
+        return localStorage.getItem(skipKey()) === '1';
+    } catch {
+        return false;
+    }
+};
+
+const markDone = () => {
+    try {
+        localStorage.setItem(skipKey(), '1');
+    } catch {
+        // ignore
+    }
+};
 
 const evaluate = () => {
-    if (! isLoggedIn.value || ! webauthnOk.value || hasWebAuthn.value || ! isMobileDevice()) {
+    if (! isLoggedIn.value || ! webauthnOk.value || ! isMobileDevice()) {
         visible.value = false;
         return;
     }
 
-    try {
-        if (sessionStorage.getItem('biometric_setup_skip') === '1') {
-            visible.value = false;
-            return;
-        }
-    } catch {
-        // ignore
+    // Аль хэдийн бүртгэгдсэн эсвэл хэрэглэгч хаасан бол дахин бүү асуу
+    if (hasWebAuthn.value || isSkipped()) {
+        visible.value = false;
+        if (hasWebAuthn.value) markDone();
+        return;
     }
 
     visible.value = true;
 };
 
 onMounted(evaluate);
+watch([hasWebAuthn, isLoggedIn, userId], evaluate);
 
 const activate = async () => {
     if (busy.value) return;
     busy.value = true;
     error.value = '';
-    tip.value = 'Гарч ирсэн цонхонд «Continue / Үргэлжлүүлэх» дарна уу.';
+    tip.value = 'Гарч ирвэл хуруу эсвэл нүүрээ уншуулна уу.';
 
     try {
         await registerBiometric();
         tip.value = '';
+        markDone();
         visible.value = false;
-        await window.axios.post(route('app.lock'));
         router.reload({ only: ['appLock', 'auth'] });
     } catch (e) {
         const name = String(e?.name || '');
@@ -53,18 +73,20 @@ const activate = async () => {
         const blob = `${name} ${msg}`;
 
         if (/NotAllowedError|AbortError|цуцла/i.test(blob)) {
-            error.value = 'Бүртгэл цуцлагдлаа эсвэл таслагдлаа.';
-            tip.value = 'Дахин дарж, «Create a passkey» цонхонд Continue дарна уу. «More options» биш.';
+            error.value = 'Үйлдэл цуцлагдлаа.';
+            tip.value = 'Дахин дарж, утасны хуруу/нүүрээр баталгаажуулна уу.';
         } else if (/InvalidStateError|already registered|exclude/i.test(blob)) {
-            error.value = 'Энэ төхөөрөмж өмнө бүртгэгдсэн байж магадгүй.';
-            tip.value = 'Профайл → Хуруу/нүүр хэсгээс шалгана уу.';
+            markDone();
+            error.value = 'Аль хэдийн бүртгэгдсэн байна.';
+            tip.value = '';
+            visible.value = false;
             router.reload({ only: ['appLock'] });
         } else if (/NotSupportedError|SecurityError/i.test(blob)) {
-            error.value = 'Энэ браузер биометрикийг дэмжихгүй эсвэл HTTPS биш байна.';
-            tip.value = 'Chrome-оор https://manage.dornogovi.gov.mn хаягаар нээнэ үү.';
+            error.value = 'Энэ төхөөрөмж дэмжихгүй эсвэл HTTPS биш.';
+            tip.value = 'Chrome-оор https://manage.dornogovi.gov.mn нээнэ үү.';
         } else {
             error.value = msg;
-            tip.value = 'Дахин оролдоод, утасны хуруу/нүүр түгжээ идэвхтэй эсэхийг шалгана уу.';
+            tip.value = 'Дахин оролдоно уу.';
         }
     } finally {
         busy.value = false;
@@ -72,12 +94,8 @@ const activate = async () => {
 };
 
 const dismissForNow = () => {
+    markDone();
     visible.value = false;
-    try {
-        sessionStorage.setItem('biometric_setup_skip', '1');
-    } catch {
-        // ignore
-    }
 };
 </script>
 
@@ -97,12 +115,11 @@ const dismissForNow = () => {
             </div>
 
             <h2 class="mt-4 text-center text-lg font-bold text-brand-navy-900">
-                Хуруу / нүүрээр нэвтрэх
+                Хуруу / нүүр идэвхжүүлэх
             </h2>
             <p class="mt-2 text-center text-sm text-slate-500">
-                «Идэвхжүүлэх» дараад гарч ирэх цонхонд
-                <b class="text-slate-700">Continue</b>
-                дарна. Ингэснээр дараагийн удаа хуруу/нүүр асууна.
+                Нэг удаа идэвхжүүлбэл дараагийн удаа нэвтрэхэд автоматаар асууна.
+                «Create a passkey» гарвал <b class="text-slate-700">Continue</b> дараад хуруугаа уншуулна.
             </p>
 
             <p v-if="error" class="mt-4 text-center text-sm text-red-600">{{ error }}</p>
@@ -114,16 +131,16 @@ const dismissForNow = () => {
                 :disabled="busy"
                 @click="activate"
             >
-                {{ busy ? 'Хүлээнэ үү…' : 'Хуруу / нүүр идэвхжүүлэх' }}
+                {{ busy ? 'Хүлээнэ үү…' : 'Одоо идэвхжүүлэх' }}
             </button>
 
             <button
                 type="button"
-                class="mt-2 w-full text-center text-xs font-medium text-slate-500 hover:text-slate-700"
+                class="mt-3 w-full text-center text-sm font-medium text-slate-500 hover:text-slate-800"
                 :disabled="busy"
                 @click="dismissForNow"
             >
-                Дараа идэвхжүүлнэ
+                Дахиж бүү асуу
             </button>
         </div>
     </div>
