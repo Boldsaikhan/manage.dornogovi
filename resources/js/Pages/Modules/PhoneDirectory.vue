@@ -21,8 +21,11 @@ const categoryFilter = ref('all');
 const showForm = ref(false);
 const showImport = ref(false);
 const fileInput = ref(null);
+/** Жагсаалтын бүх засварлах товч/чирэх горимыг идэвхжүүлнэ. */
+const manageMode = ref(false);
 
 const isDirectory = computed(() => true);
+const editingActive = computed(() => props.canManage && manageMode.value);
 
 const form = useForm({
     org_name: '',
@@ -116,9 +119,19 @@ const filteredGroups = computed(() => {
 });
 
 // Хайлт/шүүлт идэвхтэй үед байрлал нь бодит дараалалтай таарахгүй тул нуна.
-const canInsert = computed(() => props.canManage
+const canInsert = computed(() => editingActive.value
     && ! search.value.trim()
     && categoryFilter.value === 'all');
+
+const toggleManageMode = () => {
+    manageMode.value = ! manageMode.value;
+    if (! manageMode.value) {
+        showForm.value = false;
+        showImport.value = false;
+        editingId.value = null;
+        form.reset();
+    }
+};
 
 const submit = () => {
     if (isEditing.value) {
@@ -402,13 +415,22 @@ const closeDirectoryForm = () => {
                     <button
                         v-if="canManage && isDirectory"
                         type="button"
+                        class="ui-btn-ghost"
+                        :class="manageMode ? '!border-brand-navy-500 !bg-brand-navy-50 !text-brand-navy-800' : ''"
+                        @click="toggleManageMode"
+                    >
+                        {{ manageMode ? 'Засварыг дуусгах' : 'Засварлах' }}
+                    </button>
+                    <button
+                        v-if="editingActive && isDirectory"
+                        type="button"
                         class="ui-btn-primary"
                         @click="showImport = !showImport; showForm = false"
                     >
                         {{ showImport ? 'Хаах' : 'Word импорт' }}
                     </button>
                     <button
-                        v-if="canManage"
+                        v-if="editingActive"
                         type="button"
                         class="ui-btn-accent"
                         @click="openAdd"
@@ -423,7 +445,7 @@ const closeDirectoryForm = () => {
             </div>
 
             <!-- Directory: import -->
-            <form v-if="isDirectory && showImport && canManage" class="ui-card grid gap-4 p-5" @submit.prevent="submitImport">
+            <form v-if="isDirectory && showImport && editingActive" class="ui-card grid gap-4 p-5" @submit.prevent="submitImport">
                 <div>
                     <label class="ui-label">Word файл (.docx)</label>
                     <input
@@ -499,7 +521,7 @@ const closeDirectoryForm = () => {
                             <th>Албан тушаал</th>
                             <th class="text-center">Ажлын өрөөний утас</th>
                             <th class="text-center">Гар утас</th>
-                            <th v-if="canManage" />
+                            <th v-if="editingActive" />
                         </tr>
                     </thead>
                     <tbody>
@@ -509,7 +531,7 @@ const closeDirectoryForm = () => {
                                 class="group/ins"
                                 :data-drop="'gap:' + group.org_name"
                             >
-                                <td :colspan="canManage ? 6 : 5" class="!py-0.5 text-center">
+                                <td :colspan="editingActive ? 6 : 5" class="!py-0.5 text-center">
                                     <button
                                         type="button"
                                         class="w-full rounded-lg border border-dashed py-1 text-xs font-medium transition focus:opacity-100"
@@ -532,7 +554,7 @@ const closeDirectoryForm = () => {
                                 ]"
                                 :data-drop="'grp:' + group.org_name"
                             >
-                                <td :colspan="canManage ? 6 : 5" class="text-center font-semibold italic text-brand-navy-800">
+                                <td :colspan="editingActive ? 6 : 5" class="text-center font-semibold italic text-brand-navy-800">
                                     <span
                                         v-if="canInsert"
                                         class="mr-1 inline-block cursor-grab touch-none select-none px-1 text-slate-400 active:cursor-grabbing"
@@ -557,7 +579,7 @@ const closeDirectoryForm = () => {
                                         >↓</button>
                                     </span>
                                     <select
-                                        v-if="canManage"
+                                        v-if="editingActive"
                                         :value="group.category || ''"
                                         class="ml-2 rounded-lg border-slate-300 bg-white py-0.5 pl-2 pr-7 text-xs font-medium not-italic text-slate-600"
                                         title="Чөлөөний бүртгэлд ямар хамрах хүрээнд харагдахыг тодорхойлно"
@@ -575,7 +597,7 @@ const closeDirectoryForm = () => {
                                         {{ categories[group.category] || 'Сонголтгүй' }}
                                     </span>
                                     <button
-                                        v-if="canManage"
+                                        v-if="editingActive"
                                         type="button"
                                         class="ml-2 rounded-lg border border-brand-navy-200 bg-white px-2 py-0.5 text-xs font-medium not-italic text-brand-navy-700 hover:bg-brand-navy-100"
                                         title="Энэ хэлтэст шинэ албан хаагч нэмэх"
@@ -611,7 +633,7 @@ const closeDirectoryForm = () => {
                                 </td>
                                 <td class="text-center">{{ row.office_phone || '—' }}</td>
                                 <td class="text-center">{{ row.mobile_phone || '—' }}</td>
-                                <td v-if="canManage" class="text-right whitespace-nowrap">
+                                <td v-if="editingActive" class="text-right whitespace-nowrap">
                                     <span v-if="canInsert" class="mr-1 inline-flex align-middle">
                                         <button
                                             type="button"
@@ -636,7 +658,7 @@ const closeDirectoryForm = () => {
                                 v-if="canInsert && dragging"
                                 :data-drop="'end:' + group.org_name"
                             >
-                                <td :colspan="canManage ? 6 : 5" class="!py-1 text-center">
+                                <td :colspan="editingActive ? 6 : 5" class="!py-1 text-center">
                                     <span
                                         class="block rounded-lg border border-dashed py-1 text-xs font-medium"
                                         :class="dropToken === 'end:' + group.org_name
@@ -653,7 +675,7 @@ const closeDirectoryForm = () => {
                             class="group/ins"
                             data-drop="tail"
                         >
-                            <td :colspan="canManage ? 6 : 5" class="!py-0.5 text-center">
+                            <td :colspan="editingActive ? 6 : 5" class="!py-0.5 text-center">
                                 <button
                                     type="button"
                                     class="w-full rounded-lg border border-dashed py-1 text-xs font-medium transition focus:opacity-100"
@@ -669,7 +691,7 @@ const closeDirectoryForm = () => {
                             </td>
                         </tr>
                         <tr v-if="!filteredGroups.length">
-                            <td :colspan="canManage ? 6 : 5" class="!py-12 text-center text-slate-400">
+                            <td :colspan="editingActive ? 6 : 5" class="!py-12 text-center text-slate-400">
                                 {{ search ? 'Хайлтад тохирох бүртгэл алга.' : 'Одоогоор бүртгэл алга. Word файлаас импортлож болно.' }}
                             </td>
                         </tr>
@@ -679,7 +701,7 @@ const closeDirectoryForm = () => {
         </div>
 
         <!-- Modal: directory add / edit -->
-        <Modal :show="showForm && canManage && isDirectory" max-width="2xl" @close="closeDirectoryForm">
+        <Modal :show="showForm && editingActive && isDirectory" max-width="2xl" @close="closeDirectoryForm">
             <form class="p-6" @submit.prevent="submit">
                 <div class="mb-5 flex items-start justify-between gap-3">
                     <div>
