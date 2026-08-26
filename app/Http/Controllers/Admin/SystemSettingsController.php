@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\System;
+use App\Models\User;
 use App\Services\Ai\AiSettings;
 use App\Services\EmbedChecker;
 use App\Support\ModuleAccess;
@@ -20,7 +21,7 @@ class SystemSettingsController extends Controller
     public function index(AiSettings $aiSettings): Response
     {
         return Inertia::render('Admin/Systems', [
-            'systems' => System::orderBy('sort_order')->orderBy('name')->get()->map(fn (System $system) => [
+            'systems' => System::with('viewers:id')->orderBy('sort_order')->orderBy('name')->get()->map(fn (System $system) => [
                 'id' => $system->id,
                 'name' => $system->name,
                 'url' => $system->url,
@@ -34,7 +35,17 @@ class SystemSettingsController extends Controller
                 'is_internal' => $system->is_internal,
                 'is_embeddable' => $system->is_embeddable,
                 'can_auto_submit' => $system->canAutoSubmit(),
+                // Хоосон жагсаалт = бүх албан хаагчид харна.
+                'viewer_ids' => $system->viewers->pluck('id')->all(),
             ]),
+            'employees' => User::query()
+                ->orderBy('name')
+                ->get(['id', 'name', 'position', 'department_id'])
+                ->map(fn (User $u) => [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'position' => $u->position,
+                ]),
             'ai' => $aiSettings->forAdmin(),
             'menus' => ModuleVisibility::forAdmin(),
             // AI аль цэсэд ямар эрхтэйг тохируулах жагсаалт.
@@ -136,6 +147,9 @@ class SystemSettingsController extends Controller
 
         $maxOrder = (int) System::query()->max('sort_order');
 
+        $viewerIds = $data['viewer_ids'] ?? [];
+        unset($data['viewer_ids']);
+
         $system = System::query()->create([
             ...$data,
             'slug' => $slug,
@@ -144,6 +158,8 @@ class SystemSettingsController extends Controller
             'icon' => 'globe',
         ]);
 
+        $system->viewers()->sync($viewerIds);
+
         return back()->with('success', "\"{$system->name}\" систем бүртгэгдлээ.");
     }
 
@@ -151,9 +167,17 @@ class SystemSettingsController extends Controller
     {
         $data = $this->validatedSystem($request);
 
-        $system->update($data);
+        $viewerIds = $data['viewer_ids'] ?? [];
+        unset($data['viewer_ids']);
 
-        return back()->with('success', "\"{$system->name}\" тохиргоо хадгалагдлаа.");
+        $system->update($data);
+        $system->viewers()->sync($viewerIds);
+
+        $who = $viewerIds === []
+            ? 'бүх албан хаагчдад нээлттэй'
+            : count($viewerIds).' албан хаагчдад харагдана';
+
+        return back()->with('success', "\"{$system->name}\" тохиргоо хадгалагдлаа — {$who}.");
     }
 
     public function destroy(System $system): RedirectResponse
@@ -180,6 +204,8 @@ class SystemSettingsController extends Controller
             'is_active' => ['boolean'],
             'requires_login' => ['boolean'],
             'is_internal' => ['boolean'],
+            'viewer_ids' => ['nullable', 'array'],
+            'viewer_ids.*' => ['integer', 'exists:users,id'],
         ]);
     }
 

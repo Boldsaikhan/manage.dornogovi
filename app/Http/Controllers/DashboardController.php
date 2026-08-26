@@ -18,6 +18,7 @@ class DashboardController extends Controller
 
         $systems = System::query()
             ->where('is_active', true)
+            ->visibleTo($request->user())
             ->with(['credentials' => fn ($q) => $q->where('user_id', $userId)])
             ->orderBy('sort_order')
             ->orderBy('name')

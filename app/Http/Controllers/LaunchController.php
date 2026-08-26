@@ -17,6 +17,7 @@ class LaunchController extends Controller
     public function __invoke(Request $request, System $system): Response
     {
         abort_unless($system->is_active, 404);
+        abort_unless($system->isVisibleTo($request->user()), 403);
         abort_unless(Vault::isUnlocked($request), 423, 'Нэвтрэх мэдээллийн сан түгжээтэй байна.');
 
         $credential = UserCredential::where('user_id', $request->user()->id)

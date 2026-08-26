@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class System extends Model
@@ -51,6 +53,46 @@ class System extends Model
     public function credentials(): HasMany
     {
         return $this->hasMany(UserCredential::class);
+    }
+
+    /**
+     * Тухайн системийг харах эрхтэй албан хаагчид.
+     * Хоосон байвал бүх хэрэглэгчидэд нээлттэй.
+     */
+    public function viewers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class)->withTimestamps();
+    }
+
+    /**
+     * Тухайн хэрэглэгчийн харах боломжтой системүүд.
+     */
+    public function scopeVisibleTo(Builder $query, ?User $user): Builder
+    {
+        if ($user?->is_admin) {
+            return $query;
+        }
+
+        return $query->where(function (Builder $q) use ($user) {
+            $q->whereDoesntHave('viewers');
+
+            if ($user) {
+                $q->orWhereHas('viewers', fn (Builder $v) => $v->whereKey($user->id));
+            }
+        });
+    }
+
+    public function isVisibleTo(?User $user): bool
+    {
+        if ($user?->is_admin) {
+            return true;
+        }
+
+        if ($this->viewers()->doesntExist()) {
+            return true;
+        }
+
+        return (bool) $user && $this->viewers()->whereKey($user->id)->exists();
     }
 
     /**

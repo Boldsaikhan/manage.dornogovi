@@ -7,6 +7,7 @@ import InputError from '@/Components/InputError.vue';
 
 const props = defineProps({
     systems: Array,
+    employees: { type: Array, default: () => [] },
     ai: Object,
     menus: { type: Array, default: () => [] },
     aiModules: { type: Array, default: () => [] },
@@ -28,6 +29,7 @@ const form = useForm({
     is_active: true,
     requires_login: true,
     is_internal: false,
+    viewer_ids: [],
 });
 
 const aiForm = useForm({
@@ -98,6 +100,41 @@ const resetForm = () => {
     form.is_active = true;
     form.requires_login = true;
     form.is_internal = false;
+    form.viewer_ids = [];
+    viewerSearch.value = '';
+};
+
+// ── Системийг харах албан хаагчид ──
+const viewerSearch = ref('');
+
+const filteredEmployees = computed(() => {
+    const q = viewerSearch.value.trim().toLowerCase();
+
+    if (! q) {
+        return props.employees;
+    }
+
+    return props.employees.filter((e) => (e.name ?? '').toLowerCase().includes(q)
+        || (e.position ?? '').toLowerCase().includes(q));
+});
+
+const toggleViewer = (id) => {
+    const list = form.viewer_ids;
+
+    form.viewer_ids = list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
+};
+
+const viewerNames = (system) => {
+    const ids = system.viewer_ids ?? [];
+
+    if (ids.length === 0) {
+        return 'Бүгд харна';
+    }
+
+    return props.employees
+        .filter((e) => ids.includes(e.id))
+        .map((e) => e.name)
+        .join(', ');
 };
 
 const openCreate = () => {
@@ -119,6 +156,8 @@ const openEdit = (system) => {
     form.is_active = system.is_active;
     form.requires_login = system.requires_login;
     form.is_internal = system.is_internal;
+    form.viewer_ids = [...(system.viewer_ids ?? [])];
+    viewerSearch.value = '';
     modal.value = true;
 };
 
@@ -389,12 +428,13 @@ const saveAi = () => {
                         <th class="px-5 py-2 font-medium">Систем</th>
                         <th class="px-5 py-2 font-medium">Нэвтрэх арга</th>
                         <th class="px-5 py-2 font-medium">Дотор нээгдэх</th>
+                        <th class="px-5 py-2 font-medium">Харах албан хаагч</th>
                         <th class="w-52 px-5 py-2" />
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-if="!systems?.length">
-                        <td colspan="4" class="px-5 py-10 text-center text-sm text-slate-400">
+                        <td colspan="5" class="px-5 py-10 text-center text-sm text-slate-400">
                             Систем бүртгэгдээгүй байна. «Систем бүртгэх» дарж нэмнэ үү.
                         </td>
                     </tr>
@@ -433,6 +473,19 @@ const saveAi = () => {
                             >
                                 {{ system.is_embeddable === null ? 'Шалгаагүй' : (system.is_embeddable ? 'Тийм' : 'Үгүй') }}
                             </span>
+                        </td>
+                        <td class="px-5 py-3">
+                            <span
+                                class="rounded-full px-2 py-0.5 text-xs"
+                                :class="(system.viewer_ids?.length ?? 0) > 0
+                                    ? 'bg-brand-orange-100 text-brand-orange-700'
+                                    : 'bg-brand-navy-100 text-brand-navy-600'"
+                            >
+                                {{ (system.viewer_ids?.length ?? 0) > 0 ? `${system.viewer_ids.length} албан хаагч` : 'Бүгд' }}
+                            </span>
+                            <div v-if="(system.viewer_ids?.length ?? 0) > 0" class="mt-1 max-w-xs truncate text-xs text-brand-navy-300" :title="viewerNames(system)">
+                                {{ viewerNames(system) }}
+                            </div>
                         </td>
                         <td class="px-5 py-3 text-right whitespace-nowrap">
                             <button type="button" class="text-brand-navy-600 hover:underline" @click="openEdit(system)">
@@ -538,6 +591,57 @@ const saveAi = () => {
                         <input v-model="form.is_internal" type="checkbox" class="rounded border-brand-navy-200 text-brand-orange-500" />
                         Дотоод ажил
                     </label>
+
+                    <!-- Харах албан хаагчид -->
+                    <div class="rounded-xl border border-brand-navy-100 bg-slate-50/70 p-4">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <h3 class="text-sm font-semibold text-brand-navy-800">Харах албан хаагчид</h3>
+                                <p class="mt-0.5 text-xs text-brand-navy-400">
+                                    Хэнийг ч сонгоогүй бол бүх албан хаагчдад харагдана. Сонговол зөвхөн тэдний цэсэнд гарна.
+                                </p>
+                            </div>
+                            <span class="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold text-brand-navy-600 ring-1 ring-brand-navy-100">
+                                {{ form.viewer_ids.length ? form.viewer_ids.length + ' сонгогдсон' : 'Бүгд харна' }}
+                            </span>
+                        </div>
+
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <input
+                                v-model="viewerSearch"
+                                type="search"
+                                placeholder="Нэрээр хайх…"
+                                class="min-w-0 flex-1 rounded-md border border-brand-navy-200 px-3 py-1.5 text-sm"
+                            />
+                            <button
+                                type="button"
+                                class="rounded-md border border-brand-navy-200 px-3 py-1.5 text-xs"
+                                @click="form.viewer_ids = []"
+                            >
+                                Цэвэрлэх (бүгд харна)
+                            </button>
+                        </div>
+
+                        <div class="mt-3 max-h-56 overflow-y-auto rounded-lg border border-brand-navy-100 bg-white">
+                            <p v-if="! filteredEmployees.length" class="px-3 py-4 text-center text-xs text-slate-400">
+                                Илэрц олдсонгүй.
+                            </p>
+                            <label
+                                v-for="e in filteredEmployees"
+                                :key="e.id"
+                                class="flex cursor-pointer items-center gap-2 border-b border-slate-50 px-3 py-2 text-sm last:border-0 hover:bg-brand-navy-50"
+                            >
+                                <input
+                                    type="checkbox"
+                                    class="rounded border-brand-navy-200 text-brand-orange-500"
+                                    :checked="form.viewer_ids.includes(e.id)"
+                                    @change="toggleViewer(e.id)"
+                                />
+                                <span class="font-medium text-brand-navy-800">{{ e.name }}</span>
+                                <span v-if="e.position" class="truncate text-xs text-brand-navy-300">{{ e.position }}</span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="mt-6 flex justify-end gap-2">

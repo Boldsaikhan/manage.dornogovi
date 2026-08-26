@@ -110,6 +110,7 @@ class HandleInertiaRequests extends Middleware
 
         return System::query()
             ->where('is_active', true)
+            ->visibleTo($request->user())
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get()
