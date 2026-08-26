@@ -12,7 +12,7 @@ class Vault
 {
     public const SESSION_KEY = 'vault.unlocked_until';
 
-    public const MINUTES = 120;
+    public const MINUTES = 240;
 
     public static function unlock(Request $request): void
     {

@@ -39,6 +39,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/dept-dashboard', [DepartmentDashboardController::class, 'index'])->name('dept.dashboard');
 
     Route::post('/vault/unlock', [VaultController::class, 'unlock'])->name('vault.unlock');
+    Route::post('/vault/unlock/qr', [VaultController::class, 'createUnlockQr'])
+        ->middleware('throttle:30,1')
+        ->name('vault.unlock.qr.create');
+    Route::get('/vault/unlock/qr/{token}/status', [VaultController::class, 'unlockQrStatus'])
+        ->middleware('throttle:240,1')
+        ->name('vault.unlock.qr.status');
     Route::post('/vault/lock', [VaultController::class, 'lock'])->name('vault.lock');
 
     Route::get('/push/vapid-public-key', [PushSubscriptionController::class, 'publicKey'])->name('push.vapid');

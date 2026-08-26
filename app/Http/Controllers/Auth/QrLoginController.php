@@ -38,6 +38,7 @@ class QrLoginController extends Controller
         $token = LoginQrToken::create([
             'token' => LoginQrToken::generateToken(),
             'status' => LoginQrToken::PENDING,
+            'purpose' => LoginQrToken::PURPOSE_LOGIN,
             'requester_ip' => $request->ip(),
             'requester_agent' => substr((string) $request->userAgent(), 0, 500),
             'session_id' => $request->session()->getId(),
@@ -58,6 +59,11 @@ class QrLoginController extends Controller
         $record = LoginQrToken::where('token', $token)->first();
 
         if (! $record || $record->isExpired()) {
+            return response()->json(['status' => 'expired']);
+        }
+
+        // Vault нээх QR — энэ endpoint биш.
+        if ($record->isVaultUnlock()) {
             return response()->json(['status' => 'expired']);
         }
 
@@ -104,6 +110,7 @@ class QrLoginController extends Controller
             'token' => $token,
             'valid' => (bool) $record?->isActionable(),
             'state' => $record?->status ?? 'missing',
+            'purpose' => $record?->purpose ?? LoginQrToken::PURPOSE_LOGIN,
             'device' => $record ? [
                 'ip' => $record->requester_ip,
                 'agent' => self::describeAgent($record->requester_agent),
@@ -121,13 +128,25 @@ class QrLoginController extends Controller
             return back()->withErrors(['token' => 'Хүсэлтийн хугацаа дууссан байна. Компьютер дээрээ QR-ыг шинэчилнэ үү.']);
         }
 
+        // Vault нээх: зөвхөн тухайн хэрэглэгч өөрөө зөвшөөрнө.
+        if ($record->isVaultUnlock()
+            && (int) $record->expected_user_id !== (int) $request->user()->id) {
+            return back()->withErrors([
+                'token' => 'Энэ хүсэлт өөр хэрэглэгчийнх байна. Өөрийн эрхээр нэвтэрч дахин уншуулна уу.',
+            ]);
+        }
+
         $record->forceFill([
             'status' => LoginQrToken::APPROVED,
             'user_id' => $request->user()->id,
             'approved_at' => now(),
         ])->save();
 
-        return back()->with('success', 'Зөвшөөрлөө. Компьютер дээрээ нэвтэрч байна.');
+        $message = $record->isVaultUnlock()
+            ? 'Зөвшөөрлөө. Компьютер дээрх нэвтрэх мэдээллийн сан нээгдэж байна.'
+            : 'Зөвшөөрлөө. Компьютер дээрээ нэвтэрч байна.';
+
+        return back()->with('success', $message);
     }
 
     /** Утас: татгалзана. */

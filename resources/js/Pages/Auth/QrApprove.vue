@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
@@ -7,12 +7,15 @@ const props = defineProps({
     token: String,
     valid: Boolean,
     state: String,
+    purpose: { type: String, default: 'login' },
     device: Object,
 });
 
 const page = usePage();
 const busy = ref(false);
 const finished = ref(false);
+
+const isVault = computed(() => props.purpose === 'vault_unlock');
 
 const send = (routeName) => {
     busy.value = true;
@@ -28,20 +31,22 @@ const send = (routeName) => {
     });
 };
 
-const stateText = {
+const stateText = computed(() => ({
     approved: 'Энэ хүсэлт аль хэдийн зөвшөөрөгдсөн байна.',
-    consumed: 'Энэ хүсэлтээр нэвтэрсэн байна.',
+    consumed: isVault.value
+        ? 'Энэ хүсэлтээр сан нээгдсэн байна.'
+        : 'Энэ хүсэлтээр нэвтэрсэн байна.',
     rejected: 'Энэ хүсэлт цуцлагдсан байна.',
     missing: 'Ийм хүсэлт олдсонгүй.',
     pending: 'Хүсэлтийн хугацаа дууссан байна.',
-};
+}));
 </script>
 
 <template>
-    <Head title="QR нэвтрэлт баталгаажуулах" />
+    <Head :title="isVault ? 'Сан нээх баталгаажуулалт' : 'QR нэвтрэлт баталгаажуулах'" />
 
     <AuthenticatedLayout>
-        <template #header>QR нэвтрэлт</template>
+        <template #header>{{ isVault ? 'Сан нээх' : 'QR нэвтрэлт' }}</template>
 
         <div class="ui-page mx-auto max-w-md">
             <div v-if="finished || page.props.flash?.success" class="ui-card p-6 text-center">
@@ -71,10 +76,20 @@ const stateText = {
             </div>
 
             <div v-else class="ui-card p-6">
-                <h2 class="text-base font-semibold text-brand-navy-900">Компьютерт нэвтрэхийг зөвшөөрөх үү?</h2>
+                <h2 class="text-base font-semibold text-brand-navy-900">
+                    {{ isVault
+                        ? 'Нэвтрэх мэдээллийн санг нээхийг зөвшөөрөх үү?'
+                        : 'Компьютерт нэвтрэхийг зөвшөөрөх үү?' }}
+                </h2>
                 <p class="mt-1 text-sm text-slate-500">
-                    Доорх төхөөрөмж таны эрхээр нэгдсэн системд нэвтрэхийг хүсэж байна.
-                    Хэрэв энэ та биш бол <strong>Татгалзах</strong> дарна уу.
+                    <template v-if="isVault">
+                        Доорх төхөөрөмж таны нэвтрэх мэдээллийн санг 4 цагийн турш нээхийг хүсэж байна.
+                        Хэрэв энэ та биш бол <strong>Татгалзах</strong> дарна уу.
+                    </template>
+                    <template v-else>
+                        Доорх төхөөрөмж таны эрхээр нэгдсэн системд нэвтрэхийг хүсэж байна.
+                        Хэрэв энэ та биш бол <strong>Татгалзах</strong> дарна уу.
+                    </template>
                 </p>
 
                 <dl class="mt-5 space-y-2 rounded-xl bg-slate-50 p-4 text-sm">
@@ -93,7 +108,10 @@ const stateText = {
                 </dl>
 
                 <p class="mt-3 text-xs text-slate-400">
-                    Хүсэлт 2 минут хүчинтэй. Зөвшөөрсний дараа тухайн компьютер таны эрхээр нэвтэрнэ.
+                    Хүсэлт 2 минут хүчинтэй.
+                    {{ isVault
+                        ? 'Зөвшөөрсний дараа компьютер дээрх сан нээгдэнэ.'
+                        : 'Зөвшөөрсний дараа тухайн компьютер таны эрхээр нэвтэрнэ.' }}
                 </p>
 
                 <div class="mt-6 grid grid-cols-2 gap-3">

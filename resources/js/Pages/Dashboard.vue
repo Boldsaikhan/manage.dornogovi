@@ -1,9 +1,10 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
+import QRCode from 'qrcode';
 
 const props = defineProps({
     systems: Array,
@@ -95,16 +96,54 @@ const removeCredential = (system) => {
 /* ---------- Санг нээх ---------- */
 
 const unlockModal = ref(false);
+const unlockMode = ref('password'); // password | qr
 const accountPassword = ref('');
 const unlockError = ref('');
 const unlocking = ref(false);
 const pendingSystem = ref(null);
 
+const qrImage = ref('');
+const qrSeconds = ref(0);
+const qrState = ref('idle'); // idle | loading | waiting | approved | expired | rejected | error
+let pollTimer = null;
+let tickTimer = null;
+
+const stopQrTimers = () => {
+    clearInterval(pollTimer);
+    clearInterval(tickTimer);
+    pollTimer = null;
+    tickTimer = null;
+};
+
+const finishUnlock = () => {
+    unlockModal.value = false;
+    accountPassword.value = '';
+    unlockMode.value = 'password';
+    stopQrTimers();
+    qrImage.value = '';
+    qrState.value = 'idle';
+    const target = pendingSystem.value;
+    router.reload({
+        only: ['vault'],
+        onSuccess: () => target && openLaunchWindow(target),
+    });
+};
+
 const openUnlock = (system) => {
     pendingSystem.value = system;
     accountPassword.value = '';
     unlockError.value = '';
+    unlockMode.value = 'password';
+    stopQrTimers();
+    qrImage.value = '';
+    qrState.value = 'idle';
     unlockModal.value = true;
+};
+
+const closeUnlock = () => {
+    unlockModal.value = false;
+    stopQrTimers();
+    unlockMode.value = 'password';
 };
 
 const submitUnlock = async () => {
@@ -114,14 +153,7 @@ const submitUnlock = async () => {
         await window.axios.post(route('vault.unlock'), {
             account_password: accountPassword.value,
         });
-        unlockModal.value = false;
-        accountPassword.value = '';
-        const target = pendingSystem.value;
-        // Хуваалцсан vault.unlocked төлөвийг шинэчилнэ.
-        router.reload({
-            only: ['vault'],
-            onSuccess: () => target && openLaunchWindow(target),
-        });
+        finishUnlock();
     } catch (e) {
         unlockError.value =
             e.response?.data?.errors?.account_password?.[0] ??
@@ -130,6 +162,83 @@ const submitUnlock = async () => {
         unlocking.value = false;
     }
 };
+
+const startUnlockQr = async () => {
+    stopQrTimers();
+    qrState.value = 'loading';
+    qrImage.value = '';
+    unlockError.value = '';
+
+    try {
+        const { data } = await window.axios.post(route('vault.unlock.qr.create'));
+        qrImage.value = await QRCode.toDataURL(data.url, {
+            width: 360,
+            margin: 1,
+            errorCorrectionLevel: 'M',
+            color: { dark: '#1e3a5f', light: '#ffffff' },
+        });
+        qrSeconds.value = data.expires_in;
+        qrState.value = 'waiting';
+
+        tickTimer = setInterval(() => {
+            if (--qrSeconds.value <= 0) {
+                stopQrTimers();
+                qrState.value = 'expired';
+            }
+        }, 1000);
+
+        pollTimer = setInterval(() => pollUnlockQr(data.token, data.client_secret), 2000);
+    } catch (e) {
+        qrState.value = 'error';
+        unlockError.value = 'QR үүсгэж чадсангүй. Дахин оролдоно уу.';
+    }
+};
+
+const pollUnlockQr = async (token, clientSecret) => {
+    try {
+        const { data } = await window.axios.get(route('vault.unlock.qr.status', token), {
+            params: { client_secret: clientSecret },
+        });
+
+        if (data.status === 'approved') {
+            stopQrTimers();
+            qrState.value = 'approved';
+            finishUnlock();
+
+            return;
+        }
+
+        if (data.status === 'expired' || data.status === 'rejected') {
+            stopQrTimers();
+            qrState.value = data.status;
+        }
+    } catch (e) {
+        // дараагийн poll
+    }
+};
+
+const qrCountdown = computed(() => {
+    const m = Math.floor(qrSeconds.value / 60);
+    const sec = qrSeconds.value % 60;
+
+    return `${m}:${String(sec).padStart(2, '0')}`;
+});
+
+watch(unlockMode, (mode) => {
+    if (mode === 'qr' && unlockModal.value) {
+        startUnlockQr();
+    } else {
+        stopQrTimers();
+    }
+});
+
+watch(unlockModal, (open) => {
+    if (! open) {
+        stopQrTimers();
+    }
+});
+
+onBeforeUnmount(stopQrTimers);
 
 /* ---------- Нэвтрэх ---------- */
 
@@ -380,31 +489,98 @@ onMounted(() => {
             </form>
         </Modal>
 
-        <Modal :show="unlockModal" @close="unlockModal = false">
-            <form class="p-6" @submit.prevent="submitUnlock">
+        <Modal :show="unlockModal" @close="closeUnlock">
+            <div class="p-6">
                 <h2 class="ui-title text-base">Нэвтрэх мэдээллийн санг нээх</h2>
                 <p class="ui-subtitle">
                     Хадгалсан нууц үгсээ задлахын тулд өөрийгөө баталгаажуулна уу.
-                    Нэг удаа нээвэл 2 цагийн турш дахин асуухгүй.
+                    Нэг удаа нээвэл 4 цагийн турш дахин асуухгүй.
                 </p>
 
-                <label class="ui-label mt-5">Энэ платформ руу нэвтрэх нууц үг</label>
-                <p class="mb-2 text-xs text-slate-400">
-                    {{ page.props.auth.user.email }} — бусад системийн нууц үг биш.
-                </p>
-                <input
-                    v-model="accountPassword"
-                    type="password"
-                    autocomplete="current-password"
-                    class="ui-input"
-                />
-                <p v-if="unlockError" class="mt-1 text-sm text-red-500">{{ unlockError }}</p>
-
-                <div class="mt-6 flex justify-end gap-2">
-                    <button type="button" class="ui-btn-ghost" @click="unlockModal = false">Болих</button>
-                    <button type="submit" :disabled="unlocking" class="ui-btn-primary">Нээх</button>
+                <div class="mt-4 grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
+                    <button
+                        type="button"
+                        class="rounded-lg px-3 py-2 text-sm font-semibold transition"
+                        :class="unlockMode === 'password'
+                            ? 'bg-white text-brand-navy-800 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700'"
+                        @click="unlockMode = 'password'"
+                    >
+                        Нууц үг
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-lg px-3 py-2 text-sm font-semibold transition"
+                        :class="unlockMode === 'qr'
+                            ? 'bg-white text-brand-navy-800 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700'"
+                        @click="unlockMode = 'qr'"
+                    >
+                        QR код
+                    </button>
                 </div>
-            </form>
+
+                <form v-if="unlockMode === 'password'" class="mt-4" @submit.prevent="submitUnlock">
+                    <label class="ui-label">Энэ платформ руу нэвтрэх нууц үг</label>
+                    <p class="mb-2 text-xs text-slate-400">
+                        {{ page.props.auth.user.email }} — бусад системийн нууц үг биш.
+                    </p>
+                    <input
+                        v-model="accountPassword"
+                        type="password"
+                        autocomplete="current-password"
+                        class="ui-input"
+                    />
+                    <p v-if="unlockError" class="mt-1 text-sm text-red-500">{{ unlockError }}</p>
+
+                    <div class="mt-6 flex justify-end gap-2">
+                        <button type="button" class="ui-btn-ghost" @click="closeUnlock">Болих</button>
+                        <button type="submit" :disabled="unlocking" class="ui-btn-primary">Нээх</button>
+                    </div>
+                </form>
+
+                <div v-else class="mt-4">
+                    <p class="mb-3 text-sm text-slate-600">
+                        Утаснаасаа <strong class="text-brand-navy-700">ижил эрхээр нэвтэрсэн</strong> байж
+                        энэ QR кодыг уншуулна уу.
+                    </p>
+
+                    <div class="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+                        <div
+                            v-if="qrState === 'loading'"
+                            class="flex h-48 w-48 items-center justify-center text-sm text-slate-400"
+                        >
+                            QR үүсгэж байна…
+                        </div>
+                        <img
+                            v-else-if="qrImage && (qrState === 'waiting' || qrState === 'approved')"
+                            :src="qrImage"
+                            alt="QR код"
+                            class="h-48 w-48 rounded-xl"
+                        />
+                        <div
+                            v-else
+                            class="flex h-48 w-48 flex-col items-center justify-center gap-2 px-3 text-center text-sm text-slate-500"
+                        >
+                            <span v-if="qrState === 'expired'">QR кодын хугацаа дууссан.</span>
+                            <span v-else-if="qrState === 'rejected'">Хүсэлт цуцлагдлаа.</span>
+                            <span v-else-if="qrState === 'error'">Алдаа гарлаа.</span>
+                            <button type="button" class="ui-btn-ghost !py-1.5 text-xs" @click="startUnlockQr">
+                                Шинэ QR
+                            </button>
+                        </div>
+
+                        <p v-if="qrState === 'waiting'" class="text-xs font-medium text-slate-500">
+                            Хүчинтэй: {{ qrCountdown }}
+                        </p>
+                        <p v-if="unlockError" class="text-sm text-red-500">{{ unlockError }}</p>
+                    </div>
+
+                    <div class="mt-6 flex justify-end gap-2">
+                        <button type="button" class="ui-btn-ghost" @click="closeUnlock">Болих</button>
+                    </div>
+                </div>
+            </div>
         </Modal>
     </AuthenticatedLayout>
 </template>
