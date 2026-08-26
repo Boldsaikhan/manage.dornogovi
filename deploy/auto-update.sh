@@ -29,6 +29,15 @@ PHP_FPM="${PHP_FPM:-php8.3-fpm}"
 exec 9>"${LOCK}"
 flock -n 9 || exit 0
 
+# git reset --hard нь ЭНЭ скриптийг өөрийг нь дарж бичдэг тул ажиллаж байх зуур
+# эх файл нь солигдож, bash завсраас нь буруу уншиж мэднэ. Тиймээс хуулбараасаа
+# ажиллана (flock-ийн fd 9 exec хийсний дараа ч хэвээр үлдэнэ).
+if [ -z "${DEPLOY_REEXEC:-}" ]; then
+    cp -f "$0" /tmp/manage-deploy-run.sh
+    chmod +x /tmp/manage-deploy-run.sh
+    DEPLOY_REEXEC=1 exec /tmp/manage-deploy-run.sh "$@"
+fi
+
 # Cron-ийн PATH ихэвчлэн богино байдаг.
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
 
@@ -62,8 +71,15 @@ trap 'fix_ownership; maintenance_off' EXIT
 echo "==> $(date '+%F %T') шинэчлэл: ${LOCAL:0:7} -> ${REMOTE:0:7}"
 git reset --hard --quiet "origin/${BRANCH}"
 
+# АСУУДЛААС СЭРГИЙЛЭХ: composer/npm буюу build нь 1-3 минут үргэлжилдэг тул
+# тэдгээрийг сайтыг амьд байхад нь эхлээд эх хавтастаа бэлтгэнэ.
+# Засварын горим зөвхөн rsync + migrate хугацаанд (хэдэн секунд) асна.
+composer install --no-dev --optimize-autoloader --no-interaction --quiet
+npm ci --include=dev
+npm run build
+
 # Шинэчлэлтийн үед 500 биш, засварын хуудас харагдана.
-(cd "${WEB_ROOT}" 2>/dev/null && php artisan down --retry=60 >/dev/null 2>&1) || true
+(cd "${WEB_ROOT}" 2>/dev/null && php artisan down --retry=15 >/dev/null 2>&1) || true
 
 # ⚠️ storage/ болон bootstrap/cache-ийг ХЭЗЭЭ Ч синк хийхгүй:
 #   - storage/app дотор хэрэглэгчийн оруулсан файлууд байна (rsync --delete устгачихна),
@@ -72,19 +88,13 @@ git reset --hard --quiet "origin/${BRANCH}"
 rsync -a --delete \
     --exclude '.git' --exclude '.github' --exclude 'node_modules' \
     --exclude '.env' --exclude 'storage' --exclude 'bootstrap/cache' \
-    --exclude 'public/build' --exclude 'public/storage' \
+    --exclude 'public/storage' \
     "${SRC_DIR}/" "${WEB_ROOT}/"
 
 # rsync root-оор бичдэг тул эзэмшигчийг тэр дор нь буцаана.
 fix_ownership
 
 cd "${WEB_ROOT}"
-
-composer install --no-dev --optimize-autoloader --no-interaction --quiet
-
-# vite нь devDependencies-д байгаа тул production горимд алгасахгүй.
-npm ci --include=dev
-npm run build
 
 php artisan migrate --force
 php artisan config:cache
