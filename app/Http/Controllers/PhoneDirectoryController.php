@@ -289,6 +289,60 @@ class PhoneDirectoryController extends Controller
         return back(303)->with('success', $data['org_name'].' — байрлал шинэчлэгдлээ.');
     }
 
+    /**
+     * Албан хаагчийг бүлэг дотор эсвэл өөр хэлтэс/байгууллага руу зөөнө.
+     *
+     * before_id — заасан мөрийн өмнө тавина (хоосон бол бүлгийн ард).
+     */
+    public function reorderRow(Request $request): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+
+        $data = $request->validate([
+            'id' => ['required', 'integer', 'exists:phone_directory_entries,id'],
+            'org_name' => ['required', 'string', 'max:255'],
+            'before_id' => ['nullable', 'integer'],
+        ]);
+
+        $entry = PhoneDirectoryEntry::findOrFail($data['id']);
+        $org = $data['org_name'];
+
+        $target = PhoneDirectoryEntry::query()->where('org_name', $org);
+
+        // Хүлээн авах бүлгийн байрлал, ангиллыг өвлүүлнэ.
+        $orgOrder = (int) ((clone $target)->min('org_order')
+            ?? (PhoneDirectoryEntry::query()->max('org_order') + 1));
+        $category = (clone $target)->whereNotNull('category')->value('category');
+
+        $ids = (clone $target)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->pluck('id')
+            ->all();
+
+        $ids = array_values(array_filter($ids, fn ($id) => (int) $id !== $entry->id));
+
+        $before = $data['before_id'] ?? null;
+        $pos = $before === null ? false : array_search((int) $before, $ids, true);
+        array_splice($ids, $pos === false ? count($ids) : $pos, 0, [$entry->id]);
+
+        DB::transaction(function () use ($entry, $org, $orgOrder, $category, $ids) {
+            $entry->update([
+                'org_name' => $org,
+                'category' => $category,
+                'org_order' => $orgOrder,
+            ]);
+
+            foreach ($ids as $index => $id) {
+                PhoneDirectoryEntry::query()
+                    ->whereKey($id)
+                    ->update(['sort_order' => $index + 1, 'org_order' => $orgOrder]);
+            }
+        });
+
+        return back(303)->with('success', $entry->person_name.' — '.$org);
+    }
+
     public function destroy(Request $request, PhoneDirectoryEntry $entry): RedirectResponse
     {
         abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);

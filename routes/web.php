@@ -70,6 +70,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/phone-directory/import', [PhoneDirectoryController::class, 'import'])->name('phone-directory.import');
     Route::patch('/phone-directory/category', [PhoneDirectoryController::class, 'updateCategory'])->name('phone-directory.category');
     Route::patch('/phone-directory/reorder', [PhoneDirectoryController::class, 'reorder'])->name('phone-directory.reorder');
+    Route::patch('/phone-directory/reorder-row', [PhoneDirectoryController::class, 'reorderRow'])->name('phone-directory.reorder-row');
     // Parameterized routes last — otherwise "category"/"export" match as {entry}.
     Route::patch('/phone-directory/{entry}', [PhoneDirectoryController::class, 'update'])->name('phone-directory.update');
     Route::delete('/phone-directory/{entry}', [PhoneDirectoryController::class, 'destroy'])->name('phone-directory.destroy');

@@ -163,12 +163,19 @@ const moveGroup = (group, direction) => {
 };
 
 const startDrag = (group, event) => {
+    draggingRow.value = null;
     draggingOrg.value = group.org_name;
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('text/plain', group.org_name);
 };
 
 const dragOverGroup = (group) => {
+    if (draggingRow.value) {
+        dropTargetRow.value = 'top:' + group.org_name;
+
+        return;
+    }
+
     if (draggingOrg.value && draggingOrg.value !== group.org_name) {
         dropTargetOrg.value = group.org_name;
     }
@@ -177,12 +184,21 @@ const dragOverGroup = (group) => {
 const endDrag = () => {
     draggingOrg.value = null;
     dropTargetOrg.value = null;
+    draggingRow.value = null;
+    dropTargetRow.value = null;
 };
 
-// Чирсэн бүлгийг тухайн бүлгийн өмнө байрлуулна.
+// Бүлгийн толгой дээр буулгах: мөр бол тухайн бүлгийн эхэнд, бүлэг бол өмнө нь.
 const dropOnGroup = (group) => {
+    const row = draggingRow.value;
     const org = draggingOrg.value;
     endDrag();
+
+    if (row) {
+        moveRow(row.id, group.org_name, group.rows[0]?.id ?? null);
+
+        return;
+    }
 
     if (! org || org === group.org_name) return;
 
@@ -191,6 +207,52 @@ const dropOnGroup = (group) => {
         { org_name: org, before_org_name: group.org_name },
         { preserveScroll: true },
     );
+};
+
+// --- Албан хаагчийн мөрийг зөөх (бүлэг дотор ба бүлэг хооронд) ---
+const draggingRow = ref(null);
+const dropTargetRow = ref(null);
+
+const moveRow = (id, orgName, beforeId) => {
+    router.patch(
+        route('phone-directory.reorder-row'),
+        { id, org_name: orgName, before_id: beforeId },
+        { preserveScroll: true },
+    );
+};
+
+const startRowDrag = (row, group, event) => {
+    draggingOrg.value = null;
+    draggingRow.value = { id: row.id, org_name: group.org_name };
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', String(row.id));
+    event.stopPropagation();
+};
+
+const dragOverRow = (row) => {
+    if (draggingRow.value && draggingRow.value.id !== row.id) {
+        dropTargetRow.value = 'row:' + row.id;
+    }
+};
+
+// Чирсэн мөрийг энэ мөрийн өмнө тавина.
+const dropOnRow = (row, group) => {
+    const dragged = draggingRow.value;
+    endDrag();
+
+    if (! dragged || dragged.id === row.id) return;
+
+    moveRow(dragged.id, group.org_name, row.id);
+};
+
+// Бүлгийн хамгийн ард тавина.
+const dropAtGroupEnd = (group) => {
+    const dragged = draggingRow.value;
+    endDrag();
+
+    if (! dragged) return;
+
+    moveRow(dragged.id, group.org_name, null);
 };
 
 // Жагсаалтын хамгийн ард буулгах.
@@ -461,8 +523,23 @@ const closeDirectoryForm = () => {
                                     </button>
                                 </td>
                             </tr>
-                            <tr v-for="(row, index) in group.rows" :key="row.id">
-                                <td class="text-center">{{ index + 1 }}</td>
+                            <tr
+                                v-for="(row, index) in group.rows"
+                                :key="row.id"
+                                :draggable="canInsert"
+                                :class="[
+                                    draggingRow && draggingRow.id === row.id ? 'opacity-40' : '',
+                                    dropTargetRow === 'row:' + row.id ? '!border-t-2 !border-brand-navy-500' : '',
+                                ]"
+                                @dragstart="startRowDrag(row, group, $event)"
+                                @dragend="endDrag"
+                                @dragover.prevent="dragOverRow(row)"
+                                @drop.prevent="dropOnRow(row, group)"
+                            >
+                                <td class="text-center">
+                                    <span v-if="canInsert" class="mr-1 cursor-grab select-none text-slate-300 active:cursor-grabbing">⠿</span>
+                                    {{ index + 1 }}
+                                </td>
                                 <td>
                                     <span class="ui-clamp-2" :title="row.person_name">{{ row.person_name }}</span>
                                 </td>
@@ -474,6 +551,22 @@ const closeDirectoryForm = () => {
                                 <td v-if="canManage" class="text-right whitespace-nowrap">
                                     <button type="button" class="ui-btn-ghost mr-1 !py-1 text-xs" @click="openEdit(row, group)">Засах</button>
                                     <button type="button" class="ui-btn-danger !py-1 text-xs" @click="destroyRow(row.id)">Устгах</button>
+                                </td>
+                            </tr>
+                            <tr
+                                v-if="canInsert && draggingRow"
+                                @dragover.prevent="dropTargetRow = 'end:' + group.org_name"
+                                @drop.prevent="dropAtGroupEnd(group)"
+                            >
+                                <td :colspan="canManage ? 6 : 5" class="!py-1 text-center">
+                                    <span
+                                        class="block rounded-lg border border-dashed py-1 text-xs font-medium"
+                                        :class="dropTargetRow === 'end:' + group.org_name
+                                            ? 'border-brand-navy-400 bg-brand-navy-50 text-brand-navy-700'
+                                            : 'border-slate-200 text-slate-400'"
+                                    >
+                                        ⇩ «{{ group.org_name }}»-ийн ард
+                                    </span>
                                 </td>
                             </tr>
                         </template>
