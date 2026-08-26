@@ -112,7 +112,9 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/systems', [SystemSettingsController::class, 'index'])->name('systems.index');
+        Route::post('/systems', [SystemSettingsController::class, 'store'])->name('systems.store');
         Route::patch('/systems/{system}', [SystemSettingsController::class, 'update'])->name('systems.update');
+        Route::delete('/systems/{system}', [SystemSettingsController::class, 'destroy'])->name('systems.destroy');
         Route::post('/systems/{system}/check-embed', [SystemSettingsController::class, 'checkEmbed'])->name('systems.check-embed');
         Route::patch('/ai-settings', [SystemSettingsController::class, 'updateAi'])->name('ai-settings.update');
         Route::patch('/menu-settings', [SystemSettingsController::class, 'updateMenus'])->name('menu-settings.update');

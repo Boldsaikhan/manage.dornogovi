@@ -10,6 +10,7 @@ use App\Support\ModuleAccess;
 use App\Support\ModuleVisibility;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -121,9 +122,54 @@ class SystemSettingsController extends Controller
         return back()->with('success', 'Manage AI тохиргоо хадгалагдлаа.');
     }
 
+    public function store(Request $request): RedirectResponse
+    {
+        $data = $this->validatedSystem($request);
+
+        $baseSlug = Str::slug($data['name']) ?: 'system';
+        $slug = $baseSlug;
+        $i = 2;
+        while (System::query()->where('slug', $slug)->exists()) {
+            $slug = $baseSlug.'-'.$i;
+            $i++;
+        }
+
+        $maxOrder = (int) System::query()->max('sort_order');
+
+        $system = System::query()->create([
+            ...$data,
+            'slug' => $slug,
+            'sort_order' => $maxOrder + 1,
+            'category' => $data['is_internal'] ? 'Дотоод' : 'Гадны',
+            'icon' => 'globe',
+        ]);
+
+        return back()->with('success', "\"{$system->name}\" систем бүртгэгдлээ.");
+    }
+
     public function update(Request $request, System $system): RedirectResponse
     {
-        $data = $request->validate([
+        $data = $this->validatedSystem($request);
+
+        $system->update($data);
+
+        return back()->with('success', "\"{$system->name}\" тохиргоо хадгалагдлаа.");
+    }
+
+    public function destroy(System $system): RedirectResponse
+    {
+        $name = $system->name;
+        $system->delete();
+
+        return back()->with('success', "\"{$name}\" систем устгагдлаа.");
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function validatedSystem(Request $request): array
+    {
+        return $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'url' => ['required', 'url', 'max:2000'],
             'login_url' => ['nullable', 'url', 'max:2000'],
@@ -135,10 +181,6 @@ class SystemSettingsController extends Controller
             'requires_login' => ['boolean'],
             'is_internal' => ['boolean'],
         ]);
-
-        $system->update($data);
-
-        return back()->with('success', "\"{$system->name}\" тохиргоо хадгалагдлаа.");
     }
 
     public function checkEmbed(System $system, EmbedChecker $checker): RedirectResponse

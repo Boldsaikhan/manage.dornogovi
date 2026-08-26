@@ -396,23 +396,26 @@ const isCurrent = (routeName) => {
                 </div>
             </header>
 
-            <main class="p-4 sm:p-6 lg:p-8">
+            <main
+                class="p-4 sm:p-6 lg:p-8"
+                :class="page.props.aiAssistant?.available ? 'pb-28' : ''"
+            >
                 <slot />
             </main>
         </div>
 
-        <!-- AI floating entry -->
+        <!-- AI floating entry — хүснэгтийн үйлдлээс хол байлгана -->
         <button
             v-if="page.props.aiAssistant?.available && !aiOpen"
             type="button"
-            class="fixed bottom-5 right-5 z-30 flex items-center gap-2 rounded-2xl bg-brand-navy-700 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-navy-700/30 transition hover:-translate-y-0.5 hover:bg-brand-navy-800"
+            class="fixed bottom-5 right-5 z-30 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-navy-700 text-white shadow-lg shadow-brand-navy-700/30 transition hover:-translate-y-0.5 hover:bg-brand-navy-800 sm:h-auto sm:w-auto sm:gap-2 sm:px-4 sm:py-3"
             :title="page.props.aiAssistant?.name || 'Manage AI'"
             @click="toggleAiPanel(true)"
         >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                 <path :d="iconPaths.sparkles" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
-            <span class="hidden sm:inline">{{ page.props.aiAssistant?.name || 'Manage AI' }}</span>
+            <span class="hidden text-sm font-semibold sm:inline">{{ page.props.aiAssistant?.name || 'Manage AI' }}</span>
         </button>
 
         <AiPanel

@@ -84,4 +84,34 @@ class SystemSettingsTest extends TestCase
 
         $this->assertFalse($system->refresh()->is_embeddable);
     }
+
+    public function test_admin_can_register_a_new_system(): void
+    {
+        $this->actingAs(User::factory()->create(['is_admin' => true]))
+            ->post(route('admin.systems.store'), [
+                'name' => 'Шинэ систем',
+                'url' => 'https://example.gov.mn',
+                'login_method' => System::LOGIN_MANUAL,
+                'is_active' => true,
+                'requires_login' => true,
+                'is_internal' => false,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('systems', [
+            'name' => 'Шинэ систем',
+            'url' => 'https://example.gov.mn',
+        ]);
+    }
+
+    public function test_admin_can_delete_a_system(): void
+    {
+        $system = $this->system();
+
+        $this->actingAs(User::factory()->create(['is_admin' => true]))
+            ->delete(route('admin.systems.destroy', $system))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('systems', ['id' => $system->id]);
+    }
 }

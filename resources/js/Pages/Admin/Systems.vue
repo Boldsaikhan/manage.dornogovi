@@ -85,6 +85,27 @@ const saveMenus = () => {
     menuForm.enabled = { ...menuEnabled.value };
     menuForm.patch(route('admin.menu-settings.update'), { preserveScroll: true });
 };
+
+const resetForm = () => {
+    form.clearErrors();
+    form.name = '';
+    form.url = '';
+    form.login_url = '';
+    form.login_method = 'manual';
+    form.login_form_action = '';
+    form.login_username_field = '';
+    form.login_password_field = '';
+    form.is_active = true;
+    form.requires_login = true;
+    form.is_internal = false;
+};
+
+const openCreate = () => {
+    editing.value = null;
+    resetForm();
+    modal.value = true;
+};
+
 const openEdit = (system) => {
     editing.value = system;
     form.clearErrors();
@@ -102,10 +123,30 @@ const openEdit = (system) => {
 };
 
 const submit = () => {
-    form.patch(route('admin.systems.update', editing.value.id), {
+    if (editing.value) {
+        form.patch(route('admin.systems.update', editing.value.id), {
+            preserveScroll: true,
+            onSuccess: () => (modal.value = false),
+        });
+
+        return;
+    }
+
+    form.post(route('admin.systems.store'), {
         preserveScroll: true,
-        onSuccess: () => (modal.value = false),
+        onSuccess: () => {
+            modal.value = false;
+            resetForm();
+        },
     });
+};
+
+const removeSystem = (system) => {
+    if (! confirm(`«${system.name}» системийг устгах уу?`)) {
+        return;
+    }
+
+    router.delete(route('admin.systems.destroy', system.id), { preserveScroll: true });
 };
 
 const checkEmbed = (system) => {
@@ -325,23 +366,38 @@ const saveAi = () => {
             </form>
         </section>
 
-        <p class="mb-6 max-w-3xl text-sm text-brand-navy-400">
-            Систем бүрийн нэвтрэх аргыг энд тохируулна. <strong>Шууд илгээх</strong> горим нь
-            хэрэглэгчийн нэр, нууц үгийг нуугдмал маягтаар тухайн системийн нэвтрэх хаяг руу
-            илгээж, нэг товшилтоор нэвтрүүлнэ.
-        </p>
+        <section class="mb-6 rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h2 class="text-base font-semibold text-brand-navy-900">Холбосон системүүд</h2>
+                    <p class="mt-1 max-w-3xl text-sm text-brand-navy-400">
+                        Систем бүрийн нэвтрэх аргыг энд тохируулна. <strong>Шууд илгээх</strong> горим нь
+                        хэрэглэгчийн нэр, нууц үгийг нуугдмал маягтаар тухайн системийн нэвтрэх хаяг руу
+                        илгээж, нэг товшилтоор нэвтрүүлнэ.
+                    </p>
+                </div>
+                <button type="button" class="ui-btn-primary shrink-0" @click="openCreate">
+                    + Систем бүртгэх
+                </button>
+            </div>
+        </section>
 
-        <div class="overflow-hidden rounded-xl border border-brand-navy-100 bg-white shadow-sm">
+        <div class="mb-8 overflow-hidden rounded-xl border border-brand-navy-100 bg-white shadow-sm">
             <table class="w-full text-sm">
                 <thead class="bg-brand-navy-50 text-left text-brand-navy-700">
                     <tr>
                         <th class="px-5 py-2 font-medium">Систем</th>
                         <th class="px-5 py-2 font-medium">Нэвтрэх арга</th>
                         <th class="px-5 py-2 font-medium">Дотор нээгдэх</th>
-                        <th class="w-40 px-5 py-2" />
+                        <th class="w-52 px-5 py-2" />
                     </tr>
                 </thead>
                 <tbody>
+                    <tr v-if="!systems?.length">
+                        <td colspan="4" class="px-5 py-10 text-center text-sm text-slate-400">
+                            Систем бүртгэгдээгүй байна. «Систем бүртгэх» дарж нэмнэ үү.
+                        </td>
+                    </tr>
                     <tr
                         v-for="(system, i) in systems"
                         :key="system.id"
@@ -378,12 +434,15 @@ const saveAi = () => {
                                 {{ system.is_embeddable === null ? 'Шалгаагүй' : (system.is_embeddable ? 'Тийм' : 'Үгүй') }}
                             </span>
                         </td>
-                        <td class="px-5 py-3 text-right">
-                            <button class="text-brand-navy-600 hover:underline" @click="openEdit(system)">
+                        <td class="px-5 py-3 text-right whitespace-nowrap">
+                            <button type="button" class="text-brand-navy-600 hover:underline" @click="openEdit(system)">
                                 Тохируулах
                             </button>
-                            <button class="ml-3 text-brand-navy-400 hover:underline" @click="checkEmbed(system)">
+                            <button type="button" class="ml-3 text-brand-navy-400 hover:underline" @click="checkEmbed(system)">
                                 Дахин шалгах
+                            </button>
+                            <button type="button" class="ml-3 text-rose-600 hover:underline" @click="removeSystem(system)">
+                                Устгах
                             </button>
                         </td>
                     </tr>
@@ -394,8 +453,11 @@ const saveAi = () => {
         <Modal :show="modal" max-width="xl" @close="modal = false">
             <form class="p-6" @submit.prevent="submit">
                 <h2 class="text-base font-semibold text-brand-navy-900">
-                    {{ editing?.name }} — тохиргоо
+                    {{ editing ? `${editing.name} — тохиргоо` : 'Шинэ систем бүртгэх' }}
                 </h2>
+                <p v-if="! editing" class="mt-1 text-sm text-slate-500">
+                    Нэр, хаяг оруулаад бүртгэсний дараа нэвтрэх аргыг нарийвчлан тохируулж болно.
+                </p>
 
                 <div class="mt-4 space-y-3">
                     <div>
@@ -403,6 +465,8 @@ const saveAi = () => {
                         <input
                             v-model="form.name"
                             type="text"
+                            required
+                            placeholder="Жишээ: Төрийн ERP"
                             class="w-full rounded-md border border-brand-navy-200 px-3 py-2 text-sm focus:border-brand-orange-500 focus:ring-brand-orange-500"
                         />
                         <InputError :message="form.errors.name" class="mt-1" />
@@ -414,6 +478,8 @@ const saveAi = () => {
                             <input
                                 v-model="form.url"
                                 type="url"
+                                required
+                                placeholder="https://..."
                                 class="w-full rounded-md border border-brand-navy-200 px-3 py-2 text-sm focus:border-brand-orange-500 focus:ring-brand-orange-500"
                             />
                             <InputError :message="form.errors.url" class="mt-1" />
@@ -423,6 +489,7 @@ const saveAi = () => {
                             <input
                                 v-model="form.login_url"
                                 type="url"
+                                placeholder="Хоосон бол үндсэн хаяг"
                                 class="w-full rounded-md border border-brand-navy-200 px-3 py-2 text-sm focus:border-brand-orange-500 focus:ring-brand-orange-500"
                             />
                             <InputError :message="form.errors.login_url" class="mt-1" />
@@ -441,7 +508,7 @@ const saveAi = () => {
                     </div>
 
                     <template v-if="form.login_method === 'form_post'">
-                        <div class="rounded-lg border border-brand-navy-100 bg-brand-navy-50 p-3 space-y-3">
+                        <div class="space-y-3 rounded-lg border border-brand-navy-100 bg-brand-navy-50 p-3">
                             <div>
                                 <label class="mb-1 block text-xs font-medium text-brand-navy-700">Маягтын хаяг</label>
                                 <input v-model="form.login_form_action" type="url" class="w-full rounded-md border border-brand-navy-200 px-3 py-2 text-sm" />
@@ -475,7 +542,9 @@ const saveAi = () => {
 
                 <div class="mt-6 flex justify-end gap-2">
                     <button type="button" class="rounded-md border border-brand-navy-200 px-4 py-1.5 text-sm" @click="modal = false">Болих</button>
-                    <button type="submit" :disabled="form.processing" class="rounded-md bg-brand-orange-500 px-4 py-1.5 text-sm font-medium text-white">Хадгалах</button>
+                    <button type="submit" :disabled="form.processing" class="rounded-md bg-brand-orange-500 px-4 py-1.5 text-sm font-medium text-white">
+                        {{ editing ? 'Хадгалах' : 'Бүртгэх' }}
+                    </button>
                 </div>
             </form>
         </Modal>
