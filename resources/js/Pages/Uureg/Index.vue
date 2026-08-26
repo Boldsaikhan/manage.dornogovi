@@ -1138,8 +1138,11 @@ const prepTableMinWidth = computed(() => {
                 </div>
             </div>
 
-            <!-- Үүрэг чиглэл -->
-            <div v-if="isDirective" class="ui-table-wrap w-full overflow-x-auto">
+            <!-- Үүрэг чиглэл — өндөр хязгаарлаж хажуугийн scroll viewport-д үлдэнэ -->
+            <div
+                v-if="isDirective"
+                class="ui-card max-h-[min(70vh,calc(100dvh-12rem))] w-full overflow-auto overscroll-contain"
+            >
                 <table
                     class="ui-table table-fixed"
                     :style="{ width: `${directiveTableMinWidth}px`, minWidth: `${directiveTableMinWidth}px` }"
@@ -1156,7 +1159,7 @@ const prepTableMinWidth = computed(() => {
                     </colgroup>
                     <thead>
                         <tr>
-                            <th v-if="canManage" class="text-center">
+                            <th v-if="canManage" class="sticky top-0 z-20 bg-brand-navy-50 text-center">
                                 <input
                                     type="checkbox"
                                     class="rounded border-slate-300 text-brand-navy-600"
@@ -1166,13 +1169,13 @@ const prepTableMinWidth = computed(() => {
                                     @change="toggleSelectAll"
                                 />
                             </th>
-                            <th class="text-center">№</th>
-                            <th>Үүрэг чиглэл</th>
-                            <th>Хариуцах эзэн</th>
-                            <th>Хяналт тавих албан тушаалтан</th>
-                            <th>Хэрэгжилт</th>
-                            <th class="text-center">Биелэлтийн хувь</th>
-                            <th v-if="canManage" class="text-center" />
+                            <th class="sticky top-0 z-20 bg-brand-navy-50 text-center">№</th>
+                            <th class="sticky top-0 z-20 bg-brand-navy-50">Үүрэг чиглэл</th>
+                            <th class="sticky top-0 z-20 bg-brand-navy-50">Хариуцах эзэн</th>
+                            <th class="sticky top-0 z-20 bg-brand-navy-50">Хяналт тавих албан тушаалтан</th>
+                            <th class="sticky top-0 z-20 bg-brand-navy-50">Хэрэгжилт</th>
+                            <th class="sticky top-0 z-20 bg-brand-navy-50 text-center">Биелэлтийн хувь</th>
+                            <th v-if="canManage" class="sticky top-0 z-20 bg-brand-navy-50 text-center" />
                         </tr>
                     </thead>
                     <tbody>
@@ -1269,7 +1272,10 @@ const prepTableMinWidth = computed(() => {
             </div>
 
             <!-- Бэлтгэл ажил хангах төлөвлөгөө -->
-            <div v-else class="ui-table-wrap overflow-x-auto">
+            <div
+                v-else
+                class="ui-card max-h-[min(70vh,calc(100dvh-12rem))] overflow-auto overscroll-contain"
+            >
                 <table
                     class="ui-table table-fixed"
                     :style="{ width: `${prepTableMinWidth}px`, minWidth: `${prepTableMinWidth}px` }"
@@ -1288,7 +1294,7 @@ const prepTableMinWidth = computed(() => {
                     </colgroup>
                     <thead>
                         <tr>
-                            <th v-if="canManage" class="text-center">
+                            <th v-if="canManage" class="sticky top-0 z-20 bg-brand-navy-50 text-center">
                                 <input
                                     type="checkbox"
                                     class="rounded border-slate-300 text-brand-navy-600"
@@ -1298,15 +1304,15 @@ const prepTableMinWidth = computed(() => {
                                     @change="toggleSelectAll"
                                 />
                             </th>
-                            <th class="text-center">№</th>
-                            <th>Ажлын чиглэл</th>
-                            <th>Арга хэмжээ</th>
-                            <th>Хугацаа</th>
-                            <th>Хариуцах эзэн</th>
-                            <th>Хамтран хэрэгжүүлэх</th>
-                            <th>Хэрэгжилт</th>
-                            <th class="text-center">Биелэлтийн хувь</th>
-                            <th v-if="canManage" class="text-center" />
+                            <th class="sticky top-0 z-20 bg-brand-navy-50 text-center">№</th>
+                            <th class="sticky top-0 z-20 bg-brand-navy-50">Ажлын чиглэл</th>
+                            <th class="sticky top-0 z-20 bg-brand-navy-50">Арга хэмжээ</th>
+                            <th class="sticky top-0 z-20 bg-brand-navy-50">Хугацаа</th>
+                            <th class="sticky top-0 z-20 bg-brand-navy-50">Хариуцах эзэн</th>
+                            <th class="sticky top-0 z-20 bg-brand-navy-50">Хамтран хэрэгжүүлэх</th>
+                            <th class="sticky top-0 z-20 bg-brand-navy-50">Хэрэгжилт</th>
+                            <th class="sticky top-0 z-20 bg-brand-navy-50 text-center">Биелэлтийн хувь</th>
+                            <th v-if="canManage" class="sticky top-0 z-20 bg-brand-navy-50 text-center" />
                         </tr>
                     </thead>
                     <tbody>
