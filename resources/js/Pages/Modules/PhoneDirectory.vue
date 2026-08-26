@@ -150,6 +150,63 @@ const changeCategory = (orgName, category) => {
     );
 };
 
+// --- Бүлгийг (хэлтэс/байгууллага) зөөх ---
+const draggingOrg = ref(null);
+const dropTargetOrg = ref(null);
+
+const moveGroup = (group, direction) => {
+    router.patch(
+        route('phone-directory.reorder'),
+        { org_name: group.org_name, direction },
+        { preserveScroll: true },
+    );
+};
+
+const startDrag = (group, event) => {
+    draggingOrg.value = group.org_name;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', group.org_name);
+};
+
+const dragOverGroup = (group) => {
+    if (draggingOrg.value && draggingOrg.value !== group.org_name) {
+        dropTargetOrg.value = group.org_name;
+    }
+};
+
+const endDrag = () => {
+    draggingOrg.value = null;
+    dropTargetOrg.value = null;
+};
+
+// Чирсэн бүлгийг тухайн бүлгийн өмнө байрлуулна.
+const dropOnGroup = (group) => {
+    const org = draggingOrg.value;
+    endDrag();
+
+    if (! org || org === group.org_name) return;
+
+    router.patch(
+        route('phone-directory.reorder'),
+        { org_name: org, before_org_name: group.org_name },
+        { preserveScroll: true },
+    );
+};
+
+// Жагсаалтын хамгийн ард буулгах.
+const dropAtEnd = () => {
+    const org = draggingOrg.value;
+    endDrag();
+
+    if (! org) return;
+
+    router.patch(
+        route('phone-directory.reorder'),
+        { org_name: org, before_org_name: '' },
+        { preserveScroll: true },
+    );
+};
+
 const destroyRow = (id) => {
     if (!confirm('Устгах уу?')) return;
     router.delete(route('phone-directory.destroy', id), { preserveScroll: true });
@@ -323,21 +380,58 @@ const closeDirectoryForm = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        <template v-for="group in filteredGroups" :key="group.org_name">
-                            <tr v-if="canInsert" class="group/ins">
+                        <template v-for="(group, gi) in filteredGroups" :key="group.org_name">
+                            <tr
+                                v-if="canInsert"
+                                class="group/ins"
+                                @dragover.prevent="dragOverGroup(group)"
+                                @drop.prevent="dropOnGroup(group)"
+                            >
                                 <td :colspan="canManage ? 6 : 5" class="!py-0.5 text-center">
                                     <button
                                         type="button"
-                                        class="w-full rounded-lg border border-dashed border-slate-200 py-1 text-xs font-medium text-slate-400 opacity-0 transition hover:border-brand-navy-300 hover:text-brand-navy-700 focus:opacity-100 group-hover/ins:opacity-100"
+                                        class="w-full rounded-lg border border-dashed py-1 text-xs font-medium transition focus:opacity-100"
+                                        :class="dropTargetOrg === group.org_name
+                                            ? 'border-brand-navy-400 bg-brand-navy-50 text-brand-navy-700 opacity-100'
+                                            : 'border-slate-200 text-slate-400 opacity-0 hover:border-brand-navy-300 hover:text-brand-navy-700 group-hover/ins:opacity-100'"
                                         @click="openInsertGroup(group)"
                                     >
-                                        ＋ Энд шинэ хүснэгт нэмэх
+                                        {{ dropTargetOrg === group.org_name ? '⇩ Энд байрлуулах' : '＋ Энд шинэ хүснэгт нэмэх' }}
                                     </button>
                                 </td>
                             </tr>
-                            <tr class="bg-brand-navy-50">
+                            <tr
+                                class="bg-brand-navy-50"
+                                :class="draggingOrg === group.org_name ? 'opacity-40' : ''"
+                                :draggable="canInsert"
+                                @dragstart="startDrag(group, $event)"
+                                @dragend="endDrag"
+                                @dragover.prevent="dragOverGroup(group)"
+                                @drop.prevent="dropOnGroup(group)"
+                            >
                                 <td :colspan="canManage ? 6 : 5" class="text-center font-semibold italic text-brand-navy-800">
+                                    <span
+                                        v-if="canInsert"
+                                        class="mr-1 cursor-grab select-none text-slate-400 active:cursor-grabbing"
+                                        title="Чирж байрлуулна"
+                                    >⠿</span>
                                     {{ group.org_name }}
+                                    <span v-if="canInsert" class="ml-2 inline-flex align-middle">
+                                        <button
+                                            type="button"
+                                            class="rounded-l-lg border border-slate-300 bg-white px-1.5 py-0.5 text-xs not-italic text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                                            :disabled="gi === 0"
+                                            title="Дээш зөөх"
+                                            @click="moveGroup(group, 'up')"
+                                        >↑</button>
+                                        <button
+                                            type="button"
+                                            class="-ml-px rounded-r-lg border border-slate-300 bg-white px-1.5 py-0.5 text-xs not-italic text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                                            :disabled="gi === filteredGroups.length - 1"
+                                            title="Доош зөөх"
+                                            @click="moveGroup(group, 'down')"
+                                        >↓</button>
+                                    </span>
                                     <select
                                         v-if="canManage"
                                         :value="group.category || ''"
@@ -383,6 +477,25 @@ const closeDirectoryForm = () => {
                                 </td>
                             </tr>
                         </template>
+                        <tr
+                            v-if="canInsert && filteredGroups.length"
+                            class="group/ins"
+                            @dragover.prevent="draggingOrg && (dropTargetOrg = '__end__')"
+                            @drop.prevent="dropAtEnd"
+                        >
+                            <td :colspan="canManage ? 6 : 5" class="!py-0.5 text-center">
+                                <button
+                                    type="button"
+                                    class="w-full rounded-lg border border-dashed py-1 text-xs font-medium transition focus:opacity-100"
+                                    :class="dropTargetOrg === '__end__'
+                                        ? 'border-brand-navy-400 bg-brand-navy-50 text-brand-navy-700 opacity-100'
+                                        : 'border-slate-200 text-slate-400 opacity-0 hover:border-brand-navy-300 hover:text-brand-navy-700 group-hover/ins:opacity-100'"
+                                    @click="openAdd"
+                                >
+                                    {{ dropTargetOrg === '__end__' ? '⇩ Хамгийн ард байрлуулах' : '＋ Шинэ хүснэгт нэмэх' }}
+                                </button>
+                            </td>
+                        </tr>
                         <tr v-if="!filteredGroups.length">
                             <td :colspan="canManage ? 6 : 5" class="!py-12 text-center text-slate-400">
                                 {{ search ? 'Хайлтад тохирох бүртгэл алга.' : 'Одоогоор бүртгэл алга. Word файлаас импортлож болно.' }}

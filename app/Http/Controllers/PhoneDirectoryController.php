@@ -229,6 +229,66 @@ class PhoneDirectoryController extends Controller
         return back(303)->with('success', $data['org_name'].' — '.$label);
     }
 
+    /**
+     * Хэлтэс/байгууллагыг бүлгээр нь дээш-доош зөөнө.
+     *
+     * direction = up|down — хөрш бүлэгтэй солино.
+     * before_org_name — заасан бүлгийн өмнө тавина (хоосон бол хамгийн ард).
+     */
+    public function reorder(Request $request): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+
+        $data = $request->validate([
+            'org_name' => ['required', 'string', 'max:255'],
+            'direction' => ['nullable', Rule::in(['up', 'down'])],
+            'before_org_name' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $order = PhoneDirectoryEntry::query()
+            ->orderBy('org_order')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->pluck('org_name')
+            ->unique()
+            ->values()
+            ->all();
+
+        $from = array_search($data['org_name'], $order, true);
+
+        if ($from === false) {
+            return back(303);
+        }
+
+        array_splice($order, $from, 1);
+
+        if (! empty($data['direction'])) {
+            $to = $data['direction'] === 'up'
+                ? max(0, $from - 1)
+                : min(count($order), $from + 1);
+        } else {
+            $before = trim((string) ($data['before_org_name'] ?? ''));
+            $found = $before === '' ? false : array_search($before, $order, true);
+            $to = $found === false ? count($order) : $found;
+        }
+
+        if ($to === $from) {
+            return back(303);
+        }
+
+        array_splice($order, $to, 0, [$data['org_name']]);
+
+        DB::transaction(function () use ($order) {
+            foreach ($order as $index => $name) {
+                PhoneDirectoryEntry::query()
+                    ->where('org_name', $name)
+                    ->update(['org_order' => $index + 1]);
+            }
+        });
+
+        return back(303)->with('success', $data['org_name'].' — байрлал шинэчлэгдлээ.');
+    }
+
     public function destroy(Request $request, PhoneDirectoryEntry $entry): RedirectResponse
     {
         abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
