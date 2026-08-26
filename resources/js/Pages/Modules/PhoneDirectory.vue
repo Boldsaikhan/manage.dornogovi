@@ -31,6 +31,8 @@ const form = useForm({
     position: '',
     office_phone: '',
     mobile_phone: '',
+    // Хоосон биш бол шинэ хүснэгтийг тухайн бүлгийн ӨМНӨ байрлуулна.
+    before_org_name: '',
 });
 
 const editingId = ref(null);
@@ -97,6 +99,11 @@ const filteredGroups = computed(() => {
         .filter((g) => g.rows.length);
 });
 
+// Хайлт/шүүлт идэвхтэй үед байрлал нь бодит дараалалтай таарахгүй тул нуна.
+const canInsert = computed(() => props.canManage
+    && ! search.value.trim()
+    && categoryFilter.value === 'all');
+
 const submit = () => {
     if (isEditing.value) {
         form.patch(route('phone-directory.update', editingId.value), {
@@ -158,6 +165,23 @@ const resetDirectoryForm = () => {
 
 const openAdd = () => {
     resetDirectoryForm();
+    showForm.value = true;
+    showImport.value = false;
+};
+
+// Тухайн хэлтэс/байгууллагын доор шууд шинэ мөр нэмнэ.
+const openAddRow = (group) => {
+    resetDirectoryForm();
+    form.org_name = group.org_name;
+    form.category = group.category || '';
+    showForm.value = true;
+    showImport.value = false;
+};
+
+// Хоёр бүлгийн хооронд шинэ хүснэгт (байгууллага/хэлтэс) оруулна.
+const openInsertGroup = (beforeGroup) => {
+    resetDirectoryForm();
+    form.before_org_name = beforeGroup.org_name;
     showForm.value = true;
     showImport.value = false;
 };
@@ -300,6 +324,17 @@ const closeDirectoryForm = () => {
                     </thead>
                     <tbody>
                         <template v-for="group in filteredGroups" :key="group.org_name">
+                            <tr v-if="canInsert" class="group/ins">
+                                <td :colspan="canManage ? 6 : 5" class="!py-0.5 text-center">
+                                    <button
+                                        type="button"
+                                        class="w-full rounded-lg border border-dashed border-slate-200 py-1 text-xs font-medium text-slate-400 opacity-0 transition hover:border-brand-navy-300 hover:text-brand-navy-700 focus:opacity-100 group-hover/ins:opacity-100"
+                                        @click="openInsertGroup(group)"
+                                    >
+                                        ＋ Энд шинэ хүснэгт нэмэх
+                                    </button>
+                                </td>
+                            </tr>
                             <tr class="bg-brand-navy-50">
                                 <td :colspan="canManage ? 6 : 5" class="text-center font-semibold italic text-brand-navy-800">
                                     {{ group.org_name }}
@@ -321,6 +356,15 @@ const closeDirectoryForm = () => {
                                     >
                                         {{ categories[group.category] || 'Сонголтгүй' }}
                                     </span>
+                                    <button
+                                        v-if="canManage"
+                                        type="button"
+                                        class="ml-2 rounded-lg border border-brand-navy-200 bg-white px-2 py-0.5 text-xs font-medium not-italic text-brand-navy-700 hover:bg-brand-navy-100"
+                                        title="Энэ хэлтэст шинэ албан хаагч нэмэх"
+                                        @click="openAddRow(group)"
+                                    >
+                                        ＋ мөр нэмэх
+                                    </button>
                                 </td>
                             </tr>
                             <tr v-for="(row, index) in group.rows" :key="row.id">
@@ -355,9 +399,13 @@ const closeDirectoryForm = () => {
                 <div class="mb-5 flex items-start justify-between gap-3">
                     <div>
                         <h3 class="text-base font-semibold text-brand-navy-900">
-                            {{ isEditing ? 'Бүртгэл засах' : 'Шинэ бүртгэл' }}
+                            {{ isEditing ? 'Бүртгэл засах' : (form.before_org_name ? 'Шинэ хүснэгт' : 'Шинэ бүртгэл') }}
                         </h3>
-                        <p class="mt-0.5 text-sm text-slate-500">Утасны жагсаалт</p>
+                        <p class="mt-0.5 text-sm text-slate-500">
+                            {{ form.before_org_name
+                                ? `«${form.before_org_name}»-ийн өмнө нэмэгдэнэ.`
+                                : 'Утасны жагсаалт' }}
+                        </p>
                     </div>
                     <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" @click="closeDirectoryForm">✕</button>
                 </div>

@@ -112,7 +112,11 @@ class PhoneDirectoryController extends Controller
             'position' => ['nullable', 'string', 'max:255'],
             'office_phone' => ['nullable', 'string', 'max:64'],
             'mobile_phone' => ['nullable', 'string', 'max:64'],
+            'before_org_name' => ['nullable', 'string', 'max:255'],
         ]);
+
+        $beforeOrg = trim((string) ($data['before_org_name'] ?? ''));
+        unset($data['before_org_name']);
 
         if (($data['category'] ?? '') === '') {
             // Формоос «Сонголтгүй» — байгууллагын одоогийн ангиллыг авна (байхгүй бол null).
@@ -123,6 +127,29 @@ class PhoneDirectoryController extends Controller
         }
 
         $sibling = PhoneDirectoryEntry::query()->where('org_name', $data['org_name']);
+        $isNewOrg = ! (clone $sibling)->exists();
+
+        // Дунд нь шинэ хүснэгт — заасан бүлгийн өмнө байрлуулж, доод бүлгүүдийг ухраана.
+        $beforeOrder = $isNewOrg && $beforeOrg !== ''
+            ? PhoneDirectoryEntry::query()->where('org_name', $beforeOrg)->min('org_order')
+            : null;
+
+        if ($beforeOrder !== null) {
+            DB::transaction(function () use ($data, $beforeOrder) {
+                PhoneDirectoryEntry::query()
+                    ->where('org_order', '>=', (int) $beforeOrder)
+                    ->increment('org_order');
+
+                PhoneDirectoryEntry::create($data + [
+                    'org_order' => (int) $beforeOrder,
+                    'sort_order' => 0,
+                ]);
+            });
+
+            return redirect()
+                ->route('phone-directory.index')
+                ->with('success', 'Шинэ хүснэгт нэмэгдлээ.');
+        }
 
         $data['org_order'] = (int) ((clone $sibling)->value('org_order')
             ?? (PhoneDirectoryEntry::query()->max('org_order') + 1));
