@@ -114,4 +114,50 @@ class SystemSettingsTest extends TestCase
 
         $this->assertDatabaseMissing('systems', ['id' => $system->id]);
     }
+
+    public function test_admin_can_reorder_systems_for_menu(): void
+    {
+        $first = System::create([
+            'slug' => 'alpha',
+            'name' => 'Alpha',
+            'url' => 'https://alpha.example.gov.mn',
+            'category' => 'Гадны',
+            'sort_order' => 1,
+        ]);
+        $second = System::create([
+            'slug' => 'beta',
+            'name' => 'Beta',
+            'url' => 'https://beta.example.gov.mn',
+            'category' => 'Гадны',
+            'sort_order' => 2,
+        ]);
+        $third = System::create([
+            'slug' => 'gamma',
+            'name' => 'Gamma',
+            'url' => 'https://gamma.example.gov.mn',
+            'category' => 'Гадны',
+            'sort_order' => 3,
+        ]);
+
+        $this->actingAs(User::factory()->create(['is_admin' => true]))
+            ->patch(route('admin.systems.reorder'), [
+                'ids' => [$third->id, $first->id, $second->id],
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(1, $third->refresh()->sort_order);
+        $this->assertSame(2, $first->refresh()->sort_order);
+        $this->assertSame(3, $second->refresh()->sort_order);
+    }
+
+    public function test_non_admin_cannot_reorder_systems(): void
+    {
+        $system = $this->system();
+
+        $this->actingAs(User::factory()->create(['is_admin' => false]))
+            ->patch(route('admin.systems.reorder'), [
+                'ids' => [$system->id],
+            ])
+            ->assertForbidden();
+    }
 }

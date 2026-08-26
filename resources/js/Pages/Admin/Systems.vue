@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
@@ -14,6 +14,44 @@ const props = defineProps({
 });
 
 const page = usePage();
+
+/** Цэсийн дараалал — дээш/доош товчоор өөрчилнө. */
+const orderedSystems = ref([...(props.systems ?? [])]);
+const reorderSaving = ref(false);
+
+watch(
+    () => props.systems,
+    (list) => {
+        orderedSystems.value = [...(list ?? [])];
+    },
+);
+
+const saveOrder = (list) => {
+    reorderSaving.value = true;
+    router.patch(
+        route('admin.systems.reorder'),
+        { ids: list.map((s) => s.id) },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                reorderSaving.value = false;
+            },
+        },
+    );
+};
+
+const moveSystem = (index, direction) => {
+    const next = index + direction;
+    if (next < 0 || next >= orderedSystems.value.length || reorderSaving.value) {
+        return;
+    }
+
+    const list = [...orderedSystems.value];
+    const [row] = list.splice(index, 1);
+    list.splice(next, 0, row);
+    orderedSystems.value = list;
+    saveOrder(list);
+};
 
 const modal = ref(false);
 const editing = ref(null);
@@ -413,6 +451,7 @@ const saveAi = () => {
                         Систем бүрийн нэвтрэх аргыг энд тохируулна. <strong>Шууд илгээх</strong> горим нь
                         хэрэглэгчийн нэр, нууц үгийг нуугдмал маягтаар тухайн системийн нэвтрэх хаяг руу
                         илгээж, нэг товшилтоор нэвтрүүлнэ.
+                        Зүүн талын ▲▼ товчоор <strong>цэсэнд харагдах дарааллыг</strong> өөрчилнө.
                     </p>
                 </div>
                 <button type="button" class="ui-btn-primary shrink-0" @click="openCreate">
@@ -425,6 +464,7 @@ const saveAi = () => {
             <table class="w-full text-sm">
                 <thead class="bg-brand-navy-50 text-left text-brand-navy-700">
                     <tr>
+                        <th class="w-16 px-3 py-2 text-center font-medium" title="Цэсийн дараалал">№</th>
                         <th class="px-5 py-2 font-medium">Систем</th>
                         <th class="px-5 py-2 font-medium">Нэвтрэх арга</th>
                         <th class="px-5 py-2 font-medium">Дотор нээгдэх</th>
@@ -433,16 +473,45 @@ const saveAi = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-if="!systems?.length">
-                        <td colspan="5" class="px-5 py-10 text-center text-sm text-slate-400">
+                    <tr v-if="!orderedSystems.length">
+                        <td colspan="6" class="px-5 py-10 text-center text-sm text-slate-400">
                             Систем бүртгэгдээгүй байна. «Систем бүртгэх» дарж нэмнэ үү.
                         </td>
                     </tr>
                     <tr
-                        v-for="(system, i) in systems"
+                        v-for="(system, i) in orderedSystems"
                         :key="system.id"
                         :class="i % 2 === 1 ? 'bg-brand-navy-50' : 'bg-white'"
                     >
+                        <td class="px-2 py-2 text-center align-middle">
+                            <div class="inline-flex flex-col items-center gap-0.5">
+                                <button
+                                    type="button"
+                                    class="rounded p-0.5 text-brand-navy-500 hover:bg-brand-navy-100 hover:text-brand-navy-800 disabled:cursor-not-allowed disabled:opacity-30"
+                                    :disabled="i === 0 || reorderSaving"
+                                    title="Дээш"
+                                    aria-label="Дээш"
+                                    @click="moveSystem(i, -1)"
+                                >
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+                                    </svg>
+                                </button>
+                                <span class="text-xs font-semibold tabular-nums text-brand-navy-600">{{ i + 1 }}</span>
+                                <button
+                                    type="button"
+                                    class="rounded p-0.5 text-brand-navy-500 hover:bg-brand-navy-100 hover:text-brand-navy-800 disabled:cursor-not-allowed disabled:opacity-30"
+                                    :disabled="i === orderedSystems.length - 1 || reorderSaving"
+                                    title="Доош"
+                                    aria-label="Доош"
+                                    @click="moveSystem(i, 1)"
+                                >
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
                         <td class="px-5 py-3">
                             <div class="font-medium text-brand-navy-800">{{ system.name }}</div>
                             <div class="text-xs text-brand-navy-300">{{ system.login_url ?? system.url }}</div>

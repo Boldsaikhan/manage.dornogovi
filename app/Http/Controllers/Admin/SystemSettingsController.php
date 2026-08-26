@@ -189,6 +189,23 @@ class SystemSettingsController extends Controller
     }
 
     /**
+     * Цэсэнд харагдах дарааллыг шинэчилнэ.
+     */
+    public function reorder(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'distinct', 'exists:systems,id'],
+        ]);
+
+        foreach (array_values($data['ids']) as $index => $id) {
+            System::query()->whereKey($id)->update(['sort_order' => $index + 1]);
+        }
+
+        return back()->with('success', 'Цэсийн дараалал хадгалагдлаа.');
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function validatedSystem(Request $request): array
