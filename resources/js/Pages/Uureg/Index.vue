@@ -317,9 +317,9 @@ const statusSegments = computed(() => {
     const total = overall.value.count || 1;
 
     return [
-        { label: 'Дууссан', value: overall.value.done, color: '#10b981' },
-        { label: 'Хэрэгжиж буй', value: overall.value.started, color: '#f59e0b' },
-        { label: 'Эхлээгүй', value: overall.value.pending, color: '#cbd5e1' },
+        { label: 'Дууссан', value: overall.value.done, color: '#22c55e' },
+        { label: 'Хэрэгжиж буй', value: overall.value.started, color: '#eab308' },
+        { label: 'Эхлээгүй', value: overall.value.pending, color: '#f97316', warn: true },
     ].map((s) => ({ ...s, percent: Math.round((s.value / total) * 100) }));
 });
 
@@ -362,13 +362,42 @@ const overall = computed(() => ({
     pending: props.tasks.filter((t) => ! Number(t.progress)).length,
 }));
 
-const barColor = (value) => {
-    if (value >= 80) return 'bg-emerald-500';
-    if (value >= 50) return 'bg-brand-navy-500';
-    if (value > 0) return 'bg-amber-500';
+/**
+ * Хэрэгжилтийн өнгө:
+ * 0% (эхлээгүй) — саарал + анхааруулга
+ * <50 — улаан · 50–89 — шар · ≥90 — ногоон
+ */
+const progressLevel = (value) => {
+    const n = Number(value) || 0;
+    if (n <= 0) return 'pending';
+    if (n < 50) return 'low';
+    if (n < 90) return 'mid';
 
-    return 'bg-slate-300';
+    return 'high';
 };
+
+const progressStroke = (value) => ({
+    pending: '#94a3b8',
+    low: '#ef4444',
+    mid: '#eab308',
+    high: '#22c55e',
+}[progressLevel(value)]);
+
+const progressTextClass = (value) => ({
+    pending: 'text-slate-500',
+    low: 'text-red-600',
+    mid: 'text-yellow-600',
+    high: 'text-emerald-600',
+}[progressLevel(value)]);
+
+const barColor = (value) => ({
+    pending: 'bg-slate-300',
+    low: 'bg-red-500',
+    mid: 'bg-yellow-400',
+    high: 'bg-emerald-500',
+}[progressLevel(value)]);
+
+const isPendingProgress = (value) => progressLevel(value) === 'pending';
 
 const openDashboard = () => {
     showDashboard.value = true;
@@ -691,7 +720,18 @@ const prepTableMinWidth = computed(() => {
                     </span>
                 </span>
 
-                <span class="text-2xl font-bold text-brand-navy-800">{{ overall.progress }}%</span>
+                <span class="flex items-center gap-1 text-2xl font-bold" :class="progressTextClass(overall.progress)">
+                    <svg
+                        v-if="isPendingProgress(overall.progress)"
+                        class="h-5 w-5 text-orange-500"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        aria-hidden="true"
+                    >
+                        <path d="M12 3.2L2.5 19.5A1.2 1.2 0 003.55 21.2h16.9a1.2 1.2 0 001.05-1.7L12 3.2zm0 5.3c.55 0 1 .4 1 .95v4.6c0 .55-.45 1-1 1s-1-.45-1-1v-4.6c0-.55.45-.95 1-.95zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z" />
+                    </svg>
+                    {{ overall.progress }}%
+                </span>
 
                 <span class="h-2 min-w-[6rem] flex-1 overflow-hidden rounded-full bg-slate-200">
                     <span class="block h-full rounded-full" :class="barColor(overall.progress)" :style="{ width: overall.progress + '%' }" />
@@ -700,7 +740,13 @@ const prepTableMinWidth = computed(() => {
                 <span class="flex gap-3 text-xs text-slate-500">
                     <span>Нийт <b class="text-slate-700">{{ overall.count }}</b></span>
                     <span>Дууссан <b class="text-emerald-600">{{ overall.done }}</b></span>
-                    <span>Эхлээгүй <b class="text-slate-600">{{ overall.pending }}</b></span>
+                    <span class="inline-flex items-center gap-0.5">
+                        Эхлээгүй
+                        <svg class="h-3.5 w-3.5 text-orange-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M12 3.2L2.5 19.5A1.2 1.2 0 003.55 21.2h16.9a1.2 1.2 0 001.05-1.7L12 3.2zm0 5.3c.55 0 1 .4 1 .95v4.6c0 .55-.45 1-1 1s-1-.45-1-1v-4.6c0-.55.45-.95 1-.95zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z" />
+                        </svg>
+                        <b class="text-orange-600">{{ overall.pending }}</b>
+                    </span>
                 </span>
             </button>
 
@@ -961,22 +1007,33 @@ const prepTableMinWidth = computed(() => {
 
                 <div class="grid gap-4 lg:grid-cols-3">
                     <section class="ui-card-pad flex items-center gap-5">
-                        <svg viewBox="0 0 130 130" class="h-32 w-32 shrink-0 -rotate-90">
-                            <circle cx="65" cy="65" r="52" fill="none" stroke="#e2e8f0" stroke-width="16" />
-                            <circle
-                                cx="65"
-                                cy="65"
-                                r="52"
-                                fill="none"
-                                :stroke="overall.progress >= 80 ? '#10b981' : overall.progress >= 50 ? '#3771b8' : '#f59e0b'"
-                                stroke-width="16"
-                                stroke-linecap="round"
-                                :stroke-dasharray="donut(overall.progress).dash"
-                            />
-                        </svg>
+                        <div class="relative h-32 w-32 shrink-0">
+                            <svg viewBox="0 0 130 130" class="h-32 w-32 -rotate-90">
+                                <circle cx="65" cy="65" r="52" fill="none" stroke="#e2e8f0" stroke-width="16" />
+                                <circle
+                                    cx="65"
+                                    cy="65"
+                                    r="52"
+                                    fill="none"
+                                    :stroke="progressStroke(overall.progress)"
+                                    stroke-width="16"
+                                    stroke-linecap="round"
+                                    :stroke-dasharray="donut(overall.progress).dash"
+                                />
+                            </svg>
+                            <span
+                                v-if="isPendingProgress(overall.progress)"
+                                class="absolute inset-0 flex items-center justify-center text-orange-500"
+                                title="Эхлээгүй"
+                            >
+                                <svg class="h-8 w-8" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path d="M12 3.2L2.5 19.5A1.2 1.2 0 003.55 21.2h16.9a1.2 1.2 0 001.05-1.7L12 3.2zm0 5.3c.55 0 1 .4 1 .95v4.6c0 .55-.45 1-1 1s-1-.45-1-1v-4.6c0-.55.45-.95 1-.95zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z" />
+                                </svg>
+                            </span>
+                        </div>
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Нийт хэрэгжилт</p>
-                            <p class="text-4xl font-bold text-brand-navy-800">{{ overall.progress }}%</p>
+                            <p class="text-4xl font-bold" :class="progressTextClass(overall.progress)">{{ overall.progress }}%</p>
                             <p class="mt-1 text-sm text-slate-500">{{ overall.done }}/{{ overall.count }} үүрэг дууссан</p>
                         </div>
                     </section>
@@ -993,7 +1050,16 @@ const prepTableMinWidth = computed(() => {
                         </div>
                         <div class="mt-3 flex flex-wrap gap-4 text-sm">
                             <span v-for="segment in statusSegments" :key="segment.label" class="flex items-center gap-2">
-                                <span class="h-3 w-3 rounded-sm" :style="{ background: segment.color }" />
+                                <span
+                                    v-if="segment.warn"
+                                    class="inline-flex text-orange-500"
+                                    title="Эхлээгүй — анхааруулга"
+                                >
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                        <path d="M12 3.2L2.5 19.5A1.2 1.2 0 003.55 21.2h16.9a1.2 1.2 0 001.05-1.7L12 3.2zm0 5.3c.55 0 1 .4 1 .95v4.6c0 .55-.45 1-1 1s-1-.45-1-1v-4.6c0-.55.45-.95 1-.95zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z" />
+                                    </svg>
+                                </span>
+                                <span v-else class="h-3 w-3 rounded-sm" :style="{ background: segment.color }" />
                                 <span class="text-slate-600">{{ segment.label }}</span>
                                 <b class="text-slate-800">{{ segment.value }}</b>
                                 <span class="text-xs text-slate-400">({{ segment.percent }}%)</span>
@@ -1013,21 +1079,32 @@ const prepTableMinWidth = computed(() => {
                             @click="applyFilterAndClose(item.type, item.key, item.label)"
                         >
                             <div class="flex items-center gap-4">
-                                <svg viewBox="0 0 130 130" class="h-16 w-16 shrink-0 -rotate-90">
-                                    <circle cx="65" cy="65" r="52" fill="none" stroke="#e2e8f0" stroke-width="20" />
-                                    <circle
-                                        cx="65"
-                                        cy="65"
-                                        r="52"
-                                        fill="none"
-                                        :stroke="item.progress >= 80 ? '#10b981' : item.progress >= 50 ? '#3771b8' : item.progress > 0 ? '#f59e0b' : '#cbd5e1'"
-                                        stroke-width="20"
-                                        :stroke-dasharray="donut(item.progress).dash"
-                                    />
-                                </svg>
+                                <div class="relative h-16 w-16 shrink-0">
+                                    <svg viewBox="0 0 130 130" class="h-16 w-16 -rotate-90">
+                                        <circle cx="65" cy="65" r="52" fill="none" stroke="#e2e8f0" stroke-width="20" />
+                                        <circle
+                                            cx="65"
+                                            cy="65"
+                                            r="52"
+                                            fill="none"
+                                            :stroke="progressStroke(item.progress)"
+                                            stroke-width="20"
+                                            :stroke-dasharray="donut(item.progress).dash"
+                                        />
+                                    </svg>
+                                    <span
+                                        v-if="isPendingProgress(item.progress)"
+                                        class="absolute inset-0 flex items-center justify-center text-orange-500"
+                                        title="Эхлээгүй"
+                                    >
+                                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                            <path d="M12 3.2L2.5 19.5A1.2 1.2 0 003.55 21.2h16.9a1.2 1.2 0 001.05-1.7L12 3.2zm0 5.3c.55 0 1 .4 1 .95v4.6c0 .55-.45 1-1 1s-1-.45-1-1v-4.6c0-.55.45-.95 1-.95zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z" />
+                                        </svg>
+                                    </span>
+                                </div>
                                 <div class="min-w-0">
                                     <p class="truncate text-sm font-semibold text-slate-700" :title="item.label">{{ item.label }}</p>
-                                    <p class="text-2xl font-bold text-brand-navy-700">{{ item.progress }}%</p>
+                                    <p class="text-2xl font-bold" :class="progressTextClass(item.progress)">{{ item.progress }}%</p>
                                     <p class="text-xs text-slate-500">
                                         <template v-if="item.key === 'heltes' && item.peopleCount">
                                             {{ item.peopleCount }} албан хаагч · {{ item.count }} үүрэг
@@ -1059,23 +1136,45 @@ const prepTableMinWidth = computed(() => {
                             :title="unit.label"
                             @click="applyFilterAndClose('org', unit.key, unit.label)"
                         >
-                            <svg viewBox="0 0 130 130" class="h-16 w-16 shrink-0 -rotate-90">
-                                <circle cx="65" cy="65" r="52" fill="none" stroke="#e2e8f0" stroke-width="18" />
-                                <circle
-                                    cx="65"
-                                    cy="65"
-                                    r="52"
-                                    fill="none"
-                                    :stroke="unit.progress >= 80 ? '#10b981' : unit.progress >= 50 ? '#3771b8' : unit.progress > 0 ? '#f59e0b' : '#cbd5e1'"
-                                    stroke-width="18"
-                                    stroke-linecap="round"
-                                    :stroke-dasharray="donut(unit.progress).dash"
-                                />
-                            </svg>
+                            <div class="relative h-16 w-16 shrink-0">
+                                <svg viewBox="0 0 130 130" class="h-16 w-16 -rotate-90">
+                                    <circle cx="65" cy="65" r="52" fill="none" stroke="#e2e8f0" stroke-width="18" />
+                                    <circle
+                                        cx="65"
+                                        cy="65"
+                                        r="52"
+                                        fill="none"
+                                        :stroke="progressStroke(unit.progress)"
+                                        stroke-width="18"
+                                        stroke-linecap="round"
+                                        :stroke-dasharray="donut(unit.progress).dash"
+                                    />
+                                </svg>
+                                <span
+                                    v-if="isPendingProgress(unit.progress)"
+                                    class="absolute inset-0 flex items-center justify-center text-orange-500"
+                                    title="Эхлээгүй"
+                                >
+                                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                        <path d="M12 3.2L2.5 19.5A1.2 1.2 0 003.55 21.2h16.9a1.2 1.2 0 001.05-1.7L12 3.2zm0 5.3c.55 0 1 .4 1 .95v4.6c0 .55-.45 1-1 1s-1-.45-1-1v-4.6c0-.55.45-.95 1-.95zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z" />
+                                    </svg>
+                                </span>
+                            </div>
                             <p class="line-clamp-2 min-h-[2.5rem] text-xs font-semibold leading-snug text-slate-700">
                                 {{ shortOrgLabel(unit.label) }}
                             </p>
-                            <p class="text-xl font-bold text-brand-navy-700">{{ unit.progress }}%</p>
+                            <p class="flex items-center justify-center gap-1 text-xl font-bold" :class="progressTextClass(unit.progress)">
+                                <svg
+                                    v-if="isPendingProgress(unit.progress)"
+                                    class="h-4 w-4 text-orange-500"
+                                    viewBox="0 0 24 24"
+                                    fill="currentColor"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M12 3.2L2.5 19.5A1.2 1.2 0 003.55 21.2h16.9a1.2 1.2 0 001.05-1.7L12 3.2zm0 5.3c.55 0 1 .4 1 .95v4.6c0 .55-.45 1-1 1s-1-.45-1-1v-4.6c0-.55.45-.95 1-.95zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z" />
+                                </svg>
+                                {{ unit.progress }}%
+                            </p>
                             <p class="text-[10px] leading-tight text-slate-500">
                                 {{ unit.directoryPeopleCount || unit.peopleCount }} хүн
                                 <span v-if="unit.count"> · {{ unit.count }} үүрэг</span>
@@ -1110,7 +1209,9 @@ const prepTableMinWidth = computed(() => {
                                         :style="{ width: unit.progress + '%' }"
                                     />
                                 </span>
-                                <span class="w-12 shrink-0 text-right text-sm font-bold text-brand-navy-700">{{ unit.progress }}%</span>
+                                <span class="w-12 shrink-0 text-right text-sm font-bold" :class="progressTextClass(unit.progress)">
+                                    <span v-if="isPendingProgress(unit.progress)" class="mr-0.5 inline-block align-middle text-orange-500" title="Эхлээгүй">⚠</span>{{ unit.progress }}%
+                                </span>
                                 <span class="w-28 shrink-0 text-right text-xs text-slate-500">
                                     {{ unit.peopleCount }} хүн · {{ unit.count }} үүрэг
                                 </span>
@@ -1131,7 +1232,9 @@ const prepTableMinWidth = computed(() => {
                                             :style="{ width: person.progress + '%' }"
                                         />
                                     </span>
-                                    <span class="w-10 shrink-0 text-right text-xs font-semibold text-slate-700">{{ person.progress }}%</span>
+                                    <span class="w-10 shrink-0 text-right text-xs font-semibold" :class="progressTextClass(person.progress)">
+                                        <span v-if="isPendingProgress(person.progress)" class="mr-0.5 inline-block align-middle text-orange-500" title="Эхлээгүй">⚠</span>{{ person.progress }}%
+                                    </span>
                                     <span class="w-16 shrink-0 text-right text-xs text-slate-400">{{ person.count }} үүрэг</span>
                                 </button>
                             </div>
