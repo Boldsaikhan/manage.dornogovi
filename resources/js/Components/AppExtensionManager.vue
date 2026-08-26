@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import InstallAppButton from '@/Components/InstallAppButton.vue';
+import { downloadExtensionLoose } from '@/utils/extensionInstall';
 
 /**
  * Mobile = апп суулгах (+ өргөтгөл татах), Desktop = өргөтгөл суулгах.
@@ -148,6 +149,30 @@ const clearAppData = async () => {
 const appHelp = computed(() => (isIos()
     ? 'iPhone: нүүр дэлгэц дээрх icon дээр удаан дараад «Апп устгах» сонгоно.'
     : 'Android: icon дээр удаан дараад «Устгах». Компьютер: chrome://apps → icon дээр баруун товч → «Remove from Chrome».'));
+
+const downloading = ref(false);
+
+const downloadExtension = async () => {
+    if (downloading.value) return;
+
+    downloading.value = true;
+    message.value = '';
+
+    try {
+        const result = await downloadExtensionLoose();
+        message.value = result.method === 'folder'
+            ? `«${result.folder}» хавтас үүслээ. chrome://extensions → Load unpacked → тэр хавтсыг сонгоно.`
+            : `Файлууд татагдлаа. «${result.folder}» нэртэй хавтас үүсгээд бүх файлыг хийгээд Load unpacked хийнэ.`;
+        showHelp.value = true;
+    } catch (e) {
+        if (e?.name === 'AbortError') {
+            return;
+        }
+        message.value = e?.response?.data?.message || e?.message || 'Өргөтгөл татаж чадсангүй.';
+    } finally {
+        downloading.value = false;
+    }
+};
 </script>
 
 <template>
@@ -166,9 +191,14 @@ const appHelp = computed(() => (isIos()
                 </p>
             </div>
             <div class="flex shrink-0 flex-wrap items-center gap-2">
-                <a :href="route('extension.download')" class="ui-btn-primary !py-1.5 text-xs">
-                    Өргөтгөл татах
-                </a>
+                <button
+                    type="button"
+                    class="ui-btn-primary !py-1.5 text-xs"
+                    :disabled="downloading"
+                    @click="downloadExtension"
+                >
+                    {{ downloading ? 'Татаж байна…' : 'Өргөтгөл татах' }}
+                </button>
                 <button type="button" class="ui-btn-ghost !py-1.5 text-xs" @click="verifyExtension">
                     Шалгах
                 </button>
@@ -199,9 +229,14 @@ const appHelp = computed(() => (isIos()
                     </p>
                 </div>
                 <div class="flex shrink-0 flex-wrap items-center gap-2">
-                    <a :href="route('extension.download')" class="ui-btn-primary !py-1.5 text-xs">
-                        Өргөтгөл татах
-                    </a>
+                    <button
+                        type="button"
+                        class="ui-btn-primary !py-1.5 text-xs"
+                        :disabled="downloading"
+                        @click="downloadExtension"
+                    >
+                        {{ downloading ? 'Татаж байна…' : 'Өргөтгөл татах' }}
+                    </button>
                     <button
                         type="button"
                         class="rounded-lg px-2 py-1 text-xs font-medium text-rose-800/70 hover:bg-rose-100"
@@ -282,7 +317,7 @@ const appHelp = computed(() => (isIos()
                         <div>
                             <p class="text-sm font-semibold text-slate-800">Өргөтгөл татах</p>
                             <p class="mt-0.5 text-xs text-slate-500">
-                                ZIP татаад компьютер дээрх Chrome/Edge-д суулгана (холбосон системд автомат нэвтрэлт).
+                                Задгай файлаар хавтас үүсгээд Chrome/Edge-д суулгана (холбосон системд автомат нэвтрэлт).
                             </p>
                         </div>
                         <span
@@ -293,13 +328,15 @@ const appHelp = computed(() => (isIos()
                         </span>
                     </div>
                     <div class="mt-2">
-                        <a
-                            :href="route('extension.download')"
+                        <button
+                            type="button"
                             class="!py-1.5 text-xs"
                             :class="extensionReady ? 'ui-btn-ghost' : 'ui-btn-primary'"
+                            :disabled="downloading"
+                            @click="downloadExtension"
                         >
-                            {{ extensionReady ? 'Дахин татах' : 'Өргөтгөл татах' }}
-                        </a>
+                            {{ downloading ? 'Татаж байна…' : (extensionReady ? 'Дахин татах' : 'Өргөтгөл татах') }}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -340,13 +377,15 @@ const appHelp = computed(() => (isIos()
                     </div>
 
                     <div class="mt-3 flex flex-wrap gap-2">
-                        <a
-                            :href="route('extension.download')"
+                        <button
+                            type="button"
                             class="!py-1.5 text-xs"
                             :class="extensionReady ? 'ui-btn-ghost' : 'ui-btn-primary'"
+                            :disabled="downloading"
+                            @click="downloadExtension"
                         >
-                            {{ extensionReady ? 'Дахин татах' : 'Өргөтгөл татах' }}
-                        </a>
+                            {{ downloading ? 'Татаж байна…' : (extensionReady ? 'Дахин татах' : 'Өргөтгөл татах') }}
+                        </button>
                         <button
                             v-if="extensionReady"
                             type="button"
@@ -369,7 +408,7 @@ const appHelp = computed(() => (isIos()
                     </div>
 
                     <ol v-if="showHelp" class="mt-3 list-decimal space-y-1 pl-5 text-xs leading-relaxed text-slate-600">
-                        <li>ZIP-ийг татаад задлана — <b>manage-dornogovi-extension</b> хавтас үүснэ.</li>
+                        <li>«Өргөтгөл татах» дарж хадгалах байршлаа сонгоно — <b>manage-dornogovi-extension</b> хавтас үүснэ (ZIP биш).</li>
                         <li><b>chrome://extensions</b> нээж, <b>Developer mode</b>-ыг асаана.</li>
                         <li><b>Load unpacked</b> дарж тэр хавтсыг сонгоод хуудсыг сэргээнэ.</li>
                         <li v-if="extensionReady">Устгах: энэ товч эсвэл chrome://extensions → Remove.</li>

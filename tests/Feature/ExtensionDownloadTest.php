@@ -10,18 +10,21 @@ class ExtensionDownloadTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_extension_zip_downloads(): void
+    public function test_extension_package_downloads_as_json_files(): void
     {
         $user = User::factory()->create();
 
-        $response = $this->actingAs($user)->get(route('extension.download'));
+        $response = $this->actingAs($user)->getJson(route('extension.download'));
 
         $response->assertOk();
-        $response->assertHeader('Content-Type', 'application/zip');
+        $response->assertJsonStructure([
+            'folder',
+            'files' => [
+                'manifest.json' => ['encoding', 'content'],
+            ],
+        ]);
 
-        $body = $response->getContent();
-        $this->assertNotEmpty($body);
-        $this->assertStringStartsWith('PK', $body);
+        $this->assertStringNotContainsString('PK', $response->getContent());
     }
 
     public function test_guests_cannot_download(): void

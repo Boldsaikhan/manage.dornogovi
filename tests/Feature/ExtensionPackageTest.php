@@ -5,39 +5,35 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
-use ZipArchive;
 
 class ExtensionPackageTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_zip_contains_ready_folder_with_icons_and_popup(): void
+    public function test_package_contains_loose_files_with_icons_and_popup(): void
     {
         $user = User::factory()->create();
 
-        $body = $this->actingAs($user)->get(route('extension.download'))->assertOk()->getContent();
+        $json = $this->actingAs($user)
+            ->getJson(route('extension.download'))
+            ->assertOk()
+            ->assertJsonPath('folder', 'manage-dornogovi-extension')
+            ->json();
 
-        $tmp = tempnam(sys_get_temp_dir(), 'zip');
-        file_put_contents($tmp, $body);
-
-        $zip = new ZipArchive;
-        $this->assertTrue($zip->open($tmp) === true);
-
-        $names = [];
-        for ($i = 0; $i < $zip->numFiles; $i++) {
-            $names[] = $zip->getNameIndex($i);
-        }
-        $zip->close();
-        @unlink($tmp);
+        $files = $json['files'] ?? [];
 
         foreach ([
-            'manage-dornogovi-extension/manifest.json',
-            'manage-dornogovi-extension/popup.html',
-            'manage-dornogovi-extension/popup.js',
-            'manage-dornogovi-extension/icons/icon-128.png',
+            'manifest.json',
+            'popup.html',
+            'popup.js',
+            'icons/icon-128.png',
         ] as $expected) {
-            $this->assertContains($expected, $names);
+            $this->assertArrayHasKey($expected, $files);
+            $this->assertNotEmpty($files[$expected]['content'] ?? null);
         }
+
+        $this->assertSame('base64', $files['icons/icon-128.png']['encoding']);
+        $this->assertSame('utf-8', $files['manifest.json']['encoding']);
     }
 
     public function test_manifest_has_name_icons_and_secure_channel(): void
@@ -50,7 +46,6 @@ class ExtensionPackageTest extends TestCase
         $this->assertNotEmpty($manifest['key']);
         $this->assertContains('https://manage.dornogovi.gov.mn/*', $manifest['externally_connectable']['matches']);
 
-        // Устгах товч popup дээр бий
         $popup = file_get_contents(base_path('browser-extension/popup.html'));
         $this->assertStringContainsString('id="uninstall"', $popup);
 
