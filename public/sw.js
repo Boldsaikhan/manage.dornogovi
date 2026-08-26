@@ -5,7 +5,7 @@
  * Build файлууд: сүлжээ эхлээд, дараа нь кэш (шинэ deploy эвдэрэхгүй).
  */
 
-const VERSION = 'v7-20260826-push';
+const VERSION = 'v8-20260826-notify';
 const SHELL_CACHE = `shell-${VERSION}`;
 const ASSET_CACHE = `assets-${VERSION}`;
 
@@ -203,14 +203,27 @@ self.addEventListener('push', (event) => {
     }
 
     event.waitUntil(
-        self.registration.showNotification(data.title || 'Дорноговь', {
-            body: data.body || '',
-            icon: data.icon || '/icons/icon-192.png',
-            badge: data.badge || '/icons/icon-192.png',
-            tag: data.tag || 'manage-dornogovi',
-            data: { url: data.url || '/dept-dashboard' },
-            renotify: true,
-        }),
+        Promise.all([
+            self.registration.showNotification(data.title || 'Дорноговь', {
+                body: data.body || '',
+                icon: data.icon || '/icons/icon-192.png',
+                badge: data.badge || '/icons/icon-192.png',
+                tag: data.tag || 'manage-dornogovi',
+                data: { url: data.url || '/dept-dashboard' },
+                renotify: true,
+            }),
+            self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+                const payload = {
+                    title: data.title,
+                    body: data.body,
+                    url: data.url || '/dept-dashboard',
+                    at: new Date().toISOString(),
+                };
+                clients.forEach((client) => {
+                    client.postMessage({ type: 'PUSH_NOTIFICATION', payload });
+                });
+            }),
+        ]),
     );
 });
 

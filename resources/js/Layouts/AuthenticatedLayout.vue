@@ -6,6 +6,7 @@ import DropdownLink from '@/Components/DropdownLink.vue';
 import StateEmblem from '@/Components/StateEmblem.vue';
 import OrnamentMark from '@/Components/OrnamentMark.vue';
 import AppInstallMenu from '@/Components/AppInstallMenu.vue';
+import NotificationBell from '@/Components/NotificationBell.vue';
 import MobileAppGate from '@/Components/MobileAppGate.vue';
 import AiPanel from '@/Components/AiPanel.vue';
 import AppLockGate from '@/Components/AppLockGate.vue';
@@ -409,6 +410,7 @@ const isCurrent = (routeName) => {
                 </div>
 
                 <div class="ml-auto flex items-center gap-2">
+                    <NotificationBell />
                     <AppInstallMenu />
 
                     <Dropdown align="right" width="48">

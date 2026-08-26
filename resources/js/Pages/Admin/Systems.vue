@@ -4,6 +4,7 @@ import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
+import PushSubscribe from '@/Components/PushSubscribe.vue';
 
 const props = defineProps({
     systems: Array,
@@ -441,6 +442,17 @@ const saveAi = () => {
                     </button>
                 </div>
             </form>
+        </section>
+
+        <section class="mb-8 rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm">
+            <div class="mb-4">
+                <h2 class="text-base font-semibold text-brand-navy-900">Push мэдэгдэл</h2>
+                <p class="mt-1 max-w-2xl text-sm text-brand-navy-400">
+                    Чөлөө, үүрэг, томилолт зэрэг холбоотой мэдээллийг төхөөрөмж рүү илгээнэ.
+                    Асаасны дараа толгойн <b>хонх</b> icon дээр тоогоор харагдана.
+                </p>
+            </div>
+            <PushSubscribe class="max-w-xl" />
         </section>
 
         <section class="mb-6 rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm">

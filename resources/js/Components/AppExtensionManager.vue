@@ -1,10 +1,9 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import PushSubscribe from '@/Components/PushSubscribe.vue';
 import InstallAppButton from '@/Components/InstallAppButton.vue';
 
 /**
- * Mobile = апп (+ өргөтгөл татах), Desktop = өргөтгөл суулгах.
+ * Mobile = апп суулгах (+ өргөтгөл татах), Desktop = өргөтгөл суулгах.
  */
 const props = defineProps({
     /** true бол зөвхөн өргөтгөл суугаагүй үеийн мэдэгдэл. */
@@ -298,8 +297,6 @@ const appHelp = computed(() => (isIos()
                         </a>
                     </div>
                 </div>
-
-                <PushSubscribe />
             </div>
 
             <!-- ── Desktop ── -->
