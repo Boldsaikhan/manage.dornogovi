@@ -4,6 +4,7 @@ import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
+import AppExtensionManager from '@/Components/AppExtensionManager.vue';
 
 const props = defineProps({
     systems: Array,
@@ -13,13 +14,6 @@ const props = defineProps({
 
 const page = usePage();
 
-// Автомат нэвтрэлтийн өргөтгөл суусан эсэх (bridge.js тэмдэг тавина).
-const extensionReady = ref(false);
-const showExtensionHelp = ref(false);
-
-onMounted(() => {
-    extensionReady.value = document.documentElement.dataset.mdExtension === '1';
-});
 
 const iconPaths = {
     wallet: 'M3 7a2 2 0 012-2h11a2 2 0 012 2v1M3 7v10a2 2 0 002 2h14a2 2 0 002-2v-6a2 2 0 00-2-2H5a2 2 0 01-2-2zM17 13h.01',
@@ -175,51 +169,7 @@ onMounted(() => {
                 {{ page.props.flash.success }}
             </div>
 
-            <!-- Автомат нэвтрэлтийн төлөв -->
-            <div
-                class="rounded-2xl border px-4 py-3 text-sm"
-                :class="extensionReady
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                    : 'border-amber-200 bg-amber-50 text-amber-900'"
-            >
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <div class="flex items-center gap-2">
-                        <span class="flex h-7 w-7 items-center justify-center rounded-full"
-                              :class="extensionReady ? 'bg-emerald-100' : 'bg-amber-100'">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                <path :d="iconPaths.lock" stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-                        </span>
-                        <span>
-                            <b v-if="extensionReady">Автомат нэвтрэлт идэвхтэй.</b>
-                            <b v-else>Автомат нэвтрэлт идэвхгүй байна.</b>
-                            <span v-if="extensionReady">
-                                Хадгалсан нэр, нууц үгээр систем рүү шууд нэвтэрнэ.
-                            </span>
-                            <span v-else>
-                                Browser өргөтгөлийг суулгавал холбосон систем дээр дарахад нэр, нууц үг автоматаар бөглөгдөж нэвтэрнэ.
-                            </span>
-                        </span>
-                    </div>
-
-                    <div v-if="! extensionReady" class="flex shrink-0 gap-2">
-                        <a :href="route('extension.download')" class="ui-btn-primary !py-1.5 text-xs">
-                            Өргөтгөл татах
-                        </a>
-                        <button type="button" class="ui-btn-ghost !py-1.5 text-xs" @click="showExtensionHelp = ! showExtensionHelp">
-                            {{ showExtensionHelp ? 'Хаах' : 'Заавар' }}
-                        </button>
-                    </div>
-                </div>
-
-                <ol v-if="showExtensionHelp && ! extensionReady" class="mt-3 list-decimal space-y-1 pl-5 text-xs leading-relaxed">
-                    <li>«Өргөтгөл татах» дарж ZIP-ийг татаад <b>задлана</b> (Extract All) — <b>manage-dornogovi-extension</b> хавтас үүснэ.</li>
-                    <li>Chrome/Edge дээр <b>chrome://extensions</b> хаягийг нээнэ.</li>
-                    <li>Баруун дээд буланд <b>Developer mode</b>-ыг асаана.</li>
-                    <li><b>Load unpacked</b> дарж тэр хавтсыг сонгоно (дотор нь manifest.json харагдана).</li>
-                    <li>Энэ хуудсыг дахин ачаална — «Автомат нэвтрэлт идэвхтэй» гэж харагдана.</li>
-                </ol>
-            </div>
+            <AppExtensionManager />
 
             <div class="grid gap-4 sm:grid-cols-3">
                 <div class="ui-stat">

@@ -49,5 +49,12 @@ class ExtensionPackageTest extends TestCase
         $this->assertArrayHasKey('default_popup', $manifest['action']);
         $this->assertNotEmpty($manifest['key']);
         $this->assertContains('https://manage.dornogovi.gov.mn/*', $manifest['externally_connectable']['matches']);
+
+        // Устгах товч popup дээр бий
+        $popup = file_get_contents(base_path('browser-extension/popup.html'));
+        $this->assertStringContainsString('id="uninstall"', $popup);
+
+        $background = file_get_contents(base_path('browser-extension/background.js'));
+        $this->assertStringContainsString('uninstallSelf', $background);
     }
 }

@@ -101,6 +101,21 @@ const handle = (message, sender, sendResponse, trusted) => {
         return true;
     }
 
+    // Хэрэглэгчийн хүсэлтээр өргөтгөл өөрөө өөрийгөө устгана.
+    if (message?.type === 'uninstall') {
+        if (! trusted) {
+            sendResponse({ ok: false, reason: 'untrusted' });
+
+            return true;
+        }
+
+        chrome.management.uninstallSelf({ showConfirmDialog: true })
+            .then(() => sendResponse({ ok: true }))
+            .catch(() => sendResponse({ ok: false }));
+
+        return true;
+    }
+
     if (message?.type === 'clear') {
         chrome.storage.session.clear().then(() => sendResponse({ ok: true }));
 

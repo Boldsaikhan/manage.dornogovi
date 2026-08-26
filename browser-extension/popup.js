@@ -41,6 +41,10 @@ enabledInput.addEventListener('change', () => {
     chrome.runtime.sendMessage({ type: 'setEnabled', value: enabledInput.checked }, refresh);
 });
 
+document.getElementById('uninstall').addEventListener('click', () => {
+    chrome.management.uninstallSelf({ showConfirmDialog: true });
+});
+
 clearButton.addEventListener('click', () => {
     chrome.runtime.sendMessage({ type: 'clear' }, refresh);
 });
