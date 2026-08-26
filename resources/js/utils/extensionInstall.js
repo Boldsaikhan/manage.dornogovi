@@ -1,6 +1,7 @@
 /**
- * Өргөтгөлийн файлуудыг ZIP биш, задгай хавтас/файл болгож хадгална.
- * Chrome/Edge: хавтас сонгоод бүх файлыг бичнэ.
+ * Өргөтгөлийг нэг хавтас болгож татна (бүх файл).
+ * Chrome/Edge: хавтас сонгоод бичнэ.
+ * Бусад: ZIP (дотор нь manage-dornogovi-extension хавтас) татна.
  */
 export async function downloadExtensionLoose() {
     const { data } = await window.axios.get(route('extension.download'));
@@ -11,32 +12,49 @@ export async function downloadExtensionLoose() {
         throw new Error('Өргөтгөлийн файл олдсонгүй.');
     }
 
+    // 1) Жинхэнэ хавтас — File System Access API (Chrome / Edge)
     if (typeof window.showDirectoryPicker === 'function') {
-        const root = await window.showDirectoryPicker({ mode: 'readwrite' });
-        const dir = await root.getDirectoryHandle(folder, { create: true });
+        try {
+            const root = await window.showDirectoryPicker({
+                mode: 'readwrite',
+                id: 'manage-dornogovi-extension',
+                startIn: 'downloads',
+            });
+            const dir = await root.getDirectoryHandle(folder, { create: true });
 
-        for (const [rel, meta] of Object.entries(files)) {
-            await writeNestedFile(dir, rel, toBlob(meta));
+            for (const [rel, meta] of Object.entries(files)) {
+                await writeNestedFile(dir, rel, toBlob(meta));
+            }
+
+            return { method: 'folder', folder, count: Object.keys(files).length };
+        } catch (e) {
+            if (e?.name === 'AbortError') {
+                throw e;
+            }
+            // API алдаатай бол ZIP руу шилжинэ
         }
-
-        return { method: 'folder', folder };
     }
 
-    // Хавтас сонгох боломжгүй хөтөч — файл бүрийг тусад нь татна.
-    for (const [rel, meta] of Object.entries(files)) {
-        const blob = toBlob(meta);
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${folder}__${rel.replace(/\//g, '__')}`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-        await new Promise((r) => setTimeout(r, 180));
-    }
+    // 2) Найдвартай fallback — нэг ZIP (дотор бүхэл хавтас)
+    await downloadZipFallback();
 
-    return { method: 'files', folder };
+    return { method: 'zip', folder, count: Object.keys(files).length };
+}
+
+async function downloadZipFallback() {
+    const response = await window.axios.get(route('extension.download.zip'), {
+        responseType: 'blob',
+    });
+
+    const blob = new Blob([response.data], { type: 'application/zip' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'manage-dornogovi-extension.zip';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
 }
 
 function toBlob(meta) {

@@ -26,6 +26,9 @@ class ExtensionPackageTest extends TestCase
             'manifest.json',
             'popup.html',
             'popup.js',
+            'dan-autofill.js',
+            'install.bat',
+            'СУУЛГАХ.txt',
             'icons/icon-128.png',
         ] as $expected) {
             $this->assertArrayHasKey($expected, $files);
@@ -34,6 +37,28 @@ class ExtensionPackageTest extends TestCase
 
         $this->assertSame('base64', $files['icons/icon-128.png']['encoding']);
         $this->assertSame('utf-8', $files['manifest.json']['encoding']);
+        $this->assertGreaterThanOrEqual(10, count($files));
+    }
+
+    public function test_zip_contains_extension_folder(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('extension.download.zip'));
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'application/zip');
+
+        $tmp = tempnam(sys_get_temp_dir(), 'ext');
+        file_put_contents($tmp, $response->streamedContent());
+
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($tmp) === true);
+        $this->assertNotFalse($zip->locateName('manage-dornogovi-extension/manifest.json'));
+        $this->assertNotFalse($zip->locateName('manage-dornogovi-extension/install.bat'));
+        $this->assertNotFalse($zip->locateName('manage-dornogovi-extension/dan-autofill.js'));
+        $zip->close();
+        @unlink($tmp);
     }
 
     public function test_manifest_has_name_icons_and_secure_channel(): void

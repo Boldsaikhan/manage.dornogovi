@@ -121,6 +121,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/ai/conversations', [AiAssistantController::class, 'newConversation'])->name('ai.conversations.store');
 
     Route::get('/extension/download', [ExtensionController::class, 'download'])->name('extension.download');
+    Route::get('/extension/download.zip', [ExtensionController::class, 'downloadZip'])->name('extension.download.zip');
     Route::get('/systems/{system}/launch', LaunchController::class)->name('systems.launch');
     Route::get('/systems/{system}', [SystemViewController::class, 'show'])->name('systems.show');
 

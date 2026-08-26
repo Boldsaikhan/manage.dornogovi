@@ -57,10 +57,14 @@
 
 ## Суулгах
 
-1. Chrome эсвэл Edge нээж `chrome://extensions` (Edge дээр `edge://extensions`) руу орно
-2. Баруун дээд буланд **Developer mode** (Хөгжүүлэгчийн горим) асаана
-3. **Load unpacked** дарж энэ `browser-extension` хавтсыг сонгоно
-4. Өргөтгөл жагсаалтад гарч ирнэ
+1. Системээс «Өргөтгөл татах» дарж **manage-dornogovi-extension** хавтсыг авна
+   (хавтас сонгох эсвэл ZIP татаж задаана).
+2. Хавтас доторх **install.bat**-ыг ажиллуулна — эсвэл `chrome://extensions` нээнэ.
+3. **Developer mode** асаана.
+4. **Load unpacked** дарж энэ хавтсыг сонгоно.
+5. Өргөтгөл жагсаалтад гарч ирнэ.
+
+Дэлгэрэнгүй: `СУУЛГАХ.txt`
 
 Firefox дэмжигдээгүй (Manifest V3 + `chrome.storage.session` ашигласан).
 
