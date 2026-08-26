@@ -57,7 +57,7 @@ const install = async () => {
 </script>
 
 <template>
-    <div v-if="visible" class="px-3 pb-2">
+    <div v-if="visible" class="pb-1">
         <button
             type="button"
             class="flex w-full items-center justify-center gap-2 rounded-xl border border-brand-navy-200 bg-brand-navy-50 px-3 py-2 text-xs font-semibold text-brand-navy-700 transition hover:bg-brand-navy-100"
