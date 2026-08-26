@@ -150,9 +150,20 @@ const changeCategory = (orgName, category) => {
     );
 };
 
-// --- Бүлгийг (хэлтэс/байгууллага) зөөх ---
-const draggingOrg = ref(null);
-const dropTargetOrg = ref(null);
+// --- Зөөх (хэлтэс/байгууллага бүлэг ба албан хаагчийн мөр) ---
+//
+// HTML5 drag&drop-ыг ашиглахгүй: ui-table нь border-collapse тул Chrome/WebKit
+// хүснэгтийн мөрийг чирүүлдэггүй. Оронд нь pointer event-ээр өөрсдөө хөтөлнө.
+//
+// Буулгах бай бүр data-drop="<төрөл>:<утга>" гэсэн шошготой:
+//   grp:<байгууллага>  — бүлгийн толгой
+//   gap:<байгууллага>  — бүлгүүдийн хоорондох зай (энэ бүлгийн ӨМНӨ)
+//   row:<id>           — албан хаагчийн мөр (энэ мөрийн ӨМНӨ)
+//   end:<байгууллага>  — бүлгийн хамгийн ард
+//   tail               — жагсаалтын хамгийн ард
+
+const dragging = ref(null);   // { kind: 'row'|'group', id?, org }
+const dropToken = ref(null);
 
 const moveGroup = (group, direction) => {
     router.patch(
@@ -162,56 +173,15 @@ const moveGroup = (group, direction) => {
     );
 };
 
-const startDrag = (group, event) => {
-    draggingRow.value = null;
-    draggingOrg.value = group.org_name;
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', group.org_name);
-};
-
-const dragOverGroup = (group) => {
-    if (draggingRow.value) {
-        dropTargetRow.value = 'top:' + group.org_name;
-
-        return;
-    }
-
-    if (draggingOrg.value && draggingOrg.value !== group.org_name) {
-        dropTargetOrg.value = group.org_name;
-    }
-};
-
-const endDrag = () => {
-    draggingOrg.value = null;
-    dropTargetOrg.value = null;
-    draggingRow.value = null;
-    dropTargetRow.value = null;
-};
-
-// Бүлгийн толгой дээр буулгах: мөр бол тухайн бүлгийн эхэнд, бүлэг бол өмнө нь.
-const dropOnGroup = (group) => {
-    const row = draggingRow.value;
-    const org = draggingOrg.value;
-    endDrag();
-
-    if (row) {
-        moveRow(row.id, group.org_name, group.rows[0]?.id ?? null);
-
-        return;
-    }
-
-    if (! org || org === group.org_name) return;
+const moveGroupBefore = (orgName, beforeOrgName) => {
+    if (orgName === beforeOrgName) return;
 
     router.patch(
         route('phone-directory.reorder'),
-        { org_name: org, before_org_name: group.org_name },
+        { org_name: orgName, before_org_name: beforeOrgName ?? '' },
         { preserveScroll: true },
     );
 };
-
-// --- Албан хаагчийн мөрийг зөөх (бүлэг дотор ба бүлэг хооронд) ---
-const draggingRow = ref(null);
-const dropTargetRow = ref(null);
 
 const moveRow = (id, orgName, beforeId) => {
     router.patch(
@@ -236,53 +206,108 @@ const moveRowBy = (group, index, step) => {
     moveRow(rows[index].id, group.org_name, beforeId);
 };
 
-const startRowDrag = (row, group, event) => {
-    draggingOrg.value = null;
-    draggingRow.value = { id: row.id, org_name: group.org_name };
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', String(row.id));
-    event.stopPropagation();
+const groupOfRow = (rowId) => props.groups.find((g) => g.rows.some((r) => r.id === rowId)) ?? null;
+
+const groupAfter = (orgName) => {
+    const i = props.groups.findIndex((g) => g.org_name === orgName);
+
+    return i === -1 ? null : (props.groups[i + 1] ?? null);
 };
 
-const dragOverRow = (row) => {
-    if (draggingRow.value && draggingRow.value.id !== row.id) {
-        dropTargetRow.value = 'row:' + row.id;
+const onPointerMove = (event) => {
+    if (! dragging.value) return;
+
+    event.preventDefault();
+
+    const el = document.elementFromPoint(event.clientX, event.clientY);
+    dropToken.value = el?.closest('[data-drop]')?.dataset.drop ?? null;
+};
+
+const commitDrop = (state, token) => {
+    if (! token) return;
+
+    const sep = token.indexOf(':');
+    const kind = sep === -1 ? token : token.slice(0, sep);
+    const value = sep === -1 ? '' : token.slice(sep + 1);
+
+    if (state.kind === 'row') {
+        if (kind === 'row') {
+            const targetId = Number(value);
+            const target = groupOfRow(targetId);
+
+            if (target && targetId !== state.id) moveRow(state.id, target.org_name, targetId);
+
+            return;
+        }
+
+        if (kind === 'grp' || kind === 'gap') {
+            const target = props.groups.find((g) => g.org_name === value);
+
+            if (target) moveRow(state.id, value, target.rows[0]?.id ?? null);
+
+            return;
+        }
+
+        if (kind === 'end') moveRow(state.id, value, null);
+
+        return;
     }
+
+    // Бүлэг зөөх.
+    if (kind === 'grp' || kind === 'gap') {
+        moveGroupBefore(state.org, value);
+
+        return;
+    }
+
+    if (kind === 'row') {
+        const target = groupOfRow(Number(value));
+
+        if (target) moveGroupBefore(state.org, target.org_name);
+
+        return;
+    }
+
+    if (kind === 'end') {
+        // Тухайн бүлгийн ард = дараагийн бүлгийн өмнө.
+        moveGroupBefore(state.org, groupAfter(value)?.org_name ?? '');
+
+        return;
+    }
+
+    if (kind === 'tail') moveGroupBefore(state.org, '');
 };
 
-// Чирсэн мөрийг энэ мөрийн өмнө тавина.
-const dropOnRow = (row, group) => {
-    const dragged = draggingRow.value;
-    endDrag();
+const onPointerUp = () => {
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerUp);
+    document.body.classList.remove('select-none');
 
-    if (! dragged || dragged.id === row.id) return;
+    const state = dragging.value;
+    const token = dropToken.value;
 
-    moveRow(dragged.id, group.org_name, row.id);
+    dragging.value = null;
+    dropToken.value = null;
+
+    if (state) commitDrop(state, token);
 };
 
-// Бүлгийн хамгийн ард тавина.
-const dropAtGroupEnd = (group) => {
-    const dragged = draggingRow.value;
-    endDrag();
+const startDrag = (event, state) => {
+    if (! canInsert.value) return;
 
-    if (! dragged) return;
+    event.preventDefault();
+    dragging.value = state;
+    dropToken.value = null;
+    document.body.classList.add('select-none');
 
-    moveRow(dragged.id, group.org_name, null);
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
 };
 
-// Жагсаалтын хамгийн ард буулгах.
-const dropAtEnd = () => {
-    const org = draggingOrg.value;
-    endDrag();
-
-    if (! org) return;
-
-    router.patch(
-        route('phone-directory.reorder'),
-        { org_name: org, before_org_name: '' },
-        { preserveScroll: true },
-    );
-};
+const isDraggingRow = computed(() => dragging.value?.kind === 'row');
+const isDraggingGroup = computed(() => dragging.value?.kind === 'group');
 
 const destroyRow = (id) => {
     if (!confirm('Устгах уу?')) return;
@@ -461,38 +486,37 @@ const closeDirectoryForm = () => {
                             <tr
                                 v-if="canInsert"
                                 class="group/ins"
-                                @dragover.prevent="dragOverGroup(group)"
-                                @dragenter.prevent="dragOverGroup(group)"
-                                @drop.prevent="dropOnGroup(group)"
+                                :data-drop="'gap:' + group.org_name"
                             >
                                 <td :colspan="canManage ? 6 : 5" class="!py-0.5 text-center">
                                     <button
                                         type="button"
                                         class="w-full rounded-lg border border-dashed py-1 text-xs font-medium transition focus:opacity-100"
-                                        :class="dropTargetOrg === group.org_name
+                                        :class="dropToken === 'gap:' + group.org_name
                                             ? 'border-brand-navy-400 bg-brand-navy-50 text-brand-navy-700 opacity-100'
-                                            : 'border-slate-200 text-slate-400 opacity-0 hover:border-brand-navy-300 hover:text-brand-navy-700 group-hover/ins:opacity-100'"
+                                            : (dragging
+                                                ? 'border-slate-200 text-slate-400 opacity-100'
+                                                : 'border-slate-200 text-slate-400 opacity-0 hover:border-brand-navy-300 hover:text-brand-navy-700 group-hover/ins:opacity-100')"
                                         @click="openInsertGroup(group)"
                                     >
-                                        {{ dropTargetOrg === group.org_name ? '⇩ Энд байрлуулах' : '＋ Энд шинэ хүснэгт нэмэх' }}
+                                        {{ dragging ? '⇩ Энд байрлуулах' : '＋ Энд шинэ хүснэгт нэмэх' }}
                                     </button>
                                 </td>
                             </tr>
                             <tr
                                 class="bg-brand-navy-50"
-                                :class="draggingOrg === group.org_name ? 'opacity-40' : ''"
-                                @dragover.prevent="dragOverGroup(group)"
-                                @dragenter.prevent="dragOverGroup(group)"
-                                @drop.prevent="dropOnGroup(group)"
+                                :class="[
+                                    isDraggingGroup && dragging.org === group.org_name ? 'opacity-40' : '',
+                                    dropToken === 'grp:' + group.org_name ? 'outline outline-2 -outline-offset-2 outline-brand-navy-500' : '',
+                                ]"
+                                :data-drop="'grp:' + group.org_name"
                             >
                                 <td :colspan="canManage ? 6 : 5" class="text-center font-semibold italic text-brand-navy-800">
                                     <span
                                         v-if="canInsert"
-                                        draggable="true"
-                                        class="mr-1 inline-block cursor-grab select-none px-1 text-slate-400 active:cursor-grabbing"
+                                        class="mr-1 inline-block cursor-grab touch-none select-none px-1 text-slate-400 active:cursor-grabbing"
                                         title="Чирж байрлуулна"
-                                        @dragstart="startDrag(group, $event)"
-                                        @dragend="endDrag"
+                                        @pointerdown="startDrag($event, { kind: 'group', org: group.org_name })"
                                     >⠿</span>
                                     {{ group.org_name }}
                                     <span v-if="canInsert" class="ml-2 inline-flex align-middle">
@@ -544,21 +568,17 @@ const closeDirectoryForm = () => {
                                 v-for="(row, index) in group.rows"
                                 :key="row.id"
                                 :class="[
-                                    draggingRow && draggingRow.id === row.id ? 'opacity-40' : '',
-                                    dropTargetRow === 'row:' + row.id ? '!border-t-2 !border-brand-navy-500' : '',
+                                    isDraggingRow && dragging.id === row.id ? 'opacity-40' : '',
+                                    dropToken === 'row:' + row.id ? 'outline outline-2 -outline-offset-2 outline-brand-navy-500' : '',
                                 ]"
-                                @dragover.prevent="dragOverRow(row)"
-                                @dragenter.prevent="dragOverRow(row)"
-                                @drop.prevent="dropOnRow(row, group)"
+                                :data-drop="'row:' + row.id"
                             >
                                 <td class="text-center">
                                     <span
                                         v-if="canInsert"
-                                        draggable="true"
-                                        class="mr-1 inline-block cursor-grab select-none px-1 text-slate-300 active:cursor-grabbing"
+                                        class="mr-1 inline-block cursor-grab touch-none select-none px-1 text-slate-300 active:cursor-grabbing"
                                         title="Чирж зөөнө"
-                                        @dragstart="startRowDrag(row, group, $event)"
-                                        @dragend="endDrag"
+                                        @pointerdown="startDrag($event, { kind: 'row', id: row.id, org: group.org_name })"
                                     >⠿</span>
                                     {{ index + 1 }}
                                 </td>
@@ -592,15 +612,13 @@ const closeDirectoryForm = () => {
                                 </td>
                             </tr>
                             <tr
-                                v-if="canInsert && draggingRow"
-                                @dragenter.prevent="dropTargetRow = 'end:' + group.org_name"
-                                @dragover.prevent="dropTargetRow = 'end:' + group.org_name"
-                                @drop.prevent="dropAtGroupEnd(group)"
+                                v-if="canInsert && dragging"
+                                :data-drop="'end:' + group.org_name"
                             >
                                 <td :colspan="canManage ? 6 : 5" class="!py-1 text-center">
                                     <span
                                         class="block rounded-lg border border-dashed py-1 text-xs font-medium"
-                                        :class="dropTargetRow === 'end:' + group.org_name
+                                        :class="dropToken === 'end:' + group.org_name
                                             ? 'border-brand-navy-400 bg-brand-navy-50 text-brand-navy-700'
                                             : 'border-slate-200 text-slate-400'"
                                     >
@@ -612,20 +630,20 @@ const closeDirectoryForm = () => {
                         <tr
                             v-if="canInsert && filteredGroups.length"
                             class="group/ins"
-                            @dragenter.prevent="draggingOrg && (dropTargetOrg = '__end__')"
-                            @dragover.prevent="draggingOrg && (dropTargetOrg = '__end__')"
-                            @drop.prevent="dropAtEnd"
+                            data-drop="tail"
                         >
                             <td :colspan="canManage ? 6 : 5" class="!py-0.5 text-center">
                                 <button
                                     type="button"
                                     class="w-full rounded-lg border border-dashed py-1 text-xs font-medium transition focus:opacity-100"
-                                    :class="dropTargetOrg === '__end__'
+                                    :class="dropToken === 'tail'
                                         ? 'border-brand-navy-400 bg-brand-navy-50 text-brand-navy-700 opacity-100'
-                                        : 'border-slate-200 text-slate-400 opacity-0 hover:border-brand-navy-300 hover:text-brand-navy-700 group-hover/ins:opacity-100'"
+                                        : (dragging
+                                            ? 'border-slate-200 text-slate-400 opacity-100'
+                                            : 'border-slate-200 text-slate-400 opacity-0 hover:border-brand-navy-300 hover:text-brand-navy-700 group-hover/ins:opacity-100')"
                                     @click="openAdd"
                                 >
-                                    {{ dropTargetOrg === '__end__' ? '⇩ Хамгийн ард байрлуулах' : '＋ Шинэ хүснэгт нэмэх' }}
+                                    {{ dragging ? '⇩ Хамгийн ард байрлуулах' : '＋ Шинэ хүснэгт нэмэх' }}
                                 </button>
                             </td>
                         </tr>
