@@ -7,8 +7,8 @@
 return [
     'groups' => [
         'dashboard' => 'Самбар',
-        'hr' => 'Хүний нөөц',
         'documents' => 'Бичиг хэрэг',
+        'hr' => 'Хүний нөөц',
         'work' => 'Ажлын удирдлага',
         'knowledge' => 'Мэдээлэл, сургалт',
         'systems' => 'Системүүд',
@@ -59,27 +59,6 @@ return [
             'icon' => 'chart',
         ],
         [
-            'key' => 'leaves',
-            'label' => 'Чөлөөний бүртгэл',
-            'route' => 'leaves.index',
-            'group' => 'hr',
-            'icon' => 'calendar',
-        ],
-        [
-            'key' => 'assignments',
-            'label' => 'Томилолтын бүртгэл',
-            'route' => 'assignments.index',
-            'group' => 'hr',
-            'icon' => 'plane',
-        ],
-        [
-            'key' => 'phone_directory',
-            'label' => 'Утасны жагсаалт',
-            'route' => 'phone-directory.index',
-            'group' => 'hr',
-            'icon' => 'phone',
-        ],
-        [
             'key' => 'regulations',
             'label' => 'Дотоод журам',
             'route' => 'regulations.index',
@@ -113,6 +92,27 @@ return [
             'route' => 'doc-standards.index',
             'group' => 'documents',
             'icon' => 'book',
+        ],
+        [
+            'key' => 'leaves',
+            'label' => 'Чөлөөний бүртгэл',
+            'route' => 'leaves.index',
+            'group' => 'hr',
+            'icon' => 'calendar',
+        ],
+        [
+            'key' => 'assignments',
+            'label' => 'Томилолтын бүртгэл',
+            'route' => 'assignments.index',
+            'group' => 'hr',
+            'icon' => 'plane',
+        ],
+        [
+            'key' => 'phone_directory',
+            'label' => 'Утасны жагсаалт',
+            'route' => 'phone-directory.index',
+            'group' => 'hr',
+            'icon' => 'phone',
         ],
         [
             'key' => 'onboarding',
