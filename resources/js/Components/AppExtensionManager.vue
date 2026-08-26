@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 /**
  * Утасны апп (PWA) болон нэвтрэлтийн өргөтгөлийг суулгах / устгах хэсэг.
@@ -13,23 +13,81 @@ const showAppHelp = ref(false);
 
 const isIos = () => /iphone|ipad|ipod/i.test(window.navigator.userAgent);
 
+// Манифестын key-ээс хамаарах тогтмол ID — dataset алга бол энэгээр шалгана.
+const FALLBACK_ID = 'hoiannpahebnneonhkjianfpmjfhpdmm';
+
+/**
+ * Өргөтгөл үнэхээр амьд эсэхийг шалгана. Устгасны дараа хуудсан дээрх
+ * data-тэмдэг хэвээрээ үлддэг тул зөвхөн түүнд найдвал «татах» товч дахин гарч ирэхгүй.
+ */
+const verifyExtension = () => {
+    const id = document.documentElement.dataset.mdExtensionId || extensionId.value || FALLBACK_ID;
+
+    if (! window.chrome?.runtime?.sendMessage) {
+        extensionReady.value = false;
+
+        return;
+    }
+
+    try {
+        chrome.runtime.sendMessage(id, { type: 'status' }, (response) => {
+            const alive = ! chrome.runtime.lastError && !! response;
+
+            extensionReady.value = alive;
+            extensionId.value = alive ? id : '';
+
+            if (! alive) {
+                // Хуучин тэмдэгийг цэвэрлэнэ — бусад хуудас бас зөв төлөв харна.
+                delete document.documentElement.dataset.mdExtension;
+                delete document.documentElement.dataset.mdExtensionId;
+            }
+        });
+    } catch {
+        extensionReady.value = false;
+    }
+};
+
 onMounted(() => {
-    extensionReady.value = document.documentElement.dataset.mdExtension === '1';
     extensionId.value = document.documentElement.dataset.mdExtensionId ?? '';
+    extensionReady.value = document.documentElement.dataset.mdExtension === '1';
     appInstalled.value = window.matchMedia('(display-mode: standalone)').matches
         || window.navigator.standalone === true;
+
+    verifyExtension();
+
+    // Буцаж ирэхэд (жишээ нь chrome://extensions-ээс) дахин шалгана.
+    window.addEventListener('focus', verifyExtension);
 });
+
+onBeforeUnmount(() => window.removeEventListener('focus', verifyExtension));
 
 // Өргөтгөл өөрөө өөрийгөө устгана (баталгаажуулах цонх гарна).
 const removeExtension = () => {
-    if (! extensionId.value || ! window.chrome?.runtime?.sendMessage) {
+    const id = extensionId.value || document.documentElement.dataset.mdExtensionId || FALLBACK_ID;
+
+    if (! window.chrome?.runtime?.sendMessage) {
         message.value = 'Өргөтгөлтэй холбогдож чадсангүй. chrome://extensions хуудсаас устгана уу.';
 
         return;
     }
 
-    chrome.runtime.sendMessage(extensionId.value, { type: 'uninstall' }, () => {
+    chrome.runtime.sendMessage(id, { type: 'uninstall' }, () => {
         message.value = 'Устгах хүсэлт илгээлээ. Гарч ирэх цонхонд баталгаажуулна уу.';
+
+        // Устгасны дараа төлөв өөрчлөгдтөл хэдэн удаа шалгана.
+        let tries = 0;
+        const timer = setInterval(() => {
+            verifyExtension();
+            tries += 1;
+
+            if (! extensionReady.value || tries > 20) {
+                clearInterval(timer);
+
+                if (! extensionReady.value) {
+                    message.value = 'Өргөтгөл устгагдлаа. Шаардвал «Өргөтгөл татах» товчоор дахин суулгана уу.';
+                }
+            }
+        }, 1000);
     });
 };
 
@@ -91,16 +149,23 @@ const appHelp = computed(() => (isIos()
                 </div>
 
                 <div class="mt-3 flex flex-wrap gap-2">
-                    <a v-if="! extensionReady" :href="route('extension.download')" class="ui-btn-primary !py-1.5 text-xs">
-                        Өргөтгөл татах
+                    <a
+                        :href="route('extension.download')"
+                        class="!py-1.5 text-xs"
+                        :class="extensionReady ? 'ui-btn-ghost' : 'ui-btn-primary'"
+                    >
+                        {{ extensionReady ? 'Дахин татах' : 'Өргөтгөл татах' }}
                     </a>
                     <button
-                        v-else
+                        v-if="extensionReady"
                         type="button"
                         class="ui-btn-danger !py-1.5 text-xs"
                         @click="removeExtension"
                     >
                         Өргөтгөлийг устгах
+                    </button>
+                    <button type="button" class="ui-btn-ghost !py-1.5 text-xs" @click="verifyExtension">
+                        Төлөв шалгах
                     </button>
                     <button type="button" class="ui-btn-ghost !py-1.5 text-xs" @click="showHelp = ! showHelp">
                         {{ showHelp ? 'Хаах' : 'Заавар' }}
