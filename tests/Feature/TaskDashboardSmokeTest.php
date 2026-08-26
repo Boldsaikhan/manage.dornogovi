@@ -43,6 +43,14 @@ class TaskDashboardSmokeTest extends TestCase
             'org_order' => 2,
             'sort_order' => 2,
         ]);
+        PhoneDirectoryEntry::create([
+            'org_name' => 'Төрийн захиргааны удирдлагын хэлтэс',
+            'category' => 'heltes',
+            'person_name' => 'Д.Сарнай',
+            'position' => 'Мэргэжилтэн',
+            'org_order' => 3,
+            'sort_order' => 1,
+        ]);
 
         $source = TaskSource::query()->where('key', 'directive')->firstOrFail();
         $source->tasks()->create(['text' => 'Тест 1', 'responsible' => 'Ц.Мөнх-Эрдэнэ', 'progress' => 60, 'sort_order' => 1]);
@@ -57,8 +65,12 @@ class TaskDashboardSmokeTest extends TestCase
                 ->component('Uureg/Index')
                 ->where('tasks.0.progress', 60)
                 ->where('tasks.1.progress', 100)
-                ->has('people', 3)
+                ->has('people', 4)
                 ->where('people.0.category', fn ($c) => in_array($c, ['agentlag', 'heltes'], true)));
+
+        // Утасны жагсаалтад 2 хэлтэс тэмдэглэгдсэн.
+        $heltesOrgs = collect(\App\Models\PhoneDirectoryEntry::query()->where('category', 'heltes')->pluck('org_name'))->unique();
+        $this->assertCount(2, $heltesOrgs);
 
         $this->assertSame(5, Task::query()->count());
     }
