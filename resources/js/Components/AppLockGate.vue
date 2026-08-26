@@ -18,7 +18,6 @@ const webauthnOk = ref(typeof window !== 'undefined' && isWebAuthnSupported());
 const clientLocked = ref(false);
 
 let locking = false;
-let unlockedPulse = false;
 
 const lock = computed(() => page.props.appLock ?? {
     locked: false,
@@ -30,7 +29,7 @@ const userId = computed(() => page.props.auth?.user?.id ?? null);
 
 const storageKey = () => `${LOCK_KEY}:${userId.value || 0}`;
 
-/** Гар утас + нэвтэрсэн хэрэглэгч — дэлгэц алга болоход түгжинэ */
+/** Гар утас + нэвтэрсэн — зөвхөн дэлгэц алга болоход түгжинэ */
 const shouldGuard = () => (
     !! page.props.auth?.user
     && isMobileDevice()
@@ -38,6 +37,9 @@ const shouldGuard = () => (
 
 const hasWebAuthn = computed(() => !! lock.value.hasWebAuthn && webauthnOk.value);
 
+/** Цэс шилжилт серверийн session lock-ийг биш, зөвхөн клиент түгжээг харуулна.
+ *  Серверийн lock зөвхөн нэвтрэхэд / дэлгэц алга болоход тавигдана.
+ */
 const showLock = computed(() => shouldGuard() && (clientLocked.value || !! lock.value.locked));
 
 const isBiometricOnly = computed(() => (
@@ -107,82 +109,59 @@ const requestLockBeacon = () => {
 /** Дэлгэц/апп алга болоход — сүлжээгүй байсан ч ШУУД түгжинэ */
 const onAppHidden = () => {
     if (! shouldGuard()) return;
+    if (document.visibilityState === 'visible' && ! document.hidden) return;
 
-    unlockedPulse = false;
     setClientLock(true);
     requestLockBeacon();
 };
 
-const syncServerLock = async () => {
-    if (locking || ! shouldGuard() || unlockedPulse) return;
-    if (! navigator.onLine) return;
-
-    locking = true;
-    try {
-        await window.axios.post(route('app.lock'));
-        router.reload({ only: ['appLock', 'vault'] });
-    } catch {
-        // Клиент түгжээ хэвээр — сервер амжилтгүй болсон ч UI түгжигдсэн
-    } finally {
-        locking = false;
+const onVisibilityChange = () => {
+    if (document.hidden) {
+        onAppHidden();
+        return;
     }
-};
 
-const onAppVisible = () => {
-    if (document.hidden || ! shouldGuard()) return;
-
+    // Буцаж ирэхэд зөвхөн өмнө түгжсэн бол харуулна — цэс солиход түгжихгүй
     offline.value = ! navigator.onLine;
-
     if (readClientLock()) {
         clientLocked.value = true;
-    }
-
-    if (clientLocked.value || ! unlockedPulse) {
-        syncServerLock();
     }
 };
 
 const onPageShow = (event) => {
-    // bfcache-ээс сэргэсэн бол заавал түгжинэ
     if (event.persisted && shouldGuard()) {
         setClientLock(true);
     }
-    onAppVisible();
+    if (readClientLock()) {
+        clientLocked.value = true;
+    }
 };
 
 const onOnline = () => {
     offline.value = false;
-    if (showLock.value) syncServerLock();
 };
 
 const onOffline = () => {
     offline.value = true;
-    if (shouldGuard()) setClientLock(true);
+    // Офлайн болсон гээд шууд түгжихгүй — зөвхөн дэлгэц алга болоход
 };
 
 onMounted(() => {
+    // Хуудас/цэс солиход layout дахин mount болж болно — зөвхөн хадгалсан түгжээг сэргээнэ
     if (shouldGuard() && readClientLock()) {
         clientLocked.value = true;
     }
 
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden) onAppHidden();
-        else onAppVisible();
-    });
+    document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('pagehide', onAppHidden);
     window.addEventListener('pageshow', onPageShow);
     window.addEventListener('freeze', onAppHidden);
-    window.addEventListener('blur', () => {
-        // Утасны PWA: дэлгэц унтрах/өөр апп руу шилжих
-        if (isMobileDevice() && document.visibilityState === 'hidden') onAppHidden();
-    });
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
-
-    onAppVisible();
 });
 
 onBeforeUnmount(() => {
+    document.removeEventListener('visibilitychange', onVisibilityChange);
     window.removeEventListener('pagehide', onAppHidden);
     window.removeEventListener('pageshow', onPageShow);
     window.removeEventListener('freeze', onAppHidden);
@@ -201,7 +180,6 @@ watch(showLock, (v) => {
 
 const clearLockLocal = () => {
     setClientLock(false);
-    unlockedPulse = true;
 };
 
 const unlock = async () => {
@@ -247,13 +225,15 @@ const unlock = async () => {
             }
         }
 
-        // Клиент түгжээг серверийн unlock-тай хамт тайлна
-        if (useBiometric && ! lock.value.locked) {
-            // Серверт түгжээ байхгүй бол эхлээд түгжээд нээнэ
+        // Серверт түгжээ байхгүй бол (зөвхөн клиент) эхлээд тавина
+        if (! lock.value.locked) {
+            locking = true;
             try {
                 await window.axios.post(route('app.lock'));
             } catch {
-                // ignore
+                // ignore — unlock оролдлого үргэлжилнэ
+            } finally {
+                locking = false;
             }
         }
 
@@ -292,6 +272,14 @@ const unlockPasswordOnly = async () => {
     busy.value = true;
     error.value = '';
     try {
+        if (! lock.value.locked) {
+            try {
+                await window.axios.post(route('app.lock'));
+            } catch {
+                // ignore
+            }
+        }
+
         const { data } = await window.axios.post(route('app.unlock.password'), {
             password: password.value,
         });

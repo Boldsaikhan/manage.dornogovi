@@ -127,7 +127,7 @@ class AppLockTest extends TestCase
 
         $this->actingAs($user)
             ->withHeader('User-Agent', self::MOBILE_UA)
-            ->get(route('dept.dashboard'))
+            ->postJson(route('app.lock'))
             ->assertOk();
 
         $this->assertTrue(session(AppLock::SESSION_KEY));
@@ -140,11 +140,11 @@ class AppLockTest extends TestCase
         $this->assertFalse((bool) session(AppLock::SESSION_KEY));
     }
 
-    public function test_mobile_user_agent_locks_on_full_page_load(): void
+    public function test_mobile_user_agent_does_not_autolock_on_navigation(): void
     {
         $user = User::factory()->create();
         $user->webauthnCredentials()->create([
-            'credential_id' => 'cred-mobile-load',
+            'credential_id' => 'cred-mobile-nav',
             'public_key' => 'pk',
             'sign_count' => 0,
             'device_name' => 'Phone',
@@ -155,8 +155,8 @@ class AppLockTest extends TestCase
             ->get(route('dept.dashboard'))
             ->assertOk();
 
-        $this->assertTrue(session(AppLock::SESSION_KEY));
-        $this->assertSame(AppLock::MODE_BIOMETRIC, session(AppLock::MODE_KEY));
+        // Цэс/хуудас шилжихэд автоматаар түгжихгүй
+        $this->assertFalse((bool) session(AppLock::SESSION_KEY));
     }
 
     public function test_app_lock_and_password_unlock(): void

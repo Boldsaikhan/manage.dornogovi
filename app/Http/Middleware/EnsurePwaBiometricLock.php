@@ -9,7 +9,9 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Гар утас дахин нээхэд биометрик түгжээ; desktop дээр түгжээг автоматаар тайлна.
+ * Desktop дээр түгжээг тайлана.
+ * Гар утасны түгжээг энд автоматаар тавьдаггүй — зөвхөн дэлгэц алга болоход (клиент) түгжинэ.
+ * Цэс хооронд шилжихэд баталгаажуулалт асуухгүй.
  */
 class EnsurePwaBiometricLock
 {
@@ -21,20 +23,8 @@ class EnsurePwaBiometricLock
             return $next($request);
         }
 
-        if (! MobileClient::isMobileRequest($request)) {
-            if (AppLock::isLocked($request)) {
-                AppLock::unlock($request);
-            }
-
-            return $next($request);
-        }
-
-        if (
-            $user->webauthnCredentials()->exists()
-            && ! $request->header('X-Inertia')
-            && $request->isMethodSafe()
-        ) {
-            AppLock::lock($request, AppLock::MODE_BIOMETRIC);
+        if (! MobileClient::isMobileRequest($request) && AppLock::isLocked($request)) {
+            AppLock::unlock($request);
         }
 
         return $next($request);
