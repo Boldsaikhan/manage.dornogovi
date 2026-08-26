@@ -17,8 +17,8 @@ class WebAuthnService
         $rpId = self::rpId($request);
         $rpName = config('app.name', 'Дорноговь');
 
-        // base64url JSON — браузерт шууд ArrayBuffer болгоход тохиромжтой.
-        return new WebAuthn($rpName, $rpId, ['none', 'apple', 'android-key', 'packed', 'tpm', 'fido-u2f'], true);
+        // Зөвхөн 'none' — Android/iOS passkey бүртгэл найдвартай (attestation: none).
+        return new WebAuthn($rpName, $rpId, ['none'], true);
     }
 
     public static function rpId(Request $request): string
@@ -32,14 +32,17 @@ class WebAuthnService
         return $request->getHost();
     }
 
-    /** Хэрэглэгчийн WebAuthn userHandle (бинар). */
+    /**
+     * WebAuthn userHandle — хамгийн багадаа 16 байт (Android зарим төхөөрөмж богино id-г татгалздаг).
+     */
     public static function userHandle(User $user): string
     {
-        return pack('N', (int) $user->id);
+        return hash('sha256', 'dornogovi-webauthn-'.$user->id, true);
     }
 
     public static function userIdFromHandle(?string $handle): ?int
     {
+        // Хуучин 4/8 байт handle + шинэ sha256 — credential.user_id-аар баталгаажуулна.
         if ($handle === null || $handle === '') {
             return null;
         }
@@ -92,14 +95,16 @@ class WebAuthnService
             ->map(fn (string $id) => self::b64urlDecode($id))
             ->all();
 
+        // Android: residentKey/UV «preferred» — «required» үед Google Passkey цуцлагдах нь элбэг.
+        // platform = утсны хуруу/нүүр (cross-platform USB түлхүүр биш).
         $args = $webauthn->getCreateArgs(
             self::userHandle($user),
             $user->email ?: ($user->phone ?: 'user-'.$user->id),
             $user->name ?: 'Хэрэглэгч',
-            120,
-            true,   // resident key — төхөөрөмж дээр хадгална
-            true,   // user verification (finger/face)
-            false,  // platform only (утсны хуруу/нүүр)
+            60,
+            'preferred',  // residentKey
+            'preferred',  // userVerification
+            false,        // platform authenticator
             $exclude
         );
 
@@ -127,11 +132,12 @@ class WebAuthnService
         $challenge = self::b64urlDecode($challengeB64);
 
         try {
+            // requireUserVerification=false — preferred бүртгэлтэй нийцнэ
             $data = $webauthn->processCreate(
                 $clientDataJSON,
                 $attestationObject,
                 $challenge,
-                true,
+                false,
                 true,
                 false
             );

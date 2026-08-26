@@ -9,47 +9,74 @@ const page = usePage();
 const visible = ref(false);
 const busy = ref(false);
 const error = ref('');
+const tip = ref('');
 const webauthnOk = ref(typeof window !== 'undefined' && isWebAuthnSupported());
 
 const hasWebAuthn = computed(() => !! page.props.appLock?.hasWebAuthn);
 const isLoggedIn = computed(() => !! page.props.auth?.user);
 
-/** Зөвхөн гар утсанд биометрик идэвхжүүлнэ */
-const shouldPromptSetup = () => (
-    isLoggedIn.value
-    && webauthnOk.value
-    && ! hasWebAuthn.value
-    && isMobileDevice()
-);
-
 const evaluate = () => {
-    visible.value = shouldPromptSetup();
+    if (! isLoggedIn.value || ! webauthnOk.value || hasWebAuthn.value || ! isMobileDevice()) {
+        visible.value = false;
+        return;
+    }
+
+    try {
+        if (sessionStorage.getItem('biometric_setup_skip') === '1') {
+            visible.value = false;
+            return;
+        }
+    } catch {
+        // ignore
+    }
+
+    visible.value = true;
 };
 
-onMounted(() => {
-    evaluate();
-});
+onMounted(evaluate);
 
 const activate = async () => {
     if (busy.value) return;
     busy.value = true;
     error.value = '';
+    tip.value = 'Гарч ирсэн цонхонд «Continue / Үргэлжлүүлэх» дарна уу.';
 
     try {
         await registerBiometric();
-        // Бүртгэл амжилттай — биометрик баталгаажуулалт асууна
-        await window.axios.post(route('app.lock'));
+        tip.value = '';
         visible.value = false;
+        await window.axios.post(route('app.lock'));
         router.reload({ only: ['appLock', 'auth'] });
     } catch (e) {
+        const name = String(e?.name || '');
         const msg = e?.response?.data?.message || e?.message || 'Идэвхжүүлэлт амжилтгүй.';
-        if (/NotAllowedError|AbortError/i.test(String(e?.name) + msg)) {
-            error.value = 'Хуруу / нүүрээр баталгаажуулалт цуцлагдлаа. Дахин оролдоно уу.';
+        const blob = `${name} ${msg}`;
+
+        if (/NotAllowedError|AbortError|цуцла/i.test(blob)) {
+            error.value = 'Бүртгэл цуцлагдлаа эсвэл таслагдлаа.';
+            tip.value = 'Дахин дарж, «Create a passkey» цонхонд Continue дарна уу. «More options» биш.';
+        } else if (/InvalidStateError|already registered|exclude/i.test(blob)) {
+            error.value = 'Энэ төхөөрөмж өмнө бүртгэгдсэн байж магадгүй.';
+            tip.value = 'Профайл → Хуруу/нүүр хэсгээс шалгана уу.';
+            router.reload({ only: ['appLock'] });
+        } else if (/NotSupportedError|SecurityError/i.test(blob)) {
+            error.value = 'Энэ браузер биометрикийг дэмжихгүй эсвэл HTTPS биш байна.';
+            tip.value = 'Chrome-оор https://manage.dornogovi.gov.mn хаягаар нээнэ үү.';
         } else {
             error.value = msg;
+            tip.value = 'Дахин оролдоод, утасны хуруу/нүүр түгжээ идэвхтэй эсэхийг шалгана уу.';
         }
     } finally {
         busy.value = false;
+    }
+};
+
+const dismissForNow = () => {
+    visible.value = false;
+    try {
+        sessionStorage.setItem('biometric_setup_skip', '1');
+    } catch {
+        // ignore
     }
 };
 </script>
@@ -73,10 +100,13 @@ const activate = async () => {
                 Хуруу / нүүрээр нэвтрэх
             </h2>
             <p class="mt-2 text-center text-sm text-slate-500">
-                Энэ утсанд Fingerprint эсвэл Face ID идэвхжүүлбэл дараагийн удаа нэвтрэх бүрт автоматаар асууна.
+                «Идэвхжүүлэх» дараад гарч ирэх цонхонд
+                <b class="text-slate-700">Continue</b>
+                дарна. Ингэснээр дараагийн удаа хуруу/нүүр асууна.
             </p>
 
             <p v-if="error" class="mt-4 text-center text-sm text-red-600">{{ error }}</p>
+            <p v-if="tip" class="mt-2 text-center text-xs text-slate-500">{{ tip }}</p>
 
             <button
                 type="button"
@@ -84,12 +114,17 @@ const activate = async () => {
                 :disabled="busy"
                 @click="activate"
             >
-                {{ busy ? 'Идэвхжүүлж байна…' : 'Хуруу / нүүр идэвхжүүлэх' }}
+                {{ busy ? 'Хүлээнэ үү…' : 'Хуруу / нүүр идэвхжүүлэх' }}
             </button>
 
-            <p class="mt-3 text-center text-[11px] text-slate-400">
-                HTTPS холболт шаардлагатай. Нэг удаа идэвхжүүлсний дараа нэвтрэх бүрт асууна.
-            </p>
+            <button
+                type="button"
+                class="mt-2 w-full text-center text-xs font-medium text-slate-500 hover:text-slate-700"
+                :disabled="busy"
+                @click="dismissForNow"
+            >
+                Дараа идэвхжүүлнэ
+            </button>
         </div>
     </div>
 </template>

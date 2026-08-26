@@ -95,9 +95,22 @@ export const credentialToAssertPayload = (credential) => {
 export const registerBiometric = async () => {
     const { data: options } = await window.axios.post(route('webauthn.register.options'));
     const publicKey = preparePublicKeyCreate(options.publicKey);
-    const credential = await navigator.credentials.create({ publicKey });
+
+    let credential;
+    try {
+        credential = await navigator.credentials.create({ publicKey });
+    } catch (e) {
+        // DOMException нэрийг хадгална (NotAllowedError гэх мэт)
+        const err = new Error(e?.message || 'Бүртгэл амжилтгүй.');
+        err.name = e?.name || 'Error';
+        err.cause = e;
+        throw err;
+    }
+
     if (! credential) {
-        throw new Error('Бүртгэл цуцлагдлаа.');
+        const err = new Error('Бүртгэл цуцлагдлаа.');
+        err.name = 'NotAllowedError';
+        throw err;
     }
 
     const payload = credentialToCreatePayload(credential);
