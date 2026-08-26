@@ -123,6 +123,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/users', [UserAccessController::class, 'index'])->name('users.index');
         Route::post('/users', [UserAccessController::class, 'store'])->name('users.store');
         Route::patch('/users/{user}', [UserAccessController::class, 'update'])->name('users.update');
+        Route::patch('/roles/{role}', [UserAccessController::class, 'updateRole'])->name('roles.update');
     });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

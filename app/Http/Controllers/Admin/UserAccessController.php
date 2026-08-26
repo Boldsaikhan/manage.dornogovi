@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Department;
+use App\Models\RolePermission;
 use App\Models\User;
 use App\Models\UserModulePermission;
 use App\Support\ModuleAccess;
@@ -46,7 +47,40 @@ class UserAccessController extends Controller
             'users' => $users,
             'departments' => Department::query()->where('is_active', true)->orderBy('sort_order')->get(['id', 'name']),
             'modules' => $modules,
+            'roles' => collect(RolePermission::ROLES)
+                ->map(fn (string $label, string $key) => [
+                    'key' => $key,
+                    'label' => $label,
+                    'field' => RolePermission::ROLE_FIELDS[$key],
+                ])
+                ->values(),
+            'rolePermissions' => RolePermission::map(),
         ]);
+    }
+
+    /**
+     * Ролийн загварыг хадгална — тухайн түвшинг сонгоход энэ эрхүүд хэрэгжинэ.
+     */
+    public function updateRole(Request $request, string $role): RedirectResponse
+    {
+        abort_unless(array_key_exists($role, RolePermission::ROLES), 404);
+
+        $data = $request->validate([
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['in:view,manage'],
+        ]);
+
+        $permissions = collect($data['permissions'] ?? [])
+            ->filter(fn ($level, $key) => ModuleAccess::find($key) !== null)
+            ->all();
+
+        RolePermission::replaceFor($role, $permissions);
+
+        return back()->with('success', sprintf(
+            '«%s» ролийн загвар хадгалагдлаа (%d модуль).',
+            RolePermission::ROLES[$role],
+            count($permissions),
+        ));
     }
 
     public function store(Request $request): RedirectResponse

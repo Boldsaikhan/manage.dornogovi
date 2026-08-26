@@ -7,6 +7,8 @@ const props = defineProps({
     users: Array,
     departments: Array,
     modules: Array,
+    roles: Array,
+    rolePermissions: Object,
 });
 
 const page = usePage();
@@ -85,6 +87,63 @@ const selectUser = (id) => {
     loadSelected();
 };
 
+// ── Ролийн загвар ──
+const roleTab = ref(props.roles?.[0]?.key ?? 'specialist');
+const roleState = reactive({});
+
+const loadRoles = () => {
+    props.roles?.forEach((r) => {
+        roleState[r.key] = { ...(props.rolePermissions?.[r.key] ?? {}) };
+    });
+};
+
+loadRoles();
+
+watch(() => props.rolePermissions, loadRoles, { deep: true });
+
+const activeRole = computed(() => props.roles?.find((r) => r.key === roleTab.value) ?? null);
+
+const setRoleLevel = (roleKey, moduleKey, level) => {
+    if (!level) {
+        delete roleState[roleKey][moduleKey];
+        return;
+    }
+    roleState[roleKey][moduleKey] = level;
+};
+
+const saveRole = () => {
+    if (!activeRole.value) return;
+    router.patch(route('admin.roles.update', activeRole.value.key), {
+        permissions: { ...roleState[activeRole.value.key] },
+    }, { preserveScroll: true });
+};
+
+// Тухайн ролийн загварыг сонгосон албан хаагчид хэрэглэнэ.
+const applyRoleToUser = (roleKey) => {
+    editState.permissions = { ...(roleState[roleKey] ?? {}) };
+};
+
+// Ролийн чагтыг асаахад тухайн загварын эрхүүд шууд бөглөгдөнө.
+const toggleRole = (role, checked) => {
+    editState[role.field] = checked;
+    if (checked) {
+        applyRoleToUser(role.key);
+    }
+};
+
+const roleSummary = (roleKey) => {
+    const entries = Object.entries(roleState[roleKey] ?? {})
+        .filter(([key]) => props.modules.some((m) => m.key === key));
+
+    if (entries.length === 0) {
+        return 'Бүх модуль хаалттай';
+    }
+
+    const manage = entries.filter(([, l]) => l === 'manage').length;
+
+    return entries.length + ' модуль нээлттэй · ' + manage + ' удирдах';
+};
+
 const setLevel = (key, level) => {
     if (!level) {
         delete editState.permissions[key];
@@ -145,10 +204,32 @@ const createUser = () => {
                         </select>
                         <input v-model="editState.password" type="password" class="ui-input" placeholder="Шинэ нууц үг (заавал биш)" />
                     </div>
-                    <div class="flex flex-wrap gap-4 text-sm font-medium text-slate-700">
-                        <label class="flex items-center gap-2"><input v-model="editState.is_admin" type="checkbox" class="rounded text-brand-navy-600" /> Супер админ</label>
-                        <label class="flex items-center gap-2"><input v-model="editState.is_department_head" type="checkbox" class="rounded text-brand-navy-600" /> Хэлтсийн дарга</label>
-                        <label class="flex items-center gap-2"><input v-model="editState.is_specialist" type="checkbox" class="rounded text-brand-navy-600" /> Мэргэжилтэн</label>
+                    <div class="space-y-2">
+                        <div class="flex flex-wrap gap-4 text-sm font-medium text-slate-700">
+                            <label v-for="r in roles" :key="r.key" class="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    class="rounded text-brand-navy-600"
+                                    :checked="editState[r.field]"
+                                    @change="toggleRole(r, $event.target.checked)"
+                                />
+                                {{ r.label }}
+                            </label>
+                        </div>
+                        <p class="text-xs text-slate-500">
+                            Ролийг сонгоход доорх «Ролийн загвар»-т заасан эрхүүд автоматаар бөглөгдөнө. Дараа нь модуль тус бүрд гараар засаж болно.
+                        </p>
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                v-for="r in roles"
+                                :key="'apply-' + r.key"
+                                type="button"
+                                class="ui-btn-ghost !py-1 text-xs"
+                                @click="applyRoleToUser(r.key)"
+                            >
+                                {{ r.label }} загвар хэрэглэх
+                            </button>
+                        </div>
                     </div>
 
                     <div class="ui-table-wrap">
@@ -179,6 +260,72 @@ const createUser = () => {
                     </div>
                     <button class="ui-btn-primary">Хадгалах</button>
                 </form>
+
+                <section class="ui-card-pad space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="ui-title text-base">Ролийн загвар</h3>
+                            <p class="mt-0.5 text-xs text-slate-500">
+                                Түвшин тус бүрд ямар модульд ямар эрхтэй байхыг урьдчилан тодорхойлно.
+                            </p>
+                        </div>
+                        <div class="ui-pill-row">
+                            <button
+                                v-for="r in roles"
+                                :key="'tab-' + r.key"
+                                type="button"
+                                class="rounded-full px-3 py-1.5 text-xs font-semibold transition"
+                                :class="roleTab === r.key ? 'bg-brand-navy-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                                @click="roleTab = r.key"
+                            >
+                                {{ r.label }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <p v-if="activeRole" class="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                        <b>{{ activeRole.label }}</b> — {{ roleSummary(activeRole.key) }}
+                    </p>
+
+                    <div v-if="activeRole" class="ui-table-wrap">
+                        <table class="ui-table">
+                            <thead>
+                                <tr>
+                                    <th>Модуль</th>
+                                    <th class="w-40">Эрх</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="m in modules" :key="'role-' + m.key">
+                                    <td>{{ m.label }}</td>
+                                    <td>
+                                        <select
+                                            class="ui-input !py-1.5"
+                                            :value="roleState[activeRole.key]?.[m.key] || ''"
+                                            @change="setRoleLevel(activeRole.key, m.key, $event.target.value)"
+                                        >
+                                            <option value="">Хаалттай</option>
+                                            <option value="view">Харах</option>
+                                            <option value="manage">Удирдах</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" class="ui-btn-primary" @click="saveRole">Загвар хадгалах</button>
+                        <button
+                            v-if="selected && activeRole"
+                            type="button"
+                            class="ui-btn-ghost"
+                            @click="applyRoleToUser(activeRole.key)"
+                        >
+                            «{{ selected.name }}»-д хэрэглэх
+                        </button>
+                    </div>
+                </section>
 
                 <form class="ui-card space-y-3 border-dashed p-5" @submit.prevent="createUser">
                     <h3 class="ui-title text-base">Шинэ албан хаагч</h3>
