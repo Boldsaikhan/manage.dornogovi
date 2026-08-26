@@ -221,6 +221,21 @@ const moveRow = (id, orgName, beforeId) => {
     );
 };
 
+// ↑/↓ товч — бүлэг доторх мөрийг нэг байрлалаар зөөнө.
+const moveRowBy = (group, index, step) => {
+    const rows = group.rows;
+    const target = index + step;
+
+    if (target < 0 || target >= rows.length) return;
+
+    // Дээш: хөршийнхөө өмнө. Доош: хөршийн дараах мөрийн өмнө (эсвэл ард).
+    const beforeId = step < 0
+        ? rows[target].id
+        : (rows[target + 1]?.id ?? null);
+
+    moveRow(rows[index].id, group.org_name, beforeId);
+};
+
 const startRowDrag = (row, group, event) => {
     draggingOrg.value = null;
     draggingRow.value = { id: row.id, org_name: group.org_name };
@@ -447,6 +462,7 @@ const closeDirectoryForm = () => {
                                 v-if="canInsert"
                                 class="group/ins"
                                 @dragover.prevent="dragOverGroup(group)"
+                                @dragenter.prevent="dragOverGroup(group)"
                                 @drop.prevent="dropOnGroup(group)"
                             >
                                 <td :colspan="canManage ? 6 : 5" class="!py-0.5 text-center">
@@ -465,17 +481,18 @@ const closeDirectoryForm = () => {
                             <tr
                                 class="bg-brand-navy-50"
                                 :class="draggingOrg === group.org_name ? 'opacity-40' : ''"
-                                :draggable="canInsert"
-                                @dragstart="startDrag(group, $event)"
-                                @dragend="endDrag"
                                 @dragover.prevent="dragOverGroup(group)"
+                                @dragenter.prevent="dragOverGroup(group)"
                                 @drop.prevent="dropOnGroup(group)"
                             >
                                 <td :colspan="canManage ? 6 : 5" class="text-center font-semibold italic text-brand-navy-800">
                                     <span
                                         v-if="canInsert"
-                                        class="mr-1 cursor-grab select-none text-slate-400 active:cursor-grabbing"
+                                        draggable="true"
+                                        class="mr-1 inline-block cursor-grab select-none px-1 text-slate-400 active:cursor-grabbing"
                                         title="Чирж байрлуулна"
+                                        @dragstart="startDrag(group, $event)"
+                                        @dragend="endDrag"
                                     >⠿</span>
                                     {{ group.org_name }}
                                     <span v-if="canInsert" class="ml-2 inline-flex align-middle">
@@ -526,18 +543,23 @@ const closeDirectoryForm = () => {
                             <tr
                                 v-for="(row, index) in group.rows"
                                 :key="row.id"
-                                :draggable="canInsert"
                                 :class="[
                                     draggingRow && draggingRow.id === row.id ? 'opacity-40' : '',
                                     dropTargetRow === 'row:' + row.id ? '!border-t-2 !border-brand-navy-500' : '',
                                 ]"
-                                @dragstart="startRowDrag(row, group, $event)"
-                                @dragend="endDrag"
                                 @dragover.prevent="dragOverRow(row)"
+                                @dragenter.prevent="dragOverRow(row)"
                                 @drop.prevent="dropOnRow(row, group)"
                             >
                                 <td class="text-center">
-                                    <span v-if="canInsert" class="mr-1 cursor-grab select-none text-slate-300 active:cursor-grabbing">⠿</span>
+                                    <span
+                                        v-if="canInsert"
+                                        draggable="true"
+                                        class="mr-1 inline-block cursor-grab select-none px-1 text-slate-300 active:cursor-grabbing"
+                                        title="Чирж зөөнө"
+                                        @dragstart="startRowDrag(row, group, $event)"
+                                        @dragend="endDrag"
+                                    >⠿</span>
                                     {{ index + 1 }}
                                 </td>
                                 <td>
@@ -549,12 +571,29 @@ const closeDirectoryForm = () => {
                                 <td class="text-center">{{ row.office_phone || '—' }}</td>
                                 <td class="text-center">{{ row.mobile_phone || '—' }}</td>
                                 <td v-if="canManage" class="text-right whitespace-nowrap">
+                                    <span v-if="canInsert" class="mr-1 inline-flex align-middle">
+                                        <button
+                                            type="button"
+                                            class="rounded-l-lg border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                                            :disabled="index === 0"
+                                            title="Дээш зөөх"
+                                            @click="moveRowBy(group, index, -1)"
+                                        >↑</button>
+                                        <button
+                                            type="button"
+                                            class="-ml-px rounded-r-lg border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                                            :disabled="index === group.rows.length - 1"
+                                            title="Доош зөөх"
+                                            @click="moveRowBy(group, index, 1)"
+                                        >↓</button>
+                                    </span>
                                     <button type="button" class="ui-btn-ghost mr-1 !py-1 text-xs" @click="openEdit(row, group)">Засах</button>
                                     <button type="button" class="ui-btn-danger !py-1 text-xs" @click="destroyRow(row.id)">Устгах</button>
                                 </td>
                             </tr>
                             <tr
                                 v-if="canInsert && draggingRow"
+                                @dragenter.prevent="dropTargetRow = 'end:' + group.org_name"
                                 @dragover.prevent="dropTargetRow = 'end:' + group.org_name"
                                 @drop.prevent="dropAtGroupEnd(group)"
                             >
@@ -573,6 +612,7 @@ const closeDirectoryForm = () => {
                         <tr
                             v-if="canInsert && filteredGroups.length"
                             class="group/ins"
+                            @dragenter.prevent="draggingOrg && (dropTargetOrg = '__end__')"
                             @dragover.prevent="draggingOrg && (dropTargetOrg = '__end__')"
                             @drop.prevent="dropAtEnd"
                         >
