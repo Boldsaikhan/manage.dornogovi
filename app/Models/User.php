@@ -62,6 +62,11 @@ class User extends Authenticatable
         return $this->hasMany(UserModulePermission::class);
     }
 
+    public function webauthnCredentials(): HasMany
+    {
+        return $this->hasMany(WebAuthnCredential::class);
+    }
+
     public static function normalizePhone(?string $phone): ?string
     {
         if ($phone === null) {

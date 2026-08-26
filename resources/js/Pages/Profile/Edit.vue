@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DeleteUserForm from './Partials/DeleteUserForm.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
+import WebAuthnDevicesForm from './Partials/WebAuthnDevicesForm.vue';
 import { Head } from '@inertiajs/vue3';
 
 defineProps({
@@ -11,6 +12,10 @@ defineProps({
     },
     status: {
         type: String,
+    },
+    webauthnCredentials: {
+        type: Array,
+        default: () => [],
     },
 });
 </script>
@@ -35,6 +40,15 @@ defineProps({
                     <UpdateProfileInformationForm
                         :must-verify-email="mustVerifyEmail"
                         :status="status"
+                        class="max-w-xl"
+                    />
+                </div>
+
+                <div
+                    class="bg-white p-4 shadow sm:rounded-lg sm:p-8"
+                >
+                    <WebAuthnDevicesForm
+                        :credentials="webauthnCredentials"
                         class="max-w-xl"
                     />
                 </div>
