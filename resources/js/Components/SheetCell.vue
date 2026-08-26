@@ -9,6 +9,20 @@ const CATEGORY_FILTERS = [
     { key: 'baiguullaga', label: 'Байгууллага', short: 'Байгууллага' },
 ];
 
+/** 14 сумын Засаг дарга нарыг нэгтгэсэн харагдах нэр */
+const SOUM_GOVERNORS_LABEL = 'Сумдын Засаг дарга нар';
+const SOUM_GOVERNORS_KEY = '__soum_governors__';
+
+const isGovernorTitle = (text) => {
+    const t = String(text ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+    // «Засаг дарга», «сумын Засаг дарга» — орлогч/түр орлон гүйцэтгэгчийг оруулахгүй.
+    if (! t.includes('засаг дарга')) return false;
+    if (t.includes('орлогч') || t.includes('түр орлон') || t.includes('үүрэг гүйцэтгэгч')) return false;
+
+    return true;
+};
+
 const props = defineProps({
     modelValue: { type: [String, Number], default: '' },
     multiline: { type: Boolean, default: false },
@@ -83,6 +97,90 @@ const parseSelected = (value) => String(value ?? '')
     .filter(Boolean);
 
 const selectedSet = computed(() => new Set(selected.value));
+
+// Утасны жагсаалтаас сумын Засаг дарга нарыг олж авна.
+const soumGovernors = computed(() => {
+    if (! hasOptions.value) return [];
+
+    return props.options.filter((opt) => {
+        if ((opt.category || '') !== 'sum') return false;
+
+        return isGovernorTitle(opt.hint) || isGovernorTitle(opt.label);
+    });
+});
+
+const soumGovernorNames = computed(() => (
+    soumGovernors.value.map((o) => String(o.value ?? o.label ?? '')).filter(Boolean)
+));
+
+const isSoumGovernorsSelected = computed(() => {
+    const names = soumGovernorNames.value;
+    if (! names.length) return false;
+
+    return names.every((n) => selectedSet.value.has(n));
+});
+
+const toggleSoumGovernors = () => {
+    ignoreBlur.value = true;
+    const names = soumGovernorNames.value;
+    if (! names.length) {
+        releaseIgnoreBlur();
+
+        return;
+    }
+
+    if (isSoumGovernorsSelected.value) {
+        const drop = new Set(names);
+        selected.value = selected.value.filter((n) => ! drop.has(n));
+    } else if (props.multiple) {
+        selected.value = [...new Set([...selected.value, ...names])];
+    } else {
+        commitValue(SOUM_GOVERNORS_LABEL);
+
+        return;
+    }
+
+    releaseIgnoreBlur();
+};
+
+/** Чипүүд: бүх сумын дарга сонгогдсон бол нэгтгэж харуулна */
+const selectedChips = computed(() => {
+    const names = soumGovernorNames.value;
+    const govSet = new Set(names);
+
+    if (names.length && names.every((n) => selectedSet.value.has(n))) {
+        const extras = selected.value.filter((n) => ! govSet.has(n));
+
+        return [
+            { key: SOUM_GOVERNORS_KEY, label: SOUM_GOVERNORS_LABEL, group: true },
+            ...extras.map((n) => ({ key: n, label: n, group: false })),
+        ];
+    }
+
+    return selected.value.map((n) => ({ key: n, label: n, group: false }));
+});
+
+const formatGovernorsDisplay = (value) => {
+    const names = parseSelected(value);
+    if (! names.length) return '';
+
+    // Шууд бүлгийн нэр хадгалагдсан бол
+    if (names.length === 1 && names[0] === SOUM_GOVERNORS_LABEL) {
+        return SOUM_GOVERNORS_LABEL;
+    }
+
+    const govs = soumGovernorNames.value;
+    if (! govs.length) return names.join(' / ');
+
+    const govSet = new Set(govs);
+    const hasAll = govs.every((n) => names.includes(n));
+    if (! hasAll) return names.join(' / ');
+
+    const extras = names.filter((n) => ! govSet.has(n) && n !== SOUM_GOVERNORS_LABEL);
+    if (! extras.length) return SOUM_GOVERNORS_LABEL;
+
+    return [SOUM_GOVERNORS_LABEL, ...extras].join(' / ');
+};
 
 const filteredOptions = computed(() => {
     if (! hasOptions.value) {
@@ -162,6 +260,10 @@ const displayText = () => {
         return props.placeholder || props.emptyLabel;
     }
 
+    if (hasOptions.value) {
+        return formatGovernorsDisplay(value) || String(value);
+    }
+
     return String(value);
 };
 
@@ -178,7 +280,13 @@ const startEdit = async () => {
     if (hasOptions.value) {
         search.value = '';
         local.value = '';
-        selected.value = parseSelected(props.modelValue);
+        const parsed = parseSelected(props.modelValue);
+        // Бүлгийн нэрээр хадгалсан бол сумын дарга нарын жагсаалт руу задална.
+        if (parsed.length === 1 && parsed[0] === SOUM_GOVERNORS_LABEL && soumGovernorNames.value.length) {
+            selected.value = [...soumGovernorNames.value];
+        } else {
+            selected.value = parsed;
+        }
     } else {
         local.value = props.modelValue ?? '';
     }
@@ -344,9 +452,17 @@ const pickOption = (opt) => {
     commitValue(value);
 };
 
-const removeChip = (name) => {
+const removeChip = (chip) => {
     ignoreBlur.value = true;
-    selected.value = selected.value.filter((n) => n !== name);
+
+    if (chip?.group || chip?.key === SOUM_GOVERNORS_KEY) {
+        const drop = new Set(soumGovernorNames.value);
+        selected.value = selected.value.filter((n) => ! drop.has(n));
+    } else {
+        const name = typeof chip === 'string' ? chip : chip?.key;
+        selected.value = selected.value.filter((n) => n !== name);
+    }
+
     releaseIgnoreBlur();
 };
 
@@ -464,7 +580,7 @@ onBeforeUnmount(() => {
             v-if="! editing"
             class="ui-sheet-display ui-clamp-2"
             :class="{ 'text-center': align === 'center', 'text-slate-400': ! modelValue && !! placeholder }"
-            :title="modelValue ? String(modelValue) : ''"
+            :title="modelValue ? formatGovernorsDisplay(modelValue) || String(modelValue) : ''"
         >
             <slot>{{ displayText() }}</slot>
         </div>
@@ -510,20 +626,33 @@ onBeforeUnmount(() => {
                         >
                             {{ cat.short ?? cat.label }}
                         </button>
+                        <button
+                            v-if="soumGovernors.length"
+                            type="button"
+                            class="shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-semibold transition"
+                            :class="isSoumGovernorsSelected
+                                ? 'border-emerald-600 bg-emerald-600 text-white'
+                                : 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:border-emerald-400'"
+                            :title="`Сумын Засаг дарга ${soumGovernors.length} хүнийг нэг дор сонгоно`"
+                            @mousedown.prevent="toggleSoumGovernors"
+                        >
+                            Сумдын Засаг дарга нар ({{ soumGovernors.length }})
+                        </button>
                     </div>
 
-                    <div v-if="multiple && selected.length" class="flex flex-wrap gap-1 pt-0.5">
+                    <div v-if="multiple && selectedChips.length" class="flex flex-wrap gap-1 pt-0.5">
                         <span
-                            v-for="name in selected"
-                            :key="name"
-                            class="inline-flex max-w-full items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-medium text-white"
+                            v-for="chip in selectedChips"
+                            :key="chip.key"
+                            class="inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-white"
+                            :class="chip.group ? 'bg-emerald-700' : 'bg-emerald-600'"
                         >
-                            <span class="truncate">{{ name }}</span>
+                            <span class="truncate">{{ chip.label }}</span>
                             <button
                                 type="button"
                                 class="text-white/70 transition hover:text-white"
                                 title="Хасах"
-                                @mousedown.prevent="removeChip(name)"
+                                @mousedown.prevent="removeChip(chip)"
                             >
                                 ✕
                             </button>
@@ -540,6 +669,36 @@ onBeforeUnmount(() => {
                     >
                         <span class="flex h-5 w-5 items-center justify-center rounded-full border border-rose-200 text-[11px]">✕</span>
                         Сонголтгүй (цэвэрлэх)
+                    </button>
+                    <button
+                        v-if="soumGovernors.length"
+                        type="button"
+                        class="flex w-full items-center gap-2.5 border-b border-slate-100 px-3 py-2.5 text-left transition"
+                        :class="isSoumGovernorsSelected
+                            ? 'bg-emerald-50 ring-1 ring-inset ring-emerald-200'
+                            : 'hover:bg-emerald-50/60'"
+                        @mousedown.prevent="toggleSoumGovernors"
+                    >
+                        <span
+                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
+                            :class="isSoumGovernorsSelected ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-800'"
+                        >
+                            {{ soumGovernors.length }}
+                        </span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block text-sm font-semibold text-slate-800">{{ SOUM_GOVERNORS_LABEL }}</span>
+                            <span class="block text-[10px] text-slate-500">
+                                {{ soumGovernors.length }} сумын Засаг даргыг нэг дор сонгоно
+                            </span>
+                        </span>
+                        <span
+                            class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px]"
+                            :class="isSoumGovernorsSelected
+                                ? 'bg-emerald-600 text-white'
+                                : 'border border-slate-200 text-transparent'"
+                        >
+                            ✓
+                        </span>
                     </button>
                     <button
                         v-for="(opt, idx) in filteredOptions"
