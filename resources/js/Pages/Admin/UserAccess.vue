@@ -375,10 +375,6 @@ const pickFromDirectory = (value) => {
                         <input v-model="createForm.position" placeholder="Албан тушаал" class="ui-input" />
                         <input v-model="createForm.email" type="email" required placeholder="И-мэйл" class="ui-input" />
                         <input v-model="createForm.password" type="password" required placeholder="Нууц үг" class="ui-input" />
-                        <select v-model="createForm.department_id" class="ui-input md:col-span-2">
-                            <option value="">Хэлтэсгүй</option>
-                            <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
-                        </select>
                     </div>
                     <p v-if="createForm.errors.name" class="text-xs text-rose-600">{{ createForm.errors.name }}</p>
                     <p v-if="createForm.errors.phone" class="text-xs text-rose-600">{{ createForm.errors.phone }}</p>
