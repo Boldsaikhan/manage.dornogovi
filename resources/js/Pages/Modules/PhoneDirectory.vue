@@ -43,34 +43,50 @@ const importForm = useForm({
     replace: false,
 });
 
-// Ангилал тус бүрийн хүний тоо + ангилалгүй үлдсэн бүлгүүд.
+// Ангилал тус бүрийн нэгжийн тоо + албан хаагчийн тоо.
 const categoryTabs = computed(() => {
-    const counts = {};
-    let none = 0;
+    const people = {};
+    const orgs = {};
+    let nonePeople = 0;
+    let noneOrgs = 0;
 
     props.groups.forEach((g) => {
         const key = g.category || '';
+        const n = g.rows?.length ?? 0;
 
         if (! key) {
-            none += g.rows.length;
+            nonePeople += n;
+            noneOrgs += 1;
 
             return;
         }
 
-        counts[key] = (counts[key] ?? 0) + g.rows.length;
+        people[key] = (people[key] ?? 0) + n;
+        orgs[key] = (orgs[key] ?? 0) + 1;
     });
 
     const tabs = [
-        { value: 'all', label: 'Бүгд', count: props.total },
+        {
+            value: 'all',
+            label: 'Бүгд',
+            orgCount: props.groups.length,
+            peopleCount: props.total,
+        },
         ...Object.entries(props.categories).map(([value, label]) => ({
             value,
             label,
-            count: counts[value] ?? 0,
+            orgCount: orgs[value] ?? 0,
+            peopleCount: people[value] ?? 0,
         })),
     ];
 
-    if (none) {
-        tabs.push({ value: 'none', label: 'Ангилалгүй', count: none });
+    if (noneOrgs) {
+        tabs.push({
+            value: 'none',
+            label: 'Ангилалгүй',
+            orgCount: noneOrgs,
+            peopleCount: nonePeople,
+        });
     }
 
     return tabs;
@@ -459,10 +475,15 @@ const closeDirectoryForm = () => {
                                 ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
                                 : 'border-slate-200 bg-white text-slate-600 hover:border-brand-navy-300 hover:text-brand-navy-700'
                         "
+                        :title="`${tab.orgCount} нэгж · ${tab.peopleCount} албан хаагч`"
                         @click="categoryFilter = tab.value"
                     >
                         {{ tab.label }}
-                        <span class="ml-1 text-xs opacity-70">{{ tab.count }}</span>
+                        <span class="ml-1.5 text-xs opacity-80">{{ tab.orgCount }}</span>
+                        <span class="ml-0.5 text-[11px] opacity-60">нэгж</span>
+                        <span class="mx-1 text-xs opacity-40">·</span>
+                        <span class="text-xs opacity-80">{{ tab.peopleCount }}</span>
+                        <span class="ml-0.5 text-[11px] opacity-60">хүн</span>
                     </button>
                 </div>
 

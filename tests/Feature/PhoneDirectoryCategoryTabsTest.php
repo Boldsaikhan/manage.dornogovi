@@ -31,7 +31,9 @@ class PhoneDirectoryCategoryTabsTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Modules/PhoneDirectory')
                 ->where('categories.heltes', 'Хэлтэс')
-                ->where('groups.0.category', 'heltes'));
+                ->where('groups.0.category', 'heltes')
+                ->where('total', 1)
+                ->has('groups', 1));
 
         // Хэлтэс болгож сонгоход хадгалагдана
         $this->actingAs($admin)
