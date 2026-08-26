@@ -16,14 +16,21 @@ const props = defineProps({
 
 const page = usePage();
 
-/** Цэсийн дараалал — дээш/доош товчоор өөрчилнө. */
-const orderedSystems = ref([...(props.systems ?? [])]);
+/** Цэсэнд харагдах системүүд — ▲▼ энэ жагсаалтын дарааллыг хадгална. */
+const orderedSystems = ref(
+    [...(props.systems ?? [])].filter((s) => ! s.is_internal),
+);
+const otherSystems = ref(
+    [...(props.systems ?? [])].filter((s) => s.is_internal),
+);
 const reorderSaving = ref(false);
 
 watch(
     () => props.systems,
     (list) => {
-        orderedSystems.value = [...(list ?? [])];
+        const all = [...(list ?? [])];
+        orderedSystems.value = all.filter((s) => ! s.is_internal);
+        otherSystems.value = all.filter((s) => s.is_internal);
     },
 );
 
@@ -460,10 +467,8 @@ const saveAi = () => {
                 <div>
                     <h2 class="text-base font-semibold text-brand-navy-900">Холбосон системүүд</h2>
                     <p class="mt-1 max-w-3xl text-sm text-brand-navy-400">
-                        Систем бүрийн нэвтрэх аргыг энд тохируулна. <strong>Шууд илгээх</strong> горим нь
-                        хэрэглэгчийн нэр, нууц үгийг нуугдмал маягтаар тухайн системийн нэвтрэх хаяг руу
-                        илгээж, нэг товшилтоор нэвтрүүлнэ.
-                        Зүүн талын ▲▼ товчоор <strong>цэсэнд харагдах дарааллыг</strong> өөрчилнө.
+                        Зүүн талын ▲▼ товчоор <strong>хажуугийн цэсийн «Холбосон системүүд»</strong>
+                        хэсгийн дарааллыг өөрчилнө. Энэ жагсаалтын №1 дээрх систем цэсэнд эхэнд гарна.
                     </p>
                 </div>
                 <button type="button" class="ui-btn-primary shrink-0" @click="openCreate">
@@ -574,6 +579,35 @@ const saveAi = () => {
                             </button>
                             <button type="button" class="ml-3 text-brand-navy-400 hover:underline" @click="checkEmbed(system)">
                                 Дахин шалгах
+                            </button>
+                            <button type="button" class="ml-3 text-rose-600 hover:underline" @click="removeSystem(system)">
+                                Устгах
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div v-if="otherSystems.length" class="mb-8 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div class="border-b border-slate-100 bg-slate-50 px-5 py-3">
+                <h3 class="text-sm font-semibold text-slate-700">Дотоод системүүд</h3>
+                <p class="text-xs text-slate-500">Цэсийн «Холбосон системүүд»-д гарахгүй.</p>
+            </div>
+            <table class="w-full text-sm">
+                <tbody>
+                    <tr
+                        v-for="(system, i) in otherSystems"
+                        :key="system.id"
+                        :class="i % 2 === 1 ? 'bg-slate-50' : 'bg-white'"
+                    >
+                        <td class="px-5 py-3">
+                            <div class="font-medium text-brand-navy-800">{{ system.name }}</div>
+                            <div class="text-xs text-brand-navy-300">{{ system.login_url ?? system.url }}</div>
+                        </td>
+                        <td class="px-5 py-3 text-right whitespace-nowrap">
+                            <button type="button" class="text-brand-navy-600 hover:underline" @click="openEdit(system)">
+                                Тохируулах
                             </button>
                             <button type="button" class="ml-3 text-rose-600 hover:underline" @click="removeSystem(system)">
                                 Устгах

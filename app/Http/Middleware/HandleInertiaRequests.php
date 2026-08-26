@@ -125,7 +125,7 @@ class HandleInertiaRequests extends Middleware
             ->where('is_active', true)
             ->visibleTo($request->user())
             ->orderBy('sort_order')
-            ->orderBy('name')
+            ->orderBy('id')
             ->get()
             ->map(fn (System $system) => [
                 'id' => $system->id,

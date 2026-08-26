@@ -21,7 +21,7 @@ class SystemSettingsController extends Controller
     public function index(AiSettings $aiSettings): Response
     {
         return Inertia::render('Admin/Systems', [
-            'systems' => System::with('viewers:id')->orderBy('sort_order')->orderBy('name')->get()->map(fn (System $system) => [
+            'systems' => System::with('viewers:id')->orderBy('sort_order')->orderBy('id')->get()->map(fn (System $system) => [
                 'id' => $system->id,
                 'name' => $system->name,
                 'url' => $system->url,
@@ -34,6 +34,7 @@ class SystemSettingsController extends Controller
                 'requires_login' => $system->requires_login,
                 'is_internal' => $system->is_internal,
                 'is_embeddable' => $system->is_embeddable,
+                'sort_order' => (int) $system->sort_order,
                 'can_auto_submit' => $system->canAutoSubmit(),
                 // Хоосон жагсаалт = бүх албан хаагчид харна.
                 'viewer_ids' => $system->viewers->pluck('id')->all(),
@@ -189,7 +190,8 @@ class SystemSettingsController extends Controller
     }
 
     /**
-     * Цэсэнд харагдах дарааллыг шинэчилнэ.
+     * Цэсэнд («Холбосон системүүд») харагдах дарааллыг шинэчилнэ.
+     * Зөвхөн гадаад (is_internal=false) системүүдийн дарааллыг тохируулна.
      */
     public function reorder(Request $request): RedirectResponse
     {
@@ -198,9 +200,27 @@ class SystemSettingsController extends Controller
             'ids.*' => ['integer', 'distinct', 'exists:systems,id'],
         ]);
 
-        foreach (array_values($data['ids']) as $index => $id) {
-            System::query()->whereKey($id)->update(['sort_order' => $index + 1]);
+        $ids = array_values($data['ids']);
+
+        // Цэсэнд гарах системүүд эхэнд — 1..n
+        foreach ($ids as $index => $id) {
+            System::query()
+                ->whereKey($id)
+                ->where('is_internal', false)
+                ->update(['sort_order' => $index + 1]);
         }
+
+        // Дотоод системүүдийг цэсийн дараа байрлуулна.
+        $next = count($ids) + 1;
+        System::query()
+            ->where('is_internal', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get(['id'])
+            ->each(function (System $system) use (&$next) {
+                $system->update(['sort_order' => $next]);
+                $next++;
+            });
 
         return back()->with('success', 'Цэсийн дараалал хадгалагдлаа.');
     }

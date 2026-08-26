@@ -148,6 +148,61 @@ class SystemSettingsTest extends TestCase
         $this->assertSame(1, $third->refresh()->sort_order);
         $this->assertSame(2, $first->refresh()->sort_order);
         $this->assertSame(3, $second->refresh()->sort_order);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('dashboard'))
+            ->assertInertia(fn ($page) => $page
+                ->where('nav.0.name', 'Gamma')
+                ->where('nav.1.name', 'Alpha')
+                ->where('nav.2.name', 'Beta')
+            );
+    }
+
+    public function test_menu_order_ignores_internal_systems(): void
+    {
+        $externalA = System::create([
+            'slug' => 'ext-a',
+            'name' => 'External A',
+            'url' => 'https://a.example.gov.mn',
+            'category' => 'Гадны',
+            'is_internal' => false,
+            'sort_order' => 1,
+        ]);
+        System::create([
+            'slug' => 'int-x',
+            'name' => 'Internal X',
+            'url' => 'https://x.example.gov.mn',
+            'category' => 'Дотоод',
+            'is_internal' => true,
+            'sort_order' => 2,
+        ]);
+        $externalB = System::create([
+            'slug' => 'ext-b',
+            'name' => 'External B',
+            'url' => 'https://b.example.gov.mn',
+            'category' => 'Гадны',
+            'is_internal' => false,
+            'sort_order' => 3,
+        ]);
+
+        $this->actingAs(User::factory()->create(['is_admin' => true]))
+            ->patch(route('admin.systems.reorder'), [
+                'ids' => [$externalB->id, $externalA->id],
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(1, $externalB->refresh()->sort_order);
+        $this->assertSame(2, $externalA->refresh()->sort_order);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('dashboard'))
+            ->assertInertia(fn ($page) => $page
+                ->where('nav.0.name', 'External B')
+                ->where('nav.0.is_internal', false)
+                ->where('nav.1.name', 'External A')
+                ->where('nav.2.name', 'Internal X')
+                ->where('nav.2.is_internal', true)
+            );
     }
 
     public function test_non_admin_cannot_reorder_systems(): void
