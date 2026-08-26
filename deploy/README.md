@@ -68,16 +68,31 @@ sudo /opt/manage-dornogovi/deploy/auto-update.sh
 `provision.sh` болон `release.sh` нь `server-setup.sh` гарахаас өмнөх гараар
 байрлуулах арга. Одоо хэрэглэхгүй, лавлагаанд үлдээв.
 
-## 6. Гаднаас (интернэтээс) хандах боломж нээх
+## 6. Гаднаас хандалт + DNS (iPhone/Safari алдаа)
 
-Домайн одоогоор дотоод хаяг (`10.52.1.67`) руу заасан тул интернэтээс хандах
-боломжгүй. Нээхийн тулд эхлээд **хоёр хүсэлт** батлагдах ёстой — төслүүдийг
-[REQUESTS.md](REQUESTS.md)-ээс аваарай:
+Нийтийн IP (`202.37.109.67`) болон HTTPS ажиллаж байгаа. Гэхдээ **DNS бүс
+буруу** (SOA `a.misconfigured.dns.server.invalid`, NS timeout) тул зарим
+төхөөрөмж (ялангуяа iPhone Safari) «server can't be found» алдаа авна.
 
-1. **НДТ** — `manage-dornogovi` сервэрт нийтийн (public) IP хуваарилах, 80/443 порт нээх
-2. **gov.mn DNS админ** — `manage.dornogovi.gov.mn` A бичлэгийг тэр нийтийн IP руу солих
+Энэ нь **сайтын кодоор засагдахгүй** — НДТ/gov.mn DNS админ засна.
+Хүсэлтийн бэлэн текст: [dns-request-email.md](dns-request-email.md),
+дэлгэрэнгүй: [REQUESTS.md](REQUESTS.md).
 
-Хоёулаа биелсний дараа сервер дээр:
+Шалгах:
+
+```bash
+bash /var/www/manage.dornogovi.gov.mn/deploy/dns-check.sh
+```
+
+DNS зөв болсны дараа сервер дээр (CloudPanel ашиглаж байвал `go-public.sh` биш,
+CloudPanel SSL UI):
+
+```bash
+# APP_URL=https://manage.dornogovi.gov.mn, SESSION_SECURE_COOKIE=true
+php artisan config:cache
+```
+
+Хуучин (CloudPanelгүй) серверт:
 
 ```bash
 sudo CERTBOT_EMAIL=<админы и-мэйл> bash /var/www/manage.dornogovi.gov.mn/deploy/go-public.sh
