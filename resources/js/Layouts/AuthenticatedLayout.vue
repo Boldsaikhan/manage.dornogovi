@@ -102,6 +102,15 @@ const externalSystems = computed(() =>
         : navSystems.value.filter((s) => !s.is_internal),
 );
 const vaultUnlocked = computed(() => page.props.vault?.unlocked ?? false);
+const navBadges = computed(() => page.props.navBadges ?? {});
+
+const badgeFor = (key) => {
+    const n = Number(navBadges.value?.[key] ?? 0);
+
+    return Number.isFinite(n) && n > 0 ? n : 0;
+};
+
+const badgeLabel = (n) => (n > 99 ? '99+' : String(n));
 
 const systemHint = (system) => {
     if (!system.requires_login) return `${system.name} — нээх`;
@@ -198,20 +207,32 @@ const isCurrent = (routeName) => {
                         v-for="item in group.items"
                         :key="item.key"
                         :href="route(item.route)"
-                        class="ui-nav-link"
+                        class="ui-nav-link relative"
                         :class="[
                             isCurrent(item.route) ? 'ui-nav-link-active' : '',
                             sidebarCollapsed ? 'lg:justify-center lg:px-0' : '',
                         ]"
-                        @mouseenter="showNavTip($event, item.label)"
+                        @mouseenter="showNavTip($event, item.label + (badgeFor(item.key) ? ` (${badgeFor(item.key)})` : ''))"
                         @mouseleave="hideNavTip"
-                        @focus="showNavTip($event, item.label)"
+                        @focus="showNavTip($event, item.label + (badgeFor(item.key) ? ` (${badgeFor(item.key)})` : ''))"
                         @blur="hideNavTip"
                     >
                         <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                             <path :d="iconPaths[item.icon] || iconPaths.clipboard" />
                         </svg>
-                        <span class="truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ item.label }}</span>
+                        <span class="min-w-0 flex-1 truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ item.label }}</span>
+                        <span
+                            v-if="badgeFor(item.key)"
+                            class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none tabular-nums"
+                            :class="[
+                                isCurrent(item.route)
+                                    ? 'bg-white/25 text-white'
+                                    : 'bg-brand-orange-500 text-white',
+                                sidebarCollapsed ? 'lg:absolute lg:right-1 lg:top-1 lg:min-w-[1.1rem] lg:px-1 lg:text-center' : '',
+                            ]"
+                        >
+                            {{ badgeLabel(badgeFor(item.key)) }}
+                        </span>
                     </Link>
                 </template>
 

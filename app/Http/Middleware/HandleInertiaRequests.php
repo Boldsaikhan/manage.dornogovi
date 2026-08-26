@@ -6,6 +6,7 @@ use App\Models\System;
 use App\Models\UserCredential;
 use App\Services\Ai\AiSettings;
 use App\Support\ModuleAccess;
+use App\Support\NavBadges;
 use App\Support\Vault;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -50,6 +51,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'nav' => fn () => $this->navigation($request),
             'moduleNav' => fn () => ModuleAccess::navFor($request->user()),
+            'navBadges' => fn () => NavBadges::for($request->user()),
             'aiAssistant' => fn () => $this->aiAssistantMeta($request),
             'systemsHubEnabled' => fn () => ModuleAccess::canView($request->user(), 'systems'),
         ];
