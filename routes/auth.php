@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Auth\QrLoginController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Auth\WebAuthnController;
@@ -22,6 +23,14 @@ Route::middleware('guest')->group(function () {
         ->name('login');
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
+
+    // QR кодоор нэвтрэх — компьютер тал (нэвтрээгүй).
+    Route::post('login/qr', [QrLoginController::class, 'create'])
+        ->middleware('throttle:30,1')
+        ->name('login.qr.create');
+    Route::get('login/qr/{token}/status', [QrLoginController::class, 'status'])
+        ->middleware('throttle:240,1')
+        ->name('login.qr.status');
 
     Route::post('webauthn/login/options', [WebAuthnController::class, 'loginOptions'])
         ->middleware('throttle:20,1')
@@ -73,6 +82,16 @@ Route::middleware('auth')->group(function () {
         ->name('webauthn.verify.options');
     Route::delete('webauthn/credentials/{credential}', [WebAuthnController::class, 'destroy'])
         ->name('webauthn.destroy');
+
+    // QR кодоор нэвтрэх — утас тал (нэвтэрсэн эрхээр зөвшөөрнө).
+    Route::get('qr/{token}', [QrLoginController::class, 'show'])
+        ->name('login.qr.show');
+    Route::post('qr/{token}/approve', [QrLoginController::class, 'approve'])
+        ->middleware('throttle:30,1')
+        ->name('login.qr.approve');
+    Route::post('qr/{token}/reject', [QrLoginController::class, 'reject'])
+        ->middleware('throttle:30,1')
+        ->name('login.qr.reject');
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');

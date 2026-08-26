@@ -1,6 +1,7 @@
 <script setup>
-import { computed, ref } from 'vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { computed, onBeforeUnmount, ref } from 'vue';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import QRCode from 'qrcode';
 import StateEmblem from '@/Components/StateEmblem.vue';
 import OrnamentMark from '@/Components/OrnamentMark.vue';
 
@@ -47,6 +48,97 @@ const switchMode = () => {
     form.login = '';
     form.clearErrors();
 };
+
+/* ---------------- QR кодоор нэвтрэх ---------------- */
+
+const isQr = computed(() => mode.value === 'qr');
+
+const qrImage = ref('');
+const qrSeconds = ref(0);
+const qrState = ref('idle');   // idle | loading | waiting | approved | expired | rejected | error
+
+let pollTimer = null;
+let tickTimer = null;
+
+const stopQrTimers = () => {
+    clearInterval(pollTimer);
+    clearInterval(tickTimer);
+    pollTimer = null;
+    tickTimer = null;
+};
+
+const startQr = async () => {
+    stopQrTimers();
+    qrState.value = 'loading';
+    qrImage.value = '';
+
+    try {
+        const { data } = await window.axios.post(route('login.qr.create'));
+
+        // QR-ыг тус тусын браузерт шууд зурна — серверт зураг үүсгэхгүй.
+        qrImage.value = await QRCode.toDataURL(data.url, {
+            width: 512,
+            margin: 1,
+            errorCorrectionLevel: 'M',
+            color: { dark: '#1e3a5f', light: '#ffffff' },
+        });
+
+        qrSeconds.value = data.expires_in;
+        qrState.value = 'waiting';
+
+        tickTimer = setInterval(() => {
+            if (--qrSeconds.value <= 0) {
+                stopQrTimers();
+                qrState.value = 'expired';
+            }
+        }, 1000);
+
+        pollTimer = setInterval(() => pollQr(data.token), 2000);
+    } catch (e) {
+        qrState.value = 'error';
+    }
+};
+
+const pollQr = async (token) => {
+    try {
+        const { data } = await window.axios.get(route('login.qr.status', token));
+
+        if (data.status === 'approved') {
+            stopQrTimers();
+            qrState.value = 'approved';
+            router.visit(data.redirect);
+
+            return;
+        }
+
+        if (data.status === 'expired' || data.status === 'rejected') {
+            stopQrTimers();
+            qrState.value = data.status;
+        }
+    } catch (e) {
+        // Түр алдаа — дараагийн асуултаар үргэлжлүүлнэ.
+    }
+};
+
+const openQr = () => {
+    mode.value = 'qr';
+    form.clearErrors();
+    startQr();
+};
+
+const closeQr = () => {
+    stopQrTimers();
+    mode.value = 'phone';
+};
+
+const qrCountdown = computed(() => {
+    const m = Math.floor(qrSeconds.value / 60);
+    const sec = qrSeconds.value % 60;
+
+    return `${m}:${String(sec).padStart(2, '0')}`;
+});
+
+onBeforeUnmount(stopQrTimers);
 
 const submit = () => {
     form.post(route('login'), {
@@ -103,7 +195,7 @@ const submit = () => {
                         {{ status }}
                     </div>
 
-                    <form class="mt-4 space-y-4" @submit.prevent="submit">
+                    <form v-if="! isQr" class="mt-4 space-y-4" @submit.prevent="submit">
                         <!-- Нэвтрэх нэр: утас эсвэл и-мэйл -->
                         <div>
                             <div
@@ -336,6 +428,57 @@ const submit = () => {
                         </button>
                     </form>
 
+                    <!-- QR кодоор нэвтрэх -->
+                    <div v-else class="mt-4">
+                        <div class="relative mx-auto flex h-[248px] w-[248px] items-center justify-center rounded-2xl border-2 border-slate-200 bg-white p-3">
+                            <img
+                                v-if="qrImage && qrState === 'waiting'"
+                                :src="qrImage"
+                                alt="QR код"
+                                class="h-full w-full"
+                            />
+
+                            <div v-else-if="qrState === 'loading'" class="text-sm text-slate-400">
+                                Үүсгэж байна…
+                            </div>
+
+                            <div v-else-if="qrState === 'approved'" class="text-center">
+                                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                                    <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                                <p class="mt-2 text-sm font-medium text-emerald-700">Нэвтэрч байна…</p>
+                            </div>
+
+                            <div v-else class="px-4 text-center">
+                                <p class="text-sm font-medium text-slate-600">
+                                    {{ qrState === 'rejected'
+                                        ? 'Хүсэлт цуцлагдсан.'
+                                        : (qrState === 'error'
+                                            ? 'Холбогдож чадсангүй.'
+                                            : 'QR кодын хугацаа дууссан.') }}
+                                </p>
+                                <button
+                                    type="button"
+                                    class="mt-3 rounded-lg bg-brand-navy-600 px-4 py-2 text-xs font-semibold text-white hover:bg-brand-navy-700"
+                                    @click="startQr"
+                                >
+                                    Шинэчлэх
+                                </button>
+                            </div>
+                        </div>
+
+                        <p class="mt-4 text-center text-sm leading-relaxed text-slate-500">
+                            Утаснаасаа <strong class="text-brand-navy-700">нэвтэрсэн эрхээрээ</strong> энэ QR кодыг
+                            уншуулаад зөвшөөрөхөд энэ компьютер шууд нэвтэрнэ.
+                        </p>
+
+                        <p v-if="qrState === 'waiting'" class="mt-2 text-center text-xs text-slate-400">
+                            Хүчинтэй хугацаа: {{ qrCountdown }}
+                        </p>
+                    </div>
+
                     <!-- Бусад арга -->
                     <div class="mt-6 flex items-center gap-3">
                         <span class="h-px flex-1 bg-slate-200"></span>
@@ -346,8 +489,33 @@ const submit = () => {
                     </div>
 
                     <button
+                        v-if="isQr"
                         type="button"
                         class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-200 px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-brand-navy-300 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-brand-navy-600/10"
+                        @click="closeQr"
+                    >
+                        <svg class="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+                        </svg>
+                        Нууц үгээр нэвтрэх
+                    </button>
+
+                    <button
+                        v-if="! isQr"
+                        type="button"
+                        class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-200 px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-brand-navy-300 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-brand-navy-600/10"
+                        @click="openQr"
+                    >
+                        <svg class="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.5h4.5v4.5h-4.5zM15.75 4.5h4.5v4.5h-4.5zM3.75 15h4.5v4.5h-4.5zM15.75 15h1.5v1.5h-1.5zM19.5 15h.75v.75h-.75zM15.75 18.75h1.5v.75h-1.5zM19.5 18h.75v1.5h-.75zM12 3.75v6M12 12.75v7.5M3.75 12h4.5M12 12h8.25" />
+                        </svg>
+                        QR кодоор нэвтрэх
+                    </button>
+
+                    <button
+                        v-if="! isQr"
+                        type="button"
+                        class="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-200 px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-brand-navy-300 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-brand-navy-600/10"
                         @click="switchMode"
                     >
                         <svg
