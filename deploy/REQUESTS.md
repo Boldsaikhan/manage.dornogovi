@@ -12,10 +12,20 @@
 > «server can't be found» / `ERR_NAME_NOT_RESOLVED` давтагдана.
 > Энэ нь **сайтын Laravel код биш** — gov.mn DNS бүс.
 
-### Гол алдаанууд
-1. Тусад бүс: SOA primary = `a.misconfigured.dns.server.invalid`
-2. NS-үүд шууд dig хийхэд timeout / өмнө нь ns4 NXDOMAIN
-3. A TTL = 60 сек — NS доголдвол утасны DNS маш хурдан унана
+### Гол алдаанууд (сертификатын DNS-01-ийн дараа илүү тод)
+Сертификат өөрөө буруу биш. DNS TXT нэмэх үед бүс эвдэрч, **NS-үүд зөрүүтэй** болсон.
+
+| DNS | Үр дүн |
+|---|---|
+| `8.8.8.8` / `1.1.1.1` | A → `202.37.109.67` (OK) |
+| Univision `ns3.univision.mn` | **NXDOMAIN** (Non-existent domain) |
+| `ns4.gov.mn` | заримдаа NXDOMAIN |
+
+1. Тусад бүс: SOA = `a.misconfigured.dns.server.invalid`
+2. Parent `dornogovi.gov.mn` serial `2022112701` (хуучин)
+3. A TTL = 60 сек
+
+Chrome дээрх «not secure» нь DNS унасан үеийн UI — сертификатын алдаа биш.
 
 ### Зөв тохиргоо (НДТ хийнэ)
 `dornogovi.gov.mn` бүсийн дотор (тусад бүс биш):
