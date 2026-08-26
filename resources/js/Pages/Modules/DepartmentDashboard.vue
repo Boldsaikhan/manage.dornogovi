@@ -22,7 +22,7 @@ defineProps({
                 <p class="ui-subtitle">Албан хаагчийн товч үзүүлэлт, явц.</p>
             </div>
 
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div class="grid grid-cols-2 gap-3 lg:grid-cols-5">
                 <div
                     v-for="card in [
                         { label: 'Хүлээгдэж буй чөлөө', value: stats.pending_leaves },
