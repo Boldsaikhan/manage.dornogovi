@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+    <meta charset="utf-8">
+    <title>Manage Dornogovi</title>
+    <style>
+        :root { color-scheme: light; }
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            width: 22rem;
+            font-family: "Segoe UI", Arial, sans-serif;
+            font-size: 13px;
+            color: #15335d;
+            background: #f8fafc;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 14px;
+            background: #fff;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        header img { width: 32px; height: 32px; }
+        header .title { font-weight: 700; font-size: 13px; }
+        header .sub { font-size: 11px; color: #64748b; }
+
+        section { padding: 12px 14px; }
+
+        .row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 12px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+
+        .row .label { font-weight: 600; }
+        .row .hint { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+        .badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 999px;
+        }
+
+        .ok { background: #dcfce7; color: #15803d; }
+        .off { background: #fee2e2; color: #b91c1c; }
+        .muted { background: #f1f5f9; color: #64748b; }
+
+        .switch { position: relative; width: 40px; height: 22px; flex: none; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; inset: 0; cursor: pointer;
+            background: #cbd5e1; border-radius: 999px; transition: .2s;
+        }
+        .slider::before {
+            content: ''; position: absolute; height: 16px; width: 16px; left: 3px; top: 3px;
+            background: #fff; border-radius: 50%; transition: .2s;
+        }
+        input:checked + .slider { background: #1c55a5; }
+        input:checked + .slider::before { transform: translateX(18px); }
+
+        ul { list-style: none; margin: 0; padding: 0; }
+        li {
+            display: flex; justify-content: space-between; gap: 8px;
+            padding: 6px 0; border-bottom: 1px dashed #e2e8f0; font-size: 12px;
+        }
+        li:last-child { border-bottom: 0; }
+        .site { color: #334155; }
+        .empty { color: #94a3b8; font-size: 12px; }
+
+        .actions { display: flex; gap: 8px; padding: 0 14px 14px; }
+        button, a.btn {
+            flex: 1; text-align: center; text-decoration: none;
+            border: 1px solid #cbd5e1; background: #fff; color: #15335d;
+            border-radius: 8px; padding: 8px 10px; font: inherit; cursor: pointer;
+        }
+        button:hover, a.btn:hover { background: #f1f5f9; }
+        .primary { background: #1c55a5; border-color: #1c55a5; color: #fff; }
+        .primary:hover { background: #164789; }
+
+        h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; margin: 4px 0 8px; }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="icons/icon-48.png" alt="">
+        <div>
+            <div class="title">Manage Dornogovi</div>
+            <div class="sub">Автомат нэвтрэлт</div>
+        </div>
+    </header>
+
+    <section>
+        <div class="row">
+            <div>
+                <div class="label">Автоматаар нэвтрэх</div>
+                <div class="hint">Унтраавал нэр, нууц үг дамжуулахгүй</div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="enabled">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <h2>Хүлээгдэж буй нэвтрэлт</h2>
+        <div class="row" style="display:block">
+            <ul id="pending"></ul>
+            <div class="empty" id="pendingEmpty">Одоогоор алга. Систем дээр дарахад энд түр (90 секунд) харагдана.</div>
+        </div>
+
+        <h2>Дэмжигдэх системүүд</h2>
+        <div class="row" style="display:block">
+            <ul>
+                <li><span class="site">erp.e-mongolia.mn</span><span class="badge muted">Төрийн ERP</span></li>
+                <li><span class="site">shilen.gov.mn</span><span class="badge muted">Шилэн данс</span></li>
+                <li><span class="site">mail.gov.mn</span><span class="badge muted">Төрийн шуудан</span></li>
+                <li><span class="site">www.gov.mn</span><span class="badge muted">Портал</span></li>
+                <li><span class="site">unelgee.gov.mn</span><span class="badge muted">Үнэлгээ</span></li>
+                <li><span class="site">sudalgaa.dornogovi.gov.mn</span><span class="badge muted">Судалгаа</span></li>
+            </ul>
+        </div>
+    </section>
+
+    <div class="actions">
+        <button id="clear">Санах ой цэвэрлэх</button>
+        <a class="btn primary" id="open" href="https://manage.dornogovi.gov.mn/dashboard" target="_blank">Систем нээх</a>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

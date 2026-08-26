@@ -118,6 +118,25 @@
 
         const go = () => location.replace(target);
 
+        // Нөөц зам (хуучин өргөтгөлтэй нийцүүлэх): хуудсаар дамжуулна.
+        const postMessageFallback = (payload) => {
+            window.addEventListener('message', (event) => {
+                if (event.origin === window.location.origin && event.data?.type === 'md-autologin-ready') {
+                    go();
+                }
+            });
+
+            window.postMessage(
+                {
+                    type: 'md-autologin',
+                    host: payload.host,
+                    username: payload.username,
+                    password: payload.password,
+                },
+                window.location.origin,
+            );
+        };
+
         stay.addEventListener('click', () => {
             clearTimeout(timer);
             status.textContent = 'Шилжихийг зогсоолоо. Нэр, нууц үгээ хуулж аваад "Одоо шилжих" дарна уу.';
@@ -129,21 +148,26 @@
             status.textContent = 'Нэвтэрч байна…';
             document.getElementById('hint').style.display = 'none';
 
-            window.addEventListener('message', (event) => {
-                if (event.origin === window.location.origin && event.data?.type === 'md-autologin-ready') {
-                    go();
-                }
-            });
+            const payload = {
+                type: 'store',
+                host: new URL(target).hostname,
+                username: document.getElementById('u').value,
+                password: document.getElementById('p').value,
+            };
 
-            window.postMessage(
-                {
-                    type: 'md-autologin',
-                    host: new URL(target).hostname,
-                    username: document.getElementById('u').value,
-                    password: document.getElementById('p').value,
-                },
-                window.location.origin,
-            );
+            const extensionId = document.documentElement.dataset.mdExtensionId;
+
+            // 1) Аюулгүй зам: мэдээллийг шууд өргөтгөл рүү илгээнэ.
+            //    Хуудсан дээрх бусад скрипт, өргөтгөл харах боломжгүй.
+            if (extensionId && window.chrome?.runtime?.sendMessage) {
+                try {
+                    chrome.runtime.sendMessage(extensionId, payload, () => go());
+                } catch (e) {
+                    postMessageFallback(payload);
+                }
+            } else {
+                postMessageFallback(payload);
+            }
 
             // Өргөтгөл хариу өгөхгүй бол ч гацахгүй.
             timer = setTimeout(go, 2000);

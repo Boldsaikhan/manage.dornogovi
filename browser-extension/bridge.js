@@ -1,11 +1,16 @@
 /**
- * Manage Dornogovi платформын нэвтрэх хуудсанд ажиллана.
+ * Manage Dornogovi платформын хуудсанд ажиллана.
  *
- * Хуудас өргөтгөл суусан эсэхийг мэдэхийн тулд тэмдэг тавьж, дараа нь хуудсаас ирсэн
- * нэвтрэх мэдээллийг хүлээж авч, зорилтот системд зориулж түр хадгална.
+ * Зөвхөн «өргөтгөл суусан» гэсэн тэмдэг тавина. Нэвтрэх мэдээлэл нь хуудаснаас
+ * шууд өргөтгөл рүү (chrome.runtime.sendMessage, externally_connectable) явдаг
+ * тул энэ скриптээр дамжихгүй — өөр өргөтгөл, скрипт харах боломжгүй.
+ *
+ * Хуучин хувилбартай нийцүүлэх нөөц зам ч үлдээв: хэрэв хуудас шууд илгээж
+ * чадаагүй бол postMessage-ээр дамжуулна.
  */
 
 document.documentElement.dataset.mdExtension = '1';
+document.documentElement.dataset.mdExtensionId = chrome.runtime.id;
 
 window.addEventListener('message', (event) => {
     // Зөвхөн энэ хуудас өөрөө илгээсэн мессежийг хүлээн авна.
@@ -15,7 +20,7 @@ window.addEventListener('message', (event) => {
 
     const data = event.data;
 
-    if (data?.type !== 'md-autologin' || !data.host || !data.username || !data.password) {
+    if (data?.type !== 'md-autologin' || ! data.host || ! data.username || ! data.password) {
         return;
     }
 

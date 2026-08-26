@@ -25,12 +25,22 @@ class ExtensionController extends Controller
             throw new RuntimeException('Өргөтгөлийн багц үүсгэж чадсангүй.');
         }
 
-        foreach (['manifest.json', 'bridge.js', 'autofill.js', 'background.js', 'README.md'] as $file) {
+        // ZIP дотор бэлэн хавтас — задлангуутаа «Load unpacked»-д шууд өгнө.
+        $folder = 'manage-dornogovi-extension';
+
+        foreach ([
+            'manifest.json', 'bridge.js', 'autofill.js', 'background.js',
+            'popup.html', 'popup.js', 'README.md',
+        ] as $file) {
             $path = $dir.DIRECTORY_SEPARATOR.$file;
 
             if (is_file($path)) {
-                $zip->addFile($path, $file);
+                $zip->addFile($path, $folder.'/'.$file);
             }
+        }
+
+        foreach (glob($dir.DIRECTORY_SEPARATOR.'icons'.DIRECTORY_SEPARATOR.'*.png') ?: [] as $icon) {
+            $zip->addFile($icon, $folder.'/icons/'.basename($icon));
         }
 
         $zip->close();
@@ -40,7 +50,7 @@ class ExtensionController extends Controller
 
         return response($content, 200, [
             'Content-Type' => 'application/zip',
-            'Content-Disposition' => 'attachment; filename="manage-dornogovi-autologin.zip"',
+            'Content-Disposition' => 'attachment; filename="manage-dornogovi-extension.zip"',
             'Content-Length' => (string) strlen($content),
         ]);
     }

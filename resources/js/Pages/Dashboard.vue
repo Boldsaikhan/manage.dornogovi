@@ -213,10 +213,10 @@ onMounted(() => {
                 </div>
 
                 <ol v-if="showExtensionHelp && ! extensionReady" class="mt-3 list-decimal space-y-1 pl-5 text-xs leading-relaxed">
-                    <li>«Өргөтгөл татах» дарж ZIP файлыг татаад задлана (Extract).</li>
+                    <li>«Өргөтгөл татах» дарж ZIP-ийг татаад <b>задлана</b> (Extract All) — <b>manage-dornogovi-extension</b> хавтас үүснэ.</li>
                     <li>Chrome/Edge дээр <b>chrome://extensions</b> хаягийг нээнэ.</li>
                     <li>Баруун дээд буланд <b>Developer mode</b>-ыг асаана.</li>
-                    <li><b>Load unpacked</b> дарж задалсан хавтсыг сонгоно.</li>
+                    <li><b>Load unpacked</b> дарж тэр хавтсыг сонгоно (дотор нь manifest.json харагдана).</li>
                     <li>Энэ хуудсыг дахин ачаална — «Автомат нэвтрэлт идэвхтэй» гэж харагдана.</li>
                 </ol>
             </div>
