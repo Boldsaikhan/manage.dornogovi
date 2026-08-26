@@ -82,7 +82,7 @@ watch(
 const showDashboard = ref(false); // дэлгэц дүүрэн дашбоард
 
 const CATEGORY_ORDER = ['udirdlaga', 'heltes', 'agentlag', 'sum', 'baiguullaga', 'unknown'];
-const filter = ref(null); // { type: 'category' | 'org', value, label }
+const filter = ref(null); // { type: 'category' | 'org' | 'person', value, label }
 
 const CATEGORY_LABELS = {
     udirdlaga: 'Аймгийн удирдлагууд',
@@ -111,7 +111,7 @@ const splitNames = (value) => String(value ?? '')
 const taskOwners = (task) => {
     const names = splitNames(task.responsible);
 
-    if (!names.length) {
+    if (! names.length) {
         return [{ value: '—', org: 'Тодорхойгүй', category: 'unknown' }];
     }
 
@@ -130,6 +130,10 @@ const average = (list) => (list.length
     ? Math.round(list.reduce((sum, t) => sum + (Number(t.progress) || 0), 0) / list.length)
     : 0);
 
+const averageNumbers = (values) => (values.length
+    ? Math.round(values.reduce((sum, n) => sum + n, 0) / values.length)
+    : 0);
+
 const buildStats = (keyFn, labelFn) => {
     const groups = new Map();
 
@@ -141,7 +145,7 @@ const buildStats = (keyFn, labelFn) => {
             if (seen.has(key)) return;
             seen.add(key);
 
-            if (!groups.has(key)) {
+            if (! groups.has(key)) {
                 groups.set(key, { key, label: labelFn(owner, key), tasks: [] });
             }
             groups.get(key).tasks.push(task);
@@ -158,6 +162,113 @@ const buildStats = (keyFn, labelFn) => {
         }))
         .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'mn'));
 };
+
+// Албан хаагч бүрийн үүргийн дундаж хэрэгжилт.
+const personStats = computed(() => {
+    const groups = new Map();
+
+    props.tasks.forEach((task) => {
+        taskOwners(task).forEach((owner) => {
+            if (owner.value === '—') return;
+
+            if (! groups.has(owner.value)) {
+                groups.set(owner.value, {
+                    key: owner.value,
+                    label: owner.value,
+                    org: owner.org,
+                    category: owner.category,
+                    tasks: [],
+                });
+            }
+
+            const row = groups.get(owner.value);
+            // Утасны жагсаалтаас олдсон мэдээллийг илүүд үзнэ.
+            if (owner.category !== 'unknown') {
+                row.org = owner.org;
+                row.category = owner.category;
+            }
+            if (! row.tasks.some((t) => t.id === task.id)) {
+                row.tasks.push(task);
+            }
+        });
+    });
+
+    return [...groups.values()]
+        .map((p) => ({
+            key: p.key,
+            label: p.label,
+            org: p.org,
+            category: p.category,
+            count: p.tasks.length,
+            done: p.tasks.filter((t) => Number(t.progress) >= 100).length,
+            progress: average(p.tasks),
+        }))
+        .sort((a, b) => b.progress - a.progress || a.label.localeCompare(b.label, 'mn'));
+});
+
+/**
+ * Нэгж (хэлтэс/агентлаг…) бүрийн үзүүлэлт =
+ * тухайн нэгжийн албан хаагчдын хэрэгжилтийн дундаж.
+ */
+const unitStats = computed(() => {
+    const groups = new Map();
+
+    personStats.value.forEach((person) => {
+        const key = person.org || 'Тодорхойгүй';
+
+        if (! groups.has(key)) {
+            groups.set(key, {
+                key,
+                label: key,
+                category: person.category || 'unknown',
+                people: [],
+            });
+        }
+
+        const g = groups.get(key);
+        if (person.category !== 'unknown' && (g.category === 'unknown' || ! g.category)) {
+            g.category = person.category;
+        }
+        g.people.push(person);
+    });
+
+    return [...groups.values()]
+        .map((g) => {
+            const taskIds = new Set();
+            let doneTasks = 0;
+
+            props.tasks.forEach((task) => {
+                const owners = taskOwners(task);
+                if (owners.some((o) => (o.org || 'Тодорхойгүй') === g.key)) {
+                    taskIds.add(task.id);
+                    if (Number(task.progress) >= 100) doneTasks += 1;
+                }
+            });
+
+            return {
+                key: g.key,
+                label: g.label,
+                category: g.category,
+                categoryLabel: CATEGORY_LABELS[g.category] ?? g.category,
+                people: [...g.people].sort((a, b) => b.progress - a.progress || a.label.localeCompare(b.label, 'mn')),
+                peopleCount: g.people.length,
+                count: taskIds.size,
+                done: doneTasks,
+                // Хэлтсийн үзүүлэлт = албан хаагчдын дундаж хэрэгжилт
+                progress: averageNumbers(g.people.map((p) => p.progress)),
+            };
+        })
+        .sort((a, b) => {
+            const ai = CATEGORY_ORDER.indexOf(a.category);
+            const bi = CATEGORY_ORDER.indexOf(b.category);
+            if (ai !== bi) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+
+            return b.progress - a.progress || b.count - a.count || a.label.localeCompare(b.label, 'mn');
+        });
+});
+
+const heltesStats = computed(() => unitStats.value.filter((u) => u.category === 'heltes'));
+const otherUnitStats = computed(() => unitStats.value.filter((u) => u.category !== 'heltes'));
 
 // Дугуй диаграмын тойрог
 const donut = (value, radius = 52) => {
@@ -177,9 +288,6 @@ const statusSegments = computed(() => {
     ].map((s) => ({ ...s, percent: Math.round((s.value / total) * 100) }));
 });
 
-// Ангиллын хэсэгт: бусад ангилал + АЗДТГ-ын нэгж бүр (албан хаагчид гэсэн нэгдсэн карт байхгүй).
-const dashboardCards = computed(() => categoryStats.value.map((item) => ({ ...item, type: 'category' })));
-
 // Ангиллын картуудыг тогтмол дарааллаар харуулна.
 const categoryStats = computed(() => buildStats(
     (owner) => owner.category,
@@ -191,17 +299,31 @@ const categoryStats = computed(() => buildStats(
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
 }));
 
-const orgStats = computed(() => buildStats(
-    (owner) => owner.org,
-    (owner) => owner.org,
-));
+// Хэлтэс ангиллын карт — албан хаагчдын дунджаар (бусад ангилал үүргийн дундаж хэвээр).
+const dashboardCards = computed(() => categoryStats.value.map((item) => {
+    if (item.key !== 'heltes') {
+        return { ...item, type: 'category' };
+    }
+
+    const departments = heltesStats.value;
+    const progress = departments.length
+        ? averageNumbers(departments.map((d) => d.progress))
+        : item.progress;
+
+    return {
+        ...item,
+        type: 'category',
+        progress,
+        peopleCount: departments.reduce((sum, d) => sum + d.peopleCount, 0),
+    };
+}));
 
 const overall = computed(() => ({
     count: props.tasks.length,
     progress: average(props.tasks),
     done: props.tasks.filter((t) => Number(t.progress) >= 100).length,
     started: props.tasks.filter((t) => Number(t.progress) > 0 && Number(t.progress) < 100).length,
-    pending: props.tasks.filter((t) => !Number(t.progress)).length,
+    pending: props.tasks.filter((t) => ! Number(t.progress)).length,
 }));
 
 const barColor = (value) => {
@@ -233,13 +355,14 @@ const clearFilter = () => {
 
 // Шүүлттэй үед зөвхөн холбогдох үүрэг чиглэл харагдана.
 const visibleTasks = computed(() => {
-    if (!filter.value) return props.tasks;
+    if (! filter.value) return props.tasks;
 
-    return props.tasks.filter((task) => taskOwners(task).some((owner) => (
-        filter.value.type === 'category'
-            ? owner.category === filter.value.value
-            : owner.org === filter.value.value
-    )));
+    return props.tasks.filter((task) => taskOwners(task).some((owner) => {
+        if (filter.value.type === 'category') return owner.category === filter.value.value;
+        if (filter.value.type === 'person') return owner.value === filter.value.value;
+
+        return owner.org === filter.value.value;
+    }));
 });
 
 const switchKind = (key) => {
@@ -869,32 +992,132 @@ const prepTableMinWidth = computed(() => {
                                 <div class="min-w-0">
                                     <p class="truncate text-sm font-semibold text-slate-700" :title="item.label">{{ item.label }}</p>
                                     <p class="text-2xl font-bold text-brand-navy-700">{{ item.progress }}%</p>
-                                    <p class="text-xs text-slate-500">{{ item.count }} үүрэг · {{ item.done }} дууссан</p>
+                                    <p class="text-xs text-slate-500">
+                                        <template v-if="item.key === 'heltes' && item.peopleCount">
+                                            {{ item.peopleCount }} албан хаагч · {{ item.count }} үүрэг
+                                        </template>
+                                        <template v-else>
+                                            {{ item.count }} үүрэг · {{ item.done }} дууссан
+                                        </template>
+                                    </p>
                                 </div>
                             </div>
                         </button>
                     </div>
                 </section>
 
-                <section v-if="orgStats.length" class="ui-card-pad mb-8 mt-4">
-                    <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                        Хэлтэс, агентлаг, байгууллагаар
+                <!-- Хэлтэс бүрийн үзүүлэлт: албан хаагчдын дундаж -->
+                <section v-if="heltesStats.length" class="ui-card-pad mt-4">
+                    <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Хэлтэс бүрийн үзүүлэлт
                     </p>
-                    <div class="space-y-2">
-                        <button
-                            v-for="item in orgStats"
-                            :key="item.key"
-                            type="button"
-                            class="flex w-full items-center gap-3 rounded-xl border border-slate-200 px-3 py-2 text-left transition hover:border-brand-navy-400"
-                            @click="applyFilterAndClose('org', item.key, item.label)"
+                    <p class="mb-3 text-xs text-slate-500">
+                        Хэлтэс бүрийн хувь = тухайн хэлтэсийн албан хаагчдын хэрэгжилтийн дундаж.
+                    </p>
+                    <div class="space-y-3">
+                        <div
+                            v-for="unit in heltesStats"
+                            :key="'heltes-' + unit.key"
+                            class="overflow-hidden rounded-2xl border border-slate-200"
                         >
-                            <span class="w-64 shrink-0 truncate text-sm text-slate-700" :title="item.label">{{ item.label }}</span>
-                            <span class="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-200">
-                                <span class="block h-full rounded-full" :class="barColor(item.progress)" :style="{ width: item.progress + '%' }" />
-                            </span>
-                            <span class="w-12 shrink-0 text-right text-sm font-semibold text-brand-navy-700">{{ item.progress }}%</span>
-                            <span class="w-20 shrink-0 text-right text-xs text-slate-500">{{ item.count }} үүрэг</span>
-                        </button>
+                            <button
+                                type="button"
+                                class="flex w-full flex-wrap items-center gap-3 bg-slate-50 px-3 py-2.5 text-left transition hover:bg-brand-navy-50"
+                                @click="applyFilterAndClose('org', unit.key, unit.label)"
+                            >
+                                <span class="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800" :title="unit.label">
+                                    {{ unit.label }}
+                                </span>
+                                <span class="h-2.5 w-32 overflow-hidden rounded-full bg-slate-200 sm:w-48">
+                                    <span
+                                        class="block h-full rounded-full"
+                                        :class="barColor(unit.progress)"
+                                        :style="{ width: unit.progress + '%' }"
+                                    />
+                                </span>
+                                <span class="w-12 shrink-0 text-right text-sm font-bold text-brand-navy-700">{{ unit.progress }}%</span>
+                                <span class="w-28 shrink-0 text-right text-xs text-slate-500">
+                                    {{ unit.peopleCount }} хүн · {{ unit.count }} үүрэг
+                                </span>
+                            </button>
+                            <div class="divide-y divide-slate-100 bg-white px-2 py-1">
+                                <button
+                                    v-for="person in unit.people"
+                                    :key="person.key"
+                                    type="button"
+                                    class="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left transition hover:bg-slate-50"
+                                    @click="applyFilterAndClose('person', person.key, person.label)"
+                                >
+                                    <span class="w-40 shrink-0 truncate text-sm text-slate-700 sm:w-52" :title="person.label">
+                                        {{ person.label }}
+                                    </span>
+                                    <span class="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                                        <span
+                                            class="block h-full rounded-full"
+                                            :class="barColor(person.progress)"
+                                            :style="{ width: person.progress + '%' }"
+                                        />
+                                    </span>
+                                    <span class="w-10 shrink-0 text-right text-xs font-semibold text-slate-700">{{ person.progress }}%</span>
+                                    <span class="w-16 shrink-0 text-right text-xs text-slate-400">{{ person.count }} үүрэг</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section v-if="otherUnitStats.length" class="ui-card-pad mb-8 mt-4">
+                    <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Бусад нэгж (агентлаг, байгууллага…)
+                    </p>
+                    <div class="space-y-3">
+                        <div
+                            v-for="unit in otherUnitStats"
+                            :key="'other-' + unit.key"
+                            class="overflow-hidden rounded-2xl border border-slate-200"
+                        >
+                            <button
+                                type="button"
+                                class="flex w-full flex-wrap items-center gap-3 bg-white px-3 py-2.5 text-left transition hover:bg-slate-50"
+                                @click="applyFilterAndClose('org', unit.key, unit.label)"
+                            >
+                                <span class="min-w-0 flex-1">
+                                    <span class="block truncate text-sm font-semibold text-slate-800" :title="unit.label">{{ unit.label }}</span>
+                                    <span class="text-[11px] text-slate-400">{{ unit.categoryLabel }}</span>
+                                </span>
+                                <span class="h-2.5 w-28 overflow-hidden rounded-full bg-slate-200 sm:w-40">
+                                    <span
+                                        class="block h-full rounded-full"
+                                        :class="barColor(unit.progress)"
+                                        :style="{ width: unit.progress + '%' }"
+                                    />
+                                </span>
+                                <span class="w-12 shrink-0 text-right text-sm font-bold text-brand-navy-700">{{ unit.progress }}%</span>
+                                <span class="w-28 shrink-0 text-right text-xs text-slate-500">
+                                    {{ unit.peopleCount }} хүн · {{ unit.count }} үүрэг
+                                </span>
+                            </button>
+                            <div v-if="unit.people.length" class="divide-y divide-slate-100 border-t border-slate-100 px-2 py-1">
+                                <button
+                                    v-for="person in unit.people"
+                                    :key="person.key"
+                                    type="button"
+                                    class="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left transition hover:bg-slate-50"
+                                    @click="applyFilterAndClose('person', person.key, person.label)"
+                                >
+                                    <span class="w-40 shrink-0 truncate text-sm text-slate-700 sm:w-52">{{ person.label }}</span>
+                                    <span class="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                                        <span
+                                            class="block h-full rounded-full"
+                                            :class="barColor(person.progress)"
+                                            :style="{ width: person.progress + '%' }"
+                                        />
+                                    </span>
+                                    <span class="w-10 shrink-0 text-right text-xs font-semibold text-slate-700">{{ person.progress }}%</span>
+                                    <span class="w-16 shrink-0 text-right text-xs text-slate-400">{{ person.count }} үүрэг</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </section>
             </div>
