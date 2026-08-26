@@ -54,15 +54,34 @@ class TaskDocxParser
      */
     private function isHeaderRow(array $cells): bool
     {
-        $joined = mb_strtolower(implode(' ', $cells));
+        $markers = [
+            'үүрэг чиглэл',
+            'хариуцах эзэн',
+            'арга хэмжээ',
+            'хяналт тавих',
+            'ажлын чиглэл',
+            'хугацаа',
+            'хамтран хэрэгжүүлэх',
+        ];
 
-        foreach (['үүрэг чиглэл', 'хариуцах эзэн', 'арга хэмжээ', 'хяналт тавих'] as $needle) {
-            if (str_contains($joined, $needle)) {
-                return true;
+        $hits = 0;
+
+        foreach ($cells as $cell) {
+            $value = mb_strtolower(trim($cell));
+            if ($value === '' || $value === '№' || $value === 'no' || $value === '#') {
+                continue;
+            }
+
+            foreach ($markers as $marker) {
+                // Зөвхөн толгойн нүд — урт агуулга дунд гарч ирсэн үгийг header гэж үзэхгүй.
+                if ($value === $marker || (str_starts_with($value, $marker) && mb_strlen($value) <= mb_strlen($marker) + 30)) {
+                    $hits++;
+                    break;
+                }
             }
         }
 
-        return false;
+        return $hits >= 2;
     }
 
     /**

@@ -644,11 +644,11 @@ const openWordPreview = async ({ file = null, documentId = null } = {}) => {
 
         const { data } = await window.axios.post(route('tasks.documents.preview'), body);
         wordPreview.value = data;
+        router.reload({ only: ['documents'], preserveScroll: true, preserveState: true });
 
         if (! data.count) {
             alert('Хүснэгт олдсонгүй. .docx хэлбэртэй, хүснэгттэй файл байх шаардлагатай.');
             closeWordPreview();
-            router.reload({ only: ['documents'] });
         }
     } catch (e) {
         const msg = e?.response?.data?.message
@@ -786,10 +786,10 @@ const prepTableMinWidth = computed(() => {
                         v-if="canManage"
                         type="button"
                         class="ui-btn-primary w-full sm:w-auto"
-                        :disabled="uploadForm.processing"
+                        :disabled="wordPreviewing"
                         @click="pickWordFile"
                     >
-                        {{ uploadForm.processing ? 'Оруулж байна…' : 'Word оруулах' }}
+                        {{ wordPreviewing ? 'Уншиж байна…' : 'Word оруулах' }}
                     </button>
                     <div ref="downloadRoot" class="relative w-full sm:w-auto">
                         <button
@@ -831,9 +831,9 @@ const prepTableMinWidth = computed(() => {
                         v-if="canManage"
                         type="button"
                         class="ui-btn-accent w-full sm:w-auto"
-                        @click="addRow"
+                        @click="openAddForm"
                     >
-                        Мөр нэмэх
+                        {{ isDirective ? 'Үүрэг чиглэл нэмэх' : 'Мөр нэмэх' }}
                     </button>
                 </div>
             </div>
@@ -856,6 +856,94 @@ const prepTableMinWidth = computed(() => {
                 </Link>
             </div>
 
+            <!-- Шинэ мөр нэмэх форм -->
+            <section
+                v-if="canManage && showAddForm"
+                ref="addFormRoot"
+                class="rounded-2xl border border-brand-navy-200 bg-white p-4 shadow-soft sm:p-5"
+            >
+                <div class="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-800">
+                            {{ isDirective ? 'Үүрэг чиглэл нэмэх' : 'Төлөвлөгөөний мөр нэмэх' }}
+                        </h3>
+                        <p class="mt-0.5 text-xs text-slate-500">
+                            Талбаруудыг бөглөж хадгална. Хоосон үлдээсэн талбар дараа засварлана.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="rounded-lg px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100"
+                        @click="showAddForm = false"
+                    >
+                        Хаах
+                    </button>
+                </div>
+
+                <form class="space-y-3" @submit.prevent="submitAddForm">
+                    <div v-if="! isDirective" class="grid gap-3 sm:grid-cols-2">
+                        <label class="block">
+                            <span class="mb-1 block text-xs font-semibold text-slate-600">Ажлын чиглэл</span>
+                            <input v-model="addForm.sector" type="text" class="ui-input w-full" placeholder="Ж: Зудын эсрэг" />
+                        </label>
+                        <label class="block">
+                            <span class="mb-1 block text-xs font-semibold text-slate-600">Хугацаа</span>
+                            <input v-model="addForm.period" type="text" class="ui-input w-full" placeholder="Ж: 08.01–09.30" />
+                        </label>
+                    </div>
+
+                    <label class="block">
+                        <span class="mb-1 block text-xs font-semibold text-slate-600">
+                            {{ isDirective ? 'Үүрэг чиглэл' : 'Арга хэмжээ' }}
+                        </span>
+                        <textarea
+                            v-model="addForm.text"
+                            rows="3"
+                            class="ui-input w-full resize-y"
+                            :placeholder="isDirective ? 'Үүрэг чиглэлийн агуулга…' : 'Арга хэмжээний тайлбар…'"
+                            required
+                        />
+                        <p v-if="addForm.errors.text" class="mt-1 text-xs text-red-600">{{ addForm.errors.text }}</p>
+                    </label>
+
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <span class="mb-1 block text-xs font-semibold text-slate-600">Хариуцах эзэн</span>
+                            <div class="rounded-xl border border-slate-200 bg-slate-50/80 px-2 py-1.5">
+                                <SheetCell
+                                    v-model="addForm.responsible"
+                                    :options="people"
+                                    multiple
+                                    placeholder="Нэр сонгох…"
+                                    empty-label="—"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <span class="mb-1 block text-xs font-semibold text-slate-600">
+                                {{ isDirective ? 'Хяналт тавих албан тушаалтан' : 'Хамтран хэрэгжүүлэх' }}
+                            </span>
+                            <div class="rounded-xl border border-slate-200 bg-slate-50/80 px-2 py-1.5">
+                                <SheetCell
+                                    v-model="addForm.collaborator"
+                                    :options="people"
+                                    multiple
+                                    placeholder="Нэр сонгох…"
+                                    empty-label="—"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-3">
+                        <button type="button" class="ui-btn-ghost" @click="showAddForm = false">Болих</button>
+                        <button type="submit" class="ui-btn-primary" :disabled="addForm.processing">
+                            {{ addForm.processing ? 'Хадгалж байна…' : 'Хадгалах' }}
+                        </button>
+                    </div>
+                </form>
+            </section>
+
             <!-- Оруулсан Word файлын товч жагсаалт -->
             <div v-if="documents.length" class="rounded-xl border border-slate-200 bg-white px-4 py-3">
                 <ul class="divide-y divide-slate-100">
@@ -877,10 +965,11 @@ const prepTableMinWidth = computed(() => {
                                 v-if="canManage"
                                 type="button"
                                 class="ui-btn-ghost !py-1.5 text-xs"
-                                title="Файлын хүснэгтийг доорх хүснэгт болгож уншина"
+                                title="Урьдчилан харж хүснэгт болгоно"
+                                :disabled="wordPreviewing"
                                 @click="importDocument(doc.id)"
                             >
-                                Хүснэгт болгох
+                                Урьдчилан харах
                             </button>
                             <a
                                 :href="route('tasks.documents.download', doc.id)"
@@ -1583,5 +1672,89 @@ const prepTableMinWidth = computed(() => {
             </div>
         </div>
 
+        <!-- Word урьдчилсан харах -->
+        <Modal :show="!! wordPreview" max-width="7xl" @close="closeWordPreview">
+            <div class="flex max-h-[85vh] flex-col">
+                <div class="border-b border-slate-100 px-5 py-4 sm:px-6">
+                    <h3 class="text-base font-semibold text-slate-800">Word-ийн урьдчилсан харагдах байдал</h3>
+                    <p class="mt-0.5 text-sm text-slate-500">
+                        <span class="font-medium text-slate-700">{{ wordPreview?.original_name }}</span>
+                        · {{ wordPreview?.count ?? 0 }} мөр · хүснэгтэд оруулахаасаа өмнө шалгана уу
+                    </p>
+                </div>
+
+                <div class="min-h-0 flex-1 overflow-auto px-3 py-3 sm:px-5">
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full min-w-[40rem] border-collapse text-left text-sm">
+                            <thead class="bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                <tr>
+                                    <th class="w-12 px-3 py-2.5">№</th>
+                                    <template v-if="wordPreview?.kind === 'prep_plan'">
+                                        <th class="px-3 py-2.5">Ажлын чиглэл</th>
+                                        <th class="px-3 py-2.5">Арга хэмжээ</th>
+                                        <th class="px-3 py-2.5">Хугацаа</th>
+                                        <th class="px-3 py-2.5">Хариуцах эзэн</th>
+                                        <th class="px-3 py-2.5">Хамтран хэрэгжүүлэх</th>
+                                    </template>
+                                    <template v-else>
+                                        <th class="px-3 py-2.5">Үүрэг чиглэл</th>
+                                        <th class="px-3 py-2.5">Хариуцах эзэн</th>
+                                        <th class="px-3 py-2.5">Хяналт тавих</th>
+                                    </template>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 bg-white">
+                                <tr
+                                    v-for="(row, idx) in (wordPreview?.rows || [])"
+                                    :key="idx"
+                                    class="align-top"
+                                >
+                                    <td class="px-3 py-2.5 text-slate-400">{{ idx + 1 }}</td>
+                                    <template v-if="wordPreview?.kind === 'prep_plan'">
+                                        <td class="px-3 py-2.5 text-slate-700">{{ row.sector || '—' }}</td>
+                                        <td class="max-w-md whitespace-pre-wrap px-3 py-2.5 text-slate-800">{{ row.text || '—' }}</td>
+                                        <td class="px-3 py-2.5 text-slate-700">{{ row.period || '—' }}</td>
+                                        <td class="px-3 py-2.5 text-slate-700">{{ row.responsible || '—' }}</td>
+                                        <td class="px-3 py-2.5 text-slate-700">{{ row.collaborator || '—' }}</td>
+                                    </template>
+                                    <template v-else>
+                                        <td class="max-w-lg whitespace-pre-wrap px-3 py-2.5 text-slate-800">{{ row.text || '—' }}</td>
+                                        <td class="px-3 py-2.5 text-slate-700">{{ row.responsible || '—' }}</td>
+                                        <td class="px-3 py-2.5 text-slate-700">{{ row.collaborator || '—' }}</td>
+                                    </template>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2 border-t border-slate-100 px-5 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-6">
+                    <p class="text-xs text-slate-500">
+                        «Нэмэх» — одоогийн мөр дээр нэмнэ. «Орлуулах» — бүх мөрийг солино.
+                    </p>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" class="ui-btn-ghost" :disabled="wordConfirming" @click="closeWordPreview">
+                            Болих
+                        </button>
+                        <button
+                            type="button"
+                            class="ui-btn-ghost"
+                            :disabled="wordConfirming || ! wordPreview?.count"
+                            @click="confirmWordImport(true)"
+                        >
+                            Орлуулах
+                        </button>
+                        <button
+                            type="button"
+                            class="ui-btn-primary"
+                            :disabled="wordConfirming || ! wordPreview?.count"
+                            @click="confirmWordImport(false)"
+                        >
+                            {{ wordConfirming ? 'Оруулж байна…' : 'Хүснэгтэд нэмэх' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Modal>
     </AuthenticatedLayout>
 </template>

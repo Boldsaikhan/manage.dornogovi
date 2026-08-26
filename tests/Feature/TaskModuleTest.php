@@ -100,4 +100,69 @@ class TaskModuleTest extends TestCase
         $this->assertDatabaseCount('task_documents', 0);
         Storage::disk('local')->assertMissing($doc->path);
     }
+
+    public function test_word_preview_does_not_import_rows_until_confirmed(): void
+    {
+        Storage::fake('local');
+
+        $admin = User::factory()->create(['is_admin' => true]);
+        $path = $this->makeDirectiveDocx();
+        $file = new UploadedFile($path, 'directive.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', null, true);
+
+        $this->actingAs($admin)
+            ->postJson(route('tasks.documents.preview'), [
+                'kind' => 'directive',
+                'file' => $file,
+            ])
+            ->assertOk()
+            ->assertJsonPath('count', 1)
+            ->assertJsonPath('rows.0.text', 'Шинэ үүрэг чиглэл')
+            ->assertJsonPath('rows.0.responsible', 'А.Болд');
+
+        $this->assertDatabaseCount('tasks', 0);
+        $this->assertDatabaseCount('task_documents', 1);
+
+        $doc = TaskDocument::first();
+
+        $this->actingAs($admin)
+            ->post(route('tasks.documents.import', $doc), ['replace' => false])
+            ->assertRedirect();
+
+        $this->assertDatabaseCount('tasks', 1);
+        $this->assertSame('Шинэ үүрэг чиглэл', Task::first()->text);
+    }
+
+    private function makeDirectiveDocx(): string
+    {
+        $xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:tbl>
+      <w:tr>
+        <w:tc><w:p><w:r><w:t>№</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t>Үүрэг чиглэл</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t>Хариуцах эзэн</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t>Хяналт тавих</w:t></w:r></w:p></w:tc>
+      </w:tr>
+      <w:tr>
+        <w:tc><w:p><w:r><w:t>1</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t>Шинэ үүрэг чиглэл</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t>А.Болд</w:t></w:r></w:p></w:tc>
+        <w:tc><w:p><w:r><w:t>Б.Дулмаа</w:t></w:r></w:p></w:tc>
+      </w:tr>
+    </w:tbl>
+  </w:body>
+</w:document>
+XML;
+
+        $path = sys_get_temp_dir().DIRECTORY_SEPARATOR.'directive-preview-'.uniqid('', true).'.docx';
+        $zip = new \ZipArchive();
+        $zip->open($path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+        $zip->addFromString('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"></Types>');
+        $zip->addFromString('word/document.xml', $xml);
+        $zip->close();
+
+        return $path;
+    }
 }

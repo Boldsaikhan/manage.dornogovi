@@ -405,13 +405,13 @@ class TaskController extends Controller
                 'required',
                 'file',
                 'max:20480',
-                'mimes:doc,docx',
+                'extensions:doc,docx',
             ],
         ]);
 
-        $document = $this->storeUploadedDocument($request, $data['kind']);
+        $this->storeUploadedDocument($request, $data['kind']);
 
-        return back(303)->with('success', 'Word файл хадгаллаа. «Хүснэгт болгох» дарж урьдчилан харна.');
+        return back(303)->with('success', 'Word файл хадгаллаа. «Урьдчилан харах» дарж шалгана.');
     }
 
     /**
@@ -430,7 +430,7 @@ class TaskController extends Controller
                 'required_without:document_id',
                 'file',
                 'max:20480',
-                'mimes:doc,docx',
+                'extensions:doc,docx',
             ],
             'document_id' => ['required_without:file', 'integer', 'exists:task_documents,id'],
         ]);
