@@ -5,12 +5,11 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import StateEmblem from '@/Components/StateEmblem.vue';
 import OrnamentMark from '@/Components/OrnamentMark.vue';
-import InstallAppButton from '@/Components/InstallAppButton.vue';
+import AppInstallMenu from '@/Components/AppInstallMenu.vue';
 import MobileAppGate from '@/Components/MobileAppGate.vue';
 import AiPanel from '@/Components/AiPanel.vue';
 import AppLockGate from '@/Components/AppLockGate.vue';
 import BiometricSetupGate from '@/Components/BiometricSetupGate.vue';
-import AppExtensionManager from '@/Components/AppExtensionManager.vue';
 
 defineProps({
     title: { type: String, default: '' },
@@ -23,13 +22,6 @@ const SIDEBAR_COLLAPSE_KEY = 'sidebar_collapsed';
 const AI_PANEL_KEY = 'ai_panel_open';
 const aiOpen = ref(false);
 const navTip = ref({ show: false, text: '', x: 0, y: 0 });
-
-/** Апп/өргөтгөлийн бүтэн хэсэгтэй хуудас — layout-ийн мэдэгдэл давтахгүй. */
-const hasExtensionManagerPage = computed(() => {
-    const path = (page.url || '').split('?')[0];
-
-    return path === '/dept-dashboard' || path === '/dashboard';
-});
 
 onMounted(() => {
     try {
@@ -309,7 +301,6 @@ const isCurrent = (routeName) => {
                 </template>
             </nav>
 
-            <InstallAppButton v-if="! sidebarCollapsed" />
 
             <div
                 class="space-y-1 border-t border-slate-100 p-3"
@@ -417,7 +408,9 @@ const isCurrent = (routeName) => {
                     </h1>
                 </div>
 
-                <div class="ml-auto">
+                <div class="ml-auto flex items-center gap-2">
+                    <AppInstallMenu />
+
                     <Dropdown align="right" width="48">
                         <template #trigger>
                             <button class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-sm transition hover:border-brand-navy-200 hover:bg-brand-navy-50">
@@ -442,8 +435,6 @@ const isCurrent = (routeName) => {
                 class="p-4 sm:p-6 lg:p-8"
                 :class="page.props.aiAssistant?.available ? 'pb-28' : ''"
             >
-                <!-- Өргөтгөл суугаагүй үед мэдэгдэнэ (нүүр/систем хуудсанд бүтэн хэсэг байгаа тул алгасна). -->
-                <AppExtensionManager v-if="! hasExtensionManagerPage" notify-only class="mb-4 block" />
                 <slot />
             </main>
         </div>

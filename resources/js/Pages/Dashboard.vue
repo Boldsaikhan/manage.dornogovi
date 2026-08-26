@@ -4,7 +4,6 @@ import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
-import AppExtensionManager from '@/Components/AppExtensionManager.vue';
 
 const props = defineProps({
     systems: Array,
@@ -169,7 +168,6 @@ onMounted(() => {
                 {{ page.props.flash.success }}
             </div>
 
-            <AppExtensionManager />
 
             <div class="grid gap-4 sm:grid-cols-3">
                 <div class="ui-stat">
