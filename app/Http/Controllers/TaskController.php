@@ -310,6 +310,49 @@ class TaskController extends Controller
         return back(303);
     }
 
+    /**
+     * Олон үүрэг дээр ижил талбаруудыг нэг дор шинэчилнэ.
+     */
+    public function bulkUpdate(Request $request): RedirectResponse
+    {
+        abort_unless(
+            ModuleAccess::canManage($request->user(), 'tasks') || $request->user()->is_admin,
+            403
+        );
+
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:tasks,id'],
+            'fields' => ['required', 'array', 'min:1'],
+            'fields.text' => ['sometimes', 'nullable', 'string', 'max:5000'],
+            'fields.period' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'fields.responsible' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'fields.collaborator' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'fields.sector' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'fields.note' => ['sometimes', 'nullable', 'string', 'max:5000'],
+            'fields.progress' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100'],
+        ]);
+
+        $fields = $data['fields'];
+
+        foreach (['responsible', 'collaborator'] as $field) {
+            if (array_key_exists($field, $fields)) {
+                $fields[$field] = PersonName::shortList($fields[$field]) ?: null;
+            }
+        }
+
+        $count = 0;
+        Task::query()
+            ->whereIn('id', $data['ids'])
+            ->get()
+            ->each(function (Task $task) use ($fields, &$count) {
+                $task->update($fields);
+                $count++;
+            });
+
+        return back(303)->with('success', "{$count} мөрөнд мэдээлэл орууллаа.");
+    }
+
     public function destroy(Request $request, Task $task): RedirectResponse
     {
         abort_unless(

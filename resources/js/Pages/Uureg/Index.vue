@@ -430,6 +430,125 @@ const visibleTasks = computed(() => {
     }));
 });
 
+/** Олон мөр сонгоод нэг дор мэдээлэл оруулах */
+const selectedIds = ref([]);
+const bulkSaving = ref(false);
+const bulk = reactive({
+    responsible: '',
+    collaborator: '',
+    note: '',
+    progress: '',
+});
+const bulkApply = reactive({
+    responsible: false,
+    collaborator: false,
+    note: false,
+    progress: false,
+});
+
+const selectedCount = computed(() => selectedIds.value.length);
+
+const allVisibleSelected = computed(() => (
+    visibleTasks.value.length > 0
+    && visibleTasks.value.every((t) => selectedIds.value.includes(t.id))
+));
+
+const someVisibleSelected = computed(() => (
+    visibleTasks.value.some((t) => selectedIds.value.includes(t.id))
+));
+
+const isSelected = (id) => selectedIds.value.includes(id);
+
+const toggleSelect = (id) => {
+    const i = selectedIds.value.indexOf(id);
+    if (i >= 0) {
+        selectedIds.value.splice(i, 1);
+    } else {
+        selectedIds.value.push(id);
+    }
+};
+
+const toggleSelectAll = () => {
+    if (allVisibleSelected.value) {
+        const visible = new Set(visibleTasks.value.map((t) => t.id));
+        selectedIds.value = selectedIds.value.filter((id) => ! visible.has(id));
+        return;
+    }
+    const next = new Set(selectedIds.value);
+    visibleTasks.value.forEach((t) => next.add(t.id));
+    selectedIds.value = [...next];
+};
+
+const clearSelection = () => {
+    selectedIds.value = [];
+};
+
+const resetBulkForm = () => {
+    bulk.responsible = '';
+    bulk.collaborator = '';
+    bulk.note = '';
+    bulk.progress = '';
+    bulkApply.responsible = false;
+    bulkApply.collaborator = false;
+    bulkApply.note = false;
+    bulkApply.progress = false;
+};
+
+const markBulkField = (field, value) => {
+    bulk[field] = value;
+    bulkApply[field] = true;
+};
+
+const applyBulk = () => {
+    if (! selectedIds.value.length) return;
+
+    const fields = {};
+    if (bulkApply.responsible) fields.responsible = bulk.responsible ?? '';
+    if (bulkApply.collaborator) fields.collaborator = bulk.collaborator ?? '';
+    if (bulkApply.note) fields.note = bulk.note ?? '';
+    if (bulkApply.progress) {
+        let n = Number.parseInt(bulk.progress, 10);
+        if (Number.isNaN(n)) n = 0;
+        n = Math.min(100, Math.max(0, n));
+        fields.progress = n;
+        bulk.progress = n;
+    }
+
+    if (! Object.keys(fields).length) {
+        alert('Оруулах талбар сонгоно уу (хажуугийн нүдийг идэвхжүүлнэ үү).');
+        return;
+    }
+
+    bulkSaving.value = true;
+    router.patch(
+        route('tasks.bulk'),
+        { ids: [...selectedIds.value], fields },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                bulkSaving.value = false;
+            },
+            onSuccess: () => {
+                // Локал draft-уудыг шууд шинэчилж UI-г хүлээхгүй шинэчилнэ.
+                selectedIds.value.forEach((id) => {
+                    if (! drafts[id]) return;
+                    Object.assign(drafts[id], fields);
+                });
+                clearSelection();
+                resetBulkForm();
+            },
+        },
+    );
+};
+
+watch(
+    () => props.kind,
+    () => {
+        clearSelection();
+        resetBulkForm();
+    },
+);
+
 const switchKind = (key) => {
     router.get(route('tasks.index'), { kind: key }, { preserveState: false });
 };
@@ -464,6 +583,7 @@ const saveProgress = (taskId) => {
 
 const removeRow = (taskId) => {
     if (!confirm('Энэ мөрийг устгах уу?')) return;
+    selectedIds.value = selectedIds.value.filter((id) => id !== taskId);
     router.delete(route('tasks.destroy', taskId), { preserveScroll: true });
 };
 
@@ -537,7 +657,7 @@ const directiveNoteColWidth = computed(() => {
 });
 
 const directiveTableMinWidth = computed(() => {
-    const fixed = 48 + 140 + 160 + 96 + (props.canManage ? 48 : 0);
+    const fixed = 48 + 140 + 160 + 96 + (props.canManage ? 48 + 40 : 0);
     return fixed + directiveTextColWidth.value + directiveNoteColWidth.value;
 });
 
@@ -558,7 +678,7 @@ const prepNoteColWidth = computed(() => {
 });
 
 const prepTableMinWidth = computed(() => {
-    const fixed = 48 + 140 + 110 + 140 + 150 + 96 + (props.canManage ? 48 : 0);
+    const fixed = 48 + 140 + 110 + 140 + 150 + 96 + (props.canManage ? 48 + 40 : 0);
     return fixed + prepTextColWidth.value + prepNoteColWidth.value;
 });
 </script>
@@ -760,6 +880,92 @@ const prepTableMinWidth = computed(() => {
                 <span class="text-slate-500">{{ visibleTasks.length }} үүрэг чиглэл</span>
             </div>
 
+            <!-- Олон мөрөнд ижил мэдээлэл оруулах -->
+            <div
+                v-if="canManage && selectedCount"
+                class="sticky top-2 z-20 rounded-2xl border border-brand-navy-200 bg-white/95 p-3 shadow-soft backdrop-blur"
+            >
+                <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <p class="text-sm font-semibold text-brand-navy-800">
+                        {{ selectedCount }} мөр сонгосон — нэг удаа мэдээлэл оруулна
+                    </p>
+                    <button type="button" class="text-xs text-slate-500 hover:text-slate-800" @click="clearSelection">
+                        Сонголт цуцлах
+                    </button>
+                </div>
+                <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    <label class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-2">
+                        <span class="flex items-center gap-2 text-xs font-medium text-slate-600">
+                            <input v-model="bulkApply.responsible" type="checkbox" class="rounded border-slate-300 text-brand-navy-600" />
+                            Хариуцах эзэн
+                        </span>
+                        <SheetCell
+                            v-model="bulk.responsible"
+                            :editable="true"
+                            :options="people"
+                            multiple
+                            placeholder="Сонгох…"
+                            @commit="(v) => markBulkField('responsible', v)"
+                        />
+                    </label>
+                    <label class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-2">
+                        <span class="flex items-center gap-2 text-xs font-medium text-slate-600">
+                            <input v-model="bulkApply.collaborator" type="checkbox" class="rounded border-slate-300 text-brand-navy-600" />
+                            {{ isDirective ? 'Хяналт тавих' : 'Хамтран хэрэгжүүлэх' }}
+                        </span>
+                        <SheetCell
+                            v-model="bulk.collaborator"
+                            :editable="true"
+                            :options="people"
+                            multiple
+                            placeholder="Сонгох…"
+                            @commit="(v) => markBulkField('collaborator', v)"
+                        />
+                    </label>
+                    <label class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-2">
+                        <span class="flex items-center gap-2 text-xs font-medium text-slate-600">
+                            <input v-model="bulkApply.note" type="checkbox" class="rounded border-slate-300 text-brand-navy-600" />
+                            Хэрэгжилт
+                        </span>
+                        <SheetCell
+                            v-model="bulk.note"
+                            multiline
+                            :editable="true"
+                            placeholder="Хэрэгжилт…"
+                            @commit="(v) => markBulkField('note', v)"
+                        />
+                    </label>
+                    <label class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-2">
+                        <span class="flex items-center gap-2 text-xs font-medium text-slate-600">
+                            <input v-model="bulkApply.progress" type="checkbox" class="rounded border-slate-300 text-brand-navy-600" />
+                            Биелэлтийн хувь
+                        </span>
+                        <SheetCell
+                            v-model="bulk.progress"
+                            type="number"
+                            align="center"
+                            :editable="true"
+                            placeholder="0–100"
+                            @commit="(v) => markBulkField('progress', v)"
+                        >
+                            <span v-if="bulk.progress !== '' && bulk.progress != null">{{ bulk.progress }}%</span>
+                            <span v-else class="text-slate-400">—</span>
+                        </SheetCell>
+                    </label>
+                </div>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                        type="button"
+                        class="ui-btn-primary"
+                        :disabled="bulkSaving"
+                        @click="applyBulk"
+                    >
+                        {{ bulkSaving ? 'Хадгалж байна…' : 'Сонгосон мөрүүдэд хэрэглэх' }}
+                    </button>
+                    <span class="text-xs text-slate-500">Зөвхөн идэвхжүүлсэн талбарууд шинэчлэгдэнэ.</span>
+                </div>
+            </div>
+
             <!-- Үүрэг чиглэл -->
             <div v-if="isDirective" class="ui-table-wrap w-full overflow-x-auto">
                 <table
@@ -767,6 +973,7 @@ const prepTableMinWidth = computed(() => {
                     :style="{ width: `${directiveTableMinWidth}px`, minWidth: `${directiveTableMinWidth}px` }"
                 >
                     <colgroup>
+                        <col v-if="canManage" style="width: 40px" />
                         <col class="w-12" />
                         <col :style="{ width: `${directiveTextColWidth}px` }" />
                         <col style="width: 140px" />
@@ -777,6 +984,16 @@ const prepTableMinWidth = computed(() => {
                     </colgroup>
                     <thead>
                         <tr>
+                            <th v-if="canManage" class="text-center">
+                                <input
+                                    type="checkbox"
+                                    class="rounded border-slate-300 text-brand-navy-600"
+                                    :checked="allVisibleSelected"
+                                    :ref="(el) => { if (el) el.indeterminate = someVisibleSelected && !allVisibleSelected; }"
+                                    title="Бүгдийг сонгох"
+                                    @change="toggleSelectAll"
+                                />
+                            </th>
                             <th class="text-center">№</th>
                             <th>Үүрэг чиглэл</th>
                             <th>Хариуцах эзэн</th>
@@ -787,7 +1004,19 @@ const prepTableMinWidth = computed(() => {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="task in visibleTasks" :key="task.id">
+                        <tr
+                            v-for="task in visibleTasks"
+                            :key="task.id"
+                            :class="isSelected(task.id) ? 'bg-brand-navy-50/70' : ''"
+                        >
+                            <td v-if="canManage" class="text-center align-middle">
+                                <input
+                                    type="checkbox"
+                                    class="rounded border-slate-300 text-brand-navy-600"
+                                    :checked="isSelected(task.id)"
+                                    @change="toggleSelect(task.id)"
+                                />
+                            </td>
                             <td class="text-center font-semibold text-slate-500">{{ task.no }}</td>
                             <td class="ui-sheet-td">
                                 <SheetCell
@@ -839,7 +1068,9 @@ const prepTableMinWidth = computed(() => {
                                     :editable="canManage"
                                     @commit="() => saveProgress(task.id)"
                                 >
-                                    {{ drafts[task.id].progress ?? 0 }}%
+                                    <span :class="progressTextClass(drafts[task.id].progress)">
+                                        {{ drafts[task.id].progress ?? 0 }}%
+                                    </span>
                                 </SheetCell>
                             </td>
                             <td v-if="canManage" class="text-center align-middle">
@@ -857,7 +1088,7 @@ const prepTableMinWidth = computed(() => {
                             </td>
                         </tr>
                         <tr v-if="!visibleTasks.length">
-                            <td :colspan="canManage ? 7 : 6" class="!py-14 text-center text-slate-400">
+                            <td :colspan="canManage ? 8 : 6" class="!py-14 text-center text-slate-400">
                                 {{ filter ? 'Энэ шүүлтэд тохирох үүрэг чиглэл алга.' : 'Одоогоор мөр алга. «Мөр нэмэх» дарж эхлүүлнэ үү.' }}
                             </td>
                         </tr>
@@ -872,6 +1103,7 @@ const prepTableMinWidth = computed(() => {
                     :style="{ width: `${prepTableMinWidth}px`, minWidth: `${prepTableMinWidth}px` }"
                 >
                     <colgroup>
+                        <col v-if="canManage" style="width: 40px" />
                         <col style="width: 48px" />
                         <col style="width: 140px" />
                         <col :style="{ width: `${prepTextColWidth}px` }" />
@@ -884,6 +1116,16 @@ const prepTableMinWidth = computed(() => {
                     </colgroup>
                     <thead>
                         <tr>
+                            <th v-if="canManage" class="text-center">
+                                <input
+                                    type="checkbox"
+                                    class="rounded border-slate-300 text-brand-navy-600"
+                                    :checked="allVisibleSelected"
+                                    :ref="(el) => { if (el) el.indeterminate = someVisibleSelected && !allVisibleSelected; }"
+                                    title="Бүгдийг сонгох"
+                                    @change="toggleSelectAll"
+                                />
+                            </th>
                             <th class="text-center">№</th>
                             <th>Ажлын чиглэл</th>
                             <th>Арга хэмжээ</th>
@@ -896,7 +1138,19 @@ const prepTableMinWidth = computed(() => {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="task in visibleTasks" :key="task.id">
+                        <tr
+                            v-for="task in visibleTasks"
+                            :key="task.id"
+                            :class="isSelected(task.id) ? 'bg-brand-navy-50/70' : ''"
+                        >
+                            <td v-if="canManage" class="text-center align-middle">
+                                <input
+                                    type="checkbox"
+                                    class="rounded border-slate-300 text-brand-navy-600"
+                                    :checked="isSelected(task.id)"
+                                    @change="toggleSelect(task.id)"
+                                />
+                            </td>
                             <td class="text-center font-semibold text-slate-500">{{ task.no }}</td>
                             <td class="ui-sheet-td">
                                 <SheetCell
@@ -964,7 +1218,9 @@ const prepTableMinWidth = computed(() => {
                                     :editable="canManage"
                                     @commit="() => saveProgress(task.id)"
                                 >
-                                    {{ drafts[task.id].progress ?? 0 }}%
+                                    <span :class="progressTextClass(drafts[task.id].progress)">
+                                        {{ drafts[task.id].progress ?? 0 }}%
+                                    </span>
                                 </SheetCell>
                             </td>
                             <td v-if="canManage" class="text-center align-middle">
@@ -982,7 +1238,7 @@ const prepTableMinWidth = computed(() => {
                             </td>
                         </tr>
                         <tr v-if="!visibleTasks.length">
-                            <td :colspan="canManage ? 9 : 8" class="!py-14 text-center text-slate-400">
+                            <td :colspan="canManage ? 10 : 8" class="!py-14 text-center text-slate-400">
                                 {{ filter ? 'Энэ шүүлтэд тохирох үүрэг чиглэл алга.' : 'Одоогоор мөр алга. «Мөр нэмэх» дарж эхлүүлнэ үү.' }}
                             </td>
                         </tr>
