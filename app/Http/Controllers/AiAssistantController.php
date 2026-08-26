@@ -145,11 +145,12 @@ class AiAssistantController extends Controller
             ->where('conversation_id', $conversationId)
             ->orderBy('id')
             ->limit(60)
-            ->get(['id', 'role', 'content', 'created_at'])
+            ->get(['id', 'role', 'content', 'meta', 'created_at'])
             ->map(fn (AiMessage $m) => [
                 'id' => $m->id,
                 'role' => $m->role,
                 'content' => $m->content,
+                'meta' => $m->meta,
                 'time' => optional($m->created_at)->format('H:i'),
             ])
             ->all();

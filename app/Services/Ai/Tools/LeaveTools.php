@@ -86,6 +86,7 @@ class LeaveTools
         return [
             'id' => $l->id,
             'user' => $l->user?->name,
+            'person_name' => $l->person_name,
             'department' => $l->department?->name,
             'type' => $l->type,
             'start_date' => optional($l->start_date)?->format('Y-m-d'),
@@ -93,6 +94,9 @@ class LeaveTools
             'days' => $l->days,
             'status' => $l->status,
             'reason' => $l->reason,
+            'title' => $l->person_name ?: ($l->user?->name ?: 'Чөлөө'),
+            'route' => 'leaves.index',
+            'href' => route('leaves.index'),
         ];
     }
 }

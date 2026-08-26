@@ -26,6 +26,8 @@ class SystemTools
                 'tone' => $open > 0 ? 'warn' : 'ok',
                 'label' => "Дуусаагүй үүрэг даалгавар: {$open}",
                 'route' => 'tasks.index',
+                'module' => 'tasks',
+                'href' => route('tasks.index'),
             ];
         }
 
@@ -35,6 +37,8 @@ class SystemTools
                 'tone' => $pending > 0 ? 'warn' : 'ok',
                 'label' => "Хүлээгдэж буй чөлөө: {$pending}",
                 'route' => 'leaves.index',
+                'module' => 'leaves',
+                'href' => route('leaves.index'),
             ];
         }
 
@@ -54,6 +58,8 @@ class SystemTools
                 'tone' => 'info',
                 'label' => "Захирамж/тушаал: нийт {$total}, сүүлийн 30 хоногт {$recent}",
                 'route' => 'decrees.index',
+                'module' => 'decrees',
+                'href' => route('decrees.index'),
             ];
         }
 
@@ -63,6 +69,8 @@ class SystemTools
                 'tone' => 'info',
                 'label' => "Утасны жагсаалт: {$phones} бүртгэл",
                 'route' => 'phone-directory.index',
+                'module' => 'phone_directory',
+                'href' => route('phone-directory.index'),
             ];
         }
 
@@ -74,6 +82,8 @@ class SystemTools
                 'tone' => 'info',
                 'label' => "Өнөөдрийн хурал: {$today}",
                 'route' => 'meetings.index',
+                'module' => 'meetings',
+                'href' => route('meetings.index'),
             ];
         }
 
@@ -83,6 +93,8 @@ class SystemTools
                 'tone' => 'info',
                 'label' => "Идэвхтэй төлөвлөгөө: {$active}",
                 'route' => 'plans.index',
+                'module' => 'plans',
+                'href' => route('plans.index'),
             ];
         }
 
@@ -231,6 +243,8 @@ class SystemTools
                 'office_phone' => $row->office_phone,
                 'mobile_phone' => $row->mobile_phone,
                 'category' => $row->category,
+                'route' => 'phone-directory.index',
+                'href' => route('phone-directory.index'),
             ])->all(),
             'source' => 'phone_directory',
         ];

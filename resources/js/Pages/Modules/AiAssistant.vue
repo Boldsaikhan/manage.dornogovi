@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue';
 import { Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import AiMessageBody from '@/Components/AiMessageBody.vue';
 
 const props = defineProps({
     messages: { type: Array, default: () => [] },
@@ -140,14 +141,21 @@ const usageLabel = computed(() => {
                         <ul class="space-y-1.5">
                             <li v-for="(item, i) in briefing.items" :key="i" class="flex gap-2 text-slate-700">
                                 <span
-                                    class="mt-1 h-2 w-2 shrink-0 rounded-full"
+                                    class="mt-1.5 h-2 w-2 shrink-0 rounded-full"
                                     :class="{
                                         'bg-red-500': item.tone === 'warn',
                                         'bg-amber-500': item.tone === 'info',
                                         'bg-emerald-500': item.tone === 'ok',
                                     }"
                                 />
-                                <span>{{ item.label }}</span>
+                                <Link
+                                    v-if="item.href || item.route"
+                                    :href="item.href || route(item.route, item.params || {})"
+                                    class="font-medium text-brand-navy-700 underline decoration-brand-navy-300 underline-offset-2 hover:text-brand-navy-900"
+                                >
+                                    {{ item.label }}
+                                </Link>
+                                <span v-else>{{ item.label }}</span>
                             </li>
                         </ul>
                     </div>
@@ -155,25 +163,20 @@ const usageLabel = computed(() => {
                     <div
                         v-for="msg in messages"
                         :key="msg.id"
-                        class="max-w-[90%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm"
+                        class="max-w-[90%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm"
                         :class="msg.role === 'user'
                             ? 'ml-auto bg-brand-navy-600 text-white'
                             : 'bg-white text-slate-800 ring-1 ring-slate-100'"
                     >
-                        {{ msg.content }}
-                        <div
-                            v-if="msg.role === 'assistant' && msg.meta?.requires_confirmation && msg.meta?.action"
-                            class="mt-3 flex flex-wrap gap-2"
-                        >
-                            <button
-                                type="button"
-                                class="rounded-lg bg-brand-orange-500 px-3 py-1.5 text-xs font-semibold text-white"
-                                @click="confirmAction(msg.meta.action)"
-                            >
-                                Баталгаажуулах
-                            </button>
-                            <span class="self-center text-xs text-slate-500">AI боловсруулсан — хүний баталгаажуулалт шаардлагатай</span>
-                        </div>
+                        <template v-if="msg.role === 'user'">
+                            <div class="whitespace-pre-wrap">{{ msg.content }}</div>
+                        </template>
+                        <AiMessageBody
+                            v-else
+                            :content="msg.content"
+                            :meta="msg.meta"
+                            @confirm="confirmAction"
+                        />
                     </div>
 
                     <p v-if="!aiEnabled" class="py-6 text-center text-sm text-amber-700">

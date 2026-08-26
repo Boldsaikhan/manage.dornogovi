@@ -95,6 +95,8 @@ class TaskTools
 
     private function map(Task $t): array
     {
+        $params = array_filter(['kind' => $t->source?->key]);
+
         return [
             'id' => $t->id,
             'text' => $t->text,
@@ -105,6 +107,9 @@ class TaskTools
             'progress' => $t->progress,
             'kind' => $t->source?->name,
             'kind_key' => $t->source?->key,
+            'route' => 'tasks.index',
+            'params' => $params,
+            'href' => route('tasks.index', $params),
         ];
     }
 }

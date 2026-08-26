@@ -9,6 +9,7 @@ use App\Models\Leave;
 use App\Models\User;
 use App\Services\Ai\Providers\AiProviderManager;
 use App\Services\Ai\Tools\ToolRegistry;
+use App\Support\AiNavLink;
 use App\Support\ModuleAccess;
 use Illuminate\Support\Str;
 use Throwable;
@@ -86,7 +87,7 @@ class AssistantService
             $this->limiter->hit($user);
             $this->audit($user, $conversation, $message, $intent, [], [], 'guard', true, null, $started);
 
-            return $this->payload($conversation, $answer, [], [], false, null, null, 'guard');
+            return $this->payload($conversation, $answer, [], [], [], false, null, null, 'guard');
         }
 
         $toolResults = [];
@@ -109,7 +110,7 @@ class AssistantService
 
             $data = $result['data'] ?? [];
             if (! empty($data['source'])) {
-                $sources[] = ['type' => 'module', 'label' => $this->moduleLabel($data['source']), 'module' => $data['source']];
+                $sources[] = $this->sourceFromModule((string) $data['source']);
             }
             if (! empty($data['requires_confirmation'])) {
                 $requiresConfirmation = true;
@@ -122,6 +123,9 @@ class AssistantService
                 $briefing = $data;
             }
         }
+
+        $links = $this->collectLinks($toolResults);
+        $sources = $this->uniqueSources($sources);
 
         $formatted = $this->formatToolContext($toolResults);
         $provider = $this->providers->resolve();
@@ -164,6 +168,7 @@ class AssistantService
             'intent' => $intent,
             'provider' => $providerName,
             'sources' => $sources,
+            'links' => $links,
             'tool_results' => $this->sanitizeToolResults($toolResults),
             'requires_confirmation' => $requiresConfirmation,
             'action' => $action,
@@ -177,6 +182,7 @@ class AssistantService
             $conversation,
             $answer,
             $sources,
+            $links,
             $this->sanitizeToolResults($toolResults),
             $requiresConfirmation,
             $action,
@@ -437,6 +443,165 @@ PROMPT;
     }
 
     /**
+     * @return array{type: string, label: string, module: string, route: ?string, params: array<string, mixed>, href: ?string}
+     */
+    private function sourceFromModule(string $moduleKey): array
+    {
+        $link = AiNavLink::forModule($moduleKey);
+
+        return [
+            'type' => 'module',
+            'label' => $link['label'] ?? $this->moduleLabel($moduleKey),
+            'module' => $moduleKey,
+            'route' => $link['route'] ?? null,
+            'params' => $link['params'] ?? [],
+            'href' => $link['href'] ?? null,
+        ];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $sources
+     * @return array<int, array<string, mixed>>
+     */
+    private function uniqueSources(array $sources): array
+    {
+        $seen = [];
+        $out = [];
+
+        foreach ($sources as $source) {
+            $key = ($source['type'] ?? '').'|'.($source['module'] ?? $source['label'] ?? '');
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $out[] = $source;
+        }
+
+        return $out;
+    }
+
+    /**
+     * Tool үр дүнгээс дарагдах холбоосуудыг цуглуулна.
+     *
+     * @param  array<int, array{tool: string, result: array}>  $toolResults
+     * @return array<int, array{label: string, href: string, route: ?string, params: array<string, mixed>, module: ?string}>
+     */
+    private function collectLinks(array $toolResults): array
+    {
+        $links = [];
+        $seen = [];
+
+        foreach ($toolResults as $row) {
+            $result = $row['result'] ?? [];
+            if (! empty($result['denied'])) {
+                continue;
+            }
+
+            $data = $result['data'] ?? [];
+            $source = isset($data['source']) ? (string) $data['source'] : null;
+
+            if (($row['tool'] ?? '') === 'get_dashboard_briefing') {
+                foreach ($data['items'] ?? [] as $item) {
+                    if (! is_array($item)) {
+                        continue;
+                    }
+                    $link = $this->normalizeItemLink((string) ($item['label'] ?? 'Цэс'), $item, $item['module'] ?? null);
+                    $this->pushLink($links, $seen, $link);
+                }
+
+                continue;
+            }
+
+            if (($row['tool'] ?? '') === 'get_task_report') {
+                $this->pushLink($links, $seen, AiNavLink::forModule('tasks', [], 'Үүрэг даалгавар'));
+
+                continue;
+            }
+
+            if (isset($data['items']) && is_array($data['items'])) {
+                foreach (array_slice($data['items'], 0, 10) as $item) {
+                    if (! is_array($item)) {
+                        continue;
+                    }
+                    $label = (string) (
+                        $item['title']
+                        ?? $item['text']
+                        ?? $item['name']
+                        ?? $item['destination']
+                        ?? (! empty($item['number']) ? '#'.$item['number'] : null)
+                        ?? ('#'.($item['id'] ?? ''))
+                    );
+                    if (! empty($item['number']) && $label !== (string) $item['number']) {
+                        $label = trim($item['number'].' — '.$label);
+                    }
+                    $link = $this->normalizeItemLink($label, $item, $source);
+                    $this->pushLink($links, $seen, $link);
+                }
+            }
+        }
+
+        return $links;
+    }
+
+    /**
+     * @param  array<string, mixed>  $item
+     * @return array{label: string, href: string, route: ?string, params: array<string, mixed>, module: ?string}|null
+     */
+    private function normalizeItemLink(string $label, array $item, ?string $source): ?array
+    {
+        $label = trim($label) !== '' ? trim($label) : 'Нээх';
+
+        if (! empty($item['href'])) {
+            return [
+                'label' => $label,
+                'href' => (string) $item['href'],
+                'route' => $item['route'] ?? null,
+                'params' => is_array($item['params'] ?? null) ? $item['params'] : [],
+                'module' => $item['module'] ?? $source,
+            ];
+        }
+
+        if (! empty($item['route'])) {
+            return AiNavLink::make(
+                $label,
+                (string) $item['route'],
+                is_array($item['params'] ?? null) ? $item['params'] : [],
+                isset($item['module']) ? (string) $item['module'] : $source,
+            );
+        }
+
+        if ($source) {
+            $base = AiNavLink::forModule($source);
+            if ($base) {
+                $base['label'] = $label;
+
+                return $base;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $links
+     * @param  array<string, true>  $seen
+     * @param  array<string, mixed>|null  $link
+     */
+    private function pushLink(array &$links, array &$seen, ?array $link): void
+    {
+        if (! $link || empty($link['href'])) {
+            return;
+        }
+
+        $key = $link['href'].'|'.$link['label'];
+        if (isset($seen[$key])) {
+            return;
+        }
+        $seen[$key] = true;
+        $links[] = $link;
+    }
+
+    /**
      * @param  array<int, mixed>  $sources
      * @param  array<int, mixed>  $toolResults
      */
@@ -466,10 +631,19 @@ PROMPT;
         ]);
     }
 
+    /**
+     * @param  array<int, array<string, mixed>>  $sources
+     * @param  array<int, array<string, mixed>>  $links
+     * @param  array<int, mixed>  $toolResults
+     * @param  array<string, mixed>|null  $action
+     * @param  array<string, mixed>|null  $briefing
+     * @return array<string, mixed>
+     */
     private function payload(
         AiConversation $conversation,
         string $message,
         array $sources,
+        array $links,
         array $toolResults,
         bool $requiresConfirmation,
         ?array $action,
@@ -480,12 +654,15 @@ PROMPT;
             'conversation_id' => $conversation->id,
             'message' => $message,
             'sources' => $sources,
+            'links' => $links,
             'tool_results' => $toolResults,
             'requires_confirmation' => $requiresConfirmation,
             'action' => $action,
             'briefing' => $briefing,
             'provider' => $provider,
-            'remaining_today' => app(AiRateLimiter::class)->remaining(auth()->user()),
+            'remaining_today' => auth()->user()
+                ? app(AiRateLimiter::class)->remaining(auth()->user())
+                : null,
             'limited' => false,
         ];
     }

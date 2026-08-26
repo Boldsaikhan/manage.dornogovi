@@ -78,12 +78,15 @@ class DocumentTools
             'items' => $query->get()->map(fn (Decree $d) => [
                 'id' => $d->id,
                 'kind' => $d->kindLabel(),
+                'kind_key' => $d->kind,
                 'number' => $d->number,
                 'title' => $d->title ?: ($d->person_name ?: '—'),
                 'person_name' => $d->person_name,
                 'issued_on' => optional($d->issued_on)?->format('Y-m-d')
                     ?? optional($d->created_at)?->format('Y-m-d'),
                 'route' => 'decrees.index',
+                'params' => ['tab' => $d->kind ?: 'niit'],
+                'href' => route('decrees.index', ['tab' => $d->kind ?: 'niit']),
             ])->all(),
             'source' => 'decrees',
         ];
@@ -105,6 +108,7 @@ class DocumentTools
                 'title' => $r->title,
                 'category' => $r->category,
                 'route' => 'regulations.index',
+                'href' => route('regulations.index'),
             ])->all(),
             'source' => 'regulations',
         ];
@@ -127,6 +131,7 @@ class DocumentTools
                 'category' => $a->category,
                 'year' => $a->year,
                 'route' => 'archives.index',
+                'href' => route('archives.index'),
             ])->all(),
             'source' => 'archives',
         ];
@@ -152,6 +157,7 @@ class DocumentTools
                 'counterparty' => $c->counterparty,
                 'issued_on' => optional($c->issued_on)?->format('Y-m-d'),
                 'route' => 'contracts.index',
+                'href' => route('contracts.index'),
             ])->all(),
             'source' => 'contracts',
         ];
@@ -172,6 +178,7 @@ class DocumentTools
                 'period' => $p->period,
                 'status' => $p->status,
                 'route' => 'plans.index',
+                'href' => route('plans.index'),
             ])->all(),
             'source' => 'plans',
         ];
@@ -191,6 +198,7 @@ class DocumentTools
                 'held_at' => optional($m->held_at)?->format('Y-m-d H:i'),
                 'status' => $m->status,
                 'route' => 'meetings.index',
+                'href' => route('meetings.index'),
             ])->all(),
             'source' => 'meetings',
         ];
@@ -210,6 +218,7 @@ class DocumentTools
                 'title' => $r->title,
                 'period' => $r->period,
                 'route' => 'reports.index',
+                'href' => route('reports.index'),
             ])->all(),
             'source' => 'reports',
         ];
@@ -230,6 +239,8 @@ class DocumentTools
                 'start_date' => optional($t->start_date)?->format('Y-m-d'),
                 'end_date' => optional($t->end_date)?->format('Y-m-d'),
                 'status' => $t->status,
+                'route' => 'assignments.index',
+                'href' => route('assignments.index'),
             ])->all(),
             'source' => 'assignments',
         ];
