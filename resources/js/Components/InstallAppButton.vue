@@ -69,9 +69,11 @@ const install = async () => {
             Утсандаа апп болгож суулгах
         </button>
 
-        <p v-if="showIosHelp" class="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-[11px] leading-relaxed text-slate-600">
-            iPhone дээр: Safari-гийн доод талын <b>Хуваалцах</b> (⬆) товчийг дараад
-            <b>«Нүүр дэлгэцэд нэмэх»</b> сонголтыг сонгоно.
+        <p v-if="showIosHelp" class="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900">
+            iPhone дээр апп <b>татаж</b> суулгах товч байхгүй.
+            Safari-ийн доод <b>Хуваалцах</b> (□↑) → жагсаалтыг гүйлгээд
+            <b>«Нүүр дэлгэцэд нэмэх»</b> → <b>«Нэмэх»</b>.
+            Chrome-оор орсон бол эхлээд Safari-ээр нээнэ үү.
         </p>
     </div>
 </template>
