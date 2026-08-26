@@ -11,6 +11,9 @@ const TTL_MS = 90_000;
 
 const key = (host) => `pending:${host}`;
 
+// Төхөөрөмжийн санах (chrome.storage.local) — браузер хаагдсан ч үлдэнэ.
+const deviceKey = (host) => `device:${host}`;
+
 // Мэдээлэл хадгалуулж чадах платформын хаягууд (production + локал хөгжүүлэлт).
 const ALLOWED_ORIGINS = [
     'https://manage.dornogovi.gov.mn/',
@@ -33,18 +36,27 @@ const store = async (message) => {
         return { ok: false, reason: 'disabled' };
     }
 
+    const entry = {
+        mode: message.mode ?? 'password',
+        username: message.username,
+        password: message.password,
+    };
+
     await chrome.storage.session.set({
-        [key(message.host)]: {
-            username: message.username,
-            password: message.password,
-            expiresAt: Date.now() + TTL_MS,
-        },
+        [key(message.host)]: { ...entry, expiresAt: Date.now() + TTL_MS },
     });
+
+    // «Энэ төхөөрөмжийг санах» — дараа удаа платформыг дамжахгүй шууд нэвтэрнэ.
+    if (message.remember) {
+        await chrome.storage.local.set({ [deviceKey(message.host)]: entry });
+    } else {
+        await chrome.storage.local.remove(deviceKey(message.host));
+    }
 
     return { ok: true };
 };
 
-const take = async (host) => {
+const take = async (host, mode) => {
     const k = key(host);
     const data = await chrome.storage.session.get(k);
     const entry = data[k];
@@ -52,11 +64,21 @@ const take = async (host) => {
     // Нэг удаа ашиглаад шууд устгана.
     await chrome.storage.session.remove(k);
 
-    if (! entry || entry.expiresAt < Date.now()) {
-        return null;
-    }
+    const fresh = entry && entry.expiresAt >= Date.now() ? entry : null;
 
-    return { username: entry.username, password: entry.password };
+    // Платформаас ирсэн мэдээлэл байхгүй бол төхөөрөмжид санасаныг авна.
+    const remembered = fresh
+        ? null
+        : (await chrome.storage.local.get(deviceKey(host)))[deviceKey(host)] ?? null;
+
+    const result = fresh ?? remembered;
+
+    if (! result) return null;
+
+    // Хүссэн горимтой таарахгүй бол өгөхгүй (dan — password).
+    if (mode && (result.mode ?? 'password') !== mode) return null;
+
+    return { mode: result.mode ?? 'password', username: result.username, password: result.password };
 };
 
 const handle = (message, sender, sendResponse, trusted) => {
@@ -73,7 +95,7 @@ const handle = (message, sender, sendResponse, trusted) => {
     }
 
     if (message?.type === 'take') {
-        take(message.host).then(sendResponse);
+        take(message.host, message.mode).then(sendResponse);
 
         return true;
     }
@@ -118,6 +140,17 @@ const handle = (message, sender, sendResponse, trusted) => {
 
     if (message?.type === 'clear') {
         chrome.storage.session.clear().then(() => sendResponse({ ok: true }));
+
+        return true;
+    }
+
+    // Төхөөрөмжид санасан бүх мэдээллийг устгана.
+    if (message?.type === 'forgetDevice') {
+        chrome.storage.local.get(null).then((all) => {
+            const keys = Object.keys(all).filter((k) => k.startsWith('device:'));
+
+            chrome.storage.local.remove(keys).then(() => sendResponse({ ok: true, removed: keys.length }));
+        });
 
         return true;
     }

@@ -13,9 +13,11 @@ class UserCredential extends Model
     protected $fillable = [
         'user_id',
         'system_id',
+        'auth_type',
         'username_encrypted',
         'password_encrypted',
         'note_encrypted',
+        'remember_device',
         'last_used_at',
     ];
 
@@ -35,6 +37,7 @@ class UserCredential extends Model
             'username_encrypted' => 'encrypted',
             'password_encrypted' => 'encrypted',
             'note_encrypted' => 'encrypted',
+            'remember_device' => 'boolean',
             'last_used_at' => 'datetime',
         ];
     }

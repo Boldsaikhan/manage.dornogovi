@@ -46,10 +46,21 @@ const launchAfterSave = ref(false);
 
 const form = useForm({
     system_id: null,
+    auth_type: 'password',
     username: '',
     password: '',
     note: '',
+    remember_device: false,
 });
+
+const isDan = computed(() => form.auth_type === 'dan');
+
+// Регистрийн дугаар — 2 кирилл үсэг + 8 орон.
+const registerValid = computed(() => /^[А-ЯЁҮӨ]{2}\d{8}$/.test(form.username.trim().toUpperCase()));
+
+const onRegisterInput = (event) => {
+    form.username = event.target.value.toUpperCase().replace(/\s+/g, '');
+};
 
 const openSave = (system, thenLaunch = false) => {
     activeSystem.value = system;
@@ -57,6 +68,9 @@ const openSave = (system, thenLaunch = false) => {
     form.reset();
     form.clearErrors();
     form.system_id = system.id;
+    // ДАН-аар нэвтэрдэг системд ДАН-ыг анхнаас сонгож өгнө.
+    form.auth_type = system.auth_type ?? (system.supports_dan ? 'dan' : 'password');
+    form.remember_device = !! system.remember_device;
     saveModal.value = true;
 };
 
@@ -293,14 +307,52 @@ onMounted(() => {
                 <h2 class="ui-title text-base">{{ activeSystem?.name }} — нэвтрэх мэдээлэл</h2>
                 <p class="ui-subtitle">Мэдээлэл шифрлэгдэн хадгалагдана. Зөвхөн та өөрөө нээж чадна.</p>
 
+                <!-- ДАН-аар нэвтэрдэг системд нэвтрэлтийн төрлийг сонгоно. -->
+                <div v-if="activeSystem?.supports_dan" class="mt-5 flex gap-2 rounded-xl bg-slate-100 p-1">
+                    <button
+                        type="button"
+                        class="flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition"
+                        :class="! isDan ? 'bg-white text-brand-navy-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                        @click="form.auth_type = 'password'"
+                    >
+                        Нэр, нууц үгээр
+                    </button>
+                    <button
+                        type="button"
+                        class="flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition"
+                        :class="isDan ? 'bg-white text-brand-navy-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                        @click="form.auth_type = 'dan'"
+                    >
+                        ДАН-аар нэвтрэх
+                    </button>
+                </div>
+
+                <p v-if="isDan" class="mt-3 rounded-xl bg-brand-navy-50 px-3 py-2 text-xs leading-relaxed text-brand-navy-700">
+                    ДАН-ы «Нэг удаагийн код» хэсэгт регистр, нууц үгийг автоматаар бөглөж,
+                    баталгаажуулах код утас руу илгээх хүртэлх алхмыг гүйцэтгэнэ.
+                    <strong>Кодыг та өөрөө оруулна</strong> — үүнийг тойрох боломжгүй.
+                </p>
+
                 <div class="mt-5 space-y-4">
                     <div>
-                        <label class="ui-label">Нэвтрэх нэр</label>
-                        <input v-model="form.username" type="text" autocomplete="off" class="ui-input" />
+                        <label class="ui-label">{{ isDan ? 'Регистрийн дугаар' : 'Нэвтрэх нэр' }}</label>
+                        <input
+                            :value="form.username"
+                            type="text"
+                            autocomplete="off"
+                            class="ui-input"
+                            :class="isDan ? 'font-mono uppercase tracking-wide' : ''"
+                            :placeholder="isDan ? 'УХ98010112' : ''"
+                            :maxlength="isDan ? 10 : 255"
+                            @input="isDan ? onRegisterInput($event) : (form.username = $event.target.value)"
+                        />
+                        <p v-if="isDan && form.username && ! registerValid" class="mt-1 text-xs text-amber-600">
+                            2 кирилл үсэг + 8 оронтой байна (жишээ: УХ98010112).
+                        </p>
                         <InputError :message="form.errors.username" class="mt-1" />
                     </div>
                     <div>
-                        <label class="ui-label">Нууц үг</label>
+                        <label class="ui-label">{{ isDan ? 'ДАН нууц үг' : 'Нууц үг' }}</label>
                         <input v-model="form.password" type="password" autocomplete="new-password" class="ui-input" />
                         <InputError :message="form.errors.password" class="mt-1" />
                     </div>
@@ -309,6 +361,14 @@ onMounted(() => {
                         <textarea v-model="form.note" rows="2" class="ui-input" />
                         <InputError :message="form.errors.note" class="mt-1" />
                     </div>
+                    <label class="flex items-start gap-2 rounded-xl border border-slate-200 px-3 py-2">
+                        <input v-model="form.remember_device" type="checkbox" class="mt-0.5 rounded border-slate-300" />
+                        <span class="text-xs leading-relaxed text-slate-600">
+                            <span class="font-medium text-slate-700">Энэ төхөөрөмжид санах</span> —
+                            дараа удаа сангаа нээлгүй шууд нэвтэрнэ.
+                            Мэдээлэл тухайн компьютерт үлдэх тул зөвхөн өөрийн төхөөрөмждөө ашиглана уу.
+                        </span>
+                    </label>
                 </div>
 
                 <div class="mt-6 flex justify-end gap-2">

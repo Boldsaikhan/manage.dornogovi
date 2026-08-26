@@ -113,7 +113,7 @@
         return true;
     };
 
-    chrome.runtime.sendMessage({ type: 'take', host: location.hostname }, (entry) => {
+    chrome.runtime.sendMessage({ type: 'take', host: location.hostname, mode: 'password' }, (entry) => {
         if (chrome.runtime.lastError || !entry) return;
 
         credential = entry;

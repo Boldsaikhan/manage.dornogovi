@@ -69,6 +69,8 @@ const form = useForm({
     url: '',
     login_url: '',
     login_method: 'manual',
+    supports_dan: false,
+    dan_login_url: '',
     login_form_action: '',
     login_username_field: '',
     login_password_field: '',
@@ -140,6 +142,8 @@ const resetForm = () => {
     form.url = '';
     form.login_url = '';
     form.login_method = 'manual';
+    form.supports_dan = false;
+    form.dan_login_url = '';
     form.login_form_action = '';
     form.login_username_field = '';
     form.login_password_field = '';
@@ -196,6 +200,8 @@ const openEdit = (system) => {
     form.url = system.url;
     form.login_url = system.login_url ?? '';
     form.login_method = system.login_method;
+    form.supports_dan = !! system.supports_dan;
+    form.dan_login_url = system.dan_login_url ?? '';
     form.login_form_action = system.login_form_action ?? '';
     form.login_username_field = system.login_username_field ?? '';
     form.login_password_field = system.login_password_field ?? '';
@@ -693,6 +699,30 @@ const saveAi = () => {
                             </div>
                         </div>
                     </template>
+
+                    <!-- ДАН — Үндэсний танилт, нэвтрэлтийн системээр нэвтэрдэг эсэх. -->
+                    <div class="rounded-xl border border-brand-navy-100 bg-slate-50/70 p-4">
+                        <label class="flex items-center gap-2 text-sm font-medium text-brand-navy-700">
+                            <input v-model="form.supports_dan" type="checkbox" class="rounded border-brand-navy-200 text-brand-orange-500" />
+                            ДАН-аар нэвтэрдэг
+                        </label>
+                        <p class="mt-1 text-xs text-brand-navy-400">
+                            Асаахад албан хаагчид нэвтрэх мэдээлэлдээ «ДАН-аар нэвтрэх» сонголтоор регистрээ хадгална.
+                        </p>
+                        <div v-if="form.supports_dan" class="mt-3">
+                            <label class="ui-label">ДАН-ы нэвтрэх хаяг (заавал биш)</label>
+                            <input
+                                v-model="form.dan_login_url"
+                                type="url"
+                                class="ui-input"
+                                placeholder="https://dan.gov.mn/…"
+                            />
+                            <p class="mt-1 text-xs text-brand-navy-400">
+                                Хоосон бол системийн ердийн нэвтрэх хаягийг хэрэглэнэ.
+                            </p>
+                            <InputError :message="form.errors.dan_login_url" class="mt-1" />
+                        </div>
+                    </div>
 
                     <label class="flex items-center gap-2 text-sm text-brand-navy-700">
                         <input v-model="form.is_active" type="checkbox" class="rounded border-brand-navy-200 text-brand-orange-500" />

@@ -45,6 +45,17 @@ document.getElementById('uninstall').addEventListener('click', () => {
     chrome.management.uninstallSelf({ showConfirmDialog: true });
 });
 
+// Тухайн төхөөрөмжид санасан нэвтрэх мэдээллийг бүрэн устгана.
+document.getElementById('forgetDevice').addEventListener('click', (event) => {
+    const button = event.currentTarget;
+
+    chrome.runtime.sendMessage({ type: 'forgetDevice' }, (result) => {
+        button.textContent = `Устгалаа (${result?.removed ?? 0})`;
+        setTimeout(() => (button.textContent = 'Төхөөрөмжид санасныг устгах'), 1800);
+        refresh();
+    });
+});
+
 clearButton.addEventListener('click', () => {
     chrome.runtime.sendMessage({ type: 'clear' }, refresh);
 });

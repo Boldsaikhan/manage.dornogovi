@@ -37,7 +37,11 @@ class DashboardController extends Controller
                     'is_embeddable' => (bool) $system->is_embeddable,
                     'auto_submit' => $system->canAutoSubmit(),
                     'requires_login' => (bool) $system->requires_login,
+                    'supports_dan' => (bool) $system->supports_dan,
+                    'dan_entry_url' => $system->danEntryUrl(),
                     'has_credential' => (bool) $credential,
+                    'auth_type' => $credential?->auth_type,
+                    'remember_device' => (bool) $credential?->remember_device,
                     'last_used_at' => $credential?->last_used_at?->diffForHumans(),
                 ];
             });

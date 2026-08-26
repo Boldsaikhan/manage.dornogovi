@@ -12,6 +12,7 @@ use App\Support\PdfTableWriter;
 use App\Support\PersonName;
 use App\Support\TaskDocxParser;
 use App\Support\XlsxTableWriter;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -408,24 +409,49 @@ class TaskController extends Controller
             ],
         ]);
 
-        $source = TaskSource::query()->where('key', $data['kind'])->firstOrFail();
-        $file = $request->file('file');
-        $path = $file->store('task-documents/'.$source->key, 'local');
+        $document = $this->storeUploadedDocument($request, $data['kind']);
 
-        $document = $source->documents()->create([
-            'uploaded_by' => $request->user()->id,
-            'original_name' => $file->getClientOriginalName(),
-            'path' => $path,
-            'mime' => $file->getClientMimeType(),
-            'size' => $file->getSize() ?: 0,
+        return back(303)->with('success', 'Word файл хадгаллаа. «Хүснэгт болгох» дарж урьдчилан харна.');
+    }
+
+    /**
+     * Word файлаас уншсан мөрүүдийг урьдчилан харуулна (хадгалаагүй).
+     */
+    public function previewDocument(Request $request): JsonResponse
+    {
+        abort_unless(
+            ModuleAccess::canManage($request->user(), 'tasks') || $request->user()->is_admin,
+            403
+        );
+
+        $data = $request->validate([
+            'kind' => ['required_without:document_id', Rule::in([TaskSource::KEY_DIRECTIVE, TaskSource::KEY_PREP_PLAN])],
+            'file' => [
+                'required_without:document_id',
+                'file',
+                'max:20480',
+                'mimes:doc,docx',
+            ],
+            'document_id' => ['required_without:file', 'integer', 'exists:task_documents,id'],
         ]);
 
-        // Файлын хүснэгтийг шууд мөр болгож уншина.
-        $imported = $this->importRows($document, $source->key, replace: false);
+        if ($request->hasFile('file')) {
+            $document = $this->storeUploadedDocument($request, $data['kind']);
+            $kind = $data['kind'];
+        } else {
+            $document = TaskDocument::query()->with('source')->findOrFail($data['document_id']);
+            $kind = $document->source->key;
+        }
 
-        return back(303)->with('success', $imported > 0
-            ? "Word файл хадгалж, {$imported} мөрийг хүснэгтэд оруулав."
-            : 'Word файл хадгаллаа. (Хүснэгт олдсонгүй — .docx хэлбэртэй, хүснэгттэй файл байх шаардлагатай.)');
+        $rows = $this->parseDocumentRows($document, $kind);
+
+        return response()->json([
+            'document_id' => $document->id,
+            'original_name' => $document->original_name,
+            'kind' => $kind,
+            'count' => count($rows),
+            'rows' => $rows,
+        ]);
     }
 
     public function importDocument(Request $request, TaskDocument $document): RedirectResponse
@@ -447,28 +473,51 @@ class TaskController extends Controller
     }
 
     /**
-     * Word файлын хүснэгтийг үүргийн мөр болгож хадгална.
+     * @return array<int, array<string, string|null>>
      */
-    private function importRows(TaskDocument $document, string $kind, bool $replace): int
+    private function parseDocumentRows(TaskDocument $document, string $kind): array
     {
         if (! Storage::disk('local')->exists($document->path)) {
-            return 0;
+            return [];
         }
 
         $extension = strtolower(pathinfo($document->original_name, PATHINFO_EXTENSION));
 
         if ($extension !== 'docx') {
-            return 0;
+            return [];
         }
 
         try {
-            $rows = app(TaskDocxParser::class)->parse(
+            return app(TaskDocxParser::class)->parse(
                 Storage::disk('local')->path($document->path),
                 $kind
             );
         } catch (Throwable) {
-            return 0;
+            return [];
         }
+    }
+
+    private function storeUploadedDocument(Request $request, string $kind): TaskDocument
+    {
+        $source = TaskSource::query()->where('key', $kind)->firstOrFail();
+        $file = $request->file('file');
+        $path = $file->store('task-documents/'.$source->key, 'local');
+
+        return $source->documents()->create([
+            'uploaded_by' => $request->user()->id,
+            'original_name' => $file->getClientOriginalName(),
+            'path' => $path,
+            'mime' => $file->getClientMimeType(),
+            'size' => $file->getSize() ?: 0,
+        ]);
+    }
+
+    /**
+     * Word файлын хүснэгтийг үүргийн мөр болгож хадгална.
+     */
+    private function importRows(TaskDocument $document, string $kind, bool $replace): int
+    {
+        $rows = $this->parseDocumentRows($document, $kind);
 
         if (! $rows) {
             return 0;

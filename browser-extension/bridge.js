@@ -28,6 +28,8 @@ window.addEventListener('message', (event) => {
         {
             type: 'store',
             host: data.host,
+            mode: data.mode ?? 'password',
+            remember: !! data.remember,
             username: data.username,
             password: data.password,
         },

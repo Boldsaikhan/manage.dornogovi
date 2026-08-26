@@ -3,9 +3,11 @@
     "name": "Manage Dornogovi",
     "short_name": "Manage Dornogovi",
     "description": "Дорноговь аймгийн нэгдсэн системд хадгалсан нэвтрэх мэдээллээр төрийн системүүдэд автоматаар нэвтэрнэ.",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8bnCcAds3tQwstn3iZhcoGndBCk3VX5Q4imN6A8marV2kU6exUAJNgra2ym4Usv+OxXTbopaWiQGXGOsazICxQC/lIsnyMg483BQBGMfLMQNLW3YH3/3fCvGcoXSneBfTkL3t7RniiUHPJn7veZVQiWn3RUueVqcnKBJXD2iFwzQKeMomygfQroxvtABf324r0G/JefjgncRMoXEt1O63gHmcZ5RuiuS9IIKhDSgAwNDivpz9jcbtWjZPDFozsnpbLEgSI9kOidaeVTJ8kjcJHq76oMUXG5YjOQnRmbb9FXc6HuHXtdrVKhmmbMhhE2NVgdzt6tJY3lwcYGA7LjG8QIDAQAB",
-    "permissions": ["storage"],
+    "permissions": [
+        "storage"
+    ],
     "host_permissions": [
         "https://manage.dornogovi.gov.mn/*",
         "http://manage.dornogovi.gov.mn/*",
@@ -17,7 +19,10 @@
         "https://loginnew.unelgee.gov.mn/*",
         "http://dornogovi.unelgee.gov.mn/*",
         "https://dornogovi.unelgee.gov.mn/*",
-        "https://sudalgaa.dornogovi.gov.mn/*"
+        "https://sudalgaa.dornogovi.gov.mn/*",
+        "https://dan.gov.mn/*",
+        "https://*.dan.gov.mn/*",
+        "https://auth.e-mongolia.mn/*"
     ],
     "externally_connectable": {
         "matches": [
@@ -52,7 +57,9 @@
                 "http://manage.dornogovi.gov.mn/*",
                 "http://localhost/manage.dornogovi.gov.mn/*"
             ],
-            "js": ["bridge.js"],
+            "js": [
+                "bridge.js"
+            ],
             "run_at": "document_start"
         },
         {
@@ -66,7 +73,21 @@
                 "https://dornogovi.unelgee.gov.mn/*",
                 "https://sudalgaa.dornogovi.gov.mn/*"
             ],
-            "js": ["autofill.js"],
+            "js": [
+                "autofill.js"
+            ],
+            "run_at": "document_idle",
+            "all_frames": false
+        },
+        {
+            "matches": [
+                "https://dan.gov.mn/*",
+                "https://*.dan.gov.mn/*",
+                "https://auth.e-mongolia.mn/*"
+            ],
+            "js": [
+                "dan-autofill.js"
+            ],
             "run_at": "document_idle",
             "all_frames": false
         }

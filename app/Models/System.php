@@ -16,6 +16,11 @@ class System extends Model
 
     public const LOGIN_FORM_POST = 'form_post';
 
+    /** ДАН — Үндэсний танилт, нэвтрэлтийн систем. */
+    public const AUTH_DAN = 'dan';
+
+    public const AUTH_PASSWORD = 'password';
+
     protected $fillable = [
         'slug',
         'name',
@@ -26,6 +31,8 @@ class System extends Model
         'login_username_field',
         'login_password_field',
         'login_extra_fields',
+        'supports_dan',
+        'dan_login_url',
         'requires_login',
         'description',
         'category',
@@ -44,6 +51,7 @@ class System extends Model
             'is_active' => 'boolean',
             'is_internal' => 'boolean',
             'requires_login' => 'boolean',
+            'supports_dan' => 'boolean',
             'is_embeddable' => 'boolean',
             'embed_checked_at' => 'datetime',
             'login_extra_fields' => 'array',
@@ -106,6 +114,12 @@ class System extends Model
     /**
      * Нуугдмал маягтаар шууд нэвтрүүлэх тохиргоо бүрэн эсэх.
      */
+    /** ДАН-аар нэвтрэх эхлэх хаяг — тусад нь заагаагүй бол ердийн нэвтрэх хаяг. */
+    public function danEntryUrl(): string
+    {
+        return $this->dan_login_url ?: $this->entryUrl();
+    }
+
     public function canAutoSubmit(): bool
     {
         return $this->login_method === self::LOGIN_FORM_POST

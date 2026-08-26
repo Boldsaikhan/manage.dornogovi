@@ -31,7 +31,13 @@ class LaunchController extends Controller
                 'system' => $system,
                 'username' => $credential->username_encrypted,
                 'password' => $credential->password_encrypted,
-                'autoSubmit' => $system->canAutoSubmit(),
+                'authType' => $credential->auth_type,
+                'rememberDevice' => (bool) $credential->remember_device,
+                // ДАН-аар нэвтрэх үед нуугдмал маягт хэрэглэхгүй — өргөтгөл бөглөнө.
+                'autoSubmit' => $credential->auth_type !== System::AUTH_DAN && $system->canAutoSubmit(),
+                'entryUrl' => $credential->auth_type === System::AUTH_DAN
+                    ? $system->danEntryUrl()
+                    : $system->entryUrl(),
             ])
             // Нэвтрэх мэдээлэл агуулсан хуудсыг хаана ч бүү хадгал.
             ->withHeaders([

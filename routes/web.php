@@ -60,6 +60,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/uureg/{task}', [TaskController::class, 'update'])->name('tasks.update');
     Route::delete('/uureg/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
     Route::post('/uureg/documents', [TaskController::class, 'storeDocument'])->name('tasks.documents.store');
+    Route::post('/uureg/documents/preview', [TaskController::class, 'previewDocument'])->name('tasks.documents.preview');
     Route::get('/uureg/documents/{document}/download', [TaskController::class, 'downloadDocument'])->name('tasks.documents.download');
     Route::post('/uureg/documents/{document}/import', [TaskController::class, 'importDocument'])->name('tasks.documents.import');
     Route::delete('/uureg/documents/{document}', [TaskController::class, 'destroyDocument'])->name('tasks.documents.destroy');

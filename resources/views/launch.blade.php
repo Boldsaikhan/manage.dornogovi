@@ -63,16 +63,16 @@
 @else
     {{-- Тохиргоогүй: нууц үгийг хуулаад системийн нэвтрэх хуудас руу шууд шилжинэ. --}}
     <div class="card">
-        <h1>{{ $system->name }}</h1>
+        <h1>{{ $system->name }}@if ($authType === 'dan') <small style="font-weight:500;color:#6c7382">— ДАН</small>@endif</h1>
         <p id="status">Нууц үгийг санах ойд хууллаа. Нэвтрэх хуудас руу шилжиж байна…</p>
 
-        <label for="u">Нэвтрэх нэр</label>
+        <label for="u">{{ $authType === 'dan' ? 'Регистрийн дугаар' : 'Нэвтрэх нэр' }}</label>
         <div class="row">
             <input id="u" type="text" value="{{ $username }}" readonly>
             <button type="button" onclick="copy('u', this)">Хуулах</button>
         </div>
 
-        <label for="p">Нууц үг</label>
+        <label for="p">{{ $authType === 'dan' ? 'ДАН нууц үг' : 'Нууц үг' }}</label>
         <div class="row">
             <input id="p" type="password" value="{{ $password }}" readonly>
             <button type="button" onclick="toggle(this)">Харах</button>
@@ -80,7 +80,7 @@
         </div>
 
         <div class="actions">
-            <a class="btn primary" id="go" href="{{ $system->entryUrl() }}">Одоо шилжих</a>
+            <a class="btn primary" id="go" href="{{ $entryUrl }}">Одоо шилжих</a>
             <button type="button" id="stay">Энд байх</button>
         </div>
 
@@ -130,6 +130,8 @@
                 {
                     type: 'md-autologin',
                     host: payload.host,
+                    mode: payload.mode,
+                    remember: payload.remember,
                     username: payload.username,
                     password: payload.password,
                 },
@@ -151,6 +153,8 @@
             const payload = {
                 type: 'store',
                 host: new URL(target).hostname,
+                mode: @json($authType),
+                remember: @json($rememberDevice),
                 username: document.getElementById('u').value,
                 password: document.getElementById('p').value,
             };

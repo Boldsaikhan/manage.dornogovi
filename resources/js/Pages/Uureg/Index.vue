@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Modal from '@/Components/Modal.vue';
 import SheetCell from '@/Components/SheetCell.vue';
 import { expandPersonNames, GROUP_LABELS } from '@/utils/soumGovernors';
 
@@ -46,10 +47,24 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDownload));
 
 const drafts = reactive({});
 const fileInput = ref(null);
+const showAddForm = ref(false);
+const addFormRoot = ref(null);
+const wordPreviewing = ref(false);
+const wordConfirming = ref(false);
+const wordPreview = ref(null); // { document_id, original_name, kind, count, rows }
 
 const uploadForm = useForm({
     kind: props.kind,
     file: null,
+});
+
+const addForm = useForm({
+    kind: props.kind,
+    text: '',
+    period: '',
+    responsible: '',
+    collaborator: '',
+    sector: '',
 });
 
 watch(
@@ -57,6 +72,11 @@ watch(
     (k) => {
         uploadForm.kind = k;
         uploadForm.file = null;
+        addForm.kind = k;
+        addForm.reset('text', 'period', 'responsible', 'collaborator', 'sector');
+        addForm.clearErrors();
+        showAddForm.value = false;
+        closeWordPreview();
         if (fileInput.value) fileInput.value.value = '';
     },
 );
@@ -553,15 +573,23 @@ const switchKind = (key) => {
     router.get(route('tasks.index'), { kind: key }, { preserveState: false });
 };
 
-const addRow = () => {
-    useForm({
-        kind: props.kind,
-        text: '',
-        period: '',
-        responsible: '',
-        collaborator: '',
-        sector: '',
-    }).post(route('tasks.store'), { preserveScroll: true });
+const openAddForm = () => {
+    showAddForm.value = true;
+    addForm.kind = props.kind;
+    requestAnimationFrame(() => {
+        addFormRoot.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+};
+
+const submitAddForm = () => {
+    addForm.kind = props.kind;
+    addForm.post(route('tasks.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            addForm.reset('text', 'period', 'responsible', 'collaborator', 'sector');
+            addForm.clearErrors();
+        },
+    });
 };
 
 const saveField = (taskId, field, value) => {
@@ -593,32 +621,83 @@ const pickWordFile = () => {
     fileInput.value?.click();
 };
 
-const onFileChange = (e) => {
-    uploadForm.file = e.target.files?.[0] ?? null;
-    if (uploadForm.file) {
-        submitUpload();
+const closeWordPreview = () => {
+    wordPreview.value = null;
+    wordPreviewing.value = false;
+    wordConfirming.value = false;
+};
+
+const openWordPreview = async ({ file = null, documentId = null } = {}) => {
+    wordPreviewing.value = true;
+    wordPreview.value = null;
+
+    try {
+        const body = new FormData();
+        if (file) {
+            body.append('kind', props.kind);
+            body.append('file', file);
+        } else if (documentId) {
+            body.append('document_id', String(documentId));
+        } else {
+            throw new Error('Файл сонгоно уу.');
+        }
+
+        const { data } = await window.axios.post(route('tasks.documents.preview'), body);
+        wordPreview.value = data;
+
+        if (! data.count) {
+            alert('Хүснэгт олдсонгүй. .docx хэлбэртэй, хүснэгттэй файл байх шаардлагатай.');
+            closeWordPreview();
+            router.reload({ only: ['documents'] });
+        }
+    } catch (e) {
+        const msg = e?.response?.data?.message
+            || e?.response?.data?.errors?.file?.[0]
+            || e?.message
+            || 'Word файлыг уншиж чадсангүй.';
+        alert(msg);
+        closeWordPreview();
+    } finally {
+        wordPreviewing.value = false;
+        uploadForm.reset('file');
+        if (fileInput.value) fileInput.value.value = '';
     }
 };
 
-const submitUpload = () => {
-    if (!uploadForm.file) return;
-    uploadForm.post(route('tasks.documents.store'), {
-        forceFormData: true,
-        preserveScroll: true,
-        onSuccess: () => {
-            uploadForm.reset('file');
-            if (fileInput.value) fileInput.value.value = '';
+const onFileChange = (e) => {
+    const file = e.target.files?.[0] ?? null;
+    uploadForm.file = file;
+    if (file) {
+        openWordPreview({ file });
+    }
+};
+
+const confirmWordImport = (replace) => {
+    const docId = wordPreview.value?.document_id;
+    if (! docId || wordConfirming.value) return;
+
+    if (replace && ! confirm('Одоо байгаа бүх мөрийг устгаад Word-ийн мөрөөр солих уу?')) {
+        return;
+    }
+
+    wordConfirming.value = true;
+    router.post(
+        route('tasks.documents.import', docId),
+        { replace: !! replace },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                wordConfirming.value = false;
+            },
+            onSuccess: () => {
+                closeWordPreview();
+            },
         },
-    });
+    );
 };
 
 const importDocument = (id) => {
-    if (!confirm('Энэ файлын хүснэгтийг уншиж, одоо байгаа мөрүүдийг солих уу?')) return;
-    router.post(
-        route('tasks.documents.import', id),
-        { replace: true },
-        { preserveScroll: true },
-    );
+    openWordPreview({ documentId: id });
 };
 
 const removeDocument = (id) => {
