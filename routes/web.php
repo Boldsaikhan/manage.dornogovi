@@ -43,6 +43,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/credentials/{system}/reveal', [CredentialController::class, 'reveal'])->name('credentials.reveal');
 
     Route::get('/uureg', [TaskController::class, 'index'])->name('tasks.index');
+    Route::get('/uureg/export', [TaskController::class, 'export'])->name('tasks.export');
     Route::post('/uureg', [TaskController::class, 'store'])->name('tasks.store');
     Route::patch('/uureg/{task}', [TaskController::class, 'update'])->name('tasks.update');
     Route::delete('/uureg/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');

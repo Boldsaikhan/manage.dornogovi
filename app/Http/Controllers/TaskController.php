@@ -6,11 +6,15 @@ use App\Models\PhoneDirectoryEntry;
 use App\Models\Task;
 use App\Models\TaskDocument;
 use App\Models\TaskSource;
+use App\Support\DocxTableWriter;
 use App\Support\ModuleAccess;
+use App\Support\PdfTableWriter;
 use App\Support\PersonName;
 use App\Support\TaskDocxParser;
+use App\Support\XlsxTableWriter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -73,6 +77,166 @@ class TaskController extends Controller
             'canManage' => ModuleAccess::canManage($request->user(), 'tasks')
                 || (bool) $request->user()->is_admin,
         ]);
+    }
+
+    /**
+     * Идэвхтэй табын хүснэгтийг Word / Excel / PDF файлаар татах.
+     */
+    public function export(
+        Request $request,
+        DocxTableWriter $docx,
+        XlsxTableWriter $xlsx,
+        PdfTableWriter $pdf,
+    ): HttpResponse {
+        abort_unless(ModuleAccess::canView($request->user(), 'tasks'), 403);
+
+        $kind = $request->string('kind')->toString();
+        if (! in_array($kind, [TaskSource::KEY_DIRECTIVE, TaskSource::KEY_PREP_PLAN], true)) {
+            $kind = TaskSource::KEY_DIRECTIVE;
+        }
+
+        $format = strtolower((string) $request->query('format', 'docx'));
+        abort_unless(in_array($format, ['docx', 'xlsx', 'pdf'], true), 404);
+
+        $source = TaskSource::query()->where('key', $kind)->firstOrFail();
+        $tasks = $source->tasks()
+            ->get([
+                'id', 'text', 'period', 'responsible', 'collaborator', 'sector', 'note', 'progress', 'sort_order',
+            ])
+            ->values();
+
+        $payload = $this->exportTable($kind, $source->name, $tasks);
+        $title = $payload['title'];
+        $tmp = tempnam(sys_get_temp_dir(), 'task_export_');
+
+        try {
+            if ($format === 'docx') {
+                $path = $tmp.'.docx';
+                $docx->write(
+                    $path,
+                    $title,
+                    $payload['headings'],
+                    $payload['widths'],
+                    $payload['docx_rows'],
+                    $payload['center'],
+                    $payload['landscape'],
+                );
+                $mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                $ascii = 'tasks.docx';
+            } elseif ($format === 'xlsx') {
+                $path = $tmp.'.xlsx';
+                $xlsx->write($path, $title, $payload['headings'], $payload['sheet_rows']);
+                $mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                $ascii = 'tasks.xlsx';
+            } else {
+                $path = $tmp.'.pdf';
+                $pdf->write($path, $title, $payload['headings'], $payload['sheet_rows'], $payload['landscape']);
+                $mime = 'application/pdf';
+                $ascii = 'tasks.pdf';
+            }
+
+            $content = (string) file_get_contents($path);
+            @unlink($path);
+        } finally {
+            @unlink($tmp);
+        }
+
+        $fileName = $title.' '.now()->format('Y-m-d').'.'.$format;
+
+        return response($content, 200, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => "attachment; filename=\"{$ascii}\"; filename*=UTF-8''".rawurlencode($fileName),
+            'Content-Length' => (string) strlen($content),
+        ]);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Task>  $tasks
+     * @return array{
+     *     title: string,
+     *     headings: array<int, string>,
+     *     widths: array<int, int>,
+     *     center: array<int, int>,
+     *     landscape: bool,
+     *     docx_rows: array<int, array{type: string, cells: array<int, string>}>,
+     *     sheet_rows: array<int, array<int, string>>
+     * }
+     */
+    private function exportTable(string $kind, string $sourceName, $tasks): array
+    {
+        $title = $sourceName !== '' ? $sourceName : (
+            $kind === TaskSource::KEY_PREP_PLAN
+                ? 'Бэлтгэл ажил хангах төлөвлөгөө'
+                : 'Үүрэг чиглэл'
+        );
+
+        if ($kind === TaskSource::KEY_PREP_PLAN) {
+            $headings = [
+                '№', 'Ажлын чиглэл', 'Арга хэмжээ', 'Хугацаа',
+                'Хариуцах эзэн', 'Хамтран хэрэгжүүлэх', 'Хэрэгжилт', 'Биелэлтийн хувь',
+            ];
+            $widths = [600, 1800, 3600, 1200, 1600, 1600, 2200, 1000];
+            $center = [0, 7];
+            $sheetRows = [];
+            $docxRows = [];
+
+            foreach ($tasks as $i => $task) {
+                $cells = [
+                    (string) ($i + 1),
+                    (string) ($task->sector ?? ''),
+                    (string) ($task->text ?? ''),
+                    (string) ($task->period ?? ''),
+                    PersonName::shortList($task->responsible),
+                    PersonName::shortList($task->collaborator),
+                    (string) ($task->note ?? ''),
+                    (string) ((int) $task->progress).'%',
+                ];
+                $sheetRows[] = $cells;
+                $docxRows[] = ['type' => 'data', 'cells' => $cells];
+            }
+
+            return [
+                'title' => $title,
+                'headings' => $headings,
+                'widths' => $widths,
+                'center' => $center,
+                'landscape' => true,
+                'docx_rows' => $docxRows,
+                'sheet_rows' => $sheetRows,
+            ];
+        }
+
+        $headings = [
+            '№', 'Үүрэг чиглэл', 'Хариуцах эзэн',
+            'Хяналт тавих албан тушаалтан', 'Хэрэгжилт', 'Биелэлтийн хувь',
+        ];
+        $widths = [600, 4800, 1600, 1800, 2400, 1000];
+        $center = [0, 5];
+        $sheetRows = [];
+        $docxRows = [];
+
+        foreach ($tasks as $i => $task) {
+            $cells = [
+                (string) ($i + 1),
+                (string) ($task->text ?? ''),
+                PersonName::shortList($task->responsible),
+                PersonName::shortList($task->collaborator),
+                (string) ($task->note ?? ''),
+                (string) ((int) $task->progress).'%',
+            ];
+            $sheetRows[] = $cells;
+            $docxRows[] = ['type' => 'data', 'cells' => $cells];
+        }
+
+        return [
+            'title' => $title,
+            'headings' => $headings,
+            'widths' => $widths,
+            'center' => $center,
+            'landscape' => true,
+            'docx_rows' => $docxRows,
+            'sheet_rows' => $sheetRows,
+        ];
     }
 
     /**

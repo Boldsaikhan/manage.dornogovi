@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import SheetCell from '@/Components/SheetCell.vue';
@@ -19,6 +19,29 @@ const kinds = [
 ];
 
 const isDirective = computed(() => props.kind === 'directive');
+
+const downloadOpen = ref(false);
+const downloadRoot = ref(null);
+const downloadFormats = [
+    { format: 'docx', label: 'Word (.docx)' },
+    { format: 'xlsx', label: 'Excel (.xlsx)' },
+    { format: 'pdf', label: 'PDF (.pdf)' },
+];
+
+const exportUrl = (format) => route('tasks.export', { kind: props.kind, format });
+
+const toggleDownload = () => {
+    downloadOpen.value = ! downloadOpen.value;
+};
+
+const closeDownload = (event) => {
+    if (! downloadRoot.value?.contains(event.target)) {
+        downloadOpen.value = false;
+    }
+};
+
+onMounted(() => document.addEventListener('click', closeDownload));
+onBeforeUnmount(() => document.removeEventListener('click', closeDownload));
 
 const drafts = reactive({});
 const fileInput = ref(null);
@@ -379,12 +402,41 @@ const prepTableMinWidth = computed(() => {
                     >
                         {{ uploadForm.processing ? 'Оруулж байна…' : 'Word оруулах' }}
                     </button>
+                    <div ref="downloadRoot" class="relative">
+                        <button
+                            type="button"
+                            class="ui-btn-ghost"
+                            :aria-expanded="downloadOpen"
+                            title="Хүснэгтийг Word, Excel, PDF-ээр татах"
+                            @click.stop="toggleDownload"
+                        >
+                            Татах
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                        </button>
+                        <div
+                            v-if="downloadOpen"
+                            class="absolute right-0 z-30 mt-1.5 min-w-[11rem] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                        >
+                            <a
+                                v-for="item in downloadFormats"
+                                :key="item.format"
+                                :href="exportUrl(item.format)"
+                                class="block px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                                @click="downloadOpen = false"
+                            >
+                                {{ item.label }}
+                            </a>
+                        </div>
+                    </div>
                     <a
                         v-if="latestDocument"
                         :href="route('tasks.documents.download', latestDocument.id)"
                         class="ui-btn-ghost"
+                        title="Оруулсан эх Word файлыг татах"
                     >
-                        Word татах
+                        Эх файл
                     </a>
                     <button
                         v-if="canManage"
