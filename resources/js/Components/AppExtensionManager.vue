@@ -159,10 +159,10 @@ const appHelp = computed(() => (isIos()
         <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="min-w-0">
                 <p class="text-sm font-semibold text-rose-900">
-                    Автомат нэвтрэлтийн өргөтгөл суугаагүй байна
+                    Өргөтгөл суугаагүй — автомат нэвтрэлт идэвхгүй
                 </p>
                 <p class="mt-0.5 text-xs text-rose-800/90">
-                    Холбосон систем рүү ороход нэр, нууц үгээ гараар оруулах болно. Суулгавал автоматаар бөглөгдөнө.
+                    Chrome/Edge дээр суулгавал холбосон систем рүү автоматаар нэвтэрнэ.
                 </p>
             </div>
             <div class="flex shrink-0 flex-wrap items-center gap-2">
@@ -190,21 +190,26 @@ const appHelp = computed(() => (isIos()
             role="status"
         >
             <div class="flex flex-wrap items-start justify-between gap-2">
-                <div>
+                <div class="min-w-0">
                     <p class="text-sm font-semibold text-rose-900">
                         Өргөтгөл суугаагүй — автомат нэвтрэлт идэвхгүй
                     </p>
                     <p class="mt-0.5 text-xs text-rose-800/90">
-                        Desktop хэсгээс «Өргөтгөл татах» дарж Chrome/Edge дээр суулгана уу.
+                        Chrome/Edge дээр суулгавал холбосон систем рүү автоматаар нэвтэрнэ.
                     </p>
                 </div>
-                <button
-                    type="button"
-                    class="shrink-0 text-xs font-medium text-rose-800/70 hover:text-rose-900"
-                    @click="dismissMissingNotice"
-                >
-                    Хаах
-                </button>
+                <div class="flex shrink-0 flex-wrap items-center gap-2">
+                    <a :href="route('extension.download')" class="ui-btn-primary !py-1.5 text-xs">
+                        Өргөтгөл татах
+                    </a>
+                    <button
+                        type="button"
+                        class="rounded-lg px-2 py-1 text-xs font-medium text-rose-800/70 hover:bg-rose-100"
+                        @click="dismissMissingNotice"
+                    >
+                        Хаах
+                    </button>
+                </div>
             </div>
         </div>
 

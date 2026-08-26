@@ -1,6 +1,7 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import AppExtensionManager from '@/Components/AppExtensionManager.vue';
 
 defineProps({
     department: Object,
@@ -21,6 +22,8 @@ defineProps({
                 </h2>
                 <p class="ui-subtitle">Албан хаагчийн товч үзүүлэлт, явц.</p>
             </div>
+
+            <AppExtensionManager notify-only />
 
             <div class="grid grid-cols-2 gap-3 lg:grid-cols-5">
                 <div
