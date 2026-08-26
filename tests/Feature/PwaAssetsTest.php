@@ -22,7 +22,7 @@ class PwaAssetsTest extends TestCase
         $manifest = json_decode(file_get_contents(public_path('manifest.webmanifest')), true);
 
         $this->assertSame('standalone', $manifest['display']);
-        $this->assertSame('/dashboard', $manifest['start_url']);
+        $this->assertSame('/dept-dashboard', $manifest['start_url']);
         $this->assertCount(3, $manifest['icons']);
     }
 

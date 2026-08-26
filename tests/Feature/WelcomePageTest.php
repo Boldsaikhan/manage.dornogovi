@@ -20,6 +20,6 @@ class WelcomePageTest extends TestCase
     {
         $this->actingAs(User::factory()->create())
             ->get('/')
-            ->assertRedirect(route('dashboard'));
+            ->assertRedirect(route('dept.dashboard'));
     }
 }

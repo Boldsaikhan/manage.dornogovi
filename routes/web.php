@@ -20,11 +20,12 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UndoController;
 use App\Http\Controllers\VaultController;
 use App\Http\Controllers\WorkGroupController;
+use App\Support\HomeRedirect;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     if (auth()->check()) {
-        return redirect()->route('dashboard');
+        return redirect()->route(HomeRedirect::routeName());
     }
 
     // Танилцуулга хуудасгүй — шууд нэвтрэх.

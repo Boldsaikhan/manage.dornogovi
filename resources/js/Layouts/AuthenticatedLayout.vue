@@ -163,7 +163,7 @@ const isCurrent = (routeName) => {
                 :class="sidebarCollapsed ? 'lg:justify-center lg:px-2' : 'gap-1 px-3'"
             >
                 <Link
-                    :href="route('dashboard')"
+                    :href="route('dept.dashboard')"
                     class="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-2 transition hover:bg-slate-50"
                     :class="sidebarCollapsed ? 'lg:flex-none lg:justify-center lg:px-2' : ''"
                     :title="sidebarCollapsed ? 'Дорноговь — Нэгдсэн систем' : undefined"

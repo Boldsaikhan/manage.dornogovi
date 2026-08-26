@@ -18,7 +18,7 @@ return [
     'items' => [
         [
             'key' => 'dept_dashboard',
-            'label' => 'Хэлтсийн самбар',
+            'label' => 'Албан хаагчийн самбар',
             'route' => 'dept.dashboard',
             'group' => 'dashboard',
             'icon' => 'chart',

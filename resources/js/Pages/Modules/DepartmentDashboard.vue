@@ -13,13 +13,13 @@ defineProps({
 </script>
 
 <template>
-    <AuthenticatedLayout title="Хэлтсийн самбар">
+    <AuthenticatedLayout title="Албан хаагчийн самбар">
         <div class="ui-page">
             <div>
                 <h2 class="ui-title">
                     {{ department?.name || (isAdmin ? 'Бүх хэлтэс (админ)' : 'Хэлтэс сонгоогүй') }}
                 </h2>
-                <p class="ui-subtitle">Хэлтэс бүрийн товч үзүүлэлт, явц.</p>
+                <p class="ui-subtitle">Албан хаагчийн товч үзүүлэлт, явц.</p>
             </div>
 
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">

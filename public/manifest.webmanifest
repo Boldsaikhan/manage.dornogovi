@@ -4,7 +4,7 @@
     "description": "Дорноговь аймгийн Засаг даргын Тамгын газрын нэгдсэн удирдлагын систем",
     "lang": "mn",
     "dir": "ltr",
-    "start_url": "/dashboard",
+    "start_url": "/dept-dashboard",
     "scope": "/",
     "display": "standalone",
     "orientation": "any",
