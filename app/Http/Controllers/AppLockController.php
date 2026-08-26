@@ -46,8 +46,10 @@ class AppLockController extends Controller
         $user = $request->user();
         $mode = AppLock::mode($request);
         $hasWebAuthn = $user->webauthnCredentials()->exists();
+        $requireBiometric = $hasWebAuthn && $request->boolean('require_biometric', true);
 
-        if ($mode === AppLock::MODE_FULL) {
+        // Биометрик алгасах эсвэл full горимд нууц үг заавал.
+        if ($mode === AppLock::MODE_FULL || ! $requireBiometric) {
             $request->validate([
                 'password' => ['required', 'string'],
             ]);
@@ -59,7 +61,7 @@ class AppLockController extends Controller
             }
         }
 
-        if ($hasWebAuthn && $request->boolean('require_biometric', true)) {
+        if ($requireBiometric) {
             $assertion = $request->input('assertion');
 
             if (! is_array($assertion)) {

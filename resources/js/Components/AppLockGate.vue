@@ -4,6 +4,8 @@ import { router, usePage } from '@inertiajs/vue3';
 import { assertBiometric, isWebAuthnSupported } from '@/utils/webauthn';
 import { isMobileDevice } from '@/utils/mobileClient';
 
+const LOCK_KEY = 'md_app_locked';
+
 const page = usePage();
 
 const password = ref('');
@@ -11,11 +13,12 @@ const busy = ref(false);
 const error = ref('');
 const hint = ref('');
 const showPasswordFallback = ref(false);
+const offline = ref(typeof navigator !== 'undefined' ? ! navigator.onLine : false);
 const webauthnOk = ref(typeof window !== 'undefined' && isWebAuthnSupported());
+const clientLocked = ref(false);
 
-/** Энэ удаагийн «харагдах» циклд биометрик баталгаажсан эсэх */
-let unlockedThisVisibleCycle = false;
 let locking = false;
+let unlockedPulse = false;
 
 const lock = computed(() => page.props.appLock ?? {
     locked: false,
@@ -23,33 +26,67 @@ const lock = computed(() => page.props.appLock ?? {
     hasWebAuthn: false,
 });
 
-const locked = computed(() => !! lock.value.locked);
-const isBiometricOnly = computed(() => lock.value.mode === 'biometric');
-const needsPassword = computed(() => ! isBiometricOnly.value);
+const userId = computed(() => page.props.auth?.user?.id ?? null);
+
+const storageKey = () => `${LOCK_KEY}:${userId.value || 0}`;
+
+/** Гар утас + нэвтэрсэн хэрэглэгч — дэлгэц алга болоход түгжинэ */
+const shouldGuard = () => (
+    !! page.props.auth?.user
+    && isMobileDevice()
+);
+
 const hasWebAuthn = computed(() => !! lock.value.hasWebAuthn && webauthnOk.value);
 
+const showLock = computed(() => shouldGuard() && (clientLocked.value || !! lock.value.locked));
+
+const isBiometricOnly = computed(() => (
+    hasWebAuthn.value
+    && (lock.value.mode === 'biometric' || clientLocked.value)
+    && ! showPasswordFallback.value
+));
+
+const needsPassword = computed(() => ! isBiometricOnly.value || showPasswordFallback.value);
+
 const title = computed(() => (
-    isBiometricOnly.value
+    isBiometricOnly.value && ! showPasswordFallback.value
         ? 'Хуруу / нүүрээр баталгаажуулна уу'
         : 'Дахин нэвтрэх'
 ));
 
-const subtitle = computed(() => (
-    isBiometricOnly.value
-        ? 'Апп нээх бүрт хурууны хээ эсвэл царайгаар баталгаажуулна.'
-        : 'Апп-аас гараад буцаж орсон тул нэвтрэх нууц үг болон биометрикийг асууна.'
-));
+const subtitle = computed(() => {
+    if (offline.value) {
+        return 'Сүлжээгүй үед апп түгжигдсэн байна. Интернэт холбогдсоны дараа нээнэ үү.';
+    }
 
-/** Зөвхөн гар утсанд биометрик түгжээ */
-const shouldGuard = () => (
-    !! page.props.auth?.user
-    && !! lock.value.hasWebAuthn
-    && isMobileDevice()
-);
+    return isBiometricOnly.value && ! showPasswordFallback.value
+        ? 'Дэлгэцээс гарсан тул хуруу эсвэл нүүрээр дахин баталгаажуулна.'
+        : 'Дэлгэцээс гарсан тул нууц үгээр дахин нээнэ үү.';
+});
+
+const readClientLock = () => {
+    try {
+        return localStorage.getItem(storageKey()) === '1';
+    } catch {
+        return false;
+    }
+};
+
+const setClientLock = (on) => {
+    clientLocked.value = on;
+    try {
+        if (on) {
+            localStorage.setItem(storageKey(), '1');
+        } else {
+            localStorage.removeItem(storageKey());
+        }
+    } catch {
+        // ignore
+    }
+};
 
 const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
-/** Далдлахад сүлжээ тасарсан ч түгжих — sendBeacon ашиглана */
 const requestLockBeacon = () => {
     if (! shouldGuard()) return;
 
@@ -58,85 +95,133 @@ const requestLockBeacon = () => {
     if (token) body.append('_token', token);
 
     const url = route('app.lock');
-    if (navigator.sendBeacon?.(url, body)) return;
+    try {
+        if (navigator.sendBeacon?.(url, body)) return;
+    } catch {
+        // ignore
+    }
 
-    // sendBeacon боломжгүй бол синхрон fetch (pagehide-д)
     fetch(url, { method: 'POST', body, credentials: 'same-origin', keepalive: true }).catch(() => {});
 };
 
-const engageLock = async () => {
-    if (locking || ! shouldGuard() || unlockedThisVisibleCycle) return;
+/** Дэлгэц/апп алга болоход — сүлжээгүй байсан ч ШУУД түгжинэ */
+const onAppHidden = () => {
+    if (! shouldGuard()) return;
+
+    unlockedPulse = false;
+    setClientLock(true);
+    requestLockBeacon();
+};
+
+const syncServerLock = async () => {
+    if (locking || ! shouldGuard() || unlockedPulse) return;
+    if (! navigator.onLine) return;
 
     locking = true;
     try {
         await window.axios.post(route('app.lock'));
         router.reload({ only: ['appLock', 'vault'] });
     } catch {
-        // Дахин оролдоно
+        // Клиент түгжээ хэвээр — сервер амжилтгүй болсон ч UI түгжигдсэн
     } finally {
         locking = false;
     }
 };
 
-const onAppHidden = () => {
-    unlockedThisVisibleCycle = false;
-    requestLockBeacon();
-};
-
 const onAppVisible = () => {
     if (document.hidden || ! shouldGuard()) return;
 
-    // Апп бүр дахин нээгдэхэд биометрик асууна
-    if (! unlockedThisVisibleCycle) {
-        engageLock();
+    offline.value = ! navigator.onLine;
+
+    if (readClientLock()) {
+        clientLocked.value = true;
+    }
+
+    if (clientLocked.value || ! unlockedPulse) {
+        syncServerLock();
     }
 };
 
-const promptBiometricIfLocked = () => {
-    if (! locked.value || busy.value) return;
-    if (! isBiometricOnly.value || ! hasWebAuthn.value) return;
+const onPageShow = (event) => {
+    // bfcache-ээс сэргэсэн бол заавал түгжинэ
+    if (event.persisted && shouldGuard()) {
+        setClientLock(true);
+    }
+    onAppVisible();
+};
 
-    setTimeout(() => {
-        if (locked.value && ! busy.value && ! unlockedThisVisibleCycle) {
-            unlock();
-        }
-    }, 400);
+const onOnline = () => {
+    offline.value = false;
+    if (showLock.value) syncServerLock();
+};
+
+const onOffline = () => {
+    offline.value = true;
+    if (shouldGuard()) setClientLock(true);
 };
 
 onMounted(() => {
-    document.addEventListener('visibilitychange', onAppVisible);
+    if (shouldGuard() && readClientLock()) {
+        clientLocked.value = true;
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) onAppHidden();
+        else onAppVisible();
+    });
     window.addEventListener('pagehide', onAppHidden);
-    window.addEventListener('pageshow', onAppVisible);
+    window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('freeze', onAppHidden);
+    window.addEventListener('blur', () => {
+        // Утасны PWA: дэлгэц унтрах/өөр апп руу шилжих
+        if (isMobileDevice() && document.visibilityState === 'hidden') onAppHidden();
+    });
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
 
     onAppVisible();
 });
 
 onBeforeUnmount(() => {
-    document.removeEventListener('visibilitychange', onAppVisible);
     window.removeEventListener('pagehide', onAppHidden);
-    window.removeEventListener('pageshow', onAppVisible);
+    window.removeEventListener('pageshow', onPageShow);
+    window.removeEventListener('freeze', onAppHidden);
+    window.removeEventListener('online', onOnline);
+    window.removeEventListener('offline', onOffline);
 });
 
-watch(locked, (v) => {
+watch(showLock, (v) => {
     if (v) {
         password.value = '';
         error.value = '';
         hint.value = '';
         showPasswordFallback.value = false;
-        promptBiometricIfLocked();
     }
-}, { immediate: true });
+});
+
+const clearLockLocal = () => {
+    setClientLock(false);
+    unlockedPulse = true;
+};
 
 const unlock = async () => {
     if (busy.value) return;
+
+    offline.value = ! navigator.onLine;
+    if (offline.value) {
+        error.value = 'Сүлжээгүй байна. Холбогдсоны дараа дахин оролдоно уу.';
+        return;
+    }
+
     busy.value = true;
     error.value = '';
     hint.value = '';
 
     try {
-        const payload = {};
+        const useBiometric = hasWebAuthn.value && ! showPasswordFallback.value;
+        const payload = { require_biometric: useBiometric };
 
-        if (needsPassword.value) {
+        if (! useBiometric) {
             if (! password.value) {
                 error.value = 'Нууц үгээ оруулна уу.';
                 return;
@@ -144,10 +229,9 @@ const unlock = async () => {
             payload.password = password.value;
         }
 
-        if (hasWebAuthn.value) {
+        if (useBiometric) {
             try {
                 payload.assertion = await assertBiometric();
-                payload.require_biometric = true;
             } catch (e) {
                 const name = e?.name || '';
                 if (/NotAllowedError|AbortError/i.test(name + String(e?.message))) {
@@ -161,21 +245,33 @@ const unlock = async () => {
                     || 'Биометрик амжилтгүй. Нууц үгээр үргэлжлүүлнэ үү.';
                 return;
             }
-        } else {
-            payload.require_biometric = false;
+        }
+
+        // Клиент түгжээг серверийн unlock-тай хамт тайлна
+        if (useBiometric && ! lock.value.locked) {
+            // Серверт түгжээ байхгүй бол эхлээд түгжээд нээнэ
+            try {
+                await window.axios.post(route('app.lock'));
+            } catch {
+                // ignore
+            }
         }
 
         await window.axios.post(route('app.unlock'), payload);
         password.value = '';
-        unlockedThisVisibleCycle = true;
+        clearLockLocal();
         router.reload({ only: ['appLock', 'vault'] });
     } catch (e) {
-        error.value = e?.response?.data?.errors?.password?.[0]
-            || e?.response?.data?.errors?.webauthn?.[0]
-            || e?.response?.data?.message
-            || 'Түгжээ тайлагдахгүй байна.';
-        if (e?.response?.data?.errors?.webauthn) {
-            showPasswordFallback.value = true;
+        if (! navigator.onLine) {
+            error.value = 'Сүлжээгүй байна. Холбогдсоны дараа дахин оролдоно уу.';
+        } else {
+            error.value = e?.response?.data?.errors?.password?.[0]
+                || e?.response?.data?.errors?.webauthn?.[0]
+                || e?.response?.data?.message
+                || 'Түгжээ тайлагдахгүй байна.';
+            if (e?.response?.data?.errors?.webauthn) {
+                showPasswordFallback.value = true;
+            }
         }
     } finally {
         busy.value = false;
@@ -184,6 +280,10 @@ const unlock = async () => {
 
 const unlockPasswordOnly = async () => {
     if (busy.value) return;
+    if (! navigator.onLine) {
+        error.value = 'Сүлжээгүй байна. Холбогдсоны дараа дахин оролдоно уу.';
+        return;
+    }
     if (! password.value) {
         error.value = 'Нууц үгээ оруулна уу.';
         return;
@@ -197,7 +297,7 @@ const unlockPasswordOnly = async () => {
         });
         hint.value = data?.hint || '';
         password.value = '';
-        unlockedThisVisibleCycle = true;
+        clearLockLocal();
         router.reload({ only: ['appLock', 'vault'] });
     } catch (e) {
         error.value = e?.response?.data?.errors?.password?.[0]
@@ -211,11 +311,12 @@ const unlockPasswordOnly = async () => {
 
 <template>
     <div
-        v-if="locked && shouldGuard()"
-        class="fixed inset-0 z-[200] flex items-center justify-center bg-brand-navy-950/80 p-4 backdrop-blur-sm"
+        v-if="showLock"
+        class="fixed inset-0 z-[200] flex items-center justify-center bg-brand-navy-950/90 p-4 backdrop-blur-md"
         role="dialog"
         aria-modal="true"
         aria-labelledby="app-lock-title"
+        @touchmove.prevent
     >
         <div class="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
             <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-navy-50 text-brand-navy-700">
@@ -231,8 +332,15 @@ const unlockPasswordOnly = async () => {
                 {{ subtitle }}
             </p>
 
+            <div
+                v-if="offline"
+                class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs text-amber-800"
+            >
+                Офлайн горимд апп нээгдэхгүй. Сүлжээ холбогдсоны дараа «Дахин оролдох» дарна.
+            </div>
+
             <form class="mt-6 space-y-4" @submit.prevent="unlock">
-                <div v-if="needsPassword || showPasswordFallback">
+                <div v-if="needsPassword && !offline">
                     <label class="mb-1 block text-xs font-medium text-slate-600">Нууц үг</label>
                     <input
                         v-model="password"
@@ -252,14 +360,15 @@ const unlockPasswordOnly = async () => {
                     :disabled="busy"
                 >
                     <span v-if="busy">Шалгаж байна…</span>
+                    <span v-else-if="offline">Дахин оролдох</span>
                     <span v-else-if="hasWebAuthn && !showPasswordFallback">
-                        {{ needsPassword ? 'Нууц үг + хуруу / нүүр' : 'Хуруу / нүүрээр нээх' }}
+                        Хуруу / нүүрээр нээх
                     </span>
                     <span v-else>Нээх</span>
                 </button>
 
                 <button
-                    v-if="showPasswordFallback && hasWebAuthn"
+                    v-if="showPasswordFallback && hasWebAuthn && !offline"
                     type="button"
                     class="ui-btn-ghost w-full"
                     :disabled="busy"
