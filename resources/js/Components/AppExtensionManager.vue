@@ -213,13 +213,13 @@ const downloadExtension = async () => {
         </div>
     </div>
 
-    <section v-else-if="! props.notifyOnly" class="ui-card-pad space-y-4">
+    <section v-else-if="! props.notifyOnly" class="space-y-3 sm:space-y-4">
         <div
             v-if="showMissingNotice"
-            class="rounded-xl border border-rose-300 bg-rose-50 px-3.5 py-3"
+            class="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2.5 sm:px-3.5 sm:py-3"
             role="status"
         >
-            <div class="flex flex-wrap items-start justify-between gap-2">
+            <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                 <div class="min-w-0">
                     <p class="text-sm font-semibold text-rose-900">
                         Өргөтгөл суугаагүй — автомат нэвтрэлт идэвхгүй
@@ -248,89 +248,86 @@ const downloadExtension = async () => {
             </div>
         </div>
 
-        <div>
+        <div class="px-0.5">
             <h3 class="text-base font-semibold text-slate-800">Апп ба өргөтгөл</h3>
-            <p class="mt-0.5 text-sm text-slate-500">
-                Гар утас — апп суулгах. Компьютер — өргөтгөл суулгах. Өргөтгөлийг утснаас ч татаж болно.
+            <p class="mt-0.5 text-xs text-slate-500 sm:text-sm">
+                Гар утас — апп. Компьютер — өргөтгөл. Өргөтгөлийг утснаас ч татаж болно.
             </p>
         </div>
 
-        <div v-if="message" class="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
+        <div v-if="message" class="rounded-xl bg-slate-100/80 px-3 py-2 text-xs text-slate-600">
             {{ message }}
         </div>
 
-        <div class="grid gap-4 lg:grid-cols-2">
+        <div class="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
             <!-- ── Mobile ── -->
             <div
-                class="space-y-3 rounded-2xl border p-4"
-                :class="isMobileDevice ? 'border-brand-navy-300 bg-brand-navy-50/40 ring-1 ring-brand-navy-200' : 'border-slate-200 bg-white'"
+                class="overflow-hidden rounded-2xl border"
+                :class="isMobileDevice
+                    ? 'border-brand-navy-300 bg-brand-navy-50/50 ring-1 ring-brand-navy-200/80'
+                    : 'border-slate-200 bg-white'"
             >
-                <div class="flex items-center justify-between gap-2">
-                    <h4 class="text-sm font-bold uppercase tracking-wide text-brand-navy-800">Mobile</h4>
-                    <span class="rounded-full bg-brand-navy-100 px-2 py-0.5 text-[10px] font-semibold text-brand-navy-700">
+                <div class="flex items-center justify-between gap-2 border-b border-slate-200/80 px-3 py-2.5 sm:px-4">
+                    <h4 class="text-xs font-bold uppercase tracking-wide text-brand-navy-800 sm:text-sm">
+                        Mobile
+                    </h4>
+                    <span class="rounded-md bg-brand-navy-100 px-2 py-0.5 text-[10px] font-semibold text-brand-navy-700">
                         Апп суулгах
                     </span>
                 </div>
 
-                <div
-                    class="rounded-xl border bg-white p-3"
-                    :class="appInstalled ? 'border-emerald-200' : 'border-slate-200'"
-                >
-                    <div class="flex items-start justify-between gap-2">
-                        <div>
+                <div class="space-y-2.5 p-3 sm:space-y-3 sm:p-4">
+                    <div
+                        class="rounded-xl border bg-white p-3"
+                        :class="appInstalled ? 'border-emerald-200' : 'border-slate-200'"
+                    >
+                        <div class="flex items-center justify-between gap-2">
                             <p class="text-sm font-semibold text-slate-800">Утасны апп (PWA)</p>
-                            <p class="mt-0.5 text-xs text-slate-500">
-                                {{ appInstalled
-                                    ? 'Апп горимоор ажиллаж байна.'
-                                    : 'Доорх товч эсвэл хажуугийн цэсээр нүүр дэлгэцэд нэмнэ.' }}
-                            </p>
+                            <span
+                                class="shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold"
+                                :class="appInstalled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'"
+                            >
+                                {{ appInstalled ? 'суусан' : 'хөтөч' }}
+                            </span>
                         </div>
-                        <span
-                            class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-                            :class="appInstalled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'"
-                        >
-                            {{ appInstalled ? 'суусан' : 'хөтчөөр' }}
-                        </span>
+                        <p v-if="appInstalled" class="mt-1 text-xs text-slate-500">
+                            Апп горимоор ажиллаж байна.
+                        </p>
+                        <div class="mt-2">
+                            <InstallAppButton />
+                        </div>
+                        <div class="mt-2 grid grid-cols-2 gap-2">
+                            <button type="button" class="ui-btn-ghost !w-full !py-2 text-xs" @click="clearAppData">
+                                Кэш цэвэрлэх
+                            </button>
+                            <button type="button" class="ui-btn-ghost !w-full !py-2 text-xs" @click="showAppHelp = ! showAppHelp">
+                                {{ showAppHelp ? 'Хаах' : 'Устгах заавар' }}
+                            </button>
+                        </div>
+                        <p v-if="showAppHelp" class="mt-2 rounded-lg bg-slate-50 px-2.5 py-2 text-xs text-slate-600">
+                            {{ appHelp }}
+                        </p>
                     </div>
-                    <div class="mt-2">
-                        <InstallAppButton />
-                    </div>
-                    <div class="mt-2 flex flex-wrap gap-2">
-                        <button type="button" class="ui-btn-ghost !py-1.5 text-xs" @click="clearAppData">
-                            Аппын кэш цэвэрлэх
-                        </button>
-                        <button type="button" class="ui-btn-ghost !py-1.5 text-xs" @click="showAppHelp = ! showAppHelp">
-                            {{ showAppHelp ? 'Хаах' : 'Устгах заавар' }}
-                        </button>
-                    </div>
-                    <p v-if="showAppHelp" class="mt-2 rounded-lg bg-slate-50 px-2.5 py-2 text-xs text-slate-600">
-                        {{ appHelp }}
-                    </p>
-                </div>
 
-                <!-- Утсан дээр ч өргөтгөл татах -->
-                <div
-                    class="rounded-xl border bg-white p-3"
-                    :class="extensionReady ? 'border-emerald-200' : 'border-rose-200'"
-                >
-                    <div class="flex items-start justify-between gap-2">
-                        <div>
+                    <div
+                        class="rounded-xl border bg-white p-3"
+                        :class="extensionReady ? 'border-emerald-200' : 'border-rose-200'"
+                    >
+                        <div class="flex items-center justify-between gap-2">
                             <p class="text-sm font-semibold text-slate-800">Өргөтгөл татах</p>
-                            <p class="mt-0.5 text-xs text-slate-500">
-                                Задгай файлаар хавтас үүсгээд Chrome/Edge-д суулгана (холбосон системд автомат нэвтрэлт).
-                            </p>
+                            <span
+                                class="shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold"
+                                :class="extensionReady ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+                            >
+                                {{ extensionReady ? 'суусан' : 'суугаагүй' }}
+                            </span>
                         </div>
-                        <span
-                            class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-                            :class="extensionReady ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
-                        >
-                            {{ extensionReady ? 'суусан' : 'суугаагүй' }}
-                        </span>
-                    </div>
-                    <div class="mt-2">
+                        <p class="mt-1 text-xs leading-relaxed text-slate-500">
+                            Задгай файлаар хадгалаад Chrome/Edge-д суулгана.
+                        </p>
                         <button
                             type="button"
-                            class="!py-1.5 text-xs"
+                            class="mt-2 !w-full !py-2 text-xs sm:!w-auto"
                             :class="extensionReady ? 'ui-btn-ghost' : 'ui-btn-primary'"
                             :disabled="downloading"
                             @click="downloadExtension"
@@ -343,76 +340,85 @@ const downloadExtension = async () => {
 
             <!-- ── Desktop ── -->
             <div
-                class="space-y-3 rounded-2xl border p-4"
-                :class="! isMobileDevice ? 'border-brand-navy-300 bg-brand-navy-50/40 ring-1 ring-brand-navy-200' : 'border-slate-200 bg-white'"
+                class="overflow-hidden rounded-2xl border"
+                :class="! isMobileDevice
+                    ? 'border-brand-navy-300 bg-brand-navy-50/50 ring-1 ring-brand-navy-200/80'
+                    : 'border-slate-200 bg-white'"
             >
-                <div class="flex items-center justify-between gap-2">
-                    <h4 class="text-sm font-bold uppercase tracking-wide text-brand-navy-800">Desktop</h4>
-                    <span class="rounded-full bg-brand-navy-100 px-2 py-0.5 text-[10px] font-semibold text-brand-navy-700">
+                <div class="flex items-center justify-between gap-2 border-b border-slate-200/80 px-3 py-2.5 sm:px-4">
+                    <h4 class="text-xs font-bold uppercase tracking-wide text-brand-navy-800 sm:text-sm">
+                        Desktop
+                    </h4>
+                    <span class="rounded-md bg-brand-navy-100 px-2 py-0.5 text-[10px] font-semibold text-brand-navy-700">
                         Өргөтгөл суулгах
                     </span>
                 </div>
 
-                <div
-                    class="rounded-xl border bg-white p-3"
-                    :class="extensionReady
-                        ? 'border-emerald-200 bg-emerald-50/40'
-                        : 'border-rose-300 bg-rose-50/50'"
-                >
-                    <div class="flex items-start justify-between gap-2">
-                        <div>
+                <div class="p-3 sm:p-4">
+                    <div
+                        class="rounded-xl border bg-white p-3"
+                        :class="extensionReady
+                            ? 'border-emerald-200'
+                            : 'border-rose-200'"
+                    >
+                        <div class="flex items-center justify-between gap-2">
                             <p class="text-sm font-semibold text-slate-800">Автомат нэвтрэлтийн өргөтгөл</p>
-                            <p class="mt-0.5 text-xs text-slate-500">
-                                {{ extensionReady
-                                    ? 'Суусан — холбосон системд нэр, нууц үг автоматаар бөглөгдөнө.'
-                                    : 'Суугаагүй — Chrome/Edge дээр суулгана уу.' }}
-                            </p>
+                            <span
+                                class="shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold"
+                                :class="extensionReady ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+                            >
+                                {{ extensionReady ? 'идэвхтэй' : 'суугаагүй' }}
+                            </span>
                         </div>
-                        <span
-                            class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-                            :class="extensionReady ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
-                        >
-                            {{ extensionReady ? 'идэвхтэй' : 'суугаагүй' }}
-                        </span>
-                    </div>
+                        <p v-if="extensionReady" class="mt-1 text-xs text-slate-500">
+                            Холбосон системд нэр, нууц үг автоматаар бөглөгдөнө.
+                        </p>
 
-                    <div class="mt-3 flex flex-wrap gap-2">
-                        <button
-                            type="button"
-                            class="!py-1.5 text-xs"
-                            :class="extensionReady ? 'ui-btn-ghost' : 'ui-btn-primary'"
-                            :disabled="downloading"
-                            @click="downloadExtension"
-                        >
-                            {{ downloading ? 'Татаж байна…' : (extensionReady ? 'Дахин татах' : 'Өргөтгөл татах') }}
-                        </button>
-                        <button
-                            v-if="extensionReady"
-                            type="button"
-                            class="ui-btn-danger !py-1.5 text-xs"
-                            @click="removeExtension"
-                        >
-                            Устгах
-                        </button>
-                        <button
-                            v-if="canVerifyExtension"
-                            type="button"
-                            class="ui-btn-ghost !py-1.5 text-xs"
-                            @click="verifyExtension"
-                        >
-                            Төлөв шалгах
-                        </button>
-                        <button type="button" class="ui-btn-ghost !py-1.5 text-xs" @click="showHelp = ! showHelp">
-                            {{ showHelp ? 'Хаах' : 'Заавар' }}
-                        </button>
-                    </div>
+                        <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                            <button
+                                type="button"
+                                class="!w-full !py-2 text-xs sm:!w-auto sm:!py-1.5"
+                                :class="extensionReady ? 'ui-btn-ghost' : 'ui-btn-primary'"
+                                :disabled="downloading"
+                                @click="downloadExtension"
+                            >
+                                {{ downloading ? 'Татаж байна…' : (extensionReady ? 'Дахин татах' : 'Өргөтгөл татах') }}
+                            </button>
+                            <div class="grid grid-cols-2 gap-2 sm:contents">
+                                <button
+                                    v-if="extensionReady"
+                                    type="button"
+                                    class="ui-btn-danger !w-full !py-2 text-xs sm:!w-auto sm:!py-1.5"
+                                    @click="removeExtension"
+                                >
+                                    Устгах
+                                </button>
+                                <button
+                                    v-if="canVerifyExtension"
+                                    type="button"
+                                    class="ui-btn-ghost !w-full !py-2 text-xs sm:!w-auto sm:!py-1.5"
+                                    @click="verifyExtension"
+                                >
+                                    Төлөв шалгах
+                                </button>
+                                <button
+                                    type="button"
+                                    class="ui-btn-ghost !w-full !py-2 text-xs sm:!w-auto sm:!py-1.5"
+                                    :class="{ 'col-span-2': ! canVerifyExtension && ! extensionReady }"
+                                    @click="showHelp = ! showHelp"
+                                >
+                                    {{ showHelp ? 'Хаах' : 'Заавар' }}
+                                </button>
+                            </div>
+                        </div>
 
-                    <ol v-if="showHelp" class="mt-3 list-decimal space-y-1 pl-5 text-xs leading-relaxed text-slate-600">
-                        <li>«Өргөтгөл татах» дарж хадгалах байршлаа сонгоно — <b>manage-dornogovi-extension</b> хавтас үүснэ (ZIP биш).</li>
-                        <li><b>chrome://extensions</b> нээж, <b>Developer mode</b>-ыг асаана.</li>
-                        <li><b>Load unpacked</b> дарж тэр хавтсыг сонгоод хуудсыг сэргээнэ.</li>
-                        <li v-if="extensionReady">Устгах: энэ товч эсвэл chrome://extensions → Remove.</li>
-                    </ol>
+                        <ol v-if="showHelp" class="mt-3 list-decimal space-y-1.5 rounded-lg bg-slate-50 px-3 py-2.5 pl-5 text-xs leading-relaxed text-slate-600">
+                            <li>«Өргөтгөл татах» дарж байршлаа сонгоно — <b>manage-dornogovi-extension</b> хавтас үүснэ.</li>
+                            <li><b>chrome://extensions</b> нээж, <b>Developer mode</b>-ыг асаана.</li>
+                            <li><b>Load unpacked</b> дарж тэр хавтсыг сонгоод хуудсыг сэргээнэ.</li>
+                            <li v-if="extensionReady">Устгах: энэ товч эсвэл chrome://extensions → Remove.</li>
+                        </ol>
+                    </div>
                 </div>
             </div>
         </div>

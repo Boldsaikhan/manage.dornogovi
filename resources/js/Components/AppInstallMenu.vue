@@ -88,8 +88,13 @@ const toggle = () => {
             :aria-label="extensionMissing ? 'Өргөтгөл суугаагүй' : 'Апп ба өргөтгөл'"
             @click.stop="toggle"
         >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
-                <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round" />
+            <!-- Туслах програм / өргөтгөл (puzzle) -->
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"
+                />
             </svg>
             <span
                 v-if="extensionMissing"
@@ -107,10 +112,10 @@ const toggle = () => {
         >
             <div
                 v-if="open"
-                class="absolute right-0 z-40 mt-2 w-[min(94vw,36rem)] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-2xl"
+                class="fixed inset-x-2 top-[4.25rem] z-40 max-h-[min(80dvh,calc(100dvh-5rem))] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-[min(94vw,36rem)] sm:max-h-[80vh]"
                 @click.stop
             >
-                <div class="max-h-[80vh] overflow-y-auto p-2">
+                <div class="max-h-[inherit] overflow-y-auto overscroll-contain p-2 sm:p-2.5">
                     <AppExtensionManager />
                 </div>
             </div>
