@@ -688,12 +688,14 @@ const prepTableMinWidth = computed(() => {
 
     <AuthenticatedLayout :title="source.name">
         <div class="ui-page">
-            <div class="flex flex-wrap items-end justify-between gap-3">
-                <div>
+            <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+                <div class="min-w-0">
                     <h2 class="ui-title">Үүрэг даалгавар</h2>
                     <p class="ui-subtitle">Word файлын хүснэгтийг уншиж, мөр бүрийг шууд засварлана.</p>
                 </div>
-                <div class="flex flex-wrap items-center gap-2">
+                <div
+                    class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center"
+                >
                     <input
                         ref="fileInput"
                         type="file"
@@ -704,34 +706,34 @@ const prepTableMinWidth = computed(() => {
                     <button
                         v-if="canManage"
                         type="button"
-                        class="ui-btn-primary"
+                        class="ui-btn-primary w-full sm:w-auto"
                         :disabled="uploadForm.processing"
                         @click="pickWordFile"
                     >
                         {{ uploadForm.processing ? 'Оруулж байна…' : 'Word оруулах' }}
                     </button>
-                    <div ref="downloadRoot" class="relative">
+                    <div ref="downloadRoot" class="relative w-full sm:w-auto">
                         <button
                             type="button"
-                            class="ui-btn-ghost"
+                            class="ui-btn-ghost w-full sm:w-auto"
                             :aria-expanded="downloadOpen"
                             title="Хүснэгтийг Word, Excel, PDF-ээр татах"
                             @click.stop="toggleDownload"
                         >
                             Татах
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                 <path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
                         </button>
                         <div
                             v-if="downloadOpen"
-                            class="absolute right-0 z-30 mt-1.5 min-w-[11rem] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                            class="absolute left-0 right-0 z-30 mt-1.5 min-w-[11rem] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg sm:left-auto sm:right-0"
                         >
                             <a
                                 v-for="item in downloadFormats"
                                 :key="item.format"
                                 :href="exportUrl(item.format)"
-                                class="block px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                                class="block px-3.5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
                                 @click="downloadOpen = false"
                             >
                                 {{ item.label }}
@@ -741,7 +743,7 @@ const prepTableMinWidth = computed(() => {
                     <a
                         v-if="latestDocument"
                         :href="route('tasks.documents.download', latestDocument.id)"
-                        class="ui-btn-ghost"
+                        class="ui-btn-ghost w-full sm:w-auto"
                         title="Оруулсан эх Word файлыг татах"
                     >
                         Эх файл
@@ -749,7 +751,7 @@ const prepTableMinWidth = computed(() => {
                     <button
                         v-if="canManage"
                         type="button"
-                        class="ui-btn-accent"
+                        class="ui-btn-accent w-full sm:w-auto"
                         @click="addRow"
                     >
                         Мөр нэмэх
@@ -758,15 +760,17 @@ const prepTableMinWidth = computed(() => {
             </div>
             <p v-if="uploadForm.errors.file" class="text-sm text-red-600">{{ uploadForm.errors.file }}</p>
 
-            <div class="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
+            <div
+                class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:rounded-2xl sm:border sm:border-slate-200 sm:bg-white sm:p-1.5 sm:shadow-soft sm:[&::-webkit-scrollbar]:auto [&::-webkit-scrollbar]:hidden"
+            >
                 <Link
                     v-for="item in kinds"
                     :key="item.key"
                     :href="route('tasks.index', { kind: item.key })"
-                    class="rounded-xl px-4 py-2.5 text-sm font-semibold transition"
+                    class="shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm font-semibold transition sm:px-4"
                     :class="kind === item.key
                         ? 'bg-brand-navy-600 text-white shadow-md shadow-brand-navy-600/20'
-                        : 'text-slate-600 hover:bg-slate-50'"
+                        : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 sm:border-0'"
                     @click.prevent="switchKind(item.key)"
                 >
                     {{ item.label }}

@@ -21,14 +21,14 @@ defineProps({
 </script>
 
 <template>
-    <Head title="Profile" />
+    <Head title="Профайл" />
 
     <AuthenticatedLayout>
         <template #header>
             <h2
                 class="text-xl font-semibold leading-tight text-gray-800"
             >
-                Profile
+                Профайл
             </h2>
         </template>
 
