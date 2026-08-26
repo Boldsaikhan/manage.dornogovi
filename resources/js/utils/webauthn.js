@@ -119,3 +119,15 @@ export const loginWithBiometric = async () => {
 
     return data;
 };
+
+/** Нэвтэрсэн хэрэглэгчийн биометрикийг баталгаажуулж assertion payload буцаана. */
+export const assertBiometric = async () => {
+    const { data: options } = await window.axios.post(route('webauthn.verify.options'));
+    const publicKey = preparePublicKeyGet(options.publicKey);
+    const credential = await navigator.credentials.get({ publicKey });
+    if (! credential) {
+        throw new Error('Баталгаажуулалт цуцлагдлаа.');
+    }
+
+    return credentialToAssertPayload(credential);
+};

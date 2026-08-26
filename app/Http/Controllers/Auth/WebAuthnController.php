@@ -76,6 +76,18 @@ class WebAuthnController extends Controller
         return response()->json($options);
     }
 
+    /** Нэвтэрсэн хэрэглэгчийн биометрик assertion options. */
+    public function verifyOptions(Request $request): JsonResponse
+    {
+        try {
+            $options = WebAuthnService::assertionOptionsForUser($request, $request->user());
+        } catch (Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json($options);
+    }
+
     public function login(Request $request): JsonResponse
     {
         $data = $request->validate([

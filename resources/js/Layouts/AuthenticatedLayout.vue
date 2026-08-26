@@ -7,6 +7,7 @@ import StateEmblem from '@/Components/StateEmblem.vue';
 import OrnamentMark from '@/Components/OrnamentMark.vue';
 import InstallAppButton from '@/Components/InstallAppButton.vue';
 import AiPanel from '@/Components/AiPanel.vue';
+import AppLockGate from '@/Components/AppLockGate.vue';
 
 defineProps({
     title: { type: String, default: '' },
@@ -455,5 +456,7 @@ const isCurrent = (routeName) => {
             :href="page.props.aiAssistant?.href || '/ai'"
             @close="toggleAiPanel(false)"
         />
+
+        <AppLockGate />
     </div>
 </template>

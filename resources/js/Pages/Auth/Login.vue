@@ -1,9 +1,8 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
-import { Head, Link, useForm, router } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import StateEmblem from '@/Components/StateEmblem.vue';
 import OrnamentMark from '@/Components/OrnamentMark.vue';
-import { isWebAuthnSupported, loginWithBiometric } from '@/utils/webauthn';
 
 defineProps({
     canResetPassword: {
@@ -17,9 +16,6 @@ defineProps({
 /** 'phone' — үндсэн арга, 'email' — нөөц арга */
 const mode = ref('phone');
 const showPassword = ref(false);
-const webauthnSupported = ref(false);
-const webauthnBusy = ref(false);
-const webauthnError = ref('');
 
 /** public/images/building.jpg байхгүй бол градиент дэвсгэрээр орлуулна */
 const buildingMissing = ref(false);
@@ -57,39 +53,6 @@ const submit = () => {
         onFinish: () => form.reset('password'),
     });
 };
-
-const loginBiometric = async () => {
-    if (! webauthnSupported.value || webauthnBusy.value) return;
-
-    webauthnBusy.value = true;
-    webauthnError.value = '';
-
-    try {
-        const data = await loginWithBiometric();
-        if (data?.redirect) {
-            router.visit(data.redirect);
-        } else {
-            router.visit(route('dept.dashboard'));
-        }
-    } catch (e) {
-        const msg = e?.response?.data?.message
-            || e?.response?.data?.errors?.webauthn?.[0]
-            || e?.message
-            || 'Биометрик нэвтрэлт амжилтгүй.';
-
-        if (/NotAllowedError|abort|цуцла/i.test(String(msg + e?.name))) {
-            webauthnError.value = 'Үйлдэл цуцлагдлаа.';
-        } else {
-            webauthnError.value = msg;
-        }
-    } finally {
-        webauthnBusy.value = false;
-    }
-};
-
-onMounted(() => {
-    webauthnSupported.value = isWebAuthnSupported();
-});
 </script>
 
 <template>
@@ -133,38 +96,15 @@ onMounted(() => {
                         НЭВТРЭХ
                     </h2>
 
+                    <p class="mt-2 text-xs text-slate-500">
+                        Утас/и-мэйл болон нууц үгээр нэвтэрнэ. Биометрик бүртгэлтэй бол дараа нь хуруу/нүүрээр баталгаажуулна.
+                    </p>
+
                     <div
                         v-if="status"
                         class="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700"
                     >
                         {{ status }}
-                    </div>
-
-                    <!-- Хуруу / нүүрээр нэвтрэх -->
-                    <div v-if="webauthnSupported" class="mt-4 space-y-2">
-                        <button
-                            type="button"
-                            class="group flex w-full items-center justify-center gap-2 rounded-xl border-2 border-brand-navy-200 bg-brand-navy-50 px-5 py-3.5 text-sm font-semibold text-brand-navy-800 transition hover:border-brand-navy-400 hover:bg-brand-navy-100 focus:outline-none focus:ring-4 focus:ring-brand-navy-600/20 disabled:cursor-not-allowed disabled:opacity-60"
-                            :disabled="webauthnBusy || form.processing"
-                            @click="loginBiometric"
-                        >
-                            <svg class="h-5 w-5 text-brand-navy-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 11c1.657 0 3-1.567 3-3.5S13.657 4 12 4 9 5.567 9 7.5 10.343 11 12 11z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.5 20c.8-3.2 2.9-5 5.5-5s4.7 1.8 5.5 5" />
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 8.5c-.8.6-1.3 1.6-1.3 2.7 0 2.3 1.6 3.8 3.3 4.3M17 8.5c.8.6 1.3 1.6 1.3 2.7 0 2.3-1.6 3.8-3.3 4.3" />
-                            </svg>
-                            <span>{{ webauthnBusy ? 'Шалгаж байна…' : 'Хуруу / нүүрээр нэвтрэх' }}</span>
-                        </button>
-                        <p v-if="webauthnError" class="text-center text-sm text-red-600">{{ webauthnError }}</p>
-                        <p class="text-center text-[11px] text-slate-400">
-                            Эхлээд нууц үгээр нэвтэрч, Профайл → Хуруу / нүүр идэвхжүүлнэ.
-                        </p>
-
-                        <div class="flex items-center gap-3 pt-1">
-                            <span class="h-px flex-1 bg-slate-200"></span>
-                            <span class="text-xs text-slate-400">эсвэл</span>
-                            <span class="h-px flex-1 bg-slate-200"></span>
-                        </div>
                     </div>
 
                     <form class="mt-4 space-y-4" @submit.prevent="submit">

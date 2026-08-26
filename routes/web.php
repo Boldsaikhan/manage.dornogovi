@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\UserAccessController;
 use App\Http\Controllers\AiAssistantController;
+use App\Http\Controllers\AppLockController;
 use App\Http\Controllers\CredentialController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DecreeController;
@@ -38,6 +39,10 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/vault/unlock', [VaultController::class, 'unlock'])->name('vault.unlock');
     Route::post('/vault/lock', [VaultController::class, 'lock'])->name('vault.lock');
+
+    Route::post('/app-lock', [AppLockController::class, 'lock'])->name('app.lock');
+    Route::post('/app-unlock', [AppLockController::class, 'unlock'])->name('app.unlock');
+    Route::post('/app-unlock-password', [AppLockController::class, 'unlockWithPassword'])->name('app.unlock.password');
 
     Route::post('/credentials', [CredentialController::class, 'store'])->name('credentials.store');
     Route::delete('/credentials/{system}', [CredentialController::class, 'destroy'])->name('credentials.destroy');

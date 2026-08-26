@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\System;
 use App\Models\UserCredential;
 use App\Services\Ai\AiSettings;
+use App\Support\AppLock;
 use App\Support\ModuleAccess;
 use App\Support\NavBadges;
 use App\Support\Vault;
@@ -49,6 +50,22 @@ class HandleInertiaRequests extends Middleware
                 'unlocked' => Vault::isUnlocked($request),
                 'until' => Vault::unlockedUntil($request),
             ],
+            'appLock' => function () use ($request) {
+                $user = $request->user();
+                if (! $user) {
+                    return [
+                        'locked' => false,
+                        'mode' => null,
+                        'hasWebAuthn' => false,
+                    ];
+                }
+
+                return [
+                    'locked' => AppLock::isLocked($request),
+                    'mode' => AppLock::mode($request),
+                    'hasWebAuthn' => $user->webauthnCredentials()->exists(),
+                ];
+            },
             'nav' => fn () => $this->navigation($request),
             'moduleNav' => fn () => ModuleAccess::navFor($request->user()),
             'navBadges' => fn () => NavBadges::for($request->user()),

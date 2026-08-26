@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Support\AppLock;
 use App\Support\HomeRedirect;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,6 +34,13 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
+
+        AppLock::unlock($request);
+
+        // Биометрик бүртгэлтэй бол нэвтрэхэд хуруу/нүүрээр дахин баталгаажуулна.
+        if ($request->user()->webauthnCredentials()->exists()) {
+            AppLock::lock($request, AppLock::MODE_BIOMETRIC);
+        }
 
         return redirect()->intended(HomeRedirect::path());
     }

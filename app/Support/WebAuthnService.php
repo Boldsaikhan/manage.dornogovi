@@ -180,7 +180,68 @@ class WebAuthnService
         return json_decode(json_encode($args), true);
     }
 
+    /**
+     * Нэвтэрсэн хэрэглэгчийн бүртгэлтэй credential-уудаар assertion options.
+     *
+     * @return array{publicKey: object}
+     */
+    public static function assertionOptionsForUser(Request $request, User $user): array
+    {
+        $webauthn = self::make($request);
+
+        $ids = $user->webauthnCredentials()
+            ->get(['credential_id'])
+            ->map(fn (WebAuthnCredential $c) => self::b64urlDecode($c->credential_id))
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($ids === []) {
+            throw new RuntimeException('Биометрик бүртгэл олдсонгүй.');
+        }
+
+        $args = $webauthn->getGetArgs(
+            $ids,
+            120,
+            false,
+            false,
+            false,
+            true,
+            true,
+            true
+        );
+
+        $challenge = $webauthn->getChallenge();
+        $request->session()->put('webauthn.challenge', self::b64urlEncode(
+            $challenge instanceof ByteBuffer ? $challenge->getBinaryString() : (string) $challenge
+        ));
+
+        return json_decode(json_encode($args), true);
+    }
+
     public static function authenticate(Request $request, array $payload): User
+    {
+        $credential = self::assertCredential($request, $payload);
+
+        $user = $credential->user;
+        if (! $user) {
+            throw new RuntimeException('Хэрэглэгч олдсонгүй.');
+        }
+
+        return $user;
+    }
+
+    /** Нэвтэрсэн хэрэглэгчийн биометрикийг баталгаажуулна. */
+    public static function verifyForUser(Request $request, User $user, array $payload): void
+    {
+        $credential = self::assertCredential($request, $payload);
+
+        if ((int) $credential->user_id !== (int) $user->id) {
+            throw new RuntimeException('Биометрик энэ хэрэглэгчид хамаарахгүй байна.');
+        }
+    }
+
+    private static function assertCredential(Request $request, array $payload): WebAuthnCredential
     {
         $webauthn = self::make($request);
         $challengeB64 = $request->session()->pull('webauthn.challenge');
@@ -233,12 +294,7 @@ class WebAuthnService
             $credential->update(['sign_count' => $newCounter]);
         }
 
-        $user = $credential->user;
-        if (! $user) {
-            throw new RuntimeException('Хэрэглэгч олдсонгүй.');
-        }
-
-        return $user;
+        return $credential;
     }
 
     public static function guessDeviceName(Request $request): string

@@ -68,6 +68,9 @@ Route::middleware('auth')->group(function () {
     Route::post('webauthn/register', [WebAuthnController::class, 'register'])
         ->middleware('throttle:20,1')
         ->name('webauthn.register');
+    Route::post('webauthn/verify/options', [WebAuthnController::class, 'verifyOptions'])
+        ->middleware('throttle:20,1')
+        ->name('webauthn.verify.options');
     Route::delete('webauthn/credentials/{credential}', [WebAuthnController::class, 'destroy'])
         ->name('webauthn.destroy');
 
