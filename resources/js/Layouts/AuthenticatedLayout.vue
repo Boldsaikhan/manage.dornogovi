@@ -101,6 +101,33 @@ const externalSystems = computed(() =>
         ? []
         : navSystems.value.filter((s) => !s.is_internal),
 );
+
+/** Цэсийн дараалал: Самбар → Холбосон системүүд → Ажлын удирдлага → … */
+const navSections = computed(() => {
+    const sections = [];
+    let systemsPlaced = false;
+
+    for (const group of moduleNav.value) {
+        if (group.key === 'work' && ! systemsPlaced) {
+            if (externalSystems.value.length) {
+                sections.push({ type: 'systems' });
+            }
+            systemsPlaced = true;
+        }
+        sections.push({ type: 'group', group });
+    }
+
+    if (! systemsPlaced && externalSystems.value.length) {
+        const afterDashboard = sections.findIndex(
+            (s) => s.type === 'group' && s.group.key === 'dashboard',
+        );
+        const at = afterDashboard >= 0 ? afterDashboard + 1 : 0;
+        sections.splice(at, 0, { type: 'systems' });
+    }
+
+    return sections;
+});
+
 const vaultUnlocked = computed(() => page.props.vault?.unlocked ?? false);
 const navBadges = computed(() => page.props.navBadges ?? {});
 
@@ -196,75 +223,78 @@ const isCurrent = (routeName) => {
                 class="flex-1 space-y-0.5 overflow-y-auto p-3"
                 :class="sidebarCollapsed ? 'lg:px-2' : ''"
             >
-                <template v-for="group in moduleNav" :key="group.key">
-                    <div
-                        class="ui-section-label"
-                        :class="sidebarCollapsed ? 'lg:mx-auto lg:!mt-3 lg:h-px lg:w-6 lg:overflow-hidden lg:bg-slate-200 lg:p-0 lg:text-[0px]' : ''"
-                    >
-                        {{ group.label }}
-                    </div>
-                    <Link
-                        v-for="item in group.items"
-                        :key="item.key"
-                        :href="route(item.route)"
-                        class="ui-nav-link relative"
-                        :class="[
-                            isCurrent(item.route) ? 'ui-nav-link-active' : '',
-                            sidebarCollapsed ? 'lg:justify-center lg:px-0' : '',
-                        ]"
-                        @mouseenter="showNavTip($event, item.label + (badgeFor(item.key) ? ` (${badgeFor(item.key)})` : ''))"
-                        @mouseleave="hideNavTip"
-                        @focus="showNavTip($event, item.label + (badgeFor(item.key) ? ` (${badgeFor(item.key)})` : ''))"
-                        @blur="hideNavTip"
-                    >
-                        <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                            <path :d="iconPaths[item.icon] || iconPaths.clipboard" />
-                        </svg>
-                        <span class="min-w-0 flex-1 truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ item.label }}</span>
-                        <span
-                            v-if="badgeFor(item.key)"
-                            class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none tabular-nums"
-                            :class="[
-                                isCurrent(item.route)
-                                    ? 'bg-white/25 text-white'
-                                    : 'bg-brand-orange-500 text-white',
-                                sidebarCollapsed ? 'lg:absolute lg:right-1 lg:top-1 lg:min-w-[1.1rem] lg:px-1 lg:text-center' : '',
-                            ]"
+                <template v-for="(section, sectionIdx) in navSections" :key="section.type === 'group' ? section.group.key : `systems-${sectionIdx}`">
+                    <template v-if="section.type === 'systems'">
+                        <div
+                            class="ui-section-label"
+                            :class="sidebarCollapsed ? 'lg:mx-auto lg:!mt-3 lg:h-px lg:w-6 lg:overflow-hidden lg:bg-slate-200 lg:p-0 lg:text-[0px]' : ''"
                         >
-                            {{ badgeLabel(badgeFor(item.key)) }}
-                        </span>
-                    </Link>
-                </template>
+                            Холбосон системүүд
+                        </div>
+                        <button
+                            v-for="system in externalSystems"
+                            :key="system.id"
+                            type="button"
+                            class="ui-nav-link relative w-full text-left"
+                            :class="sidebarCollapsed ? 'lg:justify-center lg:px-0' : ''"
+                            @click="openSystem(system)"
+                            @mouseenter="showNavTip($event, systemHint(system))"
+                            @mouseleave="hideNavTip"
+                            @focus="showNavTip($event, systemHint(system))"
+                            @blur="hideNavTip"
+                        >
+                            <svg class="h-5 w-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                <path :d="iconPaths[system.icon] ?? iconPaths.globe" />
+                            </svg>
+                            <span class="flex-1 truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ system.name }}</span>
+                            <span
+                                v-if="system.has_credential"
+                                class="h-1.5 w-1.5 rounded-full bg-brand-orange-500"
+                                :class="sidebarCollapsed ? 'lg:absolute lg:right-1.5 lg:top-1.5' : ''"
+                            />
+                        </button>
+                    </template>
 
-                <div
-                    v-if="externalSystems.length"
-                    class="ui-section-label"
-                    :class="sidebarCollapsed ? 'lg:mx-auto lg:!mt-3 lg:h-px lg:w-6 lg:overflow-hidden lg:bg-slate-200 lg:p-0 lg:text-[0px]' : ''"
-                >
-                    Холбосон системүүд
-                </div>
-                <button
-                    v-for="system in externalSystems"
-                    :key="system.id"
-                    type="button"
-                    class="ui-nav-link relative w-full text-left"
-                    :class="sidebarCollapsed ? 'lg:justify-center lg:px-0' : ''"
-                    @click="openSystem(system)"
-                    @mouseenter="showNavTip($event, systemHint(system))"
-                    @mouseleave="hideNavTip"
-                    @focus="showNavTip($event, systemHint(system))"
-                    @blur="hideNavTip"
-                >
-                    <svg class="h-5 w-5 shrink-0 opacity-70" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                        <path :d="iconPaths[system.icon] ?? iconPaths.globe" />
-                    </svg>
-                    <span class="flex-1 truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ system.name }}</span>
-                    <span
-                        v-if="system.has_credential"
-                        class="h-1.5 w-1.5 rounded-full bg-brand-orange-500"
-                        :class="sidebarCollapsed ? 'lg:absolute lg:right-1.5 lg:top-1.5' : ''"
-                    />
-                </button>
+                    <template v-else>
+                        <div
+                            class="ui-section-label"
+                            :class="sidebarCollapsed ? 'lg:mx-auto lg:!mt-3 lg:h-px lg:w-6 lg:overflow-hidden lg:bg-slate-200 lg:p-0 lg:text-[0px]' : ''"
+                        >
+                            {{ section.group.label }}
+                        </div>
+                        <Link
+                            v-for="item in section.group.items"
+                            :key="item.key"
+                            :href="route(item.route)"
+                            class="ui-nav-link relative"
+                            :class="[
+                                isCurrent(item.route) ? 'ui-nav-link-active' : '',
+                                sidebarCollapsed ? 'lg:justify-center lg:px-0' : '',
+                            ]"
+                            @mouseenter="showNavTip($event, item.label + (badgeFor(item.key) ? ` (${badgeFor(item.key)})` : ''))"
+                            @mouseleave="hideNavTip"
+                            @focus="showNavTip($event, item.label + (badgeFor(item.key) ? ` (${badgeFor(item.key)})` : ''))"
+                            @blur="hideNavTip"
+                        >
+                            <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                <path :d="iconPaths[item.icon] || iconPaths.clipboard" />
+                            </svg>
+                            <span class="min-w-0 flex-1 truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ item.label }}</span>
+                            <span
+                                v-if="badgeFor(item.key)"
+                                class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none tabular-nums"
+                                :class="[
+                                    isCurrent(item.route)
+                                        ? 'bg-white/25 text-white'
+                                        : 'bg-brand-orange-500 text-white',
+                                    sidebarCollapsed ? 'lg:absolute lg:right-1 lg:top-1 lg:min-w-[1.1rem] lg:px-1 lg:text-center' : '',
+                                ]"
+                            >
+                                {{ badgeLabel(badgeFor(item.key)) }}
+                            </span>
+                        </Link>
+                    </template>
+                </template>
             </nav>
 
             <InstallAppButton v-if="! sidebarCollapsed" />
