@@ -12,4 +12,6 @@ const isStandalonePwa = () => (
 if (isStandalonePwa()) {
     document.cookie = 'pwa_standalone=1; path=/; max-age=31536000; SameSite=Lax';
     window.axios.defaults.headers.common['X-PWA-Standalone'] = '1';
+} else if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent ?? '')) {
+    document.cookie = 'mobile_client=1; path=/; max-age=31536000; SameSite=Lax';
 }

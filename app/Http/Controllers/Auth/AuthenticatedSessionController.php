@@ -37,7 +37,7 @@ class AuthenticatedSessionController extends Controller
 
         AppLock::unlock($request);
 
-        // Биометрик бүртгэлтэй бол нэвтрэхэд хуруу/нүүрээр дахин баталгаажуулна.
+        // Утас/PWA дээр биометрик бүртгэлтэй бол нэвтрэх бүрт хуруу/нүүр асууна.
         if ($request->user()->webauthnCredentials()->exists()) {
             AppLock::lock($request, AppLock::MODE_BIOMETRIC);
         }

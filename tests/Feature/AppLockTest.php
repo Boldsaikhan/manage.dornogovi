@@ -85,6 +85,25 @@ class AppLockTest extends TestCase
         $this->assertSame(AppLock::MODE_BIOMETRIC, session(AppLock::MODE_KEY));
     }
 
+    public function test_mobile_user_agent_locks_on_full_page_load(): void
+    {
+        $user = User::factory()->create();
+        $user->webauthnCredentials()->create([
+            'credential_id' => 'cred-mobile-load',
+            'public_key' => 'pk',
+            'sign_count' => 0,
+            'device_name' => 'Phone',
+        ]);
+
+        $this->actingAs($user)
+            ->withHeader('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15')
+            ->get(route('dept.dashboard'))
+            ->assertOk();
+
+        $this->assertTrue(session(AppLock::SESSION_KEY));
+        $this->assertSame(AppLock::MODE_BIOMETRIC, session(AppLock::MODE_KEY));
+    }
+
     public function test_app_lock_and_password_unlock(): void
     {
         $user = User::factory()->create([

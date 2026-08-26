@@ -10,7 +10,7 @@ const busy = ref(false);
 const error = ref('');
 const hint = ref('');
 const showPasswordFallback = ref(false);
-const webauthnOk = ref(false);
+const webauthnOk = ref(typeof window !== 'undefined' && isWebAuthnSupported());
 
 /** Энэ удаагийн «харагдах» циклд биометрик баталгаажсан эсэх */
 let unlockedThisVisibleCycle = false;
@@ -39,16 +39,19 @@ const subtitle = computed(() => (
         : 'Апп-аас гараад буцаж орсон тул нэвтрэх нууц үг болон биометрикийг асууна.'
 ));
 
+const isMobileDevice = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent ?? '');
+
 const isStandaloneApp = () => (
     window.matchMedia('(display-mode: standalone)').matches
     || window.matchMedia('(display-mode: fullscreen)').matches
     || window.navigator.standalone === true
 );
 
+/** Утас болон PWA дээр биометрик бүртгэлтэй бол түгжээнэ */
 const shouldGuard = () => (
-    isStandaloneApp()
-    && !! page.props.auth?.user
+    !! page.props.auth?.user
     && !! lock.value.hasWebAuthn
+    && (isMobileDevice() || isStandaloneApp())
 );
 
 const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
@@ -108,7 +111,6 @@ const promptBiometricIfLocked = () => {
 };
 
 onMounted(() => {
-    webauthnOk.value = isWebAuthnSupported();
     document.addEventListener('visibilitychange', onAppVisible);
     window.addEventListener('pagehide', onAppHidden);
     window.addEventListener('pageshow', onAppVisible);
@@ -130,7 +132,7 @@ watch(locked, (v) => {
         showPasswordFallback.value = false;
         promptBiometricIfLocked();
     }
-});
+}, { immediate: true });
 
 const unlock = async () => {
     if (busy.value) return;

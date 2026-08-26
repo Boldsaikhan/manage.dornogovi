@@ -8,6 +8,7 @@ import OrnamentMark from '@/Components/OrnamentMark.vue';
 import InstallAppButton from '@/Components/InstallAppButton.vue';
 import AiPanel from '@/Components/AiPanel.vue';
 import AppLockGate from '@/Components/AppLockGate.vue';
+import BiometricSetupGate from '@/Components/BiometricSetupGate.vue';
 
 defineProps({
     title: { type: String, default: '' },
@@ -458,5 +459,6 @@ const isCurrent = (routeName) => {
         />
 
         <AppLockGate />
+        <BiometricSetupGate />
     </div>
 </template>
