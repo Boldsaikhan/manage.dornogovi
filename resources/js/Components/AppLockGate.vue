@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import { assertBiometric, isWebAuthnSupported } from '@/utils/webauthn';
+import { isMobileDevice } from '@/utils/mobileClient';
 
 const page = usePage();
 
@@ -39,19 +40,11 @@ const subtitle = computed(() => (
         : 'Апп-аас гараад буцаж орсон тул нэвтрэх нууц үг болон биометрикийг асууна.'
 ));
 
-const isMobileDevice = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent ?? '');
-
-const isStandaloneApp = () => (
-    window.matchMedia('(display-mode: standalone)').matches
-    || window.matchMedia('(display-mode: fullscreen)').matches
-    || window.navigator.standalone === true
-);
-
-/** Утас болон PWA дээр биометрик бүртгэлтэй бол түгжээнэ */
+/** Зөвхөн гар утсанд биометрик түгжээ */
 const shouldGuard = () => (
     !! page.props.auth?.user
     && !! lock.value.hasWebAuthn
-    && (isMobileDevice() || isStandaloneApp())
+    && isMobileDevice()
 );
 
 const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
@@ -218,7 +211,7 @@ const unlockPasswordOnly = async () => {
 
 <template>
     <div
-        v-if="locked"
+        v-if="locked && shouldGuard()"
         class="fixed inset-0 z-[200] flex items-center justify-center bg-brand-navy-950/80 p-4 backdrop-blur-sm"
         role="dialog"
         aria-modal="true"

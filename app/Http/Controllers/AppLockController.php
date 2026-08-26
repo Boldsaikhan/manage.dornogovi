@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\AppLock;
+use App\Support\MobileClient;
 use App\Support\WebAuthnService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,9 +14,18 @@ use Throwable;
 
 class AppLockController extends Controller
 {
-    /** Апп-аас гарах / дэлгэц нуугдахад түгжинэ. */
+    /** Апп-аас гарах / дэлгэц нуугдахад түгжинэ (зөвхөн гар утас). */
     public function lock(Request $request): JsonResponse
     {
+        if (! MobileClient::isMobileRequest($request)) {
+            AppLock::unlock($request);
+
+            return response()->json([
+                'locked' => false,
+                'mode' => null,
+            ]);
+        }
+
         $mode = $request->user()->webauthnCredentials()->exists()
             ? AppLock::MODE_BIOMETRIC
             : AppLock::MODE_FULL;

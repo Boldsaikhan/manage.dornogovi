@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import { isWebAuthnSupported, registerBiometric } from '@/utils/webauthn';
+import { isMobileDevice } from '@/utils/mobileClient';
 
 const page = usePage();
 
@@ -13,20 +14,12 @@ const webauthnOk = ref(typeof window !== 'undefined' && isWebAuthnSupported());
 const hasWebAuthn = computed(() => !! page.props.appLock?.hasWebAuthn);
 const isLoggedIn = computed(() => !! page.props.auth?.user);
 
-const isStandaloneApp = () => (
-    window.matchMedia('(display-mode: standalone)').matches
-    || window.matchMedia('(display-mode: fullscreen)').matches
-    || window.navigator.standalone === true
-);
-
-const isMobileDevice = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent ?? '');
-
-/** Утас / суулгасан PWA дээр биометрик заавал идэвхжүүлнэ */
+/** Зөвхөн гар утсанд биометрик идэвхжүүлнэ */
 const shouldPromptSetup = () => (
     isLoggedIn.value
     && webauthnOk.value
     && ! hasWebAuthn.value
-    && (isMobileDevice() || isStandaloneApp())
+    && isMobileDevice()
 );
 
 const evaluate = () => {
