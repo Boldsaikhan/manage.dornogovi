@@ -23,8 +23,8 @@ class ExtensionDownloadTest extends TestCase
                 'manifest.json' => ['encoding', 'content'],
             ],
         ]);
-
-        $this->assertStringNotContainsString('PK', $response->getContent());
+        $response->assertHeader('content-type', 'application/json');
+        $this->assertSame('manage-dornogovi-extension', $response->json('folder'));
     }
 
     public function test_guests_cannot_download(): void
