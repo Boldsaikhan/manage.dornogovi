@@ -1,12 +1,10 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import {
-    SOUM_GOVERNORS_LABEL,
     expandPersonNames,
-    filterSoumGovernors,
     formatPersonNamesDisplay,
     serializePersonNames,
-    soumGovernorNames as namesFromPeople,
+    visiblePersonGroups,
 } from '@/utils/soumGovernors';
 
 const CATEGORY_FILTERS = [
@@ -16,8 +14,6 @@ const CATEGORY_FILTERS = [
     { key: 'agentlag', label: 'Агентлаг', short: 'Агентлаг' },
     { key: 'baiguullaga', label: 'Байгууллага', short: 'Байгууллага' },
 ];
-
-const SOUM_GOVERNORS_KEY = '__soum_governors__';
 
 const props = defineProps({
     modelValue: { type: [String, Number], default: '' },
@@ -89,35 +85,36 @@ const clearSelection = () => {
 
 const selectedSet = computed(() => new Set(selected.value));
 
-const soumGovernors = computed(() => (
-    hasOptions.value ? filterSoumGovernors(props.options) : []
+/** Ангиллын шүүлтэнд тохирох бүлгүүд (Сум → Засаг/ЗДТГ, Агентлаг → дарга…) */
+const personGroups = computed(() => (
+    hasOptions.value
+        ? visiblePersonGroups(props.options, categoryOn.value)
+        : []
 ));
 
-const soumGovernorNames = computed(() => namesFromPeople(hasOptions.value ? props.options : []));
-
-const isSoumGovernorsSelected = computed(() => {
-    const names = soumGovernorNames.value;
+const isGroupSelected = (group) => {
+    const names = group?.names ?? [];
     if (! names.length) return false;
 
     return names.every((n) => selectedSet.value.has(n));
-});
+};
 
-const toggleSoumGovernors = () => {
+const togglePersonGroup = (group) => {
     ignoreBlur.value = true;
-    const names = soumGovernorNames.value;
+    const names = group?.names ?? [];
     if (! names.length) {
         releaseIgnoreBlur();
 
         return;
     }
 
-    if (isSoumGovernorsSelected.value) {
+    if (isGroupSelected(group)) {
         const drop = new Set(names);
         selected.value = selected.value.filter((n) => ! drop.has(n));
     } else if (props.multiple) {
         selected.value = [...new Set([...selected.value, ...names])];
     } else {
-        commitValue(SOUM_GOVERNORS_LABEL);
+        commitValue(group.label);
 
         return;
     }
@@ -125,21 +122,39 @@ const toggleSoumGovernors = () => {
     releaseIgnoreBlur();
 };
 
-/** Чипүүд: бүх сумын дарга сонгогдсон бол нэгтгэж харуулна */
+/** Чипүүд: сонгогдсон бүлгүүдийг нэгтгэж харуулна */
 const selectedChips = computed(() => {
-    const names = soumGovernorNames.value;
-    const govSet = new Set(names);
+    let remaining = [...selected.value];
+    const chips = [];
 
-    if (names.length && names.every((n) => selectedSet.value.has(n))) {
-        const extras = selected.value.filter((n) => ! govSet.has(n));
+    for (const group of personGroups.value) {
+        const names = group.names;
+        if (! names.length) continue;
+        if (! names.every((n) => remaining.includes(n))) continue;
 
-        return [
-            { key: SOUM_GOVERNORS_KEY, label: SOUM_GOVERNORS_LABEL, group: true },
-            ...extras.map((n) => ({ key: n, label: n, group: false })),
-        ];
+        const drop = new Set(names);
+        remaining = remaining.filter((n) => ! drop.has(n));
+        chips.push({ key: group.key, label: group.label, group: true, groupKey: group.key });
     }
 
-    return selected.value.map((n) => ({ key: n, label: n, group: false }));
+    // Шүүлт унтраасан үед ч хадгалсан бүлгийн нэрийг харуулна.
+    for (const group of visiblePersonGroups(props.options || [], {
+        sum: true, agentlag: true, udirdlaga: true, heltes: true, baiguullaga: true,
+    })) {
+        if (chips.some((c) => c.key === group.key)) continue;
+        const names = group.names;
+        if (! names.length) continue;
+        if (! names.every((n) => remaining.includes(n))) continue;
+
+        const drop = new Set(names);
+        remaining = remaining.filter((n) => ! drop.has(n));
+        chips.push({ key: group.key, label: group.label, group: true, groupKey: group.key });
+    }
+
+    return [
+        ...chips,
+        ...remaining.map((n) => ({ key: n, label: n, group: false })),
+    ];
 });
 
 const filteredOptions = computed(() => {
@@ -409,8 +424,12 @@ const pickOption = (opt) => {
 const removeChip = (chip) => {
     ignoreBlur.value = true;
 
-    if (chip?.group || chip?.key === SOUM_GOVERNORS_KEY) {
-        const drop = new Set(soumGovernorNames.value);
+    if (chip?.group) {
+        const allGroups = visiblePersonGroups(props.options || [], {
+            sum: true, agentlag: true, udirdlaga: true, heltes: true, baiguullaga: true,
+        });
+        const group = allGroups.find((g) => g.key === chip.key || g.label === chip.label);
+        const drop = new Set(group?.names ?? []);
         selected.value = selected.value.filter((n) => ! drop.has(n));
     } else {
         const name = typeof chip === 'string' ? chip : chip?.key;
@@ -581,16 +600,17 @@ onBeforeUnmount(() => {
                             {{ cat.short ?? cat.label }}
                         </button>
                         <button
-                            v-if="soumGovernors.length"
+                            v-for="group in personGroups"
+                            :key="`chip-${group.key}`"
                             type="button"
                             class="shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-semibold transition"
-                            :class="isSoumGovernorsSelected
+                            :class="isGroupSelected(group)
                                 ? 'border-emerald-600 bg-emerald-600 text-white'
                                 : 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:border-emerald-400'"
-                            :title="`Сумын Засаг дарга ${soumGovernors.length} хүнийг нэг дор сонгоно`"
-                            @mousedown.prevent="toggleSoumGovernors"
+                            :title="`${group.label} — ${group.names.length} хүн`"
+                            @mousedown.prevent="togglePersonGroup(group)"
                         >
-                            Сумдын Засаг дарга нар ({{ soumGovernors.length }})
+                            {{ group.label }} ({{ group.names.length }})
                         </button>
                     </div>
 
@@ -625,29 +645,30 @@ onBeforeUnmount(() => {
                         Сонголтгүй (цэвэрлэх)
                     </button>
                     <button
-                        v-if="soumGovernors.length"
+                        v-for="group in personGroups"
+                        :key="`row-${group.key}`"
                         type="button"
                         class="flex w-full items-center gap-2.5 border-b border-slate-100 px-3 py-2.5 text-left transition"
-                        :class="isSoumGovernorsSelected
+                        :class="isGroupSelected(group)
                             ? 'bg-emerald-50 ring-1 ring-inset ring-emerald-200'
                             : 'hover:bg-emerald-50/60'"
-                        @mousedown.prevent="toggleSoumGovernors"
+                        @mousedown.prevent="togglePersonGroup(group)"
                     >
                         <span
                             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
-                            :class="isSoumGovernorsSelected ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-800'"
+                            :class="isGroupSelected(group) ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-800'"
                         >
-                            {{ soumGovernors.length }}
+                            {{ group.names.length }}
                         </span>
                         <span class="min-w-0 flex-1">
-                            <span class="block text-sm font-semibold text-slate-800">{{ SOUM_GOVERNORS_LABEL }}</span>
+                            <span class="block text-sm font-semibold text-slate-800">{{ group.label }}</span>
                             <span class="block text-[10px] text-slate-500">
-                                {{ soumGovernors.length }} сумын Засаг даргыг нэг дор сонгоно
+                                {{ group.names.length }} хүнийг нэг дор сонгоно
                             </span>
                         </span>
                         <span
                             class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px]"
-                            :class="isSoumGovernorsSelected
+                            :class="isGroupSelected(group)
                                 ? 'bg-emerald-600 text-white'
                                 : 'border border-slate-200 text-transparent'"
                         >

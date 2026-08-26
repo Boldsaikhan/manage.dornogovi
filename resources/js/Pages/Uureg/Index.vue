@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import SheetCell from '@/Components/SheetCell.vue';
-import { expandPersonNames, SOUM_GOVERNORS_LABEL } from '@/utils/soumGovernors';
+import { expandPersonNames, GROUP_LABELS } from '@/utils/soumGovernors';
 
 const props = defineProps({
     kind: { type: String, required: true },
@@ -114,8 +114,12 @@ const taskOwners = (task) => {
     }
 
     return names.map((name) => {
-        if (name === SOUM_GOVERNORS_LABEL) {
-            return { value: name, org: 'Сумд', category: 'sum' };
+        if (GROUP_LABELS.includes(name)) {
+            return {
+                value: name,
+                org: name.includes('Агентлаг') ? 'Агентлаг' : 'Сумд',
+                category: name.includes('Агентлаг') ? 'agentlag' : 'sum',
+            };
         }
 
         const person = peopleIndex.value[name];
