@@ -234,6 +234,7 @@ const provisionHeltes = () => {
 
     const ok = confirm(
         'Хэлтэс ангиллын ' + props.heltesCount + ' албан хаагчид нэвтрэх эрх өгөх үү?\n\n'
+        + 'И-мэйл: латин нэр @dornogovi.gov.mn\n'
         + 'Нэвтрэх нэр: гар утас\n'
         + 'Нууц үг: утасны сүүлийн 4 орон + латин нэр\n'
         + 'Жишээ: 99178904 / 8904Nomin',
@@ -303,6 +304,8 @@ const pickFromDirectory = (value) => {
                     <p class="text-xs text-slate-500">
                         Утасны жагсаалтын «Хэлтэс»-т бүртгэлтэй
                         <b>{{ heltesCount }}</b> хүнд нэвтрэх эрх өгнө.
+                        И-мэйл — латин нэр@dornogovi.gov.mn (А.Бадрал →
+                        <b>badral@dornogovi.gov.mn</b>).
                         Нэвтрэх нэр — гар утас. Нууц үг — утасны сүүлийн 4 орон + латин нэр
                         (жишээ: А.Номин, 99178904 → <b>8904Nomin</b>).
                     </p>

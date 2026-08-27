@@ -7,12 +7,22 @@ use Illuminate\Console\Command;
 
 class ProvisionHeltesAccounts extends Command
 {
-    protected $signature = 'users:provision-heltes {--dry-run : Зөвхөн тоолох, хадгалахгүй}';
+    protected $signature = 'users:provision-heltes
+                            {--dry-run : Зөвхөн тоолох, хадгалахгүй}
+                            {--emails-only : Зөвхөн и-мэйлийг нэр@dornogovi.gov.mn болгох}';
 
     protected $description = 'Утасны жагсаалтын «Хэлтэс» ангиллын албан хаагчдад нэвтрэх эрх өгнө';
 
     public function handle(HeltesAccountProvisioner $provisioner): int
     {
+        if ($this->option('emails-only')) {
+            $updated = $provisioner->syncStaffEmails();
+            $this->info(sprintf('И-мэйл шинэчилсэн: %d', $updated));
+            $this->line('И-мэйл: нэр@dornogovi.gov.mn. Нэвтрэх: гар утас. Нууц үг: утасны сүүлийн 4 орон + латин нэр.');
+
+            return self::SUCCESS;
+        }
+
         $dryRun = (bool) $this->option('dry-run');
         $result = $provisioner->run($dryRun);
 
@@ -34,7 +44,7 @@ class ProvisionHeltesAccounts extends Command
             );
         }
 
-        $this->line('Нэвтрэх нэр: гар утас. Нууц үг: утасны сүүлийн 4 орон + латин нэр (жнь: 8904Nomin).');
+        $this->line('И-мэйл: нэр@dornogovi.gov.mn. Нэвтрэх: гар утас. Нууц үг: утасны сүүлийн 4 орон + латин нэр.');
 
         return self::SUCCESS;
     }
