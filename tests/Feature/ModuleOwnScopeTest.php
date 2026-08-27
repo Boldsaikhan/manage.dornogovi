@@ -92,4 +92,18 @@ class ModuleOwnScopeTest extends TestCase
             ->where('module_key', 'tasks')
             ->value('level'));
     }
+
+    public function test_tasks_index_accepts_relation_query_without_type_error(): void
+    {
+        $user = User::factory()->create(['is_admin' => true]);
+
+        \App\Models\TaskSource::query()->firstOrCreate(
+            ['key' => \App\Models\TaskSource::KEY_DIRECTIVE],
+            ['name' => 'Удирдамж', 'sort_order' => 1],
+        );
+
+        $this->actingAs($user)
+            ->get(route('tasks.index'))
+            ->assertOk();
+    }
 }
