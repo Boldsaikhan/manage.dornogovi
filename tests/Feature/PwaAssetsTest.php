@@ -6,10 +6,9 @@ use Tests\TestCase;
 
 class PwaAssetsTest extends TestCase
 {
-    public function test_manifest_icons_and_service_worker_exist(): void
+    public function test_manifest_is_served_from_current_app_url(): void
     {
         foreach ([
-            'manifest.webmanifest',
             'sw.js',
             'icons/icon-192.png',
             'icons/icon-512.png',
@@ -19,13 +18,19 @@ class PwaAssetsTest extends TestCase
             $this->assertFileExists(public_path($file));
         }
 
-        $manifest = json_decode(file_get_contents(public_path('manifest.webmanifest')), true);
+        $response = $this->get('/manifest.webmanifest');
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'application/manifest+json; charset=UTF-8');
+
+        $manifest = $response->json();
 
         $this->assertSame('manage дотоод систем', $manifest['name']);
         $this->assertSame('manage', $manifest['short_name']);
         $this->assertSame('standalone', $manifest['display']);
-        $this->assertSame('/dept-dashboard', $manifest['start_url']);
+        $this->assertStringContainsString('/dept-dashboard', $manifest['start_url']);
         $this->assertCount(3, $manifest['icons']);
+        $this->assertArrayNotHasKey('related_applications', $manifest);
     }
 
     public function test_layout_links_manifest(): void

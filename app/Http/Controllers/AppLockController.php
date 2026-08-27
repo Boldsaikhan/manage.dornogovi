@@ -30,7 +30,7 @@ class AppLockController extends Controller
             ? AppLock::MODE_BIOMETRIC
             : AppLock::MODE_FULL;
 
-        AppLock::lock($request, $mode);
+        AppLock::lock($request, $mode, $request->boolean('idle'));
 
         return response()->json([
             'locked' => true,

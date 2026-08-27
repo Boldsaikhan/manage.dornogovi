@@ -5,6 +5,7 @@ import { assertBiometric, isWebAuthnSupported } from '@/utils/webauthn';
 import { isMobileDevice } from '@/utils/mobileClient';
 
 const LOCK_KEY = 'md_app_locked';
+const LAST_ACTIVE_KEY = 'md_last_active';
 /** Биометрик цонх / unlock-ийн дараа visibility-ээр дахин түгжихгүй байх (мс). */
 const HIDE_GRACE_MS = 4000;
 
@@ -20,26 +21,23 @@ const webauthnOk = ref(typeof window !== 'undefined' && isWebAuthnSupported());
 const clientLocked = ref(false);
 
 let locking = false;
-/** WebAuthn/unlock явж байхад эсвэл дөнгөж тайлагдсаны дараа — hide event үл тоомсорлоно. */
 let suppressHideUntil = 0;
-
-const suppressHideLock = (ms = HIDE_GRACE_MS) => {
-    suppressHideUntil = Date.now() + ms;
-};
-
-const isHideSuppressed = () => Date.now() < suppressHideUntil;
 
 const lock = computed(() => page.props.appLock ?? {
     locked: false,
     mode: null,
     hasWebAuthn: false,
+    idleMinutes: 30,
 });
+
+const idleMs = computed(() => Math.max(1, Number(lock.value.idleMinutes || 30)) * 60 * 1000);
 
 const userId = computed(() => page.props.auth?.user?.id ?? null);
 
 const storageKey = () => `${LOCK_KEY}:${userId.value || 0}`;
+const lastActiveKey = () => `${LAST_ACTIVE_KEY}:${userId.value || 0}`;
 
-/** Гар утас + нэвтэрсэн — зөвхөн дэлгэц алга болоход түгжинэ */
+/** Гар утас + нэвтэрсэн */
 const shouldGuard = () => (
     !! page.props.auth?.user
     && isMobileDevice()
@@ -47,9 +45,6 @@ const shouldGuard = () => (
 
 const hasWebAuthn = computed(() => !! lock.value.hasWebAuthn && webauthnOk.value);
 
-/** Цэс шилжилт серверийн session lock-ийг биш, зөвхөн клиент түгжээг харуулна.
- *  Серверийн lock зөвхөн нэвтрэхэд / дэлгэц алга болоход тавигдана.
- */
 const showLock = computed(() => shouldGuard() && (clientLocked.value || !! lock.value.locked));
 
 const isBiometricOnly = computed(() => (
@@ -72,9 +67,35 @@ const subtitle = computed(() => {
     }
 
     return isBiometricOnly.value && ! showPasswordFallback.value
-        ? 'Дэлгэцээс гарсан тул хуруу эсвэл нүүрээр дахин баталгаажуулна.'
-        : 'Дэлгэцээс гарсан тул нууц үгээр дахин нээнэ үү.';
+        ? `${lock.value.idleMinutes || 30} минут идэвхгүй болсон тул дахин баталгаажуулна.`
+        : `${lock.value.idleMinutes || 30} минут идэвхгүй болсон тул нууц үгээр дахин нээнэ үү.`;
 });
+
+const suppressHideLock = (ms = HIDE_GRACE_MS) => {
+    suppressHideUntil = Date.now() + ms;
+};
+
+const isHideSuppressed = () => Date.now() < suppressHideUntil;
+
+const recordActivity = () => {
+    try {
+        localStorage.setItem(lastActiveKey(), String(Date.now()));
+    } catch {
+        // ignore
+    }
+};
+
+const minutesIdle = () => {
+    const last = Number(localStorage.getItem(lastActiveKey()) || 0);
+
+    if (! last) {
+        return 0;
+    }
+
+    return Date.now() - last;
+};
+
+const idleExpired = () => minutesIdle() >= idleMs.value;
 
 const readClientLock = () => {
     try {
@@ -99,60 +120,82 @@ const setClientLock = (on) => {
 
 const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
-const requestLockBeacon = () => {
-    if (! shouldGuard()) return;
-
-    const body = new FormData();
-    const token = csrfToken();
-    if (token) body.append('_token', token);
-
-    const url = route('app.lock');
-    try {
-        if (navigator.sendBeacon?.(url, body)) return;
-    } catch {
-        // ignore
-    }
-
-    fetch(url, { method: 'POST', body, credentials: 'same-origin', keepalive: true }).catch(() => {});
-};
-
-/** Дэлгэц/апп алга болоход — сүлжээгүй байсан ч ШУУД түгжинэ */
-const onAppHidden = () => {
-    if (! shouldGuard()) return;
-    if (busy.value || locking || isHideSuppressed()) return;
-    if (document.visibilityState === 'visible' && ! document.hidden) return;
-
-    setClientLock(true);
-    requestLockBeacon();
-};
-
-const onVisibilityChange = () => {
-    if (document.hidden) {
-        onAppHidden();
+const requestIdleLock = async () => {
+    if (! shouldGuard() || ! idleExpired()) {
         return;
     }
 
-    // Буцаж ирэхэд зөвхөн өмнө түгжсэн бол харуулна — цэс солиход түгжихгүй
-    offline.value = ! navigator.onLine;
-    if (busy.value || isHideSuppressed()) return;
-    if (readClientLock()) {
-        clientLocked.value = true;
+    setClientLock(true);
+
+    try {
+        await window.axios.post(route('app.lock'), { idle: true });
+    } catch {
+        // Сервер түгжээгүй байсан ч клиент түгжээг харуулна
     }
 };
 
-const onPageShow = (event) => {
+const evaluateLock = async () => {
+    if (! shouldGuard()) {
+        setClientLock(false);
+
+        return;
+    }
+
+    if (! idleExpired()) {
+        setClientLock(false);
+
+        return;
+    }
+
+    await requestIdleLock();
+};
+
+const onActivity = () => {
+    if (! shouldGuard() || showLock.value) {
+        return;
+    }
+
+    recordActivity();
+};
+
+const onVisibilityChange = () => {
+    offline.value = ! navigator.onLine;
+
+    if (document.hidden) {
+        recordActivity();
+
+        return;
+    }
+
     if (busy.value || isHideSuppressed()) {
-        if (readClientLock() && ! lock.value.locked) {
-            // Unlock-ийн дараах bfcache/pageshow — хуучин клиент түгжээг бүү сэргээ
-            return;
-        }
+        return;
     }
-    if (event.persisted && shouldGuard() && ! isHideSuppressed() && ! busy.value) {
-        setClientLock(true);
+
+    if (! idleExpired()) {
+        setClientLock(false);
+        recordActivity();
+
+        return;
     }
-    if (readClientLock() && ! isHideSuppressed()) {
-        clientLocked.value = true;
+
+    evaluateLock();
+};
+
+const onPageShow = () => {
+    offline.value = ! navigator.onLine;
+
+    if (busy.value || isHideSuppressed()) {
+        return;
     }
+
+    if (! idleExpired()) {
+        setClientLock(false);
+        recordActivity();
+
+        return;
+    }
+
+    evaluateLock();
 };
 
 const onOnline = () => {
@@ -161,35 +204,35 @@ const onOnline = () => {
 
 const onOffline = () => {
     offline.value = true;
-    // Офлайн болсон гээд шууд түгжихгүй — зөвхөн дэлгэц алга болоход
 };
 
 onMounted(() => {
-    // Хуудас/цэс солиход layout дахин mount болж болно — зөвхөн хадгалсан түгжээг сэргээнэ.
-    // Сервер түгжээгүй үед хуучин localStorage түгжээг цэвэрлэ (нэвтрэлтийн дараах үлдэгдэл).
     if (shouldGuard()) {
-        if (! lock.value.locked && readClientLock()) {
+        if (idleExpired()) {
+            evaluateLock();
+        } else {
             setClientLock(false);
-        } else if (readClientLock()) {
-            clientLocked.value = true;
+            recordActivity();
         }
     }
 
     document.addEventListener('visibilitychange', onVisibilityChange);
-    window.addEventListener('pagehide', onAppHidden);
     window.addEventListener('pageshow', onPageShow);
-    window.addEventListener('freeze', onAppHidden);
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
+    ['touchstart', 'click', 'keydown', 'scroll'].forEach((eventName) => {
+        window.addEventListener(eventName, onActivity, { passive: true });
+    });
 });
 
 onBeforeUnmount(() => {
     document.removeEventListener('visibilitychange', onVisibilityChange);
-    window.removeEventListener('pagehide', onAppHidden);
     window.removeEventListener('pageshow', onPageShow);
-    window.removeEventListener('freeze', onAppHidden);
     window.removeEventListener('online', onOnline);
     window.removeEventListener('offline', onOffline);
+    ['touchstart', 'click', 'keydown', 'scroll'].forEach((eventName) => {
+        window.removeEventListener(eventName, onActivity);
+    });
 });
 
 watch(showLock, (v) => {
@@ -203,6 +246,7 @@ watch(showLock, (v) => {
 
 const clearLockLocal = () => {
     setClientLock(false);
+    recordActivity();
 };
 
 const unlock = async () => {
@@ -232,7 +276,6 @@ const unlock = async () => {
 
         if (useBiometric) {
             try {
-                // Системийн биометрик цонх visibility=hidden болгодог — дахин бүү түгж.
                 suppressHideLock(HIDE_GRACE_MS * 2);
                 payload.assertion = await assertBiometric();
                 suppressHideLock(HIDE_GRACE_MS);
@@ -251,14 +294,13 @@ const unlock = async () => {
             }
         }
 
-        // Серверт түгжээ байхгүй бол (зөвхөн клиент) эхлээд тавина
         if (! lock.value.locked) {
             locking = true;
             suppressHideLock(HIDE_GRACE_MS);
             try {
-                await window.axios.post(route('app.lock'));
+                await window.axios.post(route('app.lock'), { idle: true });
             } catch {
-                // ignore — unlock оролдлого үргэлжилнэ
+                // ignore
             } finally {
                 locking = false;
             }
@@ -302,7 +344,11 @@ const unlockPasswordOnly = async () => {
     try {
         if (! lock.value.locked) {
             try {
-                await window.axios.post(route('app.lock'));
+                const body = new FormData();
+                const token = csrfToken();
+                if (token) body.append('_token', token);
+                body.append('idle', '1');
+                await window.axios.post(route('app.lock'), body);
             } catch {
                 // ignore
             }

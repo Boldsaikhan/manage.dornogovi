@@ -17,6 +17,7 @@ use App\Http\Controllers\LeaveSlipController;
 use App\Http\Controllers\ModuleResourceController;
 use App\Http\Controllers\PhoneDirectoryController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PwaManifestController;
 use App\Http\Controllers\SystemViewController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UndoController;
@@ -25,6 +26,8 @@ use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\WorkGroupController;
 use App\Support\HomeRedirect;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/manifest.webmanifest', PwaManifestController::class);
 
 Route::get('/', function () {
     if (auth()->check()) {

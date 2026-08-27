@@ -27,6 +27,13 @@ class EnsurePwaBiometricLock
             AppLock::unlock($request);
         }
 
+        // Хуучин «дэлгэц алга болоход шууд түгжих» үлдэгдэл — идэвхгүй биш бол тайлна.
+        if (MobileClient::isMobileRequest($request)
+            && AppLock::isLocked($request)
+            && ! AppLock::isIdleLock($request)) {
+            AppLock::unlock($request);
+        }
+
         return $next($request);
     }
 }

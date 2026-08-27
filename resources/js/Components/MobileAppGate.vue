@@ -56,8 +56,7 @@ const onPrompt = (event) => {
 
 const onInstalled = () => {
     deferredPrompt.value = null;
-    mode.value = 'installed';
-    openApp();
+    visible.value = false;
 };
 
 const openApp = () => {
@@ -124,7 +123,7 @@ const title = computed(() => {
     return 'Утсандаа апп болгож суулгана уу';
 });
 
-onMounted(async () => {
+onMounted(() => {
     if (! isMobile() || isStandalone()) {
         return;
     }
@@ -132,26 +131,11 @@ onMounted(async () => {
     window.addEventListener('beforeinstallprompt', onPrompt);
     window.addEventListener('appinstalled', onInstalled);
 
-    try {
-        const related = await window.navigator.getInstalledRelatedApps?.();
-
-        if (related?.length) {
-            mode.value = 'installed';
-            visible.value = true;
-            openApp();
-
-            return;
-        }
-    } catch {
-        // ignore
-    }
-
     if (sessionStorage.getItem('mdAppGateSkipped') === '1') {
         return;
     }
 
     if (isIos()) {
-        // iPhone дээр «татаж суулгах» товч байхгүй — заавар эсвэл Safari руу чиглүүлнэ.
         mode.value = isIosSafari() ? 'ios' : 'ios-other';
         visible.value = true;
 
