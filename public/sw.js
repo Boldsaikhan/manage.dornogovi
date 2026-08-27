@@ -5,7 +5,7 @@
  * Build файлууд: сүлжээ эхлээд, дараа нь кэш (шинэ deploy эвдэрэхгүй).
  */
 
-const VERSION = 'v10-20260827-ios-csrf';
+const VERSION = 'v11-20260827-pwa-idle';
 const SHELL_CACHE = `shell-${VERSION}`;
 const ASSET_CACHE = `assets-${VERSION}`;
 
