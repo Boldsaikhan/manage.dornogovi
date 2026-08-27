@@ -399,20 +399,26 @@ const isCurrent = (routeName) => {
                 aiOpen ? 'xl:pr-[24rem]' : '',
             ]"
         >
-            <header class="sticky top-0 z-20 flex h-[4.5rem] items-center gap-4 border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur-md sm:px-6">
-                <button class="rounded-xl p-2 text-brand-navy-700 hover:bg-slate-100 lg:hidden" @click="sidebarOpen = !sidebarOpen">
+            <header class="sticky top-0 z-20 flex h-[4.5rem] items-center gap-2 border-b border-slate-200/80 bg-white/90 px-3 backdrop-blur-md sm:gap-4 sm:px-6">
+                <button class="shrink-0 rounded-xl p-2 text-brand-navy-700 hover:bg-slate-100 lg:hidden" @click="sidebarOpen = !sidebarOpen">
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24">
                         <path :d="sidebarOpen ? iconPaths.close : iconPaths.menu" />
                     </svg>
                 </button>
 
-                <div>
-                    <h1 class="text-base font-bold tracking-tight text-brand-navy-800">
-                        <slot name="header">{{ title || 'Системүүд' }}</slot>
+                <div class="min-w-0 flex-1">
+                    <h1 class="text-sm font-bold leading-tight tracking-tight text-brand-navy-800 sm:text-base sm:leading-snug">
+                        <slot name="header">
+                            <template v-if="title === 'Албан хаагчийн самбар'">
+                                <span class="block sm:inline">Албан хаагчийн</span>
+                                <span class="block sm:inline sm:before:content-['\00a0']">самбар</span>
+                            </template>
+                            <template v-else>{{ title || 'Системүүд' }}</template>
+                        </slot>
                     </h1>
                 </div>
 
-                <div class="ml-auto flex items-center gap-2">
+                <div class="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
                     <QrScanButton />
                     <NotificationBell />
                     <AppInstallMenu />
