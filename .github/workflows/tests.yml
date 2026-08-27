@@ -6,22 +6,31 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   phpunit:
     name: PHPUnit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: mbstring, sqlite, pdo_sqlite, gd, zip, bcmath, intl, fileinfo, exif
+          extensions: mbstring, sqlite, pdo_sqlite, gd, zip, bcmath, intl, fileinfo, exif, dom, curl
           coverage: none
 
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Copy environment file
+        run: cp .env.example .env
+
+      - name: Generate app key
+        run: php artisan key:generate
 
       - name: Run tests
         run: php artisan test
