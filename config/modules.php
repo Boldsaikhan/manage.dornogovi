@@ -29,6 +29,7 @@ return [
             'route' => 'tasks.index',
             'group' => 'work',
             'icon' => 'clipboard',
+            'own_scope' => 'task_assignee',
         ],
         [
             'key' => 'work_groups',
@@ -36,6 +37,7 @@ return [
             'route' => 'work-groups.index',
             'group' => 'work',
             'icon' => 'users',
+            'own_scope' => 'lead_user_id',
         ],
         [
             'key' => 'plans',
@@ -43,6 +45,7 @@ return [
             'route' => 'plans.index',
             'group' => 'work',
             'icon' => 'calendar',
+            'own_scope' => 'created_by',
         ],
         [
             'key' => 'meetings',
@@ -50,6 +53,7 @@ return [
             'route' => 'meetings.index',
             'group' => 'work',
             'icon' => 'mic',
+            'own_scope' => 'created_by',
         ],
         [
             'key' => 'reports',
@@ -57,6 +61,7 @@ return [
             'route' => 'reports.index',
             'group' => 'work',
             'icon' => 'chart',
+            'own_scope' => 'created_by',
         ],
         [
             'key' => 'regulations',
@@ -99,6 +104,7 @@ return [
             'route' => 'leaves.index',
             'group' => 'hr',
             'icon' => 'calendar',
+            'own_scope' => 'person_name',
         ],
         [
             'key' => 'assignments',
@@ -106,6 +112,7 @@ return [
             'route' => 'assignments.index',
             'group' => 'hr',
             'icon' => 'plane',
+            'own_scope' => 'user_id',
         ],
         [
             'key' => 'phone_directory',
@@ -120,6 +127,7 @@ return [
             'route' => 'awards.index',
             'group' => 'hr',
             'icon' => 'award',
+            'own_scope' => 'award_person',
         ],
         [
             'key' => 'onboarding',

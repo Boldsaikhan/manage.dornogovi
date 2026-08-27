@@ -1,16 +1,96 @@
 <script setup>
+import { computed, ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import AppExtensionManager from '@/Components/AppExtensionManager.vue';
 
-defineProps({
+const props = defineProps({
     department: Object,
     isAdmin: Boolean,
     stats: Object,
     recentLeaves: Array,
     recentAssignments: Array,
+    recentPlans: Array,
     workGroups: Array,
 });
+
+const selectedKey = ref(null);
+
+const statCards = computed(() => [
+    {
+        key: 'leaves',
+        label: 'Хүлээгдэж буй чөлөө',
+        value: props.stats.pending_leaves,
+        panel: true,
+        route: 'leaves.index',
+        title: 'Сүүлийн чөлөө',
+        cardClass: 'border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 hover:border-amber-300',
+        labelClass: 'text-amber-700',
+        valueClass: 'text-amber-900',
+        dotClass: 'bg-amber-500',
+        selectedRing: 'ring-2 ring-amber-400 ring-offset-2',
+    },
+    {
+        key: 'assignments',
+        label: 'Идэвхтэй томилолт',
+        value: props.stats.active_assignments,
+        panel: true,
+        route: 'assignments.index',
+        title: 'Сүүлийн томилолт',
+        cardClass: 'border-sky-200 bg-gradient-to-br from-sky-50 to-blue-50 hover:border-sky-300',
+        labelClass: 'text-sky-700',
+        valueClass: 'text-sky-900',
+        dotClass: 'bg-sky-500',
+        selectedRing: 'ring-2 ring-sky-400 ring-offset-2',
+    },
+    {
+        key: 'plans',
+        label: 'Идэвхтэй төлөвлөгөө',
+        value: props.stats.active_plans,
+        panel: true,
+        route: 'plans.index',
+        title: 'Сүүлийн төлөвлөгөө',
+        cardClass: 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 hover:border-emerald-300',
+        labelClass: 'text-emerald-700',
+        valueClass: 'text-emerald-900',
+        dotClass: 'bg-emerald-500',
+        selectedRing: 'ring-2 ring-emerald-400 ring-offset-2',
+    },
+    {
+        key: 'work_groups',
+        label: 'Ажлын хэсэг',
+        value: props.stats.work_groups,
+        panel: true,
+        route: 'work-groups.index',
+        title: 'Ажлын хэсгийн явц',
+        cardClass: 'border-violet-200 bg-gradient-to-br from-violet-50 to-purple-50 hover:border-violet-300',
+        labelClass: 'text-violet-700',
+        valueClass: 'text-violet-900',
+        dotClass: 'bg-violet-500',
+        selectedRing: 'ring-2 ring-violet-400 ring-offset-2',
+    },
+    {
+        key: 'task_avg',
+        label: 'Үүргийн дундаж',
+        value: `${props.stats.task_avg}%`,
+        panel: false,
+        cardClass: 'border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100',
+        labelClass: 'text-slate-500',
+        valueClass: 'text-slate-700',
+        dotClass: 'bg-slate-400',
+        selectedRing: '',
+    },
+]);
+
+const activeCard = computed(() => statCards.value.find((card) => card.key === selectedKey.value) ?? null);
+
+function selectCard(card) {
+    if (!card.panel) {
+        return;
+    }
+
+    selectedKey.value = selectedKey.value === card.key ? null : card.key;
+}
 </script>
 
 <template>
@@ -26,57 +106,104 @@ defineProps({
             <AppExtensionManager notify-only />
 
             <div class="grid grid-cols-2 gap-3 lg:grid-cols-5">
-                <div
-                    v-for="card in [
-                        { label: 'Хүлээгдэж буй чөлөө', value: stats.pending_leaves },
-                        { label: 'Идэвхтэй томилолт', value: stats.active_assignments },
-                        { label: 'Идэвхтэй төлөвлөгөө', value: stats.active_plans },
-                        { label: 'Ажлын хэсэг', value: stats.work_groups },
-                        { label: 'Үүргийн дундаж', value: stats.task_avg + '%' },
+                <button
+                    v-for="card in statCards"
+                    :key="card.key"
+                    type="button"
+                    class="relative flex flex-col gap-1 rounded-xl border p-4 text-left transition"
+                    :class="[
+                        card.cardClass,
+                        card.panel ? 'cursor-pointer' : 'cursor-default',
+                        selectedKey === card.key ? card.selectedRing : '',
                     ]"
-                    :key="card.label"
-                    class="ui-stat"
+                    @click="selectCard(card)"
                 >
-                    <div class="ui-stat-label">{{ card.label }}</div>
-                    <div class="ui-stat-value">{{ card.value }}</div>
-                </div>
+                    <span
+                        class="absolute right-3 top-3 h-2 w-2 rounded-full"
+                        :class="card.dotClass"
+                    />
+                    <div class="text-xs font-semibold" :class="card.labelClass">{{ card.label }}</div>
+                    <div class="text-2xl font-bold tracking-tight" :class="card.valueClass">{{ card.value }}</div>
+                    <div
+                        v-if="card.panel"
+                        class="mt-1 text-[11px] font-medium"
+                        :class="card.labelClass"
+                    >
+                        {{ selectedKey === card.key ? 'Дэлгэрэнгүй хаах' : 'Дэлгэрэнгүй харах' }}
+                    </div>
+                </button>
             </div>
 
-            <div class="grid gap-4 lg:grid-cols-2">
-                <div class="ui-card-pad">
-                    <div class="mb-3 flex items-center justify-between">
-                        <h3 class="font-bold text-brand-navy-800">Сүүлийн чөлөө</h3>
-                        <Link :href="route('leaves.index')" class="text-xs font-semibold text-brand-navy-600 hover:underline">Бүгд</Link>
-                    </div>
-                    <ul class="space-y-2 text-sm">
-                        <li
-                            v-for="row in recentLeaves"
-                            :key="row.id"
-                            class="flex justify-between gap-2 border-b border-slate-100 pb-2"
-                        >
-                            <span class="text-slate-700">{{ row.user?.name || '—' }} · {{ row.type }}</span>
-                            <span class="text-slate-400">{{ row.status }}</span>
-                        </li>
-                        <li v-if="!recentLeaves.length" class="text-slate-400">Бүртгэл алга</li>
-                    </ul>
+            <div
+                v-if="activeCard"
+                class="ui-card-pad"
+            >
+                <div class="mb-3 flex items-center justify-between">
+                    <h3 class="font-bold text-brand-navy-800">{{ activeCard.title }}</h3>
+                    <Link
+                        :href="route(activeCard.route)"
+                        class="text-xs font-semibold text-brand-navy-600 hover:underline"
+                    >
+                        Бүгд
+                    </Link>
                 </div>
-                <div class="ui-card-pad">
-                    <div class="mb-3 flex items-center justify-between">
-                        <h3 class="font-bold text-brand-navy-800">Ажлын хэсгийн явц</h3>
-                        <Link :href="route('work-groups.index')" class="text-xs font-semibold text-brand-navy-600 hover:underline">Бүгд</Link>
-                    </div>
-                    <ul class="space-y-3 text-sm">
-                        <li v-for="g in workGroups" :key="g.id">
-                            <div class="flex justify-between font-medium text-slate-700">
-                                <span>{{ g.name }}</span><span>{{ g.progress }}%</span>
-                            </div>
-                            <div class="mt-1.5 h-2 rounded-full bg-slate-100">
-                                <div class="h-full rounded-full bg-brand-navy-600" :style="{ width: g.progress + '%' }" />
-                            </div>
-                        </li>
-                        <li v-if="!workGroups.length" class="text-slate-400">Бүртгэл алга</li>
-                    </ul>
-                </div>
+
+                <ul v-if="activeCard.key === 'leaves'" class="space-y-2 text-sm">
+                    <li
+                        v-for="row in recentLeaves"
+                        :key="row.id"
+                        class="flex justify-between gap-2 border-b border-slate-100 pb-2"
+                    >
+                        <span class="text-slate-700">{{ row.user?.name || '—' }} · {{ row.type }}</span>
+                        <span class="text-slate-400">{{ row.status }}</span>
+                    </li>
+                    <li v-if="!recentLeaves.length" class="text-slate-400">Бүртгэл алга</li>
+                </ul>
+
+                <ul v-else-if="activeCard.key === 'assignments'" class="space-y-2 text-sm">
+                    <li
+                        v-for="row in recentAssignments"
+                        :key="row.id"
+                        class="flex justify-between gap-2 border-b border-slate-100 pb-2"
+                    >
+                        <span class="text-slate-700">
+                            {{ row.user?.name || '—' }} · {{ row.destination || '—' }}
+                        </span>
+                        <span class="text-slate-400">{{ row.status }}</span>
+                    </li>
+                    <li v-if="!recentAssignments.length" class="text-slate-400">Бүртгэл алга</li>
+                </ul>
+
+                <ul v-else-if="activeCard.key === 'plans'" class="space-y-2 text-sm">
+                    <li
+                        v-for="row in recentPlans"
+                        :key="row.id"
+                        class="flex justify-between gap-2 border-b border-slate-100 pb-2"
+                    >
+                        <span class="text-slate-700">
+                            {{ row.title || '—' }}
+                            <span v-if="row.year" class="text-slate-400">· {{ row.year }}</span>
+                        </span>
+                        <span class="text-slate-400">{{ row.status }}</span>
+                    </li>
+                    <li v-if="!recentPlans.length" class="text-slate-400">Бүртгэл алга</li>
+                </ul>
+
+                <ul v-else-if="activeCard.key === 'work_groups'" class="space-y-3 text-sm">
+                    <li v-for="g in workGroups" :key="g.id">
+                        <div class="flex justify-between font-medium text-slate-700">
+                            <span>{{ g.name }}</span>
+                            <span>{{ g.progress }}%</span>
+                        </div>
+                        <div class="mt-1.5 h-2 rounded-full bg-slate-100">
+                            <div
+                                class="h-full rounded-full bg-violet-600"
+                                :style="{ width: g.progress + '%' }"
+                            />
+                        </div>
+                    </li>
+                    <li v-if="!workGroups.length" class="text-slate-400">Бүртгэл алга</li>
+                </ul>
             </div>
         </div>
     </AuthenticatedLayout>

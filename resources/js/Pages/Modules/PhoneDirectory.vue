@@ -19,8 +19,6 @@ const page = usePage();
 const search = ref('');
 const categoryFilter = ref('all');
 const showForm = ref(false);
-const showImport = ref(false);
-const fileInput = ref(null);
 /** Жагсаалтын бүх засварлах товч/чирэх горимыг идэвхжүүлнэ. */
 const manageMode = ref(false);
 
@@ -40,11 +38,6 @@ const form = useForm({
 
 const editingId = ref(null);
 const isEditing = computed(() => editingId.value !== null);
-
-const importForm = useForm({
-    file: null,
-    replace: false,
-});
 
 // Ангилал тус бүрийн нэгжийн тоо + албан хаагчийн тоо.
 const categoryTabs = computed(() => {
@@ -127,7 +120,6 @@ const toggleManageMode = () => {
     manageMode.value = ! manageMode.value;
     if (! manageMode.value) {
         showForm.value = false;
-        showImport.value = false;
         editingId.value = null;
         form.reset();
     }
@@ -155,18 +147,6 @@ const submit = () => {
             form.org_name = org;
             form.category = cat;
             showForm.value = false;
-        },
-    });
-};
-
-const submitImport = () => {
-    importForm.post(route('phone-directory.import'), {
-        preserveScroll: true,
-        forceFormData: true,
-        onSuccess: () => {
-            importForm.reset();
-            if (fileInput.value) fileInput.value.value = '';
-            showImport.value = false;
         },
     });
 };
@@ -354,7 +334,6 @@ const resetDirectoryForm = () => {
 const openAdd = () => {
     resetDirectoryForm();
     showForm.value = true;
-    showImport.value = false;
 };
 
 // Тухайн хэлтэс/байгууллагын доор шууд шинэ мөр нэмнэ.
@@ -363,7 +342,6 @@ const openAddRow = (group) => {
     form.org_name = group.org_name;
     form.category = group.category || '';
     showForm.value = true;
-    showImport.value = false;
 };
 
 // Хоёр бүлгийн хооронд шинэ хүснэгт (байгууллага/хэлтэс) оруулна.
@@ -371,7 +349,6 @@ const openInsertGroup = (beforeGroup) => {
     resetDirectoryForm();
     form.before_org_name = beforeGroup.org_name;
     showForm.value = true;
-    showImport.value = false;
 };
 
 const openEdit = (row, group) => {
@@ -384,7 +361,6 @@ const openEdit = (row, group) => {
     form.office_phone = row.office_phone || '';
     form.mobile_phone = row.mobile_phone || '';
     showForm.value = true;
-    showImport.value = false;
 };
 
 const closeDirectoryForm = () => {
@@ -422,14 +398,6 @@ const closeDirectoryForm = () => {
                         {{ manageMode ? 'Засварыг дуусгах' : 'Засварлах' }}
                     </button>
                     <button
-                        v-if="editingActive && isDirectory"
-                        type="button"
-                        class="ui-btn-primary"
-                        @click="showImport = !showImport; showForm = false"
-                    >
-                        {{ showImport ? 'Хаах' : 'Word импорт' }}
-                    </button>
-                    <button
                         v-if="editingActive"
                         type="button"
                         class="ui-btn-accent"
@@ -443,37 +411,6 @@ const closeDirectoryForm = () => {
             <div v-if="flash" class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
                 {{ flash }}
             </div>
-
-            <!-- Directory: import -->
-            <form v-if="isDirectory && showImport && editingActive" class="ui-card grid gap-4 p-5" @submit.prevent="submitImport">
-                <div>
-                    <label class="ui-label">Word файл (.docx)</label>
-                    <input
-                        ref="fileInput"
-                        type="file"
-                        accept=".docx"
-                        class="ui-input"
-                        @change="importForm.file = $event.target.files[0]"
-                    />
-                    <p class="mt-1 text-xs text-slate-500">
-                        Хүснэгтийн толгой: № / Овог нэр / Албан тушаал / Ажлын өрөөний утас / Гар утас.
-                    </p>
-                    <p v-if="importForm.errors.file" class="mt-1 text-sm text-rose-600">{{ importForm.errors.file }}</p>
-                </div>
-                <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
-                    <input
-                        v-model="importForm.replace"
-                        type="checkbox"
-                        class="rounded border-slate-300 text-brand-navy-600 focus:ring-brand-navy-600"
-                    />
-                    Одоо байгаа жагсаалтыг устгаад шинээр оруулах
-                </label>
-                <div>
-                    <button type="submit" class="ui-btn-primary" :disabled="importForm.processing || !importForm.file">
-                        {{ importForm.processing ? 'Уншиж байна…' : 'Импортлох' }}
-                    </button>
-                </div>
-            </form>
 
             <div class="flex flex-wrap items-center gap-3">
                 <input
@@ -692,7 +629,7 @@ const closeDirectoryForm = () => {
                         </tr>
                         <tr v-if="!filteredGroups.length">
                             <td :colspan="editingActive ? 6 : 5" class="!py-12 text-center text-slate-400">
-                                {{ search ? 'Хайлтад тохирох бүртгэл алга.' : 'Одоогоор бүртгэл алга. Word файлаас импортлож болно.' }}
+                                {{ search ? 'Хайлтад тохирох бүртгэл алга.' : 'Одоогоор бүртгэл алга.' }}
                             </td>
                         </tr>
                     </tbody>

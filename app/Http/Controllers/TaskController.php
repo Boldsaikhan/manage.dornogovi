@@ -8,6 +8,7 @@ use App\Models\TaskDocument;
 use App\Models\TaskSource;
 use App\Support\DocxTableWriter;
 use App\Support\ModuleAccess;
+use App\Support\ModuleOwnScope;
 use App\Support\PdfTableWriter;
 use App\Support\PersonName;
 use App\Support\TaskDocxParser;
@@ -36,7 +37,9 @@ class TaskController extends Controller
 
         $source = TaskSource::query()->where('key', $kind)->firstOrFail();
 
-        $tasks = $source->tasks()
+        $tasksQuery = $source->tasks();
+        ModuleOwnScope::apply($tasksQuery, $request->user(), 'tasks');
+        $tasks = $tasksQuery
             ->get([
                 'id', 'task_source_id', 'text', 'period', 'responsible',
                 'collaborator', 'sector', 'note', 'progress', 'sort_order',
@@ -100,7 +103,9 @@ class TaskController extends Controller
         abort_unless(in_array($format, ['docx', 'xlsx', 'pdf'], true), 404);
 
         $source = TaskSource::query()->where('key', $kind)->firstOrFail();
-        $tasks = $source->tasks()
+        $tasksQuery = $source->tasks();
+        ModuleOwnScope::apply($tasksQuery, $request->user(), 'tasks');
+        $tasks = $tasksQuery
             ->get([
                 'id', 'text', 'period', 'responsible', 'collaborator', 'sector', 'note', 'progress', 'sort_order',
             ])
@@ -299,6 +304,7 @@ class TaskController extends Controller
             ModuleAccess::canManage($request->user(), 'tasks') || $request->user()->is_admin,
             403
         );
+        abort_unless(ModuleOwnScope::allows($request->user(), 'tasks', $task), 403);
 
         $data = $request->validate([
             'text' => ['sometimes', 'nullable', 'string', 'max:5000'],
@@ -386,6 +392,7 @@ class TaskController extends Controller
             ModuleAccess::canManage($request->user(), 'tasks') || $request->user()->is_admin,
             403
         );
+        abort_unless(ModuleOwnScope::allows($request->user(), 'tasks', $task), 403);
 
         $task->delete();
 

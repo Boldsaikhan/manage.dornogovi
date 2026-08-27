@@ -8,6 +8,9 @@ use Illuminate\Support\Collection;
 
 class ModuleAccess
 {
+    /** @var array<int, string> */
+    public const LEVELS = ['view', 'manage', 'view_own', 'manage_own'];
+
     public static function definitions(): Collection
     {
         return collect(config('modules.items', []))->map(function (array $item) {
@@ -44,10 +47,9 @@ class ModuleAccess
             return true;
         }
 
-        return $user->modulePermissions()
-            ->where('module_key', $moduleKey)
-            ->whereIn('level', ['view', 'manage'])
-            ->exists();
+        $level = self::level($user, $moduleKey);
+
+        return in_array($level, ['view', 'manage', 'view_own', 'manage_own'], true);
     }
 
     public static function canManage(?User $user, string $moduleKey): bool
@@ -64,10 +66,54 @@ class ModuleAccess
             return true;
         }
 
+        $level = self::level($user, $moduleKey);
+
+        return in_array($level, ['manage', 'manage_own'], true);
+    }
+
+    public static function level(?User $user, string $moduleKey): ?string
+    {
+        if (! $user || $user->is_admin) {
+            return null;
+        }
+
         return $user->modulePermissions()
             ->where('module_key', $moduleKey)
-            ->where('level', 'manage')
-            ->exists();
+            ->value('level');
+    }
+
+    public static function scopeOwnOnly(?User $user, string $moduleKey): bool
+    {
+        if (! $user || $user->is_admin) {
+            return false;
+        }
+
+        return in_array(self::level($user, $moduleKey), ['view_own', 'manage_own'], true);
+    }
+
+    public static function manageOwnOnly(?User $user, string $moduleKey): bool
+    {
+        if (! $user || $user->is_admin) {
+            return false;
+        }
+
+        return self::level($user, $moduleKey) === 'manage_own';
+    }
+
+    public static function supportsOwnScope(string $moduleKey): bool
+    {
+        return filled(self::find($moduleKey)['own_scope'] ?? null);
+    }
+
+    public static function levelLabel(?string $level): string
+    {
+        return match ($level) {
+            'manage' => 'Удирдах (бүгд)',
+            'manage_own' => 'Удирдах (хамааралтай)',
+            'view' => 'Харах (бүгд)',
+            'view_own' => 'Харах (хамааралтай)',
+            default => 'Хаалттай',
+        };
     }
 
     /**

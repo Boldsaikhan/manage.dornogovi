@@ -24,6 +24,11 @@ class UserAccessController extends Controller
     {
         $modules = ModuleAccess::definitions()
             ->reject(fn ($m) => $m['key'] === 'systems')
+            ->map(fn (array $m) => [
+                'key' => $m['key'],
+                'label' => $m['label'],
+                'own_scope' => ModuleAccess::supportsOwnScope($m['key']),
+            ])
             ->values();
 
         $users = User::query()
@@ -87,7 +92,7 @@ class UserAccessController extends Controller
 
         $data = $request->validate([
             'permissions' => ['nullable', 'array'],
-            'permissions.*' => ['in:view,manage'],
+            'permissions.*' => ['in:'.implode(',', ModuleAccess::LEVELS)],
             'label' => ['nullable', 'string', 'max:60'],
         ]);
 
@@ -98,6 +103,7 @@ class UserAccessController extends Controller
 
         $permissions = collect($data['permissions'] ?? [])
             ->filter(fn ($level, $key) => ModuleAccess::find($key) !== null)
+            ->filter(fn ($level, $key) => ! in_array($level, ['view_own', 'manage_own'], true) || ModuleAccess::supportsOwnScope($key))
             ->all();
 
         RolePermission::replaceFor($model->key, $permissions);
@@ -195,7 +201,7 @@ class UserAccessController extends Controller
             'is_specialist' => ['boolean'],
             'password' => ['nullable', 'string', 'min:8'],
             'permissions' => ['nullable', 'array'],
-            'permissions.*' => ['in:view,manage'],
+            'permissions.*' => ['in:'.implode(',', ModuleAccess::LEVELS)],
         ]);
 
         $beforePermissions = $user->modulePermissions
@@ -238,6 +244,11 @@ class UserAccessController extends Controller
             if (! ModuleAccess::find($key)) {
                 continue;
             }
+
+            if (in_array($level, ['view_own', 'manage_own'], true) && ! ModuleAccess::supportsOwnScope($key)) {
+                continue;
+            }
+
             $user->modulePermissions()->create([
                 'module_key' => $key,
                 'level' => $level,
@@ -356,10 +367,6 @@ class UserAccessController extends Controller
 
     private function levelLabel(?string $level): string
     {
-        return match ($level) {
-            'manage' => 'Удирдах',
-            'view' => 'Харах',
-            default => 'Хаалттай',
-        };
+        return ModuleAccess::levelLabel($level);
     }
 }

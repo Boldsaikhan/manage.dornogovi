@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Models\User;
+
 /**
  * Хүний нэрийг албан бичгийн хэлбэрт оруулна: овгийн эхний үсэг + нэр.
  *
@@ -9,6 +11,67 @@ namespace App\Support;
  */
 class PersonName
 {
+    /** @return array{0: string, 1: string} */
+    public static function splitUserName(User $user): array
+    {
+        $name = trim((string) preg_replace('/\s+/u', ' ', $user->name));
+
+        if (str_contains($name, '.')) {
+            [$initial, $rest] = array_pad(explode('.', $name, 2), 2, '');
+
+            return [trim($initial), trim($rest)];
+        }
+
+        $parts = preg_split('/\s+/u', $name) ?: [];
+
+        if (count($parts) >= 2) {
+            return [array_shift($parts), implode(' ', $parts)];
+        }
+
+        return ['', $name];
+    }
+
+    /** @return array<int, string> */
+    public static function matchPatterns(User $user): array
+    {
+        $patterns = array_values(array_unique(array_filter([
+            self::short($user->name),
+            trim($user->name),
+            self::splitUserName($user)[1],
+        ], fn (string $value) => $value !== '')));
+
+        return $patterns;
+    }
+
+    public static function matchesUser(User $user, ?string $value): bool
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return false;
+        }
+
+        foreach (preg_split('#[/;|]+#u', $value) ?: [] as $part) {
+            $part = trim($part);
+
+            if ($part === '') {
+                continue;
+            }
+
+            foreach (self::matchPatterns($user) as $pattern) {
+                if ($part === $pattern || str_contains($part, $pattern) || str_contains($pattern, $part)) {
+                    return true;
+                }
+
+                if (self::short($part) === self::short($user->name)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     /**
      * Нэг буюу олон нэрийг (« / »-ээр тусгаарласан) богиносгоно.
      */

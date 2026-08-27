@@ -84,4 +84,12 @@ class QrLoginTest extends TestCase
 
         $this->post(route('login.qr.approve', $token))->assertRedirect(route('login'));
     }
+
+    public function test_guest_opening_scanned_qr_is_sent_to_login(): void
+    {
+        $create = $this->post(route('login.qr.create'));
+        $token = $create->json('token');
+
+        $this->get(route('login.qr.show', $token))->assertRedirect(route('login'));
+    }
 }

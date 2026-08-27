@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Leave;
 use App\Models\PhoneDirectoryEntry;
 use App\Support\ModuleAccess;
+use App\Support\ModuleOwnScope;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -36,6 +37,7 @@ class LeaveController extends Controller
         if ($scope !== 'all') {
             $query->where('scope', $scope);
         }
+        ModuleOwnScope::apply($query, $request->user(), self::MODULE);
 
         $counts = Leave::query()
             ->selectRaw('scope, count(*) as aggregate')
@@ -80,6 +82,8 @@ class LeaveController extends Controller
             'status' => ['nullable', Rule::in(['pending', 'approved', 'rejected'])],
         ]);
 
+        ModuleOwnScope::assertCanCreate($request->user(), self::MODULE, $data);
+
         $start = Carbon::parse($data['start_date'])->startOfDay();
         $days = (int) $data['days'];
         $end = $start->copy()->addDays($days - 1);
@@ -110,6 +114,7 @@ class LeaveController extends Controller
     public function destroy(Request $request, Leave $leave): RedirectResponse
     {
         abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+        abort_unless(ModuleOwnScope::allows($request->user(), self::MODULE, $leave), 403);
 
         $scope = $leave->scope ?: 'baiguullaga';
         $leave->delete();

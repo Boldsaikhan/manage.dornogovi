@@ -21,6 +21,8 @@ class PwaAssetsTest extends TestCase
 
         $manifest = json_decode(file_get_contents(public_path('manifest.webmanifest')), true);
 
+        $this->assertSame('manage дотоод систем', $manifest['name']);
+        $this->assertSame('manage', $manifest['short_name']);
         $this->assertSame('standalone', $manifest['display']);
         $this->assertSame('/dept-dashboard', $manifest['start_url']);
         $this->assertCount(3, $manifest['icons']);

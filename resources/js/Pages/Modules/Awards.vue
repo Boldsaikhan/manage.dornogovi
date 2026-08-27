@@ -1,9 +1,7 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, reactive, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import Modal from '@/Components/Modal.vue';
-import InputError from '@/Components/InputError.vue';
 
 const props = defineProps({
     tab: { type: String, default: 'state_high' },
@@ -20,66 +18,31 @@ const props = defineProps({
     categorySubtypes: { type: Object, default: () => ({}) },
 });
 
-const showForm = ref(false);
-const editingId = ref(null);
+const drafts = reactive({});
 
-const emptyForm = () => ({
-    category: props.tab,
-    subtype: props.subtype || defaultSubtype(props.tab),
-    year: props.year || new Date().getFullYear(),
-    surname: '',
-    given_name: '',
-    register_no: '',
-    age: '',
-    gender: '',
-    nominated_award: '',
-    years_in_country: '',
-    years_in_sector: '',
-    award_date: '',
-    resolution_number: '',
-    position: '',
-    address: '',
-    last_award: '',
-    supporting_org: '',
-    presidential_letter: '',
-    award_name: '',
-    work_sector: '',
-    job_title: '',
-    total_years: '',
-    position_years: '',
-    order_ref: '',
-    award_note: '',
-    notes: '',
+const numberFields = new Set([
+    'age', 'years_in_country', 'years_in_sector', 'total_years', 'position_years',
+]);
+
+const draftFields = computed(() => {
+    const fields = props.columns
+        .filter((col) => ! col.readonly && col.field)
+        .map((col) => col.field);
+
+    return [...new Set(fields)];
 });
 
-const form = useForm(emptyForm());
+const syncDrafts = () => {
+    Object.keys(drafts).forEach((key) => delete drafts[key]);
 
-function defaultSubtype(tab) {
-    const list = props.categorySubtypes[tab] || [];
-    return list[0] || '';
-}
+    props.rows.forEach((row) => {
+        drafts[row.id] = Object.fromEntries(
+            draftFields.value.map((field) => [field, row[field] ?? '']),
+        );
+    });
+};
 
-const formSubtypes = computed(() => {
-    const keys = props.categorySubtypes[form.category] || [];
-    return keys.map((key) => ({ value: key, label: props.allSubtypes[key] || key }));
-});
-
-const needsSubtype = computed(() => formSubtypes.value.length > 0);
-const isStateHigh = computed(() => form.category === 'state_high');
-const isOther = computed(() => form.category === 'other');
-const isGovernorLike = computed(() =>
-    form.category === 'governor_honor' || form.category === 'governor_leading' || form.category === 'other',
-);
-
-watch(
-    () => form.category,
-    (value) => {
-        const allowed = props.categorySubtypes[value] || [];
-        if (!allowed.includes(form.subtype)) {
-            form.subtype = allowed[0] || '';
-        }
-    },
-);
+watch(() => [props.rows, props.columns], syncDrafts, { immediate: true, deep: true });
 
 const queryParams = (overrides = {}) => {
     const params = {
@@ -88,11 +51,13 @@ const queryParams = (overrides = {}) => {
         ...(props.year ? { year: props.year } : {}),
         ...overrides,
     };
+
     Object.keys(params).forEach((key) => {
         if (params[key] === '' || params[key] === null || params[key] === undefined) {
             delete params[key];
         }
     });
+
     return params;
 };
 
@@ -117,78 +82,95 @@ const switchYear = (value) => {
 
 const exportUrl = computed(() => route('awards.export', queryParams()));
 
-const openCreate = () => {
-    editingId.value = null;
-    form.reset();
-    form.clearErrors();
-    Object.assign(form, emptyForm());
-    showForm.value = true;
+const defaultSubtype = () => {
+    if (props.subtype) {
+        return props.subtype;
+    }
+
+    const list = props.categorySubtypes[props.tab] || [];
+
+    return list[0] || '';
 };
 
-const openEdit = (row) => {
-    editingId.value = row.id;
-    form.clearErrors();
-    Object.assign(form, {
-        category: row.category,
-        subtype: row.subtype || '',
-        year: row.year || new Date().getFullYear(),
-        surname: row.surname || '',
-        given_name: row.given_name || '',
-        register_no: row.register_no || '',
-        age: row.age ?? '',
-        gender: row.gender || '',
-        nominated_award: row.nominated_award || '',
-        years_in_country: row.years_in_country ?? '',
-        years_in_sector: row.years_in_sector ?? '',
-        award_date: row.award_date || '',
-        resolution_number: row.resolution_number || '',
-        position: row.position || '',
-        address: row.address || '',
-        last_award: row.last_award || '',
-        supporting_org: row.supporting_org || '',
-        presidential_letter: row.presidential_letter || '',
-        award_name: row.award_name || '',
-        work_sector: row.work_sector || '',
-        job_title: row.job_title || '',
-        total_years: row.total_years ?? '',
-        position_years: row.position_years ?? '',
-        order_ref: row.order_ref || '',
-        award_note: row.award_note || '',
-        notes: row.notes || '',
-    });
-    showForm.value = true;
-};
-
-const closeForm = () => {
-    showForm.value = false;
-    editingId.value = null;
-};
-
-const submit = () => {
-    const options = {
-        preserveScroll: true,
-        onSuccess: () => closeForm(),
+const addRow = () => {
+    const payload = {
+        category: props.tab,
+        year: props.year || new Date().getFullYear(),
     };
 
-    if (editingId.value) {
-        form.patch(route('awards.update', editingId.value), options);
-    } else {
-        form.post(route('awards.store'), options);
+    const subtype = defaultSubtype();
+    if (subtype) {
+        payload.subtype = subtype;
     }
+
+    useForm(payload).post(route('awards.store'), { preserveScroll: true });
+};
+
+const saveField = (id, field, value) => {
+    let next = value;
+
+    if (numberFields.has(field)) {
+        if (next === '' || next === null || next === undefined) {
+            next = null;
+        } else {
+            const n = Number.parseInt(String(next), 10);
+            next = Number.isNaN(n) ? null : n;
+        }
+    } else if (typeof next === 'string') {
+        next = next.trim() === '' ? null : next.trim();
+    }
+
+    if (drafts[id] && Object.prototype.hasOwnProperty.call(drafts[id], field)) {
+        drafts[id][field] = next ?? '';
+    }
+
+    router.patch(
+        route('awards.update', id),
+        { [field]: next },
+        { preserveScroll: true, preserveState: true },
+    );
 };
 
 const destroyRow = (id) => {
-    if (!confirm('Устгах уу?')) return;
+    if (! confirm('Устгах уу?')) {
+        return;
+    }
+
     router.delete(route('awards.destroy', id), { preserveScroll: true });
 };
 
 const cellValue = (row, key) => {
     const value = row[key];
-    if (value === null || value === undefined || value === '') return '—';
+
+    if (value === null || value === undefined || value === '') {
+        return '—';
+    }
+
     return value;
 };
 
+const fieldFor = (col) => col.field || col.key;
+
+const isEditable = (col) => props.canManage && ! col.readonly && col.field;
+
 const pageTitle = computed(() => props.categories[props.tab] || 'Шагнал');
+
+/** АЗД, бусад — багана багтаах (төрөл табаар шүүгдэнэ) */
+const fitsViewport = computed(() => (
+    props.tab === 'governor_honor'
+    || props.tab === 'governor_leading'
+    || props.tab === 'other'
+));
+
+/** table-layout: fixed-д баганын хувь */
+const fitColPercents = computed(() => {
+    if (props.tab === 'other') {
+        return ['3%', '9%', '7%', '7%', '8%', '9%', '14%', '5%', '6%', '9%', '11%', '8%'];
+    }
+
+    // governor_honor, governor_leading — 10 багана
+    return ['3%', '8%', '8%', '9%', '11%', '18%', '6%', '8%', '10%', '13%'];
+});
 </script>
 
 <template>
@@ -212,7 +194,7 @@ const pageTitle = computed(() => props.categories[props.tab] || 'Шагнал');
                         v-if="canManage"
                         type="button"
                         class="ui-btn-accent"
-                        @click="openCreate"
+                        @click="addRow"
                     >
                         Шинэ нэмэх
                     </button>
@@ -286,60 +268,143 @@ const pageTitle = computed(() => props.categories[props.tab] || 'Шагнал');
                 </label>
             </div>
 
-            <div class="ui-table-wrap overflow-x-auto">
-                <table class="ui-table min-w-[1600px]">
+            <div
+                class="award-sheet rounded-xl border border-slate-300 bg-white shadow-soft"
+                :class="fitsViewport ? '' : 'overflow-x-auto'"
+            >
+                <table
+                    class="w-full border-collapse text-[11px] leading-snug text-slate-900"
+                    :class="fitsViewport ? 'award-sheet-fit table-fixed' : 'min-w-[1500px]'"
+                >
+                    <colgroup>
+                        <col
+                            v-for="(col, index) in columns"
+                            :key="`col-${col.key}`"
+                            :style="fitsViewport
+                                ? { width: fitColPercents[index] }
+                                : (col.width ? { width: col.width } : undefined)"
+                        />
+                        <col v-if="canManage" :style="{ width: fitsViewport ? '2.5rem' : '3rem' }" />
+                    </colgroup>
                     <thead>
-                        <tr>
+                        <tr class="bg-brand-navy-50 text-brand-navy-800">
                             <th
                                 v-for="col in columns"
                                 :key="col.key"
-                                class="align-bottom text-xs font-semibold leading-tight"
-                                :class="col.vertical
-                                    ? 'w-12 px-1 py-2'
-                                    : 'whitespace-nowrap'"
+                                class="border border-slate-300 px-1.5 py-2 text-center align-bottom font-semibold normal-case tracking-normal"
                             >
-                                <span
-                                    v-if="col.vertical"
-                                    class="inline-block max-h-36 origin-bottom-left translate-y-0 whitespace-nowrap"
-                                    style="writing-mode: vertical-rl; transform: rotate(180deg);"
-                                >{{ col.label }}</span>
-                                <span v-else>{{ col.label }}</span>
+                                <template v-if="col.lines?.length">
+                                    <span
+                                        v-for="(line, idx) in col.lines"
+                                        :key="idx"
+                                        class="block leading-tight"
+                                    >{{ line }}</span>
+                                </template>
+                                <span v-else class="block leading-tight">{{ col.label }}</span>
                             </th>
-                            <th v-if="canManage" class="w-28" />
+                            <th
+                                v-if="canManage"
+                                class="border border-slate-300 px-1 py-2 text-center font-semibold normal-case"
+                            />
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-if="!rows.length">
                             <td
                                 :colspan="columns.length + (canManage ? 1 : 0)"
-                                class="!py-10 text-center text-slate-500"
+                                class="border border-slate-300 px-3 py-8 text-center text-sm text-slate-500"
                             >
-                                Бүртгэл алга — «Шинэ нэмэх»-ээр мөр нэмнэ.
+                                <template v-if="canManage">
+                                    Бүртгэл алга — «Шинэ нэмэх» дарж мөр нэмнэ.
+                                </template>
+                                <template v-else>
+                                    {{ pageTitle }} бүртгэл алга.
+                                </template>
                             </td>
                         </tr>
-                        <tr v-for="row in rows" :key="row.id">
+                        <tr
+                            v-for="row in rows"
+                            :key="row.id"
+                            class="hover:bg-sky-50 focus-within:bg-sky-50"
+                        >
                             <td
                                 v-for="col in columns"
-                                :key="col.key"
-                                class="max-w-[220px] align-top"
-                                :class="col.key === 'no' || col.vertical ? 'text-center whitespace-nowrap' : ''"
+                                :key="`${row.id}-${col.key}`"
+                                class="border border-slate-300 p-0 align-top"
                             >
-                                <span class="line-clamp-3 whitespace-pre-wrap">{{ cellValue(row, col.key) }}</span>
-                            </td>
-                            <td v-if="canManage" class="whitespace-nowrap">
-                                <button
-                                    type="button"
-                                    class="mr-2 text-sm font-medium text-brand-navy-700 hover:underline"
-                                    @click="openEdit(row)"
+                                <div
+                                    v-if="col.readonly || col.key === 'no'"
+                                    class="px-1.5 py-1.5 text-center font-medium"
                                 >
-                                    Засах
-                                </button>
+                                    {{ row.no }}
+                                </div>
+
+                                <template v-else-if="isEditable(col) && drafts[row.id]">
+                                    <select
+                                        v-if="col.input === 'gender'"
+                                        v-model="drafts[row.id][fieldFor(col)]"
+                                        class="ui-table-input text-center"
+                                        @change="saveField(row.id, fieldFor(col), drafts[row.id][fieldFor(col)])"
+                                    >
+                                        <option value="" />
+                                        <option value="эр">эр</option>
+                                        <option value="эм">эм</option>
+                                    </select>
+
+                                    <input
+                                        v-else-if="col.input === 'date'"
+                                        v-model="drafts[row.id][fieldFor(col)]"
+                                        type="date"
+                                        class="ui-table-input"
+                                        @change="saveField(row.id, fieldFor(col), drafts[row.id][fieldFor(col)])"
+                                    />
+
+                                    <input
+                                        v-else-if="col.input === 'number'"
+                                        v-model="drafts[row.id][fieldFor(col)]"
+                                        type="number"
+                                        min="0"
+                                        class="ui-table-input text-center"
+                                        @change="saveField(row.id, fieldFor(col), drafts[row.id][fieldFor(col)])"
+                                    />
+
+                                    <textarea
+                                        v-else-if="col.multiline"
+                                        v-model="drafts[row.id][fieldFor(col)]"
+                                        rows="2"
+                                        class="ui-table-input-2"
+                                        @change="saveField(row.id, fieldFor(col), drafts[row.id][fieldFor(col)])"
+                                    />
+
+                                    <input
+                                        v-else
+                                        v-model="drafts[row.id][fieldFor(col)]"
+                                        type="text"
+                                        class="ui-table-input"
+                                        @change="saveField(row.id, fieldFor(col), drafts[row.id][fieldFor(col)])"
+                                    />
+                                </template>
+
+                                <div
+                                    v-else
+                                    class="px-1.5 py-1.5"
+                                    :class="col.key === 'no' ? 'text-center' : ''"
+                                >
+                                    <span
+                                        class="ui-clamp-2"
+                                        :title="String(cellValue(row, col.key))"
+                                    >{{ cellValue(row, col.key) }}</span>
+                                </div>
+                            </td>
+
+                            <td v-if="canManage" class="border border-slate-300 px-1 py-1 text-center align-top">
                                 <button
                                     type="button"
-                                    class="text-sm font-medium text-rose-600 hover:underline"
+                                    class="rounded px-1.5 py-0.5 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                                    title="Устгах"
                                     @click="destroyRow(row.id)"
                                 >
-                                    Устгах
+                                    ×
                                 </button>
                             </td>
                         </tr>
@@ -347,182 +412,32 @@ const pageTitle = computed(() => props.categories[props.tab] || 'Шагнал');
                 </table>
             </div>
         </div>
-
-        <Modal :show="showForm" max-width="4xl" @close="closeForm">
-            <div class="max-h-[85vh] overflow-y-auto p-6">
-                <h3 class="text-lg font-semibold text-slate-900">
-                    {{ editingId ? 'Шагнал засах' : 'Шинэ шагнал' }}
-                </h3>
-                <p class="mt-1 text-sm text-slate-500">{{ pageTitle }}</p>
-
-                <form class="mt-5 space-y-4" @submit.prevent="submit">
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <div>
-                            <label class="ui-label">Төрөл</label>
-                            <select v-model="form.category" class="ui-input" :disabled="!!editingId">
-                                <option
-                                    v-for="(label, value) in categories"
-                                    :key="value"
-                                    :value="value"
-                                >
-                                    {{ label }}
-                                </option>
-                            </select>
-                            <InputError :message="form.errors.category" />
-                        </div>
-                        <div v-if="needsSubtype">
-                            <label class="ui-label">Дэд төрөл</label>
-                            <select v-model="form.subtype" class="ui-input">
-                                <option
-                                    v-for="item in formSubtypes"
-                                    :key="item.value"
-                                    :value="item.value"
-                                >
-                                    {{ item.label }}
-                                </option>
-                            </select>
-                            <InputError :message="form.errors.subtype" />
-                        </div>
-                        <div>
-                            <label class="ui-label">Он</label>
-                            <input v-model="form.year" type="number" min="1990" max="2100" class="ui-input">
-                            <InputError :message="form.errors.year" />
-                        </div>
-                        <div v-if="isOther">
-                            <label class="ui-label">Шагналын нэр</label>
-                            <input v-model="form.award_name" type="text" class="ui-input">
-                            <InputError :message="form.errors.award_name" />
-                        </div>
-                    </div>
-
-                    <div class="grid gap-4 sm:grid-cols-3">
-                        <div>
-                            <label class="ui-label">Овог</label>
-                            <input v-model="form.surname" type="text" class="ui-input">
-                            <InputError :message="form.errors.surname" />
-                        </div>
-                        <div>
-                            <label class="ui-label">Нэр</label>
-                            <input v-model="form.given_name" type="text" class="ui-input">
-                            <InputError :message="form.errors.given_name" />
-                        </div>
-                        <div>
-                            <label class="ui-label">Регистр</label>
-                            <input v-model="form.register_no" type="text" class="ui-input">
-                            <InputError :message="form.errors.register_no" />
-                        </div>
-                    </div>
-
-                    <template v-if="isStateHigh">
-                        <div class="grid gap-4 sm:grid-cols-3">
-                            <div>
-                                <label class="ui-label">Нас</label>
-                                <input v-model="form.age" type="number" min="1" max="120" class="ui-input">
-                            </div>
-                            <div>
-                                <label class="ui-label">Хүйс</label>
-                                <select v-model="form.gender" class="ui-input">
-                                    <option value="">—</option>
-                                    <option value="эр">эр</option>
-                                    <option value="эм">эм</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="ui-label">Өргөн мэдүүлсэн шагнал</label>
-                                <input v-model="form.nominated_award" type="text" class="ui-input" placeholder="Жнь: ХГҮТО, АГО">
-                            </div>
-                        </div>
-                        <div class="grid gap-4 sm:grid-cols-3">
-                            <div>
-                                <label class="ui-label">Улсад ажилласан жил</label>
-                                <input v-model="form.years_in_country" type="number" min="0" class="ui-input">
-                            </div>
-                            <div>
-                                <label class="ui-label">Салбартаа ажилласан жил</label>
-                                <input v-model="form.years_in_sector" type="number" min="0" class="ui-input">
-                            </div>
-                            <div>
-                                <label class="ui-label">Огноо</label>
-                                <input v-model="form.award_date" type="date" class="ui-input">
-                            </div>
-                        </div>
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <div>
-                                <label class="ui-label">Тогтоолын дугаар</label>
-                                <input v-model="form.resolution_number" type="text" class="ui-input">
-                            </div>
-                            <div>
-                                <label class="ui-label">Сүүлд авсан шагнал, он</label>
-                                <input v-model="form.last_award" type="text" class="ui-input">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="ui-label">Албан тушаал</label>
-                            <textarea v-model="form.position" rows="2" class="ui-input" />
-                        </div>
-                        <div>
-                            <label class="ui-label">Оршин суугаа хаяг</label>
-                            <textarea v-model="form.address" rows="2" class="ui-input" />
-                        </div>
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <div>
-                                <label class="ui-label">Дэмжсэн байгууллага</label>
-                                <input v-model="form.supporting_org" type="text" class="ui-input">
-                            </div>
-                            <div>
-                                <label class="ui-label">ЕТГ-т уламжилсан албан бичгийн огноо дугаар</label>
-                                <input v-model="form.presidential_letter" type="text" class="ui-input">
-                            </div>
-                        </div>
-                    </template>
-
-                    <template v-if="isGovernorLike">
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <div>
-                                <label class="ui-label">Ажилладаг салбар</label>
-                                <input v-model="form.work_sector" type="text" class="ui-input">
-                            </div>
-                            <div>
-                                <label class="ui-label">Захирамжийн огноо, дугаар</label>
-                                <input v-model="form.order_ref" type="text" class="ui-input" placeholder="Жнь: A/219">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="ui-label">Эрхэлдэг ажил, албан тушаал</label>
-                            <textarea v-model="form.job_title" rows="2" class="ui-input" />
-                        </div>
-                        <div class="grid gap-4 sm:grid-cols-2">
-                            <div>
-                                <label class="ui-label">Нийт ажилласан жил</label>
-                                <input v-model="form.total_years" type="number" min="0" class="ui-input">
-                            </div>
-                            <div>
-                                <label class="ui-label">Тухайн албан тушаалд ажилласан жил</label>
-                                <input v-model="form.position_years" type="number" min="0" class="ui-input">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="ui-label">Шагналын дугаар, хүлээн авсан тэмдэглэл</label>
-                            <textarea v-model="form.award_note" rows="2" class="ui-input" />
-                        </div>
-                        <div v-if="isOther">
-                            <label class="ui-label">Нэмэлт тэмдэглэл</label>
-                            <textarea v-model="form.notes" rows="2" class="ui-input" />
-                        </div>
-                    </template>
-
-                    <div class="flex justify-end gap-2 pt-2">
-                        <button type="button" class="ui-btn-ghost" @click="closeForm">Болих</button>
-                        <button
-                            type="submit"
-                            class="ui-btn-accent"
-                            :disabled="form.processing"
-                        >
-                            {{ editingId ? 'Хадгалах' : 'Нэмэх' }}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </Modal>
     </AuthenticatedLayout>
 </template>
+
+<style scoped>
+.award-sheet th {
+    min-height: 3.5rem;
+}
+
+.award-sheet td {
+    min-height: 2.35rem;
+}
+
+.award-sheet-fit th,
+.award-sheet-fit td {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.award-sheet-fit th {
+    min-height: 3rem;
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+}
+
+.award-sheet-fit .ui-table-input,
+.award-sheet-fit .ui-table-input-2 {
+    font-size: 0.6875rem;
+}
+</style>

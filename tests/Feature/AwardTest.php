@@ -138,6 +138,17 @@ class AwardTest extends TestCase
 
         $this->actingAs($admin)
             ->patch(route('awards.update', $award), [
+                'surname' => 'Шинэ',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('awards', [
+            'id' => $award->id,
+            'surname' => 'Шинэ',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('awards.update', $award), [
                 'category' => 'other',
                 'year' => 2025,
                 'award_name' => 'Шинэ нэр',
@@ -145,12 +156,6 @@ class AwardTest extends TestCase
                 'given_name' => 'Нэр',
             ])
             ->assertRedirect();
-
-        $this->assertDatabaseHas('awards', [
-            'id' => $award->id,
-            'award_name' => 'Шинэ нэр',
-            'surname' => 'Шинэ',
-        ]);
 
         $this->actingAs($admin)
             ->delete(route('awards.destroy', $award))

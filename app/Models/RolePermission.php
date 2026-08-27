@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ModuleAccess;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -99,14 +100,14 @@ class RolePermission extends Model
         static::query()->where('role', $role)->delete();
 
         // Бүх модулийг хаасан бол «тохируулсан» гэдгийг тэмдэглэх мөр үлдээнэ.
-        if (array_filter($permissions, fn ($l) => in_array($l, ['view', 'manage'], true)) === []) {
+        if (array_filter($permissions, fn ($l) => in_array($l, ModuleAccess::LEVELS, true)) === []) {
             static::create(['role' => $role, 'module_key' => '__none__', 'level' => 'view']);
 
             return;
         }
 
         foreach ($permissions as $module => $level) {
-            if (! in_array($level, ['view', 'manage'], true)) {
+            if (! in_array($level, ModuleAccess::LEVELS, true)) {
                 continue;
             }
 
