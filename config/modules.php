@@ -115,6 +115,13 @@ return [
             'icon' => 'phone',
         ],
         [
+            'key' => 'awards',
+            'label' => 'Шагнал',
+            'route' => 'awards.index',
+            'group' => 'hr',
+            'icon' => 'award',
+        ],
+        [
             'key' => 'onboarding',
             'label' => 'Гарын авлага, сургалт',
             'route' => 'onboarding.index',

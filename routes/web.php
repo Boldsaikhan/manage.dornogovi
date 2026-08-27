@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\UserAccessController;
 use App\Http\Controllers\AiAssistantController;
 use App\Http\Controllers\AppLockController;
+use App\Http\Controllers\AwardController;
 use App\Http\Controllers\CredentialController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DecreeController;
@@ -86,6 +87,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/modules/leaves', [LeaveController::class, 'store'])->name('leaves.store');
     Route::delete('/modules/leaves/{leave}', [LeaveController::class, 'destroy'])->name('leaves.destroy');
     Route::get('/modules/leaves/{leave}/slip', [LeaveSlipController::class, 'show'])->name('leaves.slip');
+
+    Route::get('/modules/awards', [AwardController::class, 'index'])->name('awards.index');
+    Route::get('/modules/awards/export', [AwardController::class, 'export'])->name('awards.export');
+    Route::post('/modules/awards', [AwardController::class, 'store'])->name('awards.store');
+    Route::patch('/modules/awards/{award}', [AwardController::class, 'update'])->name('awards.update');
+    Route::delete('/modules/awards/{award}', [AwardController::class, 'destroy'])->name('awards.destroy');
+
     Route::get('/modules/assignments', [ModuleResourceController::class, 'index'])->name('assignments.index');
     Route::get('/modules/regulations', [ModuleResourceController::class, 'index'])->name('regulations.index');
     Route::post('/undo', [UndoController::class, 'store'])->name('undo.store');
