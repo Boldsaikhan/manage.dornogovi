@@ -316,7 +316,7 @@ def slide_chrome(prs):
     add_text_box(s, main_l + Inches(0.32), inner_t + Inches(2.4), main_w - Inches(0.6), Inches(0.28), "Зүүн цэсээр бүх хуудас руу орно", size=13, bold=True, color=NAVY)
     add_lines(s, main_l + Inches(0.32), inner_t + Inches(2.74), main_w - Inches(0.6), Inches(2.4), [
         "Цэс эрхээс хамаарна — хаасан цэс харагдахгүй.",
-        "Толгой: хуудасны нэр · QR уншигч · мэдэгдэл · апп суулгах · хэрэглэгч.",
+        "Толгой: хуудасны нэр · QR уншигч · мэдэгдэл · өргөтгөл · хэрэглэгч.",
         "Цэсийг компьютераар хурааж болно.",
         "«Үүрэг даалгавар» — Ажлын удирдлага бүлэгт.",
         "Эхний хуудас — Албан хаагчийн самбар.",
@@ -333,12 +333,12 @@ def slide_chrome(prs):
 
     add_round(s, Inches(9.55), Inches(4.12), Inches(3.42), Inches(2.9), WHITE, LINE, adj=0.05)
     add_rect(s, Inches(9.55), Inches(4.12), Inches(0.1), Inches(2.9), ORANGE)
-    add_text_box(s, Inches(9.8), Inches(4.24), Inches(3.0), Inches(0.3), "Утас / PWA", size=14, bold=True, color=NAVY)
+    add_text_box(s, Inches(9.8), Inches(4.24), Inches(3.0), Inches(0.3), "Утас / хөтөч", size=14, bold=True, color=NAVY)
     add_lines(s, Inches(9.8), Inches(4.58), Inches(3.0), Inches(2.25), [
+        "Safari эсвэл Chrome хөтчөөр орно.",
+        "Апп болгон суулгахгүй.",
         "Цэс товчоор зүүн цэс нээгдэнэ.",
-        "Android: Chrome → апп болгон суулгана.",
-        "iPhone: Safari → «Нүүр дэлгэцэд нэмэх».",
-        "Апп горимд хөтчийн хаяг харагдахгүй.",
+        "Хаяг: manage.dornogovi.gov.mn",
     ], size=12, color=SLATE, spacing=5)
 
     footer(s, 2)

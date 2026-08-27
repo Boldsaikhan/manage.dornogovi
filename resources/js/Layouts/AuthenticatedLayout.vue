@@ -8,7 +8,6 @@ import OrnamentMark from '@/Components/OrnamentMark.vue';
 import AppInstallMenu from '@/Components/AppInstallMenu.vue';
 import NotificationBell from '@/Components/NotificationBell.vue';
 import QrScanButton from '@/Components/QrScanButton.vue';
-import MobileAppGate from '@/Components/MobileAppGate.vue';
 import AiPanel from '@/Components/AiPanel.vue';
 import AppLockGate from '@/Components/AppLockGate.vue';
 import BiometricSetupGate from '@/Components/BiometricSetupGate.vue';
@@ -185,7 +184,6 @@ const isCurrent = (routeName) => {
 <template>
     <div class="min-h-screen bg-slate-100">
         <Head v-if="title" :title="title" />
-        <MobileAppGate />
         <aside
             class="fixed inset-y-0 left-0 z-40 flex flex-col border-r border-slate-200/80 bg-white shadow-soft transition-[width,transform] duration-200 ease-out lg:translate-x-0"
             :class="[

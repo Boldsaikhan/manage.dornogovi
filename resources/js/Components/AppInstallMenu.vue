@@ -84,8 +84,8 @@ const toggle = () => {
                 : open
                     ? 'border-brand-navy-300 bg-brand-navy-50 text-brand-navy-700'
                     : 'border-slate-200 bg-white text-brand-navy-700 hover:border-brand-navy-200 hover:bg-brand-navy-50'"
-            :title="extensionMissing ? 'Өргөтгөл суугаагүй — дарж суулгана уу' : 'Апп ба өргөтгөл'"
-            :aria-label="extensionMissing ? 'Өргөтгөл суугаагүй' : 'Апп ба өргөтгөл'"
+            :title="extensionMissing ? 'Өргөтгөл суугаагүй — дарж суулгана уу' : 'Өргөтгөл'"
+            :aria-label="extensionMissing ? 'Өргөтгөл суугаагүй' : 'Өргөтгөл'"
             @click.stop="toggle"
         >
             <!-- Туслах програм / өргөтгөл (puzzle) -->
