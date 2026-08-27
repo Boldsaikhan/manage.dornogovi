@@ -42,24 +42,17 @@ router.on('invalid', (event) => {
     window.location.reload();
 });
 
-// Гар утсанд апп болгож суулгах — service worker бүртгэнэ.
+// Утасны хөтчөөр л ашиглана — хуучин PWA service worker-ийг салгана.
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then((reg) => {
-            // Шинэ SW байвал шууд идэвхжүүлнэ (хуучин офлайн кэш үлдэхгүй).
-            reg.update().catch(() => {});
-            if (reg.waiting) {
-                reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-            }
-        }).catch(() => {
-            // Дэмжихгүй эсвэл http үед чимээгүй өнгөрнө.
-        });
+        navigator.serviceWorker.getRegistrations().then((regs) => {
+            regs.forEach((reg) => reg.unregister());
+        }).catch(() => {});
 
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-            // Нэг удаа шинэчлэгдсэний дараа хуудсыг дахин ачаална.
-            if (sessionStorage.getItem('sw_reloaded') === '1') return;
-            sessionStorage.setItem('sw_reloaded', '1');
-            window.location.reload();
-        });
+        if (window.caches?.keys) {
+            caches.keys().then((keys) => {
+                keys.forEach((key) => caches.delete(key));
+            }).catch(() => {});
+        }
     });
 }
