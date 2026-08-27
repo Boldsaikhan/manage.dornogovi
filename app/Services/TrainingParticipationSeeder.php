@@ -19,8 +19,10 @@ class TrainingParticipationSeeder
 
     public const TASK_TEXT = 'сургалтад идэвхтэй оролцох';
 
+    public const MONITOR = 'АЗДТГ-ын дарга';
+
     /**
-     * @return array{source_id: int, created: int, skipped: int, people: int}
+     * @return array{source_id: int, created: int, skipped: int, people: int, monitors_set: int}
      */
     public function run(): array
     {
@@ -51,7 +53,7 @@ class TrainingParticipationSeeder
             $source->tasks()->create([
                 'text' => self::TASK_TEXT,
                 'responsible' => $person,
-                'collaborator' => null,
+                'collaborator' => self::MONITOR,
                 'progress' => 0,
                 'sort_order' => $next,
             ]);
@@ -59,12 +61,25 @@ class TrainingParticipationSeeder
             $created++;
         }
 
+        $monitorsSet = $this->syncMonitors($source);
+
         return [
             'source_id' => $source->id,
             'created' => $created,
             'skipped' => $skipped,
             'people' => count($people),
+            'monitors_set' => $monitorsSet,
         ];
+    }
+
+    /** Хяналт тавих албан тушаалтныг АЗДТГ-ын дарга болгоно. */
+    public function syncMonitors(?TaskSource $source = null): int
+    {
+        $source ??= $this->resolveSource();
+
+        return Task::query()
+            ->where('task_source_id', $source->id)
+            ->update(['collaborator' => self::MONITOR]);
     }
 
     private function resolveSource(): TaskSource

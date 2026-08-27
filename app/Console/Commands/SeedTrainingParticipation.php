@@ -16,10 +16,11 @@ class SeedTrainingParticipation extends Command
         $result = $seeder->run();
 
         $this->info(sprintf(
-            'Хэлтэс: %d · Шинэ мөр: %d · Аль хэдийн байсан: %d · source_id=%d',
+            'Хэлтэс: %d · Шинэ мөр: %d · Аль хэдийн байсан: %d · Хяналт: %d · source_id=%d',
             $result['people'],
             $result['created'],
             $result['skipped'],
+            $result['monitors_set'] ?? 0,
             $result['source_id'],
         ));
 
