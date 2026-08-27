@@ -186,53 +186,28 @@ class SystemTools
      */
     public function searchPhoneDirectory(User $user, array $args = []): array
     {
-        $q = trim((string) ($args['q'] ?? ''));
-        $tokens = $this->searchTokens($q);
+        $q = $this->stripPhoneQueryNoise(trim((string) ($args['q'] ?? '')));
+        $aliasTerms = $this->matchingOrgAliasTerms($q);
+        $tokens = $this->tokensOutsideAliases($this->searchTokens($q), $aliasTerms);
+        $hasFilter = $aliasTerms !== [] || $tokens !== [];
 
         $rows = PhoneDirectoryEntry::query()
             ->orderBy('org_order')
             ->orderBy('sort_order')
             ->orderBy('id')
-            ->limit($tokens === [] ? 25 : 400)
             ->get();
 
-        if ($tokens !== []) {
-            $rows = $rows->filter(function (PhoneDirectoryEntry $row) use ($tokens) {
-                $hay = mb_strtolower(implode(' ', [
-                    (string) $row->person_name,
-                    (string) $row->org_name,
-                    (string) $row->position,
-                    (string) $row->office_phone,
-                    (string) $row->mobile_phone,
-                ]));
-
-                foreach ($tokens as $token) {
-                    $variants = [$token];
-                    $len = mb_strlen($token);
-                    if ($len >= 4) {
-                        $variants[] = mb_substr($token, 0, $len - 1);
-                        $variants[] = mb_substr($token, 0, 3);
-                    }
-                    if ($len >= 5) {
-                        $variants[] = mb_substr($token, 0, 4);
-                    }
-
-                    $hit = false;
-                    foreach (array_unique($variants) as $v) {
-                        if (mb_strlen($v) >= 3 && str_contains($hay, mb_strtolower($v))) {
-                            $hit = true;
-                            break;
-                        }
-                    }
-
-                    if (! $hit) {
-                        return false;
-                    }
+        if ($hasFilter) {
+            $rows = $rows->filter(function (PhoneDirectoryEntry $row) use ($tokens, $aliasTerms) {
+                if ($aliasTerms !== [] && ! $this->rowMatchesAliases($row, $aliasTerms)) {
+                    return false;
                 }
 
-                return true;
-            })->take(25)->values();
+                return $tokens === [] || $this->rowMatchesTokens($row, $tokens);
+            })->values();
         }
+
+        $rows = $rows->take($hasFilter ? 80 : 25);
 
         return [
             'items' => $rows->map(fn (PhoneDirectoryEntry $row) => [
@@ -247,7 +222,30 @@ class SystemTools
                 'href' => route('phone-directory.index'),
             ])->all(),
             'source' => 'phone_directory',
+            'query' => $q,
         ];
+    }
+
+    private function stripPhoneQueryNoise(string $q): string
+    {
+        $stop = [
+            'албан хаагчдын', 'албан хаагчийн', 'албан хаагчдад', 'албан хаагчид', 'албан хаагч',
+            'ажилтнуудын', 'ажилтнууд', 'ажилтны', 'ажилтан',
+            'хүмүүсийн', 'хүмүүс',
+            'гаргаж өг', 'олж өг', 'дугаарыг', 'дугаарууд', 'дугаар',
+            'мэдээллийг', 'мэдээлэл',
+            'утасны', 'утас',
+            'жагсаалтаас', 'жагсаалт', 'жагсаа',
+            'гаргаж', 'гарга', 'харуул', 'хайж', 'хай',
+            'бүгдийг', 'бүгд', 'бүхийг', 'бүх', 'нийтийг', 'нийт',
+        ];
+        usort($stop, fn ($a, $b) => mb_strlen($b) <=> mb_strlen($a));
+        $clean = mb_strtolower($q);
+        foreach ($stop as $s) {
+            $clean = str_replace($s, ' ', $clean);
+        }
+
+        return trim(preg_replace('/\s+/u', ' ', $clean) ?? $clean);
     }
 
     /**
@@ -261,6 +259,19 @@ class SystemTools
 
         $parts = preg_split('/\s+/u', mb_strtolower($q)) ?: [];
         $tokens = [];
+        $noise = [
+            'аас', 'ол', 'өг', 'ба', 'нь', 'ыг', 'ийг', 'ын', 'ийн',
+            'бүх', 'бүгд', 'бүгдийг', 'бүхийг', 'нийт', 'нийтийг',
+            'гаргаж', 'гарга', 'харуул', 'хайж', 'хай', 'олж',
+            'дугаар', 'дугаарыг', 'дугаарууд',
+            'утас', 'утасны',
+            'хаагч', 'хаагчид', 'хаагчийн', 'хаагчдын',
+            'ажилтан', 'ажилтны', 'ажилтнууд',
+            'мэдээлэл', 'мэдээллийг',
+            'жагсаалт', 'жагсаалтаас', 'жагсаа',
+            'хүн', 'хүмүүс', 'хүмүүсийн',
+            'надад', 'над',
+        ];
 
         foreach ($parts as $part) {
             $part = trim($part);
@@ -268,12 +279,15 @@ class SystemTools
                 continue;
             }
 
-            // Хоосон үлдэгдэл / туслах үгс
-            if (in_array($part, ['аас', 'ол', 'өг', 'ба', 'нь', 'ыг', 'ийг', 'ын', 'ийн'], true)) {
+            if (in_array($part, $noise, true)) {
                 continue;
             }
 
             $stem = preg_replace('/(ийн|ыг|ийг|ын|ий|ы)$/u', '', $part) ?? $part;
+            if (in_array($stem, $noise, true)) {
+                continue;
+            }
+
             if (mb_strlen($stem) >= 3) {
                 $tokens[] = $stem;
             } elseif (mb_strlen($part) >= 3) {
@@ -282,5 +296,138 @@ class SystemTools
         }
 
         return array_values(array_unique($tokens));
+    }
+
+    /**
+     * @return array<int, array<int, string>>
+     */
+    private function orgAliasGroups(): array
+    {
+        return [
+            [
+                'төрийн сан',
+                'төрийн сангийн газар',
+                'төрийн сангийн хэлтэс',
+                'санхүү, төрийн сан',
+                'санхүү төрийн сан',
+                'treasury',
+            ],
+        ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function matchingOrgAliasTerms(string $q): array
+    {
+        $hay = mb_strtolower($q);
+        $compact = preg_replace('/\s+/u', '', $hay) ?? $hay;
+
+        foreach ($this->orgAliasGroups() as $group) {
+            foreach ($group as $term) {
+                $t = mb_strtolower($term);
+                $tCompact = preg_replace('/\s+/u', '', $t) ?? $t;
+                if (str_contains($hay, $t) || ($tCompact !== '' && str_contains($compact, $tCompact))) {
+                    return $group;
+                }
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * @param  array<int, string>  $tokens
+     * @param  array<int, string>  $aliasTerms
+     * @return array<int, string>
+     */
+    private function tokensOutsideAliases(array $tokens, array $aliasTerms): array
+    {
+        if ($aliasTerms === [] || $tokens === []) {
+            return $tokens;
+        }
+
+        $aliasHay = mb_strtolower(implode(' ', $aliasTerms));
+
+        return array_values(array_filter($tokens, function (string $token) use ($aliasHay) {
+            foreach ($this->tokenVariants($token) as $v) {
+                if (mb_strlen($v) >= 3 && str_contains($aliasHay, $v)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }));
+    }
+
+    /**
+     * @param  array<int, string>  $aliasTerms
+     */
+    private function rowMatchesAliases(PhoneDirectoryEntry $row, array $aliasTerms): bool
+    {
+        $hay = mb_strtolower(implode(' ', [
+            (string) $row->org_name,
+            (string) $row->position,
+            (string) $row->person_name,
+        ]));
+
+        foreach ($aliasTerms as $term) {
+            $t = mb_strtolower($term);
+            if (mb_strlen($t) >= 4 && str_contains($hay, $t)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<int, string>  $tokens
+     */
+    private function rowMatchesTokens(PhoneDirectoryEntry $row, array $tokens): bool
+    {
+        $hay = mb_strtolower(implode(' ', [
+            (string) $row->person_name,
+            (string) $row->org_name,
+            (string) $row->position,
+            (string) $row->office_phone,
+            (string) $row->mobile_phone,
+        ]));
+
+        foreach ($tokens as $token) {
+            $hit = false;
+            foreach ($this->tokenVariants($token) as $v) {
+                if (mb_strlen($v) >= 3 && str_contains($hay, mb_strtolower($v))) {
+                    $hit = true;
+                    break;
+                }
+            }
+
+            if (! $hit) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function tokenVariants(string $token): array
+    {
+        $token = mb_strtolower($token);
+        $variants = [$token];
+        $len = mb_strlen($token);
+
+        if ($len >= 4) {
+            $variants[] = mb_substr($token, 0, $len - 1);
+            $variants[] = mb_substr($token, 0, 3);
+        }
+        if ($len >= 5) {
+            $variants[] = mb_substr($token, 0, 4);
+        }
+
+        return array_values(array_unique($variants));
     }
 }
