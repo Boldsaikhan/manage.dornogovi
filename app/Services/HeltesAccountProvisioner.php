@@ -15,7 +15,8 @@ use Illuminate\Support\Facades\DB;
  * Утасны жагсаалтын «Хэлтэс» ангиллын албан хаагчдад нэвтрэх эрх үүсгэнэ.
  *
  * Нэвтрэх нэр: гар утас.
- * Нууц үг: утасны сүүлийн 4 орон + нэрийн латин бичлэг (жнь: 8904Nomin).
+ * И-мэйл: латин нэр @dornogovi.gov.mn (жнь: badral@dornogovi.gov.mn).
+ * Нууц үг: утасны сүүлийн 4 орон + нэрийн латин бичлэг (жнь: 8599Badral).
  */
 class HeltesAccountProvisioner
 {
@@ -80,7 +81,64 @@ class HeltesAccountProvisioner
     }
 
     /**
-     * @return array{name: string, phone: string, password: string, position: string}|null
+     * Хуучин phone@staff.dornogovi.gov.mn хаягийг нэр@dornogovi.gov.mn болгоно.
+     * Нууц үгийг өөрчлөхгүй.
+     */
+    public function syncStaffEmails(): int
+    {
+        $updated = 0;
+        $seenPhones = [];
+
+        foreach ($this->entries() as $entry) {
+            $creds = $this->credentials($entry);
+
+            if ($creds === null || isset($seenPhones[$creds['phone']])) {
+                continue;
+            }
+
+            $seenPhones[$creds['phone']] = true;
+
+            $user = User::query()->where('phone', $creds['phone'])->first();
+
+            if ($user === null || $user->is_admin) {
+                continue;
+            }
+
+            $email = $this->uniqueEmail($creds['latin'], $user->id);
+
+            if ($user->email === $email) {
+                continue;
+            }
+
+            $user->email = $email;
+            $user->save();
+            $updated++;
+        }
+
+        $leftovers = User::query()
+            ->where('is_admin', false)
+            ->where('email', 'like', '%@staff.dornogovi.gov.mn')
+            ->get();
+
+        foreach ($leftovers as $user) {
+            $short = PersonName::short($user->name) ?: trim((string) $user->name);
+            $latin = $this->latinGivenName($short !== '' ? $short : 'User');
+            $email = $this->uniqueEmail($latin, $user->id);
+
+            if ($user->email === $email) {
+                continue;
+            }
+
+            $user->email = $email;
+            $user->save();
+            $updated++;
+        }
+
+        return $updated;
+    }
+
+    /**
+     * @return array{name: string, phone: string, password: string, position: string, latin: string}|null
      */
     public function credentials(PhoneDirectoryEntry $entry): ?array
     {
@@ -111,6 +169,7 @@ class HeltesAccountProvisioner
             'phone' => $phone,
             'password' => $password,
             'position' => trim((string) $entry->position),
+            'latin' => $latin,
         ];
     }
 
@@ -210,13 +269,13 @@ class HeltesAccountProvisioner
     }
 
     /**
-     * @param  array{name: string, phone: string, password: string, position: string}  $creds
+     * @param  array{name: string, phone: string, password: string, position: string, latin: string}  $creds
      */
     private function createUser(array $creds, PhoneDirectoryEntry $entry, bool $isHead): void
     {
         $user = User::create([
             'name' => $creds['name'],
-            'email' => $this->uniqueEmail($creds['phone']),
+            'email' => $this->uniqueEmail($creds['latin']),
             'phone' => $creds['phone'],
             'password' => $creds['password'],
             'email_verified_at' => now(),
@@ -231,7 +290,7 @@ class HeltesAccountProvisioner
     }
 
     /**
-     * @param  array{name: string, phone: string, password: string, position: string}  $creds
+     * @param  array{name: string, phone: string, password: string, position: string, latin: string}  $creds
      */
     private function updateExisting(User $user, array $creds, PhoneDirectoryEntry $entry, bool $isHead): void
     {
@@ -242,6 +301,7 @@ class HeltesAccountProvisioner
         ]);
 
         if (! $user->is_admin) {
+            $user->email = $this->uniqueEmail($creds['latin'], $user->id);
             $user->password = $creds['password'];
             $user->is_department_head = $isHead;
             $user->is_specialist = ! $isHead;
@@ -272,19 +332,36 @@ class HeltesAccountProvisioner
         }
     }
 
-    private function uniqueEmail(string $phone): string
+    private function uniqueEmail(string $latin, ?int $ignoreUserId = null): string
     {
-        $base = $phone.'@staff.dornogovi.gov.mn';
+        $local = strtolower($latin);
+        $local = preg_replace('/[^a-z]/', '', $local) ?? '';
 
-        if (! User::query()->where('email', $base)->exists()) {
+        if ($local === '') {
+            $local = 'user';
+        }
+
+        $taken = function (string $email) use ($ignoreUserId): bool {
+            $query = User::query()->where('email', $email);
+
+            if ($ignoreUserId !== null) {
+                $query->where('id', '!=', $ignoreUserId);
+            }
+
+            return $query->exists();
+        };
+
+        $base = $local.'@dornogovi.gov.mn';
+
+        if (! $taken($base)) {
             return $base;
         }
 
-        $i = 1;
+        $i = 2;
         do {
-            $email = $phone.'.'.$i.'@staff.dornogovi.gov.mn';
+            $email = $local.$i.'@dornogovi.gov.mn';
             $i++;
-        } while (User::query()->where('email', $email)->exists());
+        } while ($taken($email));
 
         return $email;
     }

@@ -42,7 +42,7 @@ class HeltesAccountProvisionTest extends TestCase
         $this->assertFalse($head->is_specialist);
         $this->assertFalse($head->is_admin);
         $this->assertTrue(Hash::check('6259Sansarmaa', $head->password));
-        $this->assertSame('91116259@staff.dornogovi.gov.mn', $head->email);
+        $this->assertSame('sansarmaa@dornogovi.gov.mn', $head->email);
         $this->assertTrue(
             UserModulePermission::query()->where('user_id', $head->id)->where('module_key', 'tasks')->exists()
         );
@@ -51,6 +51,41 @@ class HeltesAccountProvisionTest extends TestCase
         $this->assertTrue($specialist->is_specialist);
         $this->assertFalse($specialist->is_department_head);
         $this->assertTrue(Hash::check('9655Boldsaikhan', $specialist->password));
+        $this->assertSame('boldsaikhan@dornogovi.gov.mn', $specialist->email);
+    }
+
+    public function test_email_uses_latin_name_and_avoids_collision(): void
+    {
+        $this->heltesPerson(name: 'А.Бадрал', mobile: '94588599');
+        $this->heltesPerson(name: 'Б.Бадрал', mobile: '99110011', sort: 2);
+
+        app(HeltesAccountProvisioner::class)->run();
+
+        $first = User::query()->where('phone', '94588599')->first();
+        $second = User::query()->where('phone', '99110011')->first();
+
+        $this->assertSame('badral@dornogovi.gov.mn', $first->email);
+        $this->assertSame('badral2@dornogovi.gov.mn', $second->email);
+        $this->assertTrue(Hash::check('8599Badral', $first->password));
+    }
+
+    public function test_sync_staff_emails_rewrites_phone_domain_without_resetting_password(): void
+    {
+        $this->heltesPerson(name: 'А.Бадрал', mobile: '94588599');
+
+        $user = User::factory()->create([
+            'name' => 'А.Бадрал',
+            'email' => '94588599@staff.dornogovi.gov.mn',
+            'phone' => '94588599',
+            'password' => 'already-set-password',
+        ]);
+
+        $updated = app(HeltesAccountProvisioner::class)->syncStaffEmails();
+
+        $this->assertSame(1, $updated);
+        $user->refresh();
+        $this->assertSame('badral@dornogovi.gov.mn', $user->email);
+        $this->assertTrue(Hash::check('already-set-password', $user->password));
     }
 
     public function test_can_login_with_phone_and_generated_password(): void
@@ -206,6 +241,25 @@ class HeltesAccountProvisionTest extends TestCase
             ->assertSuccessful();
 
         $this->assertTrue(User::query()->where('phone', '91116259')->exists());
+    }
+
+    public function test_artisan_emails_only_rewrites_staff_domain(): void
+    {
+        $this->heltesPerson(name: 'А.Бадрал', mobile: '94588599');
+        User::factory()->create([
+            'name' => 'А.Бадрал',
+            'email' => '94588599@staff.dornogovi.gov.mn',
+            'phone' => '94588599',
+        ]);
+
+        $this->artisan('users:provision-heltes', ['--emails-only' => true])
+            ->expectsOutputToContain('И-мэйл шинэчилсэн: 1')
+            ->assertSuccessful();
+
+        $this->assertSame(
+            'badral@dornogovi.gov.mn',
+            User::query()->where('phone', '94588599')->value('email'),
+        );
     }
 
     private function heltesPerson(
