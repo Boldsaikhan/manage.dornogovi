@@ -442,10 +442,10 @@ const fitColPercents = computed(() => {
 
 <style scoped>
 .awards-page {
-    --awards-grid: #dbeafe;
-    --awards-grid-strong: #bfdbfe;
-    --awards-head: #eff6ff;
-    --awards-head-text: #1e3a8a;
+    --awards-grid: #111827;
+    --awards-grid-strong: #111827;
+    --awards-head: #f8fafc;
+    --awards-head-text: #000000;
 }
 
 .awards-hero {
@@ -664,7 +664,7 @@ const fitColPercents = computed(() => {
 
 .awards-sheet {
     overflow: hidden;
-    border: 1px solid var(--awards-grid-strong);
+    border: 1px solid #111827;
     border-radius: 1.25rem;
     background: #fff;
     box-shadow: 0 16px 40px rgb(15 23 42 / 0.06);
@@ -762,12 +762,13 @@ const fitColPercents = computed(() => {
     letter-spacing: 0.04em;
     text-transform: uppercase;
     text-align: center;
-    vertical-align: bottom;
+    vertical-align: middle;
 }
 
 .awards-grid__head-line {
     display: block;
     line-height: 1.25;
+    text-align: center;
 }
 
 .awards-grid__head--action,
