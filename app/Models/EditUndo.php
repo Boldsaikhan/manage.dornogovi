@@ -57,6 +57,37 @@ class EditUndo extends Model
     }
 
     /**
+     * Устгахаас өмнө бүтэн мөрийг бүртгэнэ — буцаахад дахин үүсгэнэ.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public static function recordDelete(
+        ?User $user,
+        Model $model,
+        array $attributes,
+        string $label,
+        ?string $summary = null,
+    ): void {
+        if (! $user || $attributes === []) {
+            return;
+        }
+
+        static::create([
+            'user_id' => $user->id,
+            'model_type' => $model::class,
+            'model_id' => $model->getKey(),
+            'label' => $label,
+            'summary' => $summary,
+            'payload' => [
+                '_deleted' => true,
+                'attributes' => $attributes,
+            ],
+        ]);
+
+        static::trim($user);
+    }
+
+    /**
      * Зөвхөн сүүлийн KEEP ширхэгийг үлдээнэ.
      */
     public static function trim(User $user): void
@@ -87,6 +118,24 @@ class EditUndo extends Model
             return false;
         }
 
+        $payload = $this->payload ?? [];
+
+        if (($payload['_deleted'] ?? false) === true) {
+            $attributes = $payload['attributes'] ?? [];
+
+            if (! is_array($attributes) || $attributes === []) {
+                $this->delete();
+
+                return false;
+            }
+
+            unset($attributes['id']);
+            $class::query()->create($attributes);
+            $this->delete();
+
+            return true;
+        }
+
         $model = $class::query()->find($this->model_id);
 
         if (! $model) {
@@ -95,7 +144,7 @@ class EditUndo extends Model
             return false;
         }
 
-        $model->forceFill($this->payload)->save();
+        $model->forceFill($payload)->save();
         $this->delete();
 
         return true;

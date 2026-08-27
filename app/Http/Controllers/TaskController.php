@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\EditUndo;
 use App\Models\PhoneDirectoryEntry;
 use App\Models\Task;
 use App\Models\TaskDocument;
@@ -79,6 +80,7 @@ class TaskController extends Controller
             'people' => $this->phoneDirectoryPeople(),
             'canManage' => ModuleAccess::canManage($request->user(), 'tasks')
                 || (bool) $request->user()->is_admin,
+            'undoCount' => EditUndo::query()->where('user_id', $request->user()->id)->count(),
         ]);
     }
 
@@ -319,7 +321,7 @@ class TaskController extends Controller
             }
         }
 
-        $task->update($data);
+        $this->saveTaskWithUndo($request, $task, $data);
 
         if (array_key_exists('responsible', $data) || array_key_exists('collaborator', $data)) {
             app(\App\Services\Push\EmployeePushNotifier::class)->notifyNamed(
@@ -374,8 +376,12 @@ class TaskController extends Controller
         Task::query()
             ->whereIn('id', $data['ids'])
             ->get()
-            ->each(function (Task $task) use ($fields, &$count) {
-                $task->update($fields);
+            ->each(function (Task $task) use ($request, $fields, &$count) {
+                if (! ModuleOwnScope::allows($request->user(), 'tasks', $task)) {
+                    return;
+                }
+
+                $this->saveTaskWithUndo($request, $task, $fields);
                 $count++;
             });
 
@@ -390,9 +396,71 @@ class TaskController extends Controller
         );
         abort_unless(ModuleOwnScope::allows($request->user(), 'tasks', $task), 403);
 
+        EditUndo::recordDelete(
+            $request->user(),
+            $task,
+            $task->only([
+                'task_source_id', 'text', 'period', 'responsible', 'collaborator',
+                'sector', 'department', 'indicator', 'baseline', 'target',
+                'progress', 'note', 'sort_order',
+            ]),
+            'Үүрэг даалгавар',
+            'Мөр устгах',
+        );
+
         $task->delete();
 
         return back(303)->with('success', 'Мөр устгалаа.');
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function saveTaskWithUndo(Request $request, Task $task, array $data): void
+    {
+        $task->fill($data);
+        $dirty = $task->getDirty();
+
+        if (! $dirty) {
+            return;
+        }
+
+        $original = [];
+        foreach (array_keys($dirty) as $field) {
+            $original[$field] = $task->getOriginal($field);
+        }
+
+        EditUndo::record(
+            $request->user(),
+            $task,
+            $original,
+            'Үүрэг даалгавар',
+            $this->taskUndoSummary($dirty),
+        );
+
+        $task->save();
+    }
+
+    /**
+     * @param  array<string, mixed>  $dirty
+     */
+    private function taskUndoSummary(array $dirty): string
+    {
+        $labels = [
+            'text' => 'Үүрэг чиглэл',
+            'responsible' => 'Хариуцах эзэн',
+            'collaborator' => 'Хяналт',
+            'note' => 'Хэрэгжилт',
+            'progress' => 'Биелэлтийн хувь',
+            'period' => 'Хугацаа',
+            'sector' => 'Ажлын чиглэл',
+        ];
+
+        $first = array_key_first($dirty);
+        $name = $labels[$first] ?? (string) $first;
+        $count = count($dirty);
+
+        return $count > 1 ? $name.' болон бусад '.($count - 1) : $name;
     }
 
     public function storeDocument(Request $request): RedirectResponse

@@ -14,7 +14,24 @@ const props = defineProps({
     documents: { type: Array, default: () => [] },
     people: { type: Array, default: () => [] },
     canManage: { type: Boolean, default: false },
+    undoCount: { type: Number, default: 0 },
 });
+
+const undoing = ref(false);
+
+const undo = () => {
+    if (undoing.value || props.undoCount < 1) {
+        return;
+    }
+
+    undoing.value = true;
+    router.post(route('undo.store'), {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            undoing.value = false;
+        },
+    });
+};
 
 const kindTabs = computed(() => (
     props.kinds.length
@@ -823,6 +840,20 @@ const prepTableMinWidth = computed(() => {
                         class="hidden"
                         @change="onFileChange"
                     />
+                    <button
+                        v-if="canManage"
+                        type="button"
+                        class="ui-btn-ghost w-full sm:w-auto"
+                        :disabled="undoCount < 1 || undoing"
+                        :title="undoCount ? 'Сүүлийн үйлдлийг буцаах' : 'Буцаах үйлдэл алга'"
+                        @click="undo"
+                    >
+                        <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path d="M9 14L4 9l5-5" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M4 9h10a6 6 0 010 12h-3" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        Буцаах<span v-if="undoCount"> ({{ undoCount }})</span>
+                    </button>
                     <button
                         v-if="canManage"
                         type="button"
