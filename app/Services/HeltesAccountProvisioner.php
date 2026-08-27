@@ -261,7 +261,7 @@ class HeltesAccountProvisioner
         $user->modulePermissions()->delete();
 
         foreach ($map as $key => $level) {
-            if (! ModuleAccess::find($key) || ! in_array($level, ['view', 'manage'], true)) {
+            if (! ModuleAccess::find($key) || ! in_array($level, ModuleAccess::LEVELS, true)) {
                 continue;
             }
 

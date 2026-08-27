@@ -8,6 +8,7 @@ use App\Models\Task;
 use App\Models\TravelAssignment;
 use App\Models\WorkGroup;
 use App\Support\ModuleAccess;
+use App\Support\ModuleOwnScope;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -32,6 +33,11 @@ class DepartmentDashboardController extends Controller
             $planQuery->where('department_id', $deptId);
             $groupQuery->where('department_id', $deptId);
         }
+
+        ModuleOwnScope::apply($leaveQuery, $user, 'leaves');
+        ModuleOwnScope::apply($assignQuery, $user, 'assignments');
+        ModuleOwnScope::apply($planQuery, $user, 'plans');
+        ModuleOwnScope::apply($groupQuery, $user, 'work_groups');
 
         $taskAvg = (int) round(Task::query()->avg('progress') ?? 0);
 

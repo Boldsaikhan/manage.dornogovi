@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PhoneDirectoryEntry;
 use App\Support\ModuleAccess;
+use App\Support\ModuleOwnScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,6 +45,8 @@ class ModuleResourceController extends Controller
         if ($scopes && $activeScope !== 'all') {
             $query->where($scopeColumn, $activeScope);
         }
+
+        ModuleOwnScope::apply($query, $request->user(), $module);
 
         // Таб бүрт өөр багана/талбар
         if ($activeScope !== 'all' && ! empty($config['scope_views'][$activeScope])) {
@@ -97,6 +100,7 @@ class ModuleResourceController extends Controller
         $data = $this->validated($request, $config);
         $data = array_merge($config['defaults'] ?? [], $data);
         $data = $this->applyScopeToData($request, $config, $data);
+        ModuleOwnScope::assertCanCreate($request->user(), $module, $data);
         $data = $this->applyCreateHooks($request, $config, $data);
         $data = $this->normalizeDecreeData($config, $data);
 
@@ -153,7 +157,10 @@ class ModuleResourceController extends Controller
         $config = $this->configOrFail($module);
         abort_unless(ModuleAccess::canManage($request->user(), $module), 403);
 
-        $config['model']::query()->whereKey($id)->delete();
+        $row = $config['model']::query()->whereKey($id)->firstOrFail();
+        abort_unless(ModuleOwnScope::allows($request->user(), $module, $row), 403);
+
+        $row->delete();
 
         return back()->with('success', 'Устгалаа.');
     }

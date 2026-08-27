@@ -179,9 +179,27 @@ const roleSummary = (roleKey) => {
         return 'Бүх модуль хаалттай';
     }
 
-    const manage = entries.filter(([, l]) => l === 'manage').length;
+    const manage = entries.filter(([, l]) => l === 'manage' || l === 'manage_own').length;
 
     return entries.length + ' модуль нээлттэй · ' + manage + ' удирдах';
+};
+
+const levelOptions = (module) => {
+    const options = [{ value: '', label: 'Хаалттай' }];
+
+    if (module.own_scope) {
+        options.push(
+            { value: 'view_own', label: 'Харах (хамааралтай)' },
+            { value: 'manage_own', label: 'Удирдах (хамааралтай)' },
+        );
+    }
+
+    options.push(
+        { value: 'view', label: 'Харах (бүгд)' },
+        { value: 'manage', label: 'Удирдах (бүгд)' },
+    );
+
+    return options;
 };
 
 const setLevel = (key, level) => {
@@ -356,9 +374,13 @@ const pickFromDirectory = (value) => {
                                             :value="editState.permissions[m.key] || ''"
                                             @change="setLevel(m.key, $event.target.value)"
                                         >
-                                            <option value="">Хаалттай</option>
-                                            <option value="view">Харах</option>
-                                            <option value="manage">Удирдах</option>
+                                            <option
+                                                v-for="option in levelOptions(m)"
+                                                :key="option.value + option.label"
+                                                :value="option.value"
+                                            >
+                                                {{ option.label }}
+                                            </option>
                                         </select>
                                     </td>
                                 </tr>
@@ -441,9 +463,13 @@ const pickFromDirectory = (value) => {
                                             :value="roleState[activeRole.key]?.[m.key] || ''"
                                             @change="setRoleLevel(activeRole.key, m.key, $event.target.value)"
                                         >
-                                            <option value="">Хаалттай</option>
-                                            <option value="view">Харах</option>
-                                            <option value="manage">Удирдах</option>
+                                            <option
+                                                v-for="option in levelOptions(m)"
+                                                :key="'role-' + option.value + option.label"
+                                                :value="option.value"
+                                            >
+                                                {{ option.label }}
+                                            </option>
                                         </select>
                                     </td>
                                 </tr>

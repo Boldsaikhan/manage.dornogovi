@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\WorkGroup;
 use App\Models\WorkGroupTask;
 use App\Support\ModuleAccess;
+use App\Support\ModuleOwnScope;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -18,8 +19,9 @@ class WorkGroupController extends Controller
 
         $groups = WorkGroup::query()
             ->with(['tasks', 'department:id,name', 'lead:id,name'])
-            ->latest('id')
-            ->get()
+            ->latest('id');
+        ModuleOwnScope::apply($groups, $request->user(), 'work_groups');
+        $groups = $groups->get()
             ->map(function (WorkGroup $group) {
                 $avg = (int) round($group->tasks->avg('progress') ?? 0);
 
@@ -71,6 +73,7 @@ class WorkGroupController extends Controller
     public function storeTask(Request $request, WorkGroup $workGroup): RedirectResponse
     {
         abort_unless(ModuleAccess::canManage($request->user(), 'work_groups'), 403);
+        abort_unless(ModuleOwnScope::allows($request->user(), 'work_groups', $workGroup), 403);
 
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -107,6 +110,7 @@ class WorkGroupController extends Controller
     public function updateTask(Request $request, WorkGroupTask $task): RedirectResponse
     {
         abort_unless(ModuleAccess::canManage($request->user(), 'work_groups'), 403);
+        abort_unless(ModuleOwnScope::allows($request->user(), 'work_groups', $task->workGroup), 403);
 
         $data = $request->validate([
             'progress' => ['nullable', 'integer', 'min:0', 'max:100'],

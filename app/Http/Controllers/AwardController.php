@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Award;
 use App\Support\ModuleAccess;
+use App\Support\ModuleOwnScope;
 use App\Support\XlsxTableWriter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,6 +40,8 @@ class AwardController extends Controller
         if ($subtype !== '') {
             $query->where('subtype', $subtype);
         }
+
+        ModuleOwnScope::apply($query, $request->user(), self::MODULE);
 
         $rows = $query
             ->limit(500)
@@ -81,6 +84,7 @@ class AwardController extends Controller
         abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
 
         $data = $this->validated($request);
+        ModuleOwnScope::assertCanCreate($request->user(), self::MODULE, $data);
         $data['created_by'] = $request->user()->id;
 
         Award::query()->create($data);
@@ -97,6 +101,7 @@ class AwardController extends Controller
     public function update(Request $request, Award $award): RedirectResponse
     {
         abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+        abort_unless(ModuleOwnScope::allows($request->user(), self::MODULE, $award), 403);
 
         $data = $this->validatedPartial($request, $award);
         $award->update($data);
@@ -107,6 +112,7 @@ class AwardController extends Controller
     public function destroy(Request $request, Award $award): RedirectResponse
     {
         abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+        abort_unless(ModuleOwnScope::allows($request->user(), self::MODULE, $award), 403);
 
         $tab = $award->category;
         $subtype = $award->subtype;
