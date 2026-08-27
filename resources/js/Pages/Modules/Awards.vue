@@ -154,6 +154,23 @@ const fieldFor = (col) => col.field || col.key;
 const isEditable = (col) => props.canManage && ! col.readonly && col.field;
 
 const pageTitle = computed(() => props.categories[props.tab] || 'Шагнал');
+
+/** АЗД, бусад — багана багтаах (төрөл табаар шүүгдэнэ) */
+const fitsViewport = computed(() => (
+    props.tab === 'governor_honor'
+    || props.tab === 'governor_leading'
+    || props.tab === 'other'
+));
+
+/** table-layout: fixed-д баганын хувь */
+const fitColPercents = computed(() => {
+    if (props.tab === 'other') {
+        return ['3%', '9%', '7%', '7%', '8%', '9%', '14%', '5%', '6%', '9%', '11%', '8%'];
+    }
+
+    // governor_honor, governor_leading — 10 багана
+    return ['3%', '8%', '8%', '9%', '11%', '18%', '6%', '8%', '10%', '13%'];
+});
 </script>
 
 <template>
@@ -251,15 +268,23 @@ const pageTitle = computed(() => props.categories[props.tab] || 'Шагнал');
                 </label>
             </div>
 
-            <div class="award-sheet overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-soft">
-                <table class="w-full min-w-[1500px] border-collapse text-[11px] leading-snug text-slate-900">
+            <div
+                class="award-sheet rounded-xl border border-slate-300 bg-white shadow-soft"
+                :class="fitsViewport ? '' : 'overflow-x-auto'"
+            >
+                <table
+                    class="w-full border-collapse text-[11px] leading-snug text-slate-900"
+                    :class="fitsViewport ? 'award-sheet-fit table-fixed' : 'min-w-[1500px]'"
+                >
                     <colgroup>
                         <col
-                            v-for="col in columns"
+                            v-for="(col, index) in columns"
                             :key="`col-${col.key}`"
-                            :style="col.width ? { width: col.width } : undefined"
+                            :style="fitsViewport
+                                ? { width: fitColPercents[index] }
+                                : (col.width ? { width: col.width } : undefined)"
                         />
-                        <col v-if="canManage" style="width: 3rem" />
+                        <col v-if="canManage" :style="{ width: fitsViewport ? '2.5rem' : '3rem' }" />
                     </colgroup>
                     <thead>
                         <tr class="bg-brand-navy-50 text-brand-navy-800">
@@ -316,7 +341,7 @@ const pageTitle = computed(() => props.categories[props.tab] || 'Шагнал');
 
                                 <template v-else-if="isEditable(col) && drafts[row.id]">
                                     <select
-                                        v-if="col.input === 'gender'"
+                                        v-else-if="col.input === 'gender'"
                                         v-model="drafts[row.id][fieldFor(col)]"
                                         class="ui-table-input text-center"
                                         @change="saveField(row.id, fieldFor(col), drafts[row.id][fieldFor(col)])"
@@ -324,21 +349,6 @@ const pageTitle = computed(() => props.categories[props.tab] || 'Шагнал');
                                         <option value="" />
                                         <option value="эр">эр</option>
                                         <option value="эм">эм</option>
-                                    </select>
-
-                                    <select
-                                        v-else-if="col.input === 'subtype'"
-                                        v-model="drafts[row.id][fieldFor(col)]"
-                                        class="ui-table-input text-center"
-                                        @change="saveField(row.id, fieldFor(col), drafts[row.id][fieldFor(col)])"
-                                    >
-                                        <option
-                                            v-for="item in subtypes"
-                                            :key="item.value"
-                                            :value="item.value"
-                                        >
-                                            {{ item.label }}
-                                        </option>
                                     </select>
 
                                     <input
@@ -407,10 +417,27 @@ const pageTitle = computed(() => props.categories[props.tab] || 'Шагнал');
 
 <style scoped>
 .award-sheet th {
-    min-height: 4.5rem;
+    min-height: 3.5rem;
 }
 
 .award-sheet td {
     min-height: 2.35rem;
+}
+
+.award-sheet-fit th,
+.award-sheet-fit td {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.award-sheet-fit th {
+    min-height: 3rem;
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+}
+
+.award-sheet-fit .ui-table-input,
+.award-sheet-fit .ui-table-input-2 {
+    font-size: 0.6875rem;
 }
 </style>

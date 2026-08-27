@@ -356,34 +356,33 @@ class AwardController extends Controller
 
         if ($tab === 'other') {
             return [
-                ['key' => 'no', 'label' => 'Д/д', 'readonly' => true, 'width' => '2.25rem'],
-                ['key' => 'award_name', 'label' => 'Шагналын нэр', 'field' => 'award_name', 'width' => '5.5rem'],
-                ['key' => 'surname', 'label' => 'Овог', 'field' => 'surname', 'width' => '4.5rem'],
-                ['key' => 'given_name', 'label' => 'Нэр', 'field' => 'given_name', 'width' => '4.5rem'],
-                ['key' => 'register_no', 'label' => 'Регистр', 'field' => 'register_no', 'width' => '5rem'],
-                ['key' => 'work_sector', 'label' => 'Ажилладаг салбар', 'field' => 'work_sector', 'width' => '5rem'],
-                ['key' => 'job_title', 'label' => 'Эрхэлдэг ажил, албан тушаал', 'field' => 'job_title', 'multiline' => true, 'width' => '8rem'],
-                ['key' => 'total_years', 'lines' => ['Нийт', 'ажилласан', 'жил'], 'field' => 'total_years', 'input' => 'number', 'width' => '3rem'],
-                ['key' => 'position_years', 'lines' => ['Тухайн', 'албан', 'тушаалд', 'ажилласан', 'жил'], 'field' => 'position_years', 'input' => 'number', 'width' => '3.25rem'],
-                ['key' => 'order_ref', 'lines' => ['Захирамж /', 'шийдвэрийн', 'огноо, дугаар'], 'field' => 'order_ref', 'width' => '5rem'],
-                ['key' => 'award_note', 'lines' => ['Шагналын дугаар,', 'хүлээн авсан', 'тухай тэмдэглэл'], 'field' => 'award_note', 'multiline' => true, 'width' => '5.5rem'],
-                ['key' => 'notes', 'label' => 'Тэмдэглэл', 'field' => 'notes', 'multiline' => true, 'width' => '5rem'],
+                ['key' => 'no', 'label' => 'Д/д', 'readonly' => true],
+                ['key' => 'award_name', 'label' => 'Шагналын нэр', 'field' => 'award_name'],
+                ['key' => 'surname', 'label' => 'Овог', 'field' => 'surname'],
+                ['key' => 'given_name', 'label' => 'Нэр', 'field' => 'given_name'],
+                ['key' => 'register_no', 'label' => 'Регистр', 'field' => 'register_no'],
+                ['key' => 'work_sector', 'label' => 'Ажилладаг салбар', 'field' => 'work_sector'],
+                ['key' => 'job_title', 'label' => 'Эрхэлдэг ажил, албан тушаал', 'field' => 'job_title', 'multiline' => true],
+                ['key' => 'total_years', 'lines' => ['Нийт', 'ажилласан', 'жил'], 'field' => 'total_years', 'input' => 'number'],
+                ['key' => 'position_years', 'lines' => ['Тухайн', 'албан', 'тушаалд', 'ажилласан', 'жил'], 'field' => 'position_years', 'input' => 'number'],
+                ['key' => 'order_ref', 'lines' => ['Захирамж /', 'шийдвэрийн', 'огноо, дугаар'], 'field' => 'order_ref'],
+                ['key' => 'award_note', 'lines' => ['Шагналын дугаар,', 'хүлээн авсан', 'тухай тэмдэглэл'], 'field' => 'award_note', 'multiline' => true],
+                ['key' => 'notes', 'label' => 'Тэмдэглэл', 'field' => 'notes', 'multiline' => true],
             ];
         }
 
-        // governor_honor, governor_leading
+        // governor_honor, governor_leading — төрөл нь дээрх табаар шүүгдэнэ
         return [
-            ['key' => 'no', 'label' => 'Д/д', 'readonly' => true, 'width' => '2.25rem'],
-            ['key' => 'subtype_label', 'label' => 'Төрөл', 'field' => 'subtype', 'input' => 'subtype', 'width' => '4rem'],
-            ['key' => 'surname', 'label' => 'Овог', 'field' => 'surname', 'width' => '4.5rem'],
-            ['key' => 'given_name', 'label' => 'Нэр', 'field' => 'given_name', 'width' => '4.5rem'],
-            ['key' => 'register_no', 'label' => 'Регистр', 'field' => 'register_no', 'width' => '5rem'],
-            ['key' => 'work_sector', 'label' => 'Ажилладаг салбар', 'field' => 'work_sector', 'width' => '5rem'],
-            ['key' => 'job_title', 'lines' => ['Эрхэлдэг ажил,', 'албан тушаал'], 'field' => 'job_title', 'multiline' => true, 'width' => '8rem'],
-            ['key' => 'total_years', 'lines' => ['Нийт', 'ажилласан', 'хугацаа'], 'field' => 'total_years', 'input' => 'number', 'width' => '3rem'],
-            ['key' => 'position_years', 'lines' => ['Тухайн', 'албан', 'тушаалд', 'ажилласан', 'жил'], 'field' => 'position_years', 'input' => 'number', 'width' => '3.25rem'],
-            ['key' => 'order_ref', 'lines' => ['Захирамжийн', 'огноо, дугаар'], 'field' => 'order_ref', 'width' => '5rem'],
-            ['key' => 'award_note', 'lines' => ['Шагналын дугаар,', 'хүлээн авсан', 'тухай тэмдэглэл'], 'field' => 'award_note', 'multiline' => true, 'width' => '5.5rem'],
+            ['key' => 'no', 'label' => 'Д/д', 'readonly' => true],
+            ['key' => 'surname', 'label' => 'Овог', 'field' => 'surname'],
+            ['key' => 'given_name', 'label' => 'Нэр', 'field' => 'given_name'],
+            ['key' => 'register_no', 'label' => 'Регистр', 'field' => 'register_no'],
+            ['key' => 'work_sector', 'label' => 'Ажилладаг салбар', 'field' => 'work_sector'],
+            ['key' => 'job_title', 'lines' => ['Эрхэлдэг ажил,', 'албан тушаал'], 'field' => 'job_title', 'multiline' => true],
+            ['key' => 'total_years', 'lines' => ['Нийт', 'ажилласан', 'хугацаа'], 'field' => 'total_years', 'input' => 'number'],
+            ['key' => 'position_years', 'lines' => ['Тухайн', 'албан', 'тушаалд', 'ажилласан', 'жил'], 'field' => 'position_years', 'input' => 'number'],
+            ['key' => 'order_ref', 'lines' => ['Захирамжийн', 'огноо, дугаар'], 'field' => 'order_ref'],
+            ['key' => 'award_note', 'lines' => ['Шагналын дугаар,', 'хүлээн авсан', 'тухай тэмдэглэл'], 'field' => 'award_note', 'multiline' => true],
         ];
     }
 
