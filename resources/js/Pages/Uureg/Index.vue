@@ -776,7 +776,8 @@ const directiveNoteColWidth = computed(() => {
 });
 
 const directiveTableMinWidth = computed(() => {
-    const fixed = 48 + 140 + 160 + 96 + (props.canManage ? 48 + 40 : 0);
+    // checkbox + № + хариуцах + хяналт + хувь + устгах + текст + хэрэгжилт
+    const fixed = 48 + 180 + 200 + 96 + (props.canManage ? 48 + 40 : 0);
     return fixed + directiveTextColWidth.value + directiveNoteColWidth.value;
 });
 
@@ -1245,18 +1246,18 @@ const prepTableMinWidth = computed(() => {
                 class="ui-card max-h-[min(70vh,calc(100dvh-12rem))] w-full overflow-auto overscroll-contain"
             >
                 <table
-                    class="ui-table table-fixed"
-                    :style="{ width: `${directiveTableMinWidth}px`, minWidth: `${directiveTableMinWidth}px` }"
+                    class="ui-table table-fixed w-full"
+                    :style="{ minWidth: `${directiveTableMinWidth}px` }"
                 >
                     <colgroup>
                         <col v-if="canManage" style="width: 40px" />
-                        <col class="w-12" />
+                        <col style="width: 48px" />
                         <col :style="{ width: `${directiveTextColWidth}px` }" />
-                        <col style="width: 140px" />
-                        <col style="width: 160px" />
+                        <col style="width: 180px" />
+                        <col style="width: 200px" />
                         <col :style="{ width: `${directiveNoteColWidth}px` }" />
                         <col style="width: 96px" />
-                        <col v-if="canManage" class="w-12" />
+                        <col v-if="canManage" style="width: 48px" />
                     </colgroup>
                     <thead>
                         <tr>
@@ -1375,11 +1376,11 @@ const prepTableMinWidth = computed(() => {
             <!-- Бэлтгэл ажил хангах төлөвлөгөө -->
             <div
                 v-else
-                class="ui-card max-h-[min(70vh,calc(100dvh-12rem))] overflow-auto overscroll-contain"
+                class="ui-card max-h-[min(70vh,calc(100dvh-12rem))] w-full overflow-auto overscroll-contain"
             >
                 <table
-                    class="ui-table table-fixed"
-                    :style="{ width: `${prepTableMinWidth}px`, minWidth: `${prepTableMinWidth}px` }"
+                    class="ui-table table-fixed w-full"
+                    :style="{ minWidth: `${prepTableMinWidth}px` }"
                 >
                     <colgroup>
                         <col v-if="canManage" style="width: 40px" />
