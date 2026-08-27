@@ -480,11 +480,23 @@ onMounted(() => {
                     </label>
                 </div>
 
-                <div class="mt-6 flex justify-end gap-2">
-                    <button type="button" class="ui-btn-ghost" @click="saveModal = false">Болих</button>
-                    <button type="submit" :disabled="form.processing" class="ui-btn-primary">
-                        {{ launchAfterSave ? 'Хадгалаад нэвтрэх' : 'Хадгалах' }}
-                    </button>
+                <div class="mt-6 flex flex-wrap items-center justify-between gap-2">
+                    <a
+                        v-if="activeSystem?.entry_url"
+                        :href="activeSystem.entry_url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="ui-btn-ghost !py-2"
+                    >
+                        Сайт нээх →
+                    </a>
+                    <span v-else />
+                    <div class="flex gap-2">
+                        <button type="button" class="ui-btn-ghost" @click="saveModal = false">Болих</button>
+                        <button type="submit" :disabled="form.processing" class="ui-btn-primary">
+                            {{ launchAfterSave ? 'Хадгалаад нэвтрэх' : 'Хадгалах' }}
+                        </button>
+                    </div>
                 </div>
             </form>
         </Modal>
