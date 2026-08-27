@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Award extends Model
 {
     public const CATEGORIES = [
-        'state_high' => 'Төрийн дээд',
+        'state_high' => 'Төрийн дээд одон, медаль',
         'governor_honor' => 'АЗД шагнал — өргөмжлөл, жуух',
         'governor_leading' => 'АЗД шагнал — тэргүүний',
         'other' => 'Бусад шагнал',

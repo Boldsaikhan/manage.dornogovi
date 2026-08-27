@@ -286,31 +286,43 @@ const pageTitle = computed(() => props.categories[props.tab] || 'Шагнал');
                 </label>
             </div>
 
-            <div v-if="!rows.length" class="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center text-slate-500">
-                {{ pageTitle }} бүртгэл алга
-            </div>
-
-            <div v-else class="ui-table-wrap overflow-x-auto">
-                <table class="ui-table min-w-[1100px]">
+            <div class="ui-table-wrap overflow-x-auto">
+                <table class="ui-table min-w-[1600px]">
                     <thead>
                         <tr>
                             <th
                                 v-for="col in columns"
                                 :key="col.key"
-                                class="whitespace-nowrap"
+                                class="align-bottom text-xs font-semibold leading-tight"
+                                :class="col.vertical
+                                    ? 'w-12 px-1 py-2'
+                                    : 'whitespace-nowrap'"
                             >
-                                {{ col.label }}
+                                <span
+                                    v-if="col.vertical"
+                                    class="inline-block max-h-36 origin-bottom-left translate-y-0 whitespace-nowrap"
+                                    style="writing-mode: vertical-rl; transform: rotate(180deg);"
+                                >{{ col.label }}</span>
+                                <span v-else>{{ col.label }}</span>
                             </th>
                             <th v-if="canManage" class="w-28" />
                         </tr>
                     </thead>
                     <tbody>
+                        <tr v-if="!rows.length">
+                            <td
+                                :colspan="columns.length + (canManage ? 1 : 0)"
+                                class="!py-10 text-center text-slate-500"
+                            >
+                                Бүртгэл алга — «Шинэ нэмэх»-ээр мөр нэмнэ.
+                            </td>
+                        </tr>
                         <tr v-for="row in rows" :key="row.id">
                             <td
                                 v-for="col in columns"
                                 :key="col.key"
                                 class="max-w-[220px] align-top"
-                                :class="col.key === 'no' ? 'text-center whitespace-nowrap' : ''"
+                                :class="col.key === 'no' || col.vertical ? 'text-center whitespace-nowrap' : ''"
                             >
                                 <span class="line-clamp-3 whitespace-pre-wrap">{{ cellValue(row, col.key) }}</span>
                             </td>
@@ -458,7 +470,7 @@ const pageTitle = computed(() => props.categories[props.tab] || 'Шагнал');
                                 <input v-model="form.supporting_org" type="text" class="ui-input">
                             </div>
                             <div>
-                                <label class="ui-label">ЕТГ-т уламжилсан бичиг</label>
+                                <label class="ui-label">ЕТГ-т уламжилсан албан бичгийн огноо дугаар</label>
                                 <input v-model="form.presidential_letter" type="text" class="ui-input">
                             </div>
                         </div>

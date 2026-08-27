@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * Утасны жагсаалтын «Хэлтэс» ангиллын албан хаагчдад нэвтрэх эрх үүсгэнэ.
  *
- * Нэвтрэх нэр: гар утас. Нууц үг: нэр + утасны сүүлийн 4 орон.
+ * Нэвтрэх нэр: гар утас.
+ * Нууц үг: утасны сүүлийн 4 орон + нэрийн латин бичлэг (жнь: 8904Nomin).
  */
 class HeltesAccountProvisioner
 {
@@ -98,10 +99,11 @@ class HeltesAccountProvisioner
         }
 
         $last4 = substr($phone, -4);
-        $password = $name.$last4;
+        $latin = $this->latinGivenName($name);
+        $password = $last4.$latin;
 
-        if (mb_strlen($password) < 8) {
-            $password .= $phone;
+        if (strlen($password) < 8) {
+            $password .= substr($phone, 0, max(0, 8 - strlen($password)));
         }
 
         return [
@@ -110,6 +112,47 @@ class HeltesAccountProvisioner
             'password' => $password,
             'position' => trim((string) $entry->position),
         ];
+    }
+
+    /**
+     * «Ц.Сансармаа» → Sansarmaa, «А.Номин» → Nomin
+     */
+    public function latinGivenName(string $shortName): string
+    {
+        $name = trim($shortName);
+
+        if (str_contains($name, '.')) {
+            $name = trim((string) substr($name, strrpos($name, '.') + 1));
+        }
+
+        $latin = $this->cyrillicToLatin($name);
+        $latin = preg_replace('/[^A-Za-z]/', '', $latin) ?? '';
+
+        if ($latin === '') {
+            $latin = 'User';
+        }
+
+        return ucfirst(strtolower($latin));
+    }
+
+    private function cyrillicToLatin(string $text): string
+    {
+        $map = [
+            'А' => 'A', 'а' => 'a', 'Б' => 'B', 'б' => 'b', 'В' => 'V', 'в' => 'v',
+            'Г' => 'G', 'г' => 'g', 'Д' => 'D', 'д' => 'd', 'Е' => 'E', 'е' => 'e',
+            'Ё' => 'Yo', 'ё' => 'yo', 'Ж' => 'J', 'ж' => 'j', 'З' => 'Z', 'з' => 'z',
+            'И' => 'I', 'и' => 'i', 'Й' => 'I', 'й' => 'i', 'К' => 'K', 'к' => 'k',
+            'Л' => 'L', 'л' => 'l', 'М' => 'M', 'м' => 'm', 'Н' => 'N', 'н' => 'n',
+            'О' => 'O', 'о' => 'o', 'Ө' => 'O', 'ө' => 'o', 'П' => 'P', 'п' => 'p',
+            'Р' => 'R', 'р' => 'r', 'С' => 'S', 'с' => 's', 'Т' => 'T', 'т' => 't',
+            'У' => 'U', 'у' => 'u', 'Ү' => 'U', 'ү' => 'u', 'Ф' => 'F', 'ф' => 'f',
+            'Х' => 'Kh', 'х' => 'kh', 'Ц' => 'Ts', 'ц' => 'ts', 'Ч' => 'Ch', 'ч' => 'ch',
+            'Ш' => 'Sh', 'ш' => 'sh', 'Щ' => 'Sh', 'щ' => 'sh', 'Ъ' => '', 'ъ' => '',
+            'Ы' => 'Y', 'ы' => 'y', 'Ь' => '', 'ь' => '', 'Э' => 'E', 'э' => 'e',
+            'Ю' => 'Yu', 'ю' => 'yu', 'Я' => 'Ya', 'я' => 'ya',
+        ];
+
+        return strtr($text, $map);
     }
 
     /**
@@ -206,7 +249,7 @@ class HeltesAccountProvisioner
 
         $user->save();
 
-        if (! $user->is_admin && $user->modulePermissions()->count() === 0) {
+        if (! $user->is_admin) {
             $this->applyRolePermissions($user, $isHead ? 'department_head' : 'specialist');
         }
     }

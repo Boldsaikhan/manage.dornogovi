@@ -34,7 +34,7 @@ class ProvisionHeltesAccounts extends Command
             );
         }
 
-        $this->line('Нэвтрэх нэр: гар утас. Нууц үг: нэр + утасны сүүлийн 4 орон.');
+        $this->line('Нэвтрэх нэр: гар утас. Нууц үг: утасны сүүлийн 4 орон + латин нэр (жнь: 8904Nomin).');
 
         return self::SUCCESS;
     }
