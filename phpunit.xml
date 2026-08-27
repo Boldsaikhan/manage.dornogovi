@@ -19,6 +19,7 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <env name="APP_KEY" value="base64:2fl+KtvkpdUo2ncUR6YS6/VpxIHJTdUPgiHJZxCYy2Q="/>
         <!-- APP_URL in .env carries the /manage.dornogovi.gov.mn/public subdirectory that
              Apache serves from; route() would then generate paths no test route matches. -->
         <env name="APP_URL" value="http://localhost"/>

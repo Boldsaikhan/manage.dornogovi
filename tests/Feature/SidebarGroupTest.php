@@ -21,6 +21,7 @@ class SidebarGroupTest extends TestCase
             'category' => 'Хяналт',
             'is_internal' => true,
             'requires_login' => false,
+            'sort_order' => 2,
         ]);
 
         System::create([
@@ -28,6 +29,7 @@ class SidebarGroupTest extends TestCase
             'name' => 'Гадны систем',
             'url' => 'https://example.gov.mn',
             'category' => 'Санхүү',
+            'sort_order' => 1,
         ]);
 
         $this->actingAs(User::factory()->create())
