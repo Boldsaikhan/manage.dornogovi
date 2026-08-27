@@ -108,10 +108,13 @@ class UserAccessController extends Controller
 
         RolePermission::replaceFor($model->key, $permissions);
 
+        $synced = ModuleAccess::syncUsersToRole($model->key);
+
         return back()->with('success', sprintf(
-            '«%s» ролийн загвар хадгалагдлаа (%d модуль).',
+            '«%s» ролийн загвар хадгалагдлаа (%d модуль)%s.',
             $model->label,
             count($permissions),
+            $synced > 0 ? sprintf(', %d хэрэглэгчийн эрх шинэчлэгдлээ', $synced) : '',
         ));
     }
 
