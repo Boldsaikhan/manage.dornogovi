@@ -3,16 +3,17 @@
 Сервер: mcloud.gov.mn / `manage-dornogovi` (instance-00005750), Ubuntu 24.04.2 LTS,
 8 vCPU / 16 GB / 100 GB.
 
-## Салбар: demo vs production
+## Салбар: demo → production (автомат)
 
-Хэрэглэгчид **production**-ыг ашиглаж эхэлсэн тул шинэ код шууд тэнд орохгүй.
+Хөгжүүлэлт амжилттай дуусахад AI **автоматаар** `demo` → `main` push хийнэ.
+Олон AI зэрэг ажиллаж болно — push-ийн өмнө pull хийнэ.
 
 | Салбар | Сайт | Хэзээ шинэчлэгдэх |
 |---|---|---|
-| `main` | https://manage.dornogovi.gov.mn | Зөвхөн «production руу гарга» гэж хэлэхэд |
-| `demo` | локал XAMPP, эсвэл demo сайт | Хөгжүүлэлт дуусах бүрт |
+| `main` | https://manage.dornogovi.gov.mn | Хөгжүүлэлт амжилттай дуусахад автомат |
+| `demo` | локал XAMPP / demo сайт | Хөгжүүлэлт дуусах бүрт |
 
-Хөгжүүлэлт `demo` дээр хийгдэнэ. Production руу гаргах:
+Гараар production руу гаргах:
 
 ```bash
 bash deploy/promote-to-production.sh
