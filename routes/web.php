@@ -65,6 +65,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/uureg', [TaskController::class, 'index'])->name('tasks.index');
     Route::get('/uureg/export', [TaskController::class, 'export'])->name('tasks.export');
+    Route::post('/uureg/sources', [TaskController::class, 'storeSource'])->name('tasks.sources.store');
+    Route::delete('/uureg/sources/{source}', [TaskController::class, 'destroySource'])->name('tasks.sources.destroy');
     Route::post('/uureg', [TaskController::class, 'store'])->name('tasks.store');
     Route::patch('/uureg/bulk', [TaskController::class, 'bulkUpdate'])->name('tasks.bulk');
     Route::patch('/uureg/{task}', [TaskController::class, 'update'])->name('tasks.update');
