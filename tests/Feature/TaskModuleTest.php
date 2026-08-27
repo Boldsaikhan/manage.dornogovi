@@ -132,6 +132,60 @@ class TaskModuleTest extends TestCase
         $this->assertSame('Шинэ үүрэг чиглэл', Task::first()->text);
     }
 
+    public function test_admin_can_create_and_delete_custom_section(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->post(route('tasks.sources.store'), [
+                'name' => 'Шинэ хяналтын хэсэг',
+                'copy_from' => 'directive',
+            ])
+            ->assertRedirect();
+
+        $source = TaskSource::query()->where('name', 'Шинэ хяналтын хэсэг')->first();
+        $this->assertNotNull($source);
+        $this->assertSame('directive', $source->layout);
+        $this->assertFalse($source->isSystem());
+
+        $this->actingAs($admin)
+            ->post(route('tasks.store'), [
+                'kind' => $source->key,
+                'text' => 'Шинэ хэсгийн мөр',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(1, $source->tasks()->count());
+
+        $this->actingAs($admin)
+            ->get(route('tasks.index', ['kind' => $source->key]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Uureg/Index')
+                ->where('kind', $source->key)
+                ->where('source.layout', 'directive')
+                ->has('kinds', 3)
+            );
+
+        $this->actingAs($admin)
+            ->delete(route('tasks.sources.destroy', $source->key))
+            ->assertRedirect(route('tasks.index'));
+
+        $this->assertDatabaseMissing('task_sources', ['id' => $source->id]);
+        $this->assertDatabaseCount('tasks', 0);
+    }
+
+    public function test_cannot_delete_system_section(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->delete(route('tasks.sources.destroy', 'directive'))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('task_sources', ['key' => 'directive']);
+    }
+
     private function makeDirectiveDocx(): string
     {
         $xml = <<<'XML'

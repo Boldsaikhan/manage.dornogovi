@@ -30,12 +30,8 @@ class TaskController extends Controller
     {
         abort_unless(ModuleAccess::canView($request->user(), 'tasks'), 403);
 
-        $kind = $request->string('kind')->toString();
-        if (! in_array($kind, [TaskSource::KEY_DIRECTIVE, TaskSource::KEY_PREP_PLAN], true)) {
-            $kind = TaskSource::KEY_DIRECTIVE;
-        }
-
-        $source = TaskSource::query()->where('key', $kind)->firstOrFail();
+        $source = $this->resolveSource($request->string('kind')->toString());
+        $kind = $source->key;
 
         $tasksQuery = $source->tasks();
         ModuleOwnScope::apply($tasksQuery, $request->user(), 'tasks');
@@ -70,10 +66,13 @@ class TaskController extends Controller
 
         return Inertia::render('Uureg/Index', [
             'kind' => $kind,
+            'kinds' => $this->kindTabs(),
             'source' => [
                 'id' => $source->id,
                 'key' => $source->key,
                 'name' => $source->name,
+                'layout' => $source->layout ?: $source->key,
+                'is_system' => $source->isSystem(),
             ],
             'tasks' => $tasks,
             'documents' => $documents,
@@ -94,15 +93,12 @@ class TaskController extends Controller
     ): HttpResponse {
         abort_unless(ModuleAccess::canView($request->user(), 'tasks'), 403);
 
-        $kind = $request->string('kind')->toString();
-        if (! in_array($kind, [TaskSource::KEY_DIRECTIVE, TaskSource::KEY_PREP_PLAN], true)) {
-            $kind = TaskSource::KEY_DIRECTIVE;
-        }
+        $source = $this->resolveSource($request->string('kind')->toString());
+        $kind = $source->key;
 
         $format = strtolower((string) $request->query('format', 'docx'));
         abort_unless(in_array($format, ['docx', 'xlsx', 'pdf'], true), 404);
 
-        $source = TaskSource::query()->where('key', $kind)->firstOrFail();
         $tasksQuery = $source->tasks();
         ModuleOwnScope::apply($tasksQuery, $request->user(), 'tasks');
         $tasks = $tasksQuery
@@ -111,7 +107,7 @@ class TaskController extends Controller
             ])
             ->values();
 
-        $payload = $this->exportTable($kind, $source->name, $tasks);
+        $payload = $this->exportTable($source, $tasks);
         $title = $payload['title'];
         $tmp = tempnam(sys_get_temp_dir(), 'task_export_');
 
@@ -168,15 +164,15 @@ class TaskController extends Controller
      *     sheet_rows: array<int, array<int, string>>
      * }
      */
-    private function exportTable(string $kind, string $sourceName, $tasks): array
+    private function exportTable(TaskSource $source, $tasks): array
     {
-        $title = $sourceName !== '' ? $sourceName : (
-            $kind === TaskSource::KEY_PREP_PLAN
+        $title = $source->name !== '' ? $source->name : (
+            $source->isPrepLayout()
                 ? 'Бэлтгэл ажил хангах төлөвлөгөө'
                 : 'Үүрэг чиглэл'
         );
 
-        if ($kind === TaskSource::KEY_PREP_PLAN) {
+        if ($source->isPrepLayout()) {
             $headings = [
                 '№', 'Ажлын чиглэл', 'Арга хэмжээ', 'Хугацаа',
                 'Хариуцах эзэн', 'Хамтран хэрэгжүүлэх', 'Хэрэгжилт', 'Биелэлтийн хувь',
@@ -263,7 +259,7 @@ class TaskController extends Controller
         );
 
         $data = $request->validate([
-            'kind' => ['required', Rule::in([TaskSource::KEY_DIRECTIVE, TaskSource::KEY_PREP_PLAN])],
+            'kind' => ['required', $this->kindRule()],
             'text' => ['nullable', 'string', 'max:5000'],
             'period' => ['nullable', 'string', 'max:255'],
             'responsible' => ['nullable', 'string', 'max:255'],
@@ -407,7 +403,7 @@ class TaskController extends Controller
         );
 
         $data = $request->validate([
-            'kind' => ['required', Rule::in([TaskSource::KEY_DIRECTIVE, TaskSource::KEY_PREP_PLAN])],
+            'kind' => ['required', $this->kindRule()],
             'file' => [
                 'required',
                 'file',
@@ -432,7 +428,7 @@ class TaskController extends Controller
         );
 
         $data = $request->validate([
-            'kind' => ['required_without:document_id', Rule::in([TaskSource::KEY_DIRECTIVE, TaskSource::KEY_PREP_PLAN])],
+            'kind' => ['required_without:document_id', $this->kindRule()],
             'file' => [
                 'required_without:document_id',
                 'file',
@@ -456,6 +452,7 @@ class TaskController extends Controller
             'document_id' => $document->id,
             'original_name' => $document->original_name,
             'kind' => $kind,
+            'layout' => $document->source?->layout ?: $kind,
             'count' => count($rows),
             'rows' => $rows,
         ]);
@@ -497,7 +494,7 @@ class TaskController extends Controller
         try {
             return app(TaskDocxParser::class)->parse(
                 Storage::disk('local')->path($document->path),
-                $kind
+                $document->source?->layout ?: $kind
             );
         } catch (Throwable) {
             return [];
@@ -568,5 +565,91 @@ class TaskController extends Controller
         $document->delete();
 
         return back(303)->with('success', 'Файл устгалаа.');
+    }
+
+    public function storeSource(Request $request): RedirectResponse
+    {
+        abort_unless(
+            ModuleAccess::canManage($request->user(), 'tasks') || $request->user()->is_admin,
+            403
+        );
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'copy_from' => ['required', $this->kindRule()],
+        ]);
+
+        $template = TaskSource::query()->where('key', $data['copy_from'])->firstOrFail();
+        $name = trim($data['name']);
+
+        if (TaskSource::query()->where('name', $name)->exists()) {
+            return back()->with('warning', 'Ийм нэртэй хэсэг аль хэдийн байна.');
+        }
+
+        $source = TaskSource::create([
+            'key' => TaskSource::keyFor($name),
+            'name' => $name,
+            'layout' => $template->layout ?: $template->key,
+            'sort_order' => (int) TaskSource::query()->max('sort_order') + 1,
+        ]);
+
+        return redirect()
+            ->route('tasks.index', ['kind' => $source->key])
+            ->with('success', sprintf('«%s» хэсэг нэмэгдлээ.', $source->name));
+    }
+
+    public function destroySource(Request $request, string $source): RedirectResponse
+    {
+        abort_unless(
+            ModuleAccess::canManage($request->user(), 'tasks') || $request->user()->is_admin,
+            403
+        );
+
+        $model = TaskSource::query()->where('key', $source)->firstOrFail();
+        abort_if($model->isSystem(), 403, 'Суурь хэсгийг устгах боломжгүй.');
+
+        $name = $model->name;
+        $model->delete();
+
+        return redirect()
+            ->route('tasks.index')
+            ->with('success', sprintf('«%s» хэсэг устгагдлаа.', $name));
+    }
+
+    private function resolveSource(string $kind): TaskSource
+    {
+        if ($kind !== '') {
+            $source = TaskSource::query()->where('key', $kind)->first();
+
+            if ($source) {
+                return $source;
+            }
+        }
+
+        return TaskSource::query()->orderBy('sort_order')->orderBy('id')->firstOrFail();
+    }
+
+    /**
+     * @return list<array{key: string, label: string, layout: string, is_system: bool}>
+     */
+    private function kindTabs(): array
+    {
+        return TaskSource::query()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (TaskSource $source) => [
+                'key' => $source->key,
+                'label' => $source->name,
+                'layout' => $source->layout ?: $source->key,
+                'is_system' => $source->isSystem(),
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function kindRule(): \Illuminate\Validation\Rules\Exists
+    {
+        return Rule::exists('task_sources', 'key');
     }
 }

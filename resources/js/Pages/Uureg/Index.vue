@@ -8,6 +8,7 @@ import { expandPersonNames, GROUP_LABELS } from '@/utils/soumGovernors';
 
 const props = defineProps({
     kind: { type: String, required: true },
+    kinds: { type: Array, default: () => [] },
     source: { type: Object, required: true },
     tasks: { type: Array, default: () => [] },
     documents: { type: Array, default: () => [] },
@@ -15,12 +16,16 @@ const props = defineProps({
     canManage: { type: Boolean, default: false },
 });
 
-const kinds = [
-    { key: 'directive', label: 'Үүрэг чиглэл' },
-    { key: 'prep_plan', label: 'Бэлтгэл ажил хангах төлөвлөгөө' },
-];
+const kindTabs = computed(() => (
+    props.kinds.length
+        ? props.kinds
+        : [
+            { key: 'directive', label: 'Үүрэг чиглэл', layout: 'directive', is_system: true },
+            { key: 'prep_plan', label: 'Бэлтгэл ажил хангах төлөвлөгөө', layout: 'prep_plan', is_system: true },
+        ]
+));
 
-const isDirective = computed(() => props.kind === 'directive');
+const isDirective = computed(() => (props.source?.layout || props.kind) !== 'prep_plan');
 
 const downloadOpen = ref(false);
 const downloadRoot = ref(null);
@@ -51,7 +56,42 @@ const showAddForm = ref(false);
 const addFormRoot = ref(null);
 const wordPreviewing = ref(false);
 const wordConfirming = ref(false);
-const wordPreview = ref(null); // { document_id, original_name, kind, count, rows }
+const wordPreview = ref(null); // { document_id, original_name, kind, layout, count, rows }
+const isPrepPreview = computed(() => (wordPreview.value?.layout || wordPreview.value?.kind) === 'prep_plan');
+
+const showNewKind = ref(false);
+const newKindForm = useForm({
+    name: '',
+    copy_from: 'directive',
+});
+const deletingKind = ref(false);
+
+const submitNewKind = () => {
+    newKindForm.post(route('tasks.sources.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            newKindForm.reset();
+            showNewKind.value = false;
+        },
+    });
+};
+
+const removeKind = () => {
+    if (props.source?.is_system || ! props.kind) {
+        return;
+    }
+
+    if (! confirm('«' + (props.source?.name || '') + '» хэсэг болон түүний бүх мөрийг устгах уу?')) {
+        return;
+    }
+
+    deletingKind.value = true;
+    router.delete(route('tasks.sources.destroy', props.kind), {
+        onFinish: () => {
+            deletingKind.value = false;
+        },
+    });
+};
 
 const uploadForm = useForm({
     kind: props.kind,
@@ -828,6 +868,15 @@ const prepTableMinWidth = computed(() => {
                         Эх файл
                     </a>
                     <button
+                        v-if="canManage && ! source.is_system"
+                        type="button"
+                        class="ui-btn-ghost w-full text-red-600 sm:w-auto"
+                        :disabled="deletingKind"
+                        @click="removeKind"
+                    >
+                        Хэсэг устгах
+                    </button>
+                    <button
                         v-if="canManage"
                         type="button"
                         class="ui-btn-accent w-full sm:w-auto"
@@ -843,7 +892,7 @@ const prepTableMinWidth = computed(() => {
                 class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:rounded-2xl sm:border sm:border-slate-200 sm:bg-white sm:p-1.5 sm:shadow-soft sm:[&::-webkit-scrollbar]:auto [&::-webkit-scrollbar]:hidden"
             >
                 <Link
-                    v-for="item in kinds"
+                    v-for="item in kindTabs"
                     :key="item.key"
                     :href="route('tasks.index', { kind: item.key })"
                     class="shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm font-semibold transition sm:px-4"
@@ -854,7 +903,59 @@ const prepTableMinWidth = computed(() => {
                 >
                     {{ item.label }}
                 </Link>
+                <button
+                    v-if="canManage"
+                    type="button"
+                    class="shrink-0 whitespace-nowrap rounded-xl border border-dashed border-brand-navy-300 px-3.5 py-2.5 text-sm font-semibold text-brand-navy-600 transition hover:bg-brand-navy-50 sm:px-4"
+                    @click="showNewKind = ! showNewKind"
+                >
+                    + Хэсэг нэмэх
+                </button>
             </div>
+
+            <section
+                v-if="canManage && showNewKind"
+                class="rounded-2xl border border-brand-navy-200 bg-white p-4 shadow-soft sm:p-5"
+            >
+                <div class="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-800">Шинэ хэсэг нэмэх</h3>
+                        <p class="mt-0.5 text-xs text-slate-500">
+                            «Үүрэг чиглэл» эсвэл «Бэлтгэл ажил хангах төлөвлөгөө»-тэй ижил хүснэгттэй шинэ таб үүсгэнэ.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="rounded-lg px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100"
+                        @click="showNewKind = false"
+                    >
+                        Хаах
+                    </button>
+                </div>
+                <form class="grid gap-3 sm:grid-cols-[1fr_1fr_auto]" @submit.prevent="submitNewKind">
+                    <input
+                        v-model="newKindForm.name"
+                        type="text"
+                        class="ui-input"
+                        placeholder="Хэсгийн нэр"
+                        required
+                    />
+                    <select v-model="newKindForm.copy_from" class="ui-input">
+                        <option
+                            v-for="item in kindTabs"
+                            :key="'copy-' + item.key"
+                            :value="item.key"
+                        >
+                            «{{ item.label }}» загвар
+                        </option>
+                    </select>
+                    <button type="submit" class="ui-btn-accent whitespace-nowrap" :disabled="newKindForm.processing">
+                        {{ newKindForm.processing ? 'Нэмэж байна…' : 'Нэмэх' }}
+                    </button>
+                </form>
+                <p v-if="newKindForm.errors.name" class="mt-2 text-xs text-red-600">{{ newKindForm.errors.name }}</p>
+                <p v-if="newKindForm.errors.copy_from" class="mt-2 text-xs text-red-600">{{ newKindForm.errors.copy_from }}</p>
+            </section>
 
             <!-- Шинэ мөр нэмэх форм -->
             <section
@@ -1695,7 +1796,7 @@ const prepTableMinWidth = computed(() => {
                             <thead class="bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                                 <tr>
                                     <th class="w-12 px-3 py-2.5">№</th>
-                                    <template v-if="wordPreview?.kind === 'prep_plan'">
+                                    <template v-if="isPrepPreview">
                                         <th class="px-3 py-2.5">Ажлын чиглэл</th>
                                         <th class="px-3 py-2.5">Арга хэмжээ</th>
                                         <th class="px-3 py-2.5">Хугацаа</th>
@@ -1716,7 +1817,7 @@ const prepTableMinWidth = computed(() => {
                                     class="align-top"
                                 >
                                     <td class="px-3 py-2.5 text-slate-400">{{ idx + 1 }}</td>
-                                    <template v-if="wordPreview?.kind === 'prep_plan'">
+                                    <template v-if="isPrepPreview">
                                         <td class="px-3 py-2.5 text-slate-700">{{ row.sector || '—' }}</td>
                                         <td class="max-w-md whitespace-pre-wrap px-3 py-2.5 text-slate-800">{{ row.text || '—' }}</td>
                                         <td class="px-3 py-2.5 text-slate-700">{{ row.period || '—' }}</td>
