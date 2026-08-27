@@ -2,28 +2,40 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import PushSubscribe from '@/Components/PushSubscribe.vue';
-import {
-    addNotification,
-    clearNotifications,
-    loadNotifications,
-    markAllRead,
-    markOneRead,
-    unreadCount,
-} from '@/utils/notificationInbox';
+import { addNotification } from '@/utils/notificationInbox';
 
 /**
- * Толгой bell — ирсэн push мэдэгдлийг icon + тоогоор харуулна.
+ * Толгой bell — серверийн in-app мэдэгдэл + push badge.
  */
 const page = usePage();
 const open = ref(false);
 const root = ref(null);
-const items = ref(loadNotifications());
+const items = ref([]);
+const loading = ref(false);
+const serverUnread = ref(Number(page.props.notificationUnread ?? 0));
 
-const unread = computed(() => unreadCount(items.value));
+const unread = computed(() => {
+    const fromItems = items.value.filter((i) => ! i.read).length;
+    if (open.value || items.value.length) {
+        return fromItems;
+    }
+
+    return serverUnread.value;
+});
+
 const pushConfigured = computed(() => !! page.props.webPush?.enabled);
 
-const refresh = () => {
-    items.value = loadNotifications();
+const fetchInbox = async () => {
+    loading.value = true;
+    try {
+        const { data } = await window.axios.get(route('notifications.index'));
+        items.value = Array.isArray(data.items) ? data.items : [];
+        serverUnread.value = Number(data.unread ?? 0);
+    } catch {
+        // silent — bell хоосон харагдана
+    } finally {
+        loading.value = false;
+    }
 };
 
 const onSwMessage = (event) => {
@@ -32,7 +44,8 @@ const onSwMessage = (event) => {
     }
 
     addNotification(event.data.payload || {});
-    refresh();
+    // Live push ирэхэд серверээс дахин татах
+    fetchInbox();
 };
 
 const onOutside = (event) => {
@@ -47,25 +60,45 @@ const onEscape = (event) => {
     }
 };
 
-const toggle = () => {
+const toggle = async () => {
     open.value = ! open.value;
     if (open.value) {
-        refresh();
+        await fetchInbox();
     }
 };
 
-const openItem = (item) => {
-    items.value = markOneRead(item.id, items.value);
+const openItem = async (item) => {
+    try {
+        if (! item.read && item.id) {
+            await window.axios.post(route('notifications.read', item.id));
+            item.read = true;
+            serverUnread.value = Math.max(0, serverUnread.value - 1);
+        }
+    } catch {
+        // ignore
+    }
     open.value = false;
     router.visit(item.url || '/dept-dashboard');
 };
 
-const markRead = () => {
-    items.value = markAllRead(items.value);
+const markRead = async () => {
+    try {
+        await window.axios.post(route('notifications.read-all'));
+        items.value = items.value.map((i) => ({ ...i, read: true }));
+        serverUnread.value = 0;
+    } catch {
+        // ignore
+    }
 };
 
-const clearAll = () => {
-    items.value = clearNotifications();
+const clearAll = async () => {
+    try {
+        await window.axios.post(route('notifications.clear'));
+        items.value = [];
+        serverUnread.value = 0;
+    } catch {
+        // ignore
+    }
 };
 
 const formatTime = (iso) => {
@@ -84,13 +117,13 @@ const formatTime = (iso) => {
 };
 
 onMounted(() => {
-    refresh();
     document.addEventListener('click', onOutside);
     document.addEventListener('keydown', onEscape);
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.addEventListener('message', onSwMessage);
     }
-    window.addEventListener('storage', refresh);
+    // Badge-ийг нэн даруу шинэчлэх (нээлттэй үүрэг sync)
+    fetchInbox();
 });
 
 onBeforeUnmount(() => {
@@ -99,7 +132,6 @@ onBeforeUnmount(() => {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.removeEventListener('message', onSwMessage);
     }
-    window.removeEventListener('storage', refresh);
 });
 </script>
 
@@ -165,7 +197,10 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <ul v-if="items.length" class="max-h-80 overflow-y-auto divide-y divide-slate-50">
+                <p v-if="loading && ! items.length" class="px-3 py-8 text-center text-sm text-slate-400">
+                    Ачаалж байна…
+                </p>
+                <ul v-else-if="items.length" class="max-h-80 overflow-y-auto divide-y divide-slate-50">
                     <li v-for="item in items" :key="item.id">
                         <button
                             type="button"

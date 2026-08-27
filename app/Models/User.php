@@ -72,6 +72,11 @@ class User extends Authenticatable
         return $this->hasMany(PushSubscription::class);
     }
 
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(UserNotification::class);
+    }
+
     public static function normalizePhone(?string $phone): ?string
     {
         if ($phone === null) {

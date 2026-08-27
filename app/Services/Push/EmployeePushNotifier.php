@@ -3,11 +3,12 @@
 namespace App\Services\Push;
 
 use App\Models\User;
+use App\Models\UserNotification;
 use App\Support\PersonName;
 use Illuminate\Support\Collection;
 
 /**
- * Албан хаагчид холбоотой мэдээллийг push-ээр мэдэгдэнэ.
+ * Албан хаагчид холбоотой мэдээллийг in-app + push-ээр мэдэгдэнэ.
  */
 class EmployeePushNotifier
 {
@@ -30,7 +31,7 @@ class EmployeePushNotifier
             }
         }
 
-        $this->push->sendToUsers($users, $payload);
+        $this->notifyUsers($users, $payload);
     }
 
     /**
@@ -39,7 +40,50 @@ class EmployeePushNotifier
      */
     public function notifyUsers(iterable $users, array $payload): void
     {
-        $this->push->sendToUsers($users, $payload);
+        $resolved = collect($users)
+            ->map(function ($user) {
+                if ($user instanceof User) {
+                    return $user;
+                }
+
+                return User::query()->find($user);
+            })
+            ->filter()
+            ->unique('id')
+            ->values();
+
+        if ($resolved->isEmpty()) {
+            return;
+        }
+
+        $title = trim((string) ($payload['title'] ?? 'Мэдэгдэл')) ?: 'Мэдэгдэл';
+        $body = isset($payload['body']) ? trim((string) $payload['body']) : null;
+        $url = isset($payload['url']) ? trim((string) $payload['url']) : null;
+        $tag = isset($payload['tag']) ? trim((string) $payload['tag']) : null;
+
+        foreach ($resolved as $user) {
+            if ($tag) {
+                $exists = UserNotification::query()
+                    ->where('user_id', $user->id)
+                    ->where('tag', $tag)
+                    ->whereNull('read_at')
+                    ->exists();
+
+                if ($exists) {
+                    continue;
+                }
+            }
+
+            UserNotification::query()->create([
+                'user_id' => $user->id,
+                'title' => $title,
+                'body' => $body !== '' ? $body : null,
+                'url' => $url !== '' ? $url : null,
+                'tag' => $tag !== '' ? $tag : null,
+            ]);
+        }
+
+        $this->push->sendToUsers($resolved, $payload);
     }
 
     /**
