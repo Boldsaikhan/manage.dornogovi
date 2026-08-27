@@ -41,7 +41,7 @@ class HeltesAccountProvisionTest extends TestCase
         $this->assertTrue($head->is_department_head);
         $this->assertFalse($head->is_specialist);
         $this->assertFalse($head->is_admin);
-        $this->assertTrue(Hash::check('Ц.Сансармаа6259', $head->password));
+        $this->assertTrue(Hash::check('6259Sansarmaa', $head->password));
         $this->assertSame('91116259@staff.dornogovi.gov.mn', $head->email);
         $this->assertTrue(
             UserModulePermission::query()->where('user_id', $head->id)->where('module_key', 'tasks')->exists()
@@ -50,7 +50,7 @@ class HeltesAccountProvisionTest extends TestCase
         $specialist = User::query()->where('phone', '89239655')->first();
         $this->assertTrue($specialist->is_specialist);
         $this->assertFalse($specialist->is_department_head);
-        $this->assertTrue(Hash::check('Б.Болдсайхан9655', $specialist->password));
+        $this->assertTrue(Hash::check('9655Boldsaikhan', $specialist->password));
     }
 
     public function test_can_login_with_phone_and_generated_password(): void
@@ -65,7 +65,7 @@ class HeltesAccountProvisionTest extends TestCase
 
         $this->post(route('login'), [
             'login' => '91116259',
-            'password' => 'Ц.Сансармаа6259',
+            'password' => '6259Sansarmaa',
         ])->assertRedirect();
 
         $this->assertAuthenticated();
@@ -120,8 +120,29 @@ class HeltesAccountProvisionTest extends TestCase
 
         $existing->refresh();
         $this->assertSame('Ц.Сансармаа', $existing->name);
-        $this->assertTrue(Hash::check('Ц.Сансармаа6259', $existing->password));
+        $this->assertTrue(Hash::check('6259Sansarmaa', $existing->password));
         $this->assertSame(1, User::query()->where('phone', '91116259')->count());
+    }
+
+    public function test_reapplies_permissions_when_updating_existing_user(): void
+    {
+        $this->heltesPerson(name: 'А.Номин', mobile: '99178904');
+
+        $existing = User::factory()->create([
+            'name' => 'А.Номин',
+            'phone' => '99178904',
+            'password' => 'old-password',
+            'is_specialist' => true,
+        ]);
+
+        $result = app(HeltesAccountProvisioner::class)->run();
+
+        $this->assertSame(1, $result['updated']);
+        $existing->refresh();
+        $this->assertTrue(Hash::check('8904Nomin', $existing->password));
+        $this->assertTrue(
+            UserModulePermission::query()->where('user_id', $existing->id)->where('module_key', 'tasks')->exists()
+        );
     }
 
     public function test_does_not_overwrite_admin_password(): void
