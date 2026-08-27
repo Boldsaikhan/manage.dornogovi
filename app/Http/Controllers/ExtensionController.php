@@ -124,11 +124,16 @@ class ExtensionController extends Controller
 
         $zip->close();
 
+        $filename = self::FOLDER.'.zip';
+
         return response()->streamDownload(function () use ($zipPath) {
             readfile($zipPath);
             @unlink($zipPath);
-        }, self::FOLDER.'.zip', [
-            'Content-Type' => 'application/zip',
+        }, $filename, [
+            // octet-stream — Safari ZIP-ийг автоматаар задлаад олон файл болгохгүй.
+            'Content-Type' => 'application/octet-stream',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Cache-Control' => 'no-store',
         ]);
     }
 }

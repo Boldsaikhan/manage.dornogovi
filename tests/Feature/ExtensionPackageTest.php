@@ -47,7 +47,10 @@ class ExtensionPackageTest extends TestCase
         $response = $this->actingAs($user)->get(route('extension.download.zip'));
 
         $response->assertOk();
-        $response->assertHeader('content-type', 'application/zip');
+        $this->assertStringContainsString(
+            'manage-dornogovi-extension.zip',
+            (string) $response->headers->get('content-disposition'),
+        );
 
         $tmp = tempnam(sys_get_temp_dir(), 'ext');
         file_put_contents($tmp, $response->streamedContent());
