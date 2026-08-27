@@ -164,7 +164,7 @@ class TaskModuleTest extends TestCase
                 ->component('Uureg/Index')
                 ->where('kind', $source->key)
                 ->where('source.layout', 'directive')
-                ->has('kinds', 3)
+                ->has('kinds', 4)
             );
 
         $this->actingAs($admin)
