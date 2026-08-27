@@ -9,7 +9,8 @@ class ProvisionHeltesAccounts extends Command
 {
     protected $signature = 'users:provision-heltes
                             {--dry-run : Зөвхөн тоолох, хадгалахгүй}
-                            {--emails-only : Зөвхөн и-мэйлийг нэр@dornogovi.gov.mn болгох}';
+                            {--emails-only : Зөвхөн и-мэйлийг нэр@dornogovi.gov.mn болгох}
+                            {--passwords-only : Нууц үгийг ZDTG+утас болгох}';
 
     protected $description = 'Утасны жагсаалтын «Хэлтэс» ангиллын албан хаагчдад нэвтрэх эрх өгнө';
 
@@ -18,7 +19,15 @@ class ProvisionHeltesAccounts extends Command
         if ($this->option('emails-only')) {
             $updated = $provisioner->syncStaffEmails();
             $this->info(sprintf('И-мэйл шинэчилсэн: %d', $updated));
-            $this->line('И-мэйл: нэр@dornogovi.gov.mn. Нэвтрэх: гар утас. Нууц үг: утасны сүүлийн 4 орон + латин нэр.');
+            $this->line('И-мэйл: нэр@dornogovi.gov.mn. Нэвтрэх: гар утас. Нууц үг: ZDTG + утас.');
+
+            return self::SUCCESS;
+        }
+
+        if ($this->option('passwords-only')) {
+            $updated = $provisioner->syncStaffPasswords();
+            $this->info(sprintf('Нууц үг шинэчилсэн: %d', $updated));
+            $this->line('Нууц үг: ZDTG + утасны дугаар (жишээ: ZDTG99178904).');
 
             return self::SUCCESS;
         }
@@ -44,7 +53,7 @@ class ProvisionHeltesAccounts extends Command
             );
         }
 
-        $this->line('И-мэйл: нэр@dornogovi.gov.mn. Нэвтрэх: гар утас. Нууц үг: утасны сүүлийн 4 орон + латин нэр.');
+        $this->line('И-мэйл: нэр@dornogovi.gov.mn. Нэвтрэх: гар утас. Нууц үг: ZDTG + утас.');
 
         return self::SUCCESS;
     }

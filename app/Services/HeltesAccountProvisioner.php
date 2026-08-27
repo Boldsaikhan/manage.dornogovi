@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
  *
  * Нэвтрэх нэр: гар утас.
  * И-мэйл: латин нэр @dornogovi.gov.mn (жнь: badral@dornogovi.gov.mn).
- * Нууц үг: утасны сүүлийн 4 орон + нэрийн латин бичлэг (жнь: 8599Badral).
+ * Нууц үг: ZDTG + утасны дугаар (жнь: ZDTG99178904).
  */
 class HeltesAccountProvisioner
 {
@@ -156,21 +156,50 @@ class HeltesAccountProvisioner
             return null;
         }
 
-        $last4 = substr($phone, -4);
         $latin = $this->latinGivenName($name);
-        $password = $last4.$latin;
-
-        if (strlen($password) < 8) {
-            $password .= substr($phone, 0, max(0, 8 - strlen($password)));
-        }
 
         return [
             'name' => $name,
             'phone' => $phone,
-            'password' => $password,
+            'password' => self::passwordFromPhone($phone),
             'position' => trim((string) $entry->position),
             'latin' => $latin,
         ];
+    }
+
+    /** Нууц үг: ZDTG + утас (жнь: ZDTG99178904). */
+    public static function passwordFromPhone(string $phone): string
+    {
+        $digits = User::normalizePhone($phone) ?? preg_replace('/\D+/', '', $phone) ?? '';
+
+        return 'ZDTG'.$digits;
+    }
+
+    /**
+     * Хандах эрхтэй (админ биш) бүх хэрэглэгчийн нууц үгийг ZDTG+утас болгоно.
+     */
+    public function syncStaffPasswords(): int
+    {
+        $updated = 0;
+
+        User::query()
+            ->where('is_admin', false)
+            ->whereNotNull('phone')
+            ->where('phone', '!=', '')
+            ->orderBy('id')
+            ->each(function (User $user) use (&$updated): void {
+                $phone = User::normalizePhone($user->phone);
+
+                if ($phone === null || strlen($phone) < 4) {
+                    return;
+                }
+
+                $user->password = self::passwordFromPhone($phone);
+                $user->save();
+                $updated++;
+            });
+
+        return $updated;
     }
 
     /**
