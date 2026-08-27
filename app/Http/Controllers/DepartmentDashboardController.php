@@ -39,7 +39,34 @@ class DepartmentDashboardController extends Controller
         ModuleOwnScope::apply($planQuery, $user, 'plans');
         ModuleOwnScope::apply($groupQuery, $user, 'work_groups');
 
-        $taskAvg = (int) round(Task::query()->avg('progress') ?? 0);
+        $taskQuery = Task::query()->with('source:id,key,name');
+        ModuleOwnScope::apply($taskQuery, $user, 'tasks');
+
+        $tasks = (clone $taskQuery)->orderBy('sort_order')->orderBy('id')->get();
+        $taskTotal = $tasks->count();
+        $taskDone = $tasks->where('progress', '>=', 100)->count();
+        $taskPending = $tasks->where('progress', '<=', 0)->count();
+        $taskStarted = $tasks->filter(fn (Task $t) => $t->progress > 0 && $t->progress < 100)->count();
+        $taskOpen = $tasks->where('progress', '<', 100)->count();
+        $taskAvg = $taskTotal > 0
+            ? (int) round($tasks->avg('progress'))
+            : 0;
+
+        $recentTasks = $tasks
+            ->sortBy([
+                fn (Task $t) => $t->progress >= 100 ? 1 : 0,
+                fn (Task $t) => -$t->id,
+            ])
+            ->take(12)
+            ->values()
+            ->map(fn (Task $t) => [
+                'id' => $t->id,
+                'text' => $t->text,
+                'responsible' => $t->responsible,
+                'progress' => (int) $t->progress,
+                'source' => $t->source?->name,
+                'kind' => $t->source?->key,
+            ]);
 
         return Inertia::render('Modules/DepartmentDashboard', [
             'department' => $user->department?->only(['id', 'name', 'code']),
@@ -50,6 +77,11 @@ class DepartmentDashboardController extends Controller
                 'active_plans' => (clone $planQuery)->where('status', 'active')->count(),
                 'work_groups' => (clone $groupQuery)->count(),
                 'task_avg' => $taskAvg,
+                'task_total' => $taskTotal,
+                'task_open' => $taskOpen,
+                'task_done' => $taskDone,
+                'task_pending' => $taskPending,
+                'task_started' => $taskStarted,
             ],
             'recentLeaves' => $leaveQuery->with('user:id,name')->latest('id')->limit(5)->get(),
             'recentAssignments' => $assignQuery->with('user:id,name')->latest('id')->limit(5)->get(),
@@ -60,6 +92,7 @@ class DepartmentDashboardController extends Controller
                 'progress' => (int) round($g->tasks->avg('progress') ?? 0),
                 'tasks' => $g->tasks->count(),
             ]),
+            'recentTasks' => $recentTasks,
         ]);
     }
 }
