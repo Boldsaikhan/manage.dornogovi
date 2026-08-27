@@ -40,10 +40,18 @@ const noticeClass = computed(() => ({
 const selectedId = ref(null);
 const selected = computed(() => props.users.find((u) => u.id === selectedId.value) || null);
 const userSearch = ref('');
-/** employee = албан хаагчийн эрх | templates = ролийн загвар */
+/** employee | templates | create */
 const panelMode = ref('employee');
 /** Албан хаагчид оноож буй ролийн түлхүүр */
 const selectedRoleKey = ref('');
+
+const departmentName = (id) => {
+    if (! id) {
+        return 'Хэлтэсгүй';
+    }
+
+    return props.departments.find((d) => d.id === id)?.name || 'Хэлтэсгүй';
+};
 
 const filteredUsers = computed(() => {
     const q = userSearch.value.trim().toLocaleLowerCase('mn');
@@ -297,7 +305,17 @@ const levelOptions = (module) => {
 
 const saveUser = () => {
     if (!selected.value) return;
-    router.patch(route('admin.users.update', selected.value.id), { ...editState }, {
+    router.patch(route('admin.users.update', selected.value.id), {
+        name: selected.value.name,
+        email: selected.value.email,
+        phone: selected.value.phone || '',
+        department_id: selected.value.department_id || '',
+        position: selected.value.position || '',
+        is_admin: editState.is_admin,
+        is_department_head: editState.is_department_head,
+        is_specialist: editState.is_specialist,
+        permissions: { ...editState.permissions },
+    }, {
         preserveScroll: true,
         onSuccess: () => loadSelected(),
     });
@@ -306,7 +324,10 @@ const saveUser = () => {
 const createUser = () => {
     createForm.post(route('admin.users.store'), {
         preserveScroll: true,
-        onSuccess: () => createForm.reset(),
+        onSuccess: () => {
+            createForm.reset();
+            panelMode.value = 'employee';
+        },
     });
 };
 
@@ -402,6 +423,14 @@ const pickFromDirectory = (value) => {
                     >
                         Ролийн загвар
                     </button>
+                    <button
+                        type="button"
+                        class="rounded-full px-4 py-2 text-sm font-semibold transition"
+                        :class="panelMode === 'create' ? 'bg-brand-navy-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                        @click="panelMode = 'create'"
+                    >
+                        Шинэ албан хаагч
+                    </button>
                 </div>
 
                 <template v-if="panelMode === 'employee'">
@@ -411,7 +440,7 @@ const pickFromDirectory = (value) => {
                 >
                     <p class="text-sm font-semibold text-brand-navy-800">Албан хаагч сонгоно уу</p>
                     <p class="max-w-sm text-xs text-slate-500">
-                        Зүүн жагсаалтаас албан хаагч дээр дарж мэдээлэл, роль тохируулна.
+                        Зүүн жагсаалтаас албан хаагч дээр дарж роль тохируулна.
                     </p>
                 </div>
 
@@ -426,17 +455,28 @@ const pickFromDirectory = (value) => {
                         </p>
                     </div>
 
-                    <div class="grid gap-3 md:grid-cols-2">
-                        <input v-model="editState.name" class="ui-input" placeholder="Нэр" required />
-                        <input v-model="editState.email" type="email" class="ui-input" placeholder="И-мэйл" required />
-                        <input v-model="editState.phone" class="ui-input" placeholder="Утас" />
-                        <input v-model="editState.position" class="ui-input" placeholder="Албан тушаал" />
-                        <select v-model="editState.department_id" class="ui-input">
-                            <option value="">Хэлтэсгүй</option>
-                            <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
-                        </select>
-                        <input v-model="editState.password" type="password" class="ui-input" placeholder="Шинэ нууц үг (заавал биш)" />
-                    </div>
+                    <dl class="grid gap-3 rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-sm md:grid-cols-2">
+                        <div>
+                            <dt class="text-xs font-medium text-slate-400">Нэр</dt>
+                            <dd class="mt-0.5 font-medium text-brand-navy-800">{{ selected.name }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-medium text-slate-400">И-мэйл</dt>
+                            <dd class="mt-0.5 font-medium text-brand-navy-800">{{ selected.email }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-medium text-slate-400">Утас</dt>
+                            <dd class="mt-0.5 font-medium text-brand-navy-800">{{ selected.phone || '—' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs font-medium text-slate-400">Албан тушаал</dt>
+                            <dd class="mt-0.5 font-medium text-brand-navy-800">{{ selected.position || '—' }}</dd>
+                        </div>
+                        <div class="md:col-span-2">
+                            <dt class="text-xs font-medium text-slate-400">Хэлтэс</dt>
+                            <dd class="mt-0.5 font-medium text-brand-navy-800">{{ departmentName(selected.department_id) }}</dd>
+                        </div>
+                    </dl>
 
                     <div class="space-y-2 rounded-xl border border-brand-navy-100 bg-slate-50/60 p-3">
                         <div class="flex flex-wrap items-center justify-between gap-2">
@@ -474,12 +514,19 @@ const pickFromDirectory = (value) => {
 
                     <button class="ui-btn-primary">Хадгалах</button>
                 </form>
+                </template>
 
-                <form class="ui-card space-y-3 border-dashed p-5" @submit.prevent="createUser">
-                    <h3 class="ui-title text-base">Шинэ албан хаагч</h3>
-                    <p class="text-xs text-slate-500">
-                        Утасны жагсаалтад бүртгэлтэй албан хаагчийг сонгоод нэвтрэх эрх өгнө.
-                    </p>
+                <form
+                    v-else-if="panelMode === 'create'"
+                    class="ui-card-pad space-y-4"
+                    @submit.prevent="createUser"
+                >
+                    <div>
+                        <h3 class="ui-title text-base">Шинэ албан хаагч</h3>
+                        <p class="mt-0.5 text-xs text-slate-500">
+                            Утасны жагсаалтад бүртгэлтэй албан хаагчийг сонгоод нэвтрэх эрх өгнө.
+                        </p>
+                    </div>
                     <div class="grid gap-3 md:grid-cols-2">
                         <div class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50/60 p-2">
                             <label class="mb-1 block text-xs font-medium text-slate-600">Албан хаагч (утасны жагсаалт)</label>
@@ -499,13 +546,16 @@ const pickFromDirectory = (value) => {
                         <input v-model="createForm.position" placeholder="Албан тушаал" class="ui-input" />
                         <input v-model="createForm.email" type="email" required placeholder="И-мэйл" class="ui-input" />
                         <input v-model="createForm.password" type="password" required placeholder="Нууц үг" class="ui-input" />
+                        <select v-model="createForm.department_id" class="ui-input md:col-span-2">
+                            <option value="">Хэлтэсгүй</option>
+                            <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
+                        </select>
                     </div>
                     <p v-if="createForm.errors.name" class="text-xs text-rose-600">{{ createForm.errors.name }}</p>
                     <p v-if="createForm.errors.phone" class="text-xs text-rose-600">{{ createForm.errors.phone }}</p>
                     <p v-if="createForm.errors.email" class="text-xs text-rose-600">{{ createForm.errors.email }}</p>
                     <button class="ui-btn-accent" :disabled="createForm.processing || !createForm.name">Нэмэх</button>
                 </form>
-                </template>
 
                 <section v-else class="ui-card-pad space-y-3">
                     <div class="flex flex-wrap items-center justify-between gap-3">
