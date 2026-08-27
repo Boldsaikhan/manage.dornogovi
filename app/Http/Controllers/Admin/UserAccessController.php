@@ -9,6 +9,7 @@ use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\User;
 use App\Models\UserModulePermission;
+use App\Services\HeltesAccountProvisioner;
 use App\Support\ModuleAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -58,7 +59,23 @@ class UserAccessController extends Controller
                 'is_system' => $role->is_system,
             ])->values(),
             'rolePermissions' => RolePermission::map(),
+            'heltesCount' => app(HeltesAccountProvisioner::class)->eligibleCount(),
         ]);
+    }
+
+    /**
+     * Утасны жагсаалтын «Хэлтэс» ангиллын бүх албан хаагчид нэвтрэх эрх өгнө.
+     */
+    public function provisionHeltes(HeltesAccountProvisioner $provisioner): RedirectResponse
+    {
+        $result = $provisioner->run();
+
+        return back()->with('success', sprintf(
+            'Хэлтсийн албан хаагчдад эрх өглөө: %d шинэ, %d шинэчилсэн, %d алгассан.',
+            $result['created'],
+            $result['updated'],
+            count($result['skipped']),
+        ));
     }
 
     /**

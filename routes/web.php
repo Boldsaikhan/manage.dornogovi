@@ -151,6 +151,7 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/users', [UserAccessController::class, 'index'])->name('users.index');
         Route::post('/users', [UserAccessController::class, 'store'])->name('users.store');
+        Route::post('/users/provision-heltes', [UserAccessController::class, 'provisionHeltes'])->name('users.provision-heltes');
         Route::patch('/users/{user}', [UserAccessController::class, 'update'])->name('users.update');
         Route::post('/roles', [UserAccessController::class, 'storeRole'])->name('roles.store');
         Route::patch('/roles/{role}', [UserAccessController::class, 'updateRole'])->name('roles.update');

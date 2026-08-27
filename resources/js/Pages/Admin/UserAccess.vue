@@ -11,6 +11,7 @@ const props = defineProps({
     roles: Array,
     rolePermissions: Object,
     people: { type: Array, default: () => [] },
+    heltesCount: { type: Number, default: 0 },
 });
 
 const page = usePage();
@@ -206,6 +207,33 @@ const createUser = () => {
     });
 };
 
+const provisioning = ref(false);
+
+const provisionHeltes = () => {
+    if (props.heltesCount < 1) {
+        return;
+    }
+
+    const ok = confirm(
+        'Хэлтэс ангиллын ' + props.heltesCount + ' албан хаагчид нэвтрэх эрх өгөх үү?\n\n'
+        + 'Нэвтрэх нэр: гар утас\n'
+        + 'Нууц үг: нэр + утасны сүүлийн 4 орон\n'
+        + 'Жишээ: 91116259 / Ц.Сансармаа6259',
+    );
+
+    if (! ok) {
+        return;
+    }
+
+    provisioning.value = true;
+    router.post(route('admin.users.provision-heltes'), {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            provisioning.value = false;
+        },
+    });
+};
+
 /** Утасны жагсаалтаас сонгоход нэр, утас, албан тушаал, хэлтэс бөглөнө. */
 const pickFromDirectory = (value) => {
     const person = props.people.find((p) => p.value === value);
@@ -252,6 +280,24 @@ const pickFromDirectory = (value) => {
             </div>
 
             <div class="space-y-4">
+                <section class="ui-card-pad space-y-3">
+                    <h3 class="ui-title text-base">Хэлтсийн албан хаагчид</h3>
+                    <p class="text-xs text-slate-500">
+                        Утасны жагсаалтын «Хэлтэс»-т бүртгэлтэй
+                        <b>{{ heltesCount }}</b> хүнд нэвтрэх эрх өгнө.
+                        Нэвтрэх нэр — гар утас. Нууц үг — нэр + утасны сүүлийн 4 орон
+                        (жишээ: Ц.Сансармаа, 91116259 → <b>Ц.Сансармаа6259</b>).
+                    </p>
+                    <button
+                        type="button"
+                        class="ui-btn-accent"
+                        :disabled="provisioning || heltesCount < 1"
+                        @click="provisionHeltes"
+                    >
+                        {{ provisioning ? 'Өгч байна…' : 'Хэлтэст бүгдэд эрх өгөх' }}
+                    </button>
+                </section>
+
                 <form v-if="selected" class="ui-card-pad space-y-4" @submit.prevent="saveUser">
                     <h3 class="ui-title text-base">Эрх тохируулах — {{ selected.name }}</h3>
                     <div class="grid gap-3 md:grid-cols-2">

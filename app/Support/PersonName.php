@@ -64,6 +64,14 @@ class PersonName
         return mb_substr($last, 0, 1).'.'.$first;
     }
 
+    /** Хүний нэр мөн эсэх — албан тушаал/байгууллагын гарчгийг хасна. */
+    public static function isPerson(?string $value): bool
+    {
+        $name = trim((string) preg_replace('/\s+/u', ' ', (string) $value));
+
+        return $name !== '' && self::looksLikePerson($name);
+    }
+
     /**
      * Албан тушаал, байгууллагын нэрийг богиносгохгүй.
      */
