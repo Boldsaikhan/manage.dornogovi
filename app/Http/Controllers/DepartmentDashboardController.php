@@ -40,7 +40,8 @@ class DepartmentDashboardController extends Controller
         ModuleOwnScope::apply($groupQuery, $user, 'work_groups');
 
         $taskQuery = Task::query()->with('source:id,key,name');
-        ModuleOwnScope::apply($taskQuery, $user, 'tasks');
+        // Самбар: зөвхөн тухайн мэргэжилтэнд (хариуцагч/хамтран) хамаатай үүрэг.
+        ModuleOwnScope::restrictTasksToAssignee($taskQuery, $user);
 
         $tasks = (clone $taskQuery)->orderBy('sort_order')->orderBy('id')->get();
         $taskTotal = $tasks->count();

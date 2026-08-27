@@ -66,6 +66,18 @@ class ModuleOwnScope
     }
 
     /**
+     * Үүрэг даалгаврыг responsible/collaborator нэрээр шүүнэ (эрхээс үл хамааран).
+     *
+     * @param  Builder|Relation  $query
+     */
+    public static function restrictTasksToAssignee(Builder|Relation $query, User $user): Builder
+    {
+        $builder = $query instanceof Relation ? $query->getQuery() : $query;
+
+        return self::applyTaskAssigneeScope($builder, $user);
+    }
+
+    /**
      * «Удирдах (хамааралтай)» эрхтэй хэрэглэгч зөвхөн өөрт хамааралтай мөр үүсгэнэ.
      *
      * @param  array<string, mixed>  $data
