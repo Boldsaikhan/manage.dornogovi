@@ -179,14 +179,87 @@ const removeRole = () => {
 // Тухайн ролийн загварыг сонгосон албан хаагчид хэрэглэнэ.
 const applyRoleToUser = (roleKey) => {
     editState.permissions = { ...(roleState[roleKey] ?? {}) };
+
+    // Суурь ролийн талбаруудыг загвартай нийцүүлнэ (чекбоксгүй — зөвхөн товчоор).
+    editState.is_admin = false;
+    editState.is_department_head = false;
+    editState.is_specialist = false;
+
+    const role = props.roles?.find((r) => r.key === roleKey);
+    if (role?.field) {
+        editState[role.field] = true;
+    }
 };
 
-// Ролийн чагтыг асаахад тухайн загварын эрхүүд шууд бөглөгдөнө.
-const toggleRole = (role, checked) => {
-    editState[role.field] = checked;
-    if (checked) {
-        applyRoleToUser(role.key);
+const permissionsMatch = (a = {}, b = {}) => {
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+
+    for (const key of keys) {
+        if ((a[key] || '') !== (b[key] || '')) {
+            return false;
+        }
     }
+
+    return true;
+};
+
+/** Сонгосон албан хаагчийн одоогийн роль(ууд) — хадгалагдсан төлөв. */
+const selectedRoleLabels = computed(() => {
+    if (! selected.value) {
+        return [];
+    }
+
+    const labels = [];
+
+    if (selected.value.is_admin) {
+        labels.push('Супер админ');
+    }
+    if (selected.value.is_department_head) {
+        labels.push('Хэлтсийн дарга');
+    }
+    if (selected.value.is_specialist) {
+        labels.push('Мэргэжилтэн');
+    }
+
+    const custom = props.roles?.filter((r) => ! r.field) ?? [];
+    for (const role of custom) {
+        if (permissionsMatch(selected.value.permissions, roleState[role.key] ?? {})) {
+            labels.push(role.label);
+        }
+    }
+
+    if (labels.length === 0) {
+        return ['Гараар тохируулсан'];
+    }
+
+    return [...new Set(labels)];
+});
+
+/** Засварлаж буй төлөвтэй таарч буй загвар (хадгалаагүй өөрчлөлт орно). */
+const draftRoleHint = computed(() => {
+    for (const role of props.roles ?? []) {
+        if (permissionsMatch(editState.permissions, roleState[role.key] ?? {})) {
+            return role.label;
+        }
+    }
+
+    return null;
+});
+
+const userRoleLabels = (user) => {
+    const labels = [];
+
+    if (user.is_admin) {
+        labels.push('Супер админ');
+    }
+    if (user.is_department_head) {
+        labels.push('Хэлтсийн дарга');
+    }
+    if (user.is_specialist) {
+        labels.push('Мэргэжилтэн');
+    }
+
+    return labels.length ? labels : ['Гараар'];
 };
 
 const roleSummary = (roleKey) => {
@@ -332,6 +405,15 @@ const pickFromDirectory = (value) => {
                     >
                         <span class="font-semibold text-brand-navy-800">{{ u.name }}</span>
                         <span class="text-xs text-slate-400">{{ u.email }} · {{ u.phone || 'утасгүй' }}</span>
+                        <span class="mt-1 flex flex-wrap gap-1">
+                            <span
+                                v-for="label in userRoleLabels(u)"
+                                :key="u.id + '-' + label"
+                                class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600"
+                            >
+                                {{ label }}
+                            </span>
+                        </span>
                     </button>
                 </div>
             </aside>
@@ -358,7 +440,27 @@ const pickFromDirectory = (value) => {
                 </section>
 
                 <form v-if="selected" class="ui-card-pad space-y-4" @submit.prevent="saveUser">
-                    <h3 class="ui-title text-base">Эрх тохируулах — {{ selected.name }}</h3>
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h3 class="ui-title text-base">Эрх тохируулах — {{ selected.name }}</h3>
+                            <p class="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+                                <span>Одоогийн роль:</span>
+                                <span
+                                    v-for="label in selectedRoleLabels"
+                                    :key="'sel-' + label"
+                                    class="rounded-full bg-brand-navy-50 px-2.5 py-0.5 font-semibold text-brand-navy-700"
+                                >
+                                    {{ label }}
+                                </span>
+                            </p>
+                            <p
+                                v-if="draftRoleHint && !selectedRoleLabels.includes(draftRoleHint)"
+                                class="mt-1 text-xs text-amber-700"
+                            >
+                                Засварлаж буй загвар: <b>{{ draftRoleHint }}</b> (хадгалаагүй)
+                            </p>
+                        </div>
+                    </div>
                     <div class="grid gap-3 md:grid-cols-2">
                         <input v-model="editState.name" class="ui-input" placeholder="Нэр" required />
                         <input v-model="editState.email" type="email" class="ui-input" placeholder="И-мэйл" required />
@@ -371,19 +473,8 @@ const pickFromDirectory = (value) => {
                         <input v-model="editState.password" type="password" class="ui-input" placeholder="Шинэ нууц үг (заавал биш)" />
                     </div>
                     <div class="space-y-2">
-                        <div class="flex flex-wrap gap-4 text-sm font-medium text-slate-700">
-                            <label v-for="r in roles.filter((x) => x.field)" :key="r.key" class="flex items-center gap-2">
-                                <input
-                                    type="checkbox"
-                                    class="rounded text-brand-navy-600"
-                                    :checked="editState[r.field]"
-                                    @change="toggleRole(r, $event.target.checked)"
-                                />
-                                {{ r.label }}
-                            </label>
-                        </div>
                         <p class="text-xs text-slate-500">
-                            Ролийг сонгоход доорх «Ролийн загвар»-т заасан эрхүүд автоматаар бөглөгдөнө. Дараа нь модуль тус бүрд гараар засаж болно.
+                            Доорх «… загвар хэрэглэх» товчоор ролийн эрхийг онооно. Дараа нь модуль тус бүрд гараар засаж болно.
                         </p>
                         <div class="flex flex-wrap gap-2">
                             <button
@@ -391,6 +482,7 @@ const pickFromDirectory = (value) => {
                                 :key="'apply-' + r.key"
                                 type="button"
                                 class="ui-btn-ghost !py-1 text-xs"
+                                :class="draftRoleHint === r.label ? '!border-brand-navy-400 !bg-brand-navy-50 !text-brand-navy-800' : ''"
                                 @click="applyRoleToUser(r.key)"
                             >
                                 {{ r.label }} загвар хэрэглэх
