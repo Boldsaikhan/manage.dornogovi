@@ -3,6 +3,29 @@
 Сервер: mcloud.gov.mn / `manage-dornogovi` (instance-00005750), Ubuntu 24.04.2 LTS,
 8 vCPU / 16 GB / 100 GB.
 
+## Салбар: demo vs production
+
+Хэрэглэгчид **production**-ыг ашиглаж эхэлсэн тул шинэ код шууд тэнд орохгүй.
+
+| Салбар | Сайт | Хэзээ шинэчлэгдэх |
+|---|---|---|
+| `main` | https://manage.dornogovi.gov.mn | Зөвхөн «production руу гарга» гэж хэлэхэд |
+| `demo` | локал XAMPP, эсвэл demo сайт | Хөгжүүлэлт дуусах бүрт |
+
+Хөгжүүлэлт `demo` дээр хийгдэнэ. Production руу гаргах:
+
+```bash
+bash deploy/promote-to-production.sh
+```
+
+Demo сайтыг ижил сервер дээр (тусдаа өгөгдлийн сантай) суулгах:
+
+```bash
+sudo bash /opt/manage-dornogovi-demo/deploy/setup-demo-site.sh
+```
+
+Локал шалгалт: `C:\xampp\htdocs\manage.dornogovi.gov.mn` (`demo` салбар).
+
 | Зүйл | Утга |
 |---|---|
 | SSH | `ndc-user@10.52.1.67`, түлхүүр `~/.ssh/manage_dornogovi` |
@@ -38,7 +61,8 @@ Seeder зөвхөн анхны удаад ажиллана — дахин суу
 
 ## 2. Автомат шинэчлэлт (cron)
 
-GitHub-ийн `main` салбарт push хийхэд **2 минутын дотор** сервер өөрөө шинэчлэгдэнэ.
+GitHub-ийн **`main`** салбарт push хийхэд **2 минутын дотор** production шинэчлэгдэнэ.
+Хөгжүүлэлтийг `demo` руу илгээнэ — production автоматаар авахгүй.
 
 ```bash
 # нэг удаа суулгах
