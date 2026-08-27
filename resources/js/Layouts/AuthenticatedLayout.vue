@@ -445,17 +445,18 @@ const isCurrent = (routeName) => {
 
             <main
                 class="p-4 sm:p-6 lg:p-8"
-                :class="page.props.aiAssistant?.available ? 'pb-28' : ''"
+                :class="page.props.aiAssistant?.available ? 'pb-24' : ''"
             >
                 <slot />
             </main>
         </div>
 
-        <!-- AI floating entry — хүснэгтийн үйлдлээс хол байлгана -->
+        <!-- AI товч: баруун доор хүснэгтийн scroll/устгах товчтой давхардахгүйн тулд зүүн доор -->
         <button
             v-if="page.props.aiAssistant?.available && !aiOpen"
             type="button"
-            class="fixed bottom-5 right-5 z-30 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-navy-700 text-white shadow-lg shadow-brand-navy-700/30 transition hover:-translate-y-0.5 hover:bg-brand-navy-800 sm:h-auto sm:w-auto sm:gap-2 sm:px-4 sm:py-3"
+            class="fixed bottom-5 z-30 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-navy-700 text-white shadow-lg shadow-brand-navy-700/30 transition hover:-translate-y-0.5 hover:bg-brand-navy-800 sm:h-auto sm:w-auto sm:gap-2 sm:px-4 sm:py-3"
+            :class="sidebarCollapsed ? 'left-5 lg:left-[5.5rem]' : 'left-5 lg:left-[18.75rem]'"
             :title="page.props.aiAssistant?.name || 'Manage AI'"
             @click="toggleAiPanel(true)"
         >
