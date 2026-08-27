@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Models\Role;
+use App\Models\RolePermission;
 use App\Models\User;
 use App\Services\Ai\AiSettings;
 use Illuminate\Support\Collection;
@@ -77,9 +79,80 @@ class ModuleAccess
             return null;
         }
 
+        // Системийн рольтой бол ролийн загвар л цэсийг тодорхойлно —
+        // загварт байхгүй / хаалттай модуль харагдахгүй.
+        $roleKey = self::systemRoleKey($user);
+        if ($roleKey) {
+            $level = RolePermission::map()[$roleKey][$moduleKey] ?? null;
+
+            return in_array($level, self::LEVELS, true) ? $level : null;
+        }
+
         return $user->modulePermissions()
             ->where('module_key', $moduleKey)
             ->value('level');
+    }
+
+    /**
+     * Суурь роль (админ биш): дарга > мэргэжилтэн.
+     */
+    public static function systemRoleKey(User $user): ?string
+    {
+        if ($user->is_admin) {
+            return null;
+        }
+
+        if ($user->is_department_head) {
+            return 'department_head';
+        }
+
+        if ($user->is_specialist) {
+            return 'specialist';
+        }
+
+        return null;
+    }
+
+    /**
+     * Ролийн загварыг тухайн рольтой бүх хэрэглэгчид хуулна.
+     */
+    public static function syncUsersToRole(string $roleKey): int
+    {
+        $field = Role::SYSTEM_FIELDS[$roleKey] ?? null;
+        if (! $field) {
+            return 0;
+        }
+
+        $map = RolePermission::map()[$roleKey] ?? [];
+        $query = User::query()->where($field, true)->where('is_admin', false);
+
+        // Мэргэжилтэн загвар — дарга нарт бүү хүр.
+        if ($roleKey === 'specialist') {
+            $query->where('is_department_head', false);
+        }
+
+        $count = 0;
+        foreach ($query->get() as $user) {
+            $user->modulePermissions()->delete();
+
+            foreach ($map as $module => $level) {
+                if ($module === '__none__' || ! self::find($module) || ! in_array($level, self::LEVELS, true)) {
+                    continue;
+                }
+
+                if (in_array($level, ['view_own', 'manage_own'], true) && ! self::supportsOwnScope($module)) {
+                    continue;
+                }
+
+                $user->modulePermissions()->create([
+                    'module_key' => $module,
+                    'level' => $level,
+                ]);
+            }
+            $count++;
+        }
+
+        return $count;
     }
 
     public static function scopeOwnOnly(?User $user, string $moduleKey): bool
