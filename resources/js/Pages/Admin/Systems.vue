@@ -20,7 +20,7 @@ const SETTINGS_TABS = [
     { id: 'menus', label: 'Цэс нээх / хаах' },
     { id: 'ai', label: 'Manage AI' },
     { id: 'push', label: 'Push мэдэгдэл' },
-    { id: 'systems', label: 'Холбосон системүүд' },
+    { id: 'systems', label: 'Гадны системүүд' },
 ];
 
 const readSettingsTab = () => {
@@ -558,10 +558,10 @@ const saveAi = () => {
         <section class="mb-6 rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <h2 class="text-base font-semibold text-brand-navy-900">Холбосон системүүд</h2>
+                    <h2 class="text-base font-semibold text-brand-navy-900">Гадны системүүд</h2>
                     <p class="mt-1 max-w-3xl text-sm text-brand-navy-400">
-                        Зүүн талын ▲▼ товчоор <strong>хажуугийн цэсийн «Холбосон системүүд»</strong>
-                        хэсгийн дарааллыг өөрчилнө. Энэ жагсаалтын №1 дээрх систем цэсэнд эхэнд гарна.
+                        Нэвтрэх URL, ДАН, автоматаар бөглөх тохиргоо. Ажилтны цэсэнд гарахгүй —
+                        зөвхөн админ удирдлага / өргөтгөлд ашиглана.
                     </p>
                 </div>
                 <button type="button" class="ui-btn-primary shrink-0" @click="openCreate">
@@ -685,7 +685,7 @@ const saveAi = () => {
         <div v-if="otherSystems.length" class="mb-8 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <div class="border-b border-slate-100 bg-slate-50 px-5 py-3">
                 <h3 class="text-sm font-semibold text-slate-700">Дотоод системүүд</h3>
-                <p class="text-xs text-slate-500">Цэсийн «Холбосон системүүд»-д гарахгүй.</p>
+                <p class="text-xs text-slate-500">Ажилтны цэсэнд гарахгүй (дотоод).</p>
             </div>
             <table class="w-full text-sm">
                 <tbody>

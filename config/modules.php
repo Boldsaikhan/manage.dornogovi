@@ -11,7 +11,6 @@ return [
         'hr' => 'Хүний нөөц',
         'work' => 'Ажлын удирдлага',
         'knowledge' => 'Мэдээлэл, сургалт',
-        'systems' => 'Системүүд',
         'admin' => 'Удирдлага',
     ],
 
@@ -142,13 +141,6 @@ return [
             'route' => 'ai.index',
             'group' => 'knowledge',
             'icon' => 'sparkles',
-        ],
-        [
-            'key' => 'systems',
-            'label' => 'Холбосон системүүд',
-            'route' => 'dashboard',
-            'group' => 'systems',
-            'icon' => 'grid',
         ],
     ],
 ];

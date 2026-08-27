@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\System;
 use App\Models\User;
-use App\Models\UserModulePermission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -25,15 +24,7 @@ class SystemViewerAccessTest extends TestCase
 
     private function staff(): User
     {
-        $user = User::factory()->create(['is_admin' => false]);
-
-        UserModulePermission::create([
-            'user_id' => $user->id,
-            'module_key' => 'systems',
-            'level' => 'view',
-        ]);
-
-        return $user;
+        return User::factory()->create(['is_admin' => false]);
     }
 
     public function test_system_without_viewers_is_visible_to_everyone(): void
@@ -41,9 +32,9 @@ class SystemViewerAccessTest extends TestCase
         $this->system();
 
         $this->actingAs($this->staff())
-            ->get(route('dashboard'))
+            ->get(route('dept.dashboard'))
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->has('systems', 1));
+            ->assertInertia(fn ($page) => $page->has('nav', 1));
     }
 
     public function test_system_is_hidden_from_users_who_were_not_added(): void
@@ -54,9 +45,9 @@ class SystemViewerAccessTest extends TestCase
         $outsider = $this->staff();
 
         $this->actingAs($outsider)
-            ->get(route('dashboard'))
+            ->get(route('dept.dashboard'))
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->has('systems', 0));
+            ->assertInertia(fn ($page) => $page->has('nav', 0));
 
         $this->actingAs($outsider)
             ->get(route('systems.show', $system))
@@ -70,9 +61,9 @@ class SystemViewerAccessTest extends TestCase
         $system->viewers()->sync([$user->id]);
 
         $this->actingAs($user)
-            ->get(route('dashboard'))
+            ->get(route('dept.dashboard'))
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->has('systems', 1));
+            ->assertInertia(fn ($page) => $page->has('nav', 1));
 
         $this->actingAs($user)
             ->get(route('systems.show', $system))
@@ -106,8 +97,8 @@ class SystemViewerAccessTest extends TestCase
         $system->viewers()->sync([User::factory()->create()->id]);
 
         $this->actingAs(User::factory()->create(['is_admin' => true]))
-            ->get(route('dashboard'))
+            ->get(route('dept.dashboard'))
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->has('systems', 1));
+            ->assertInertia(fn ($page) => $page->has('nav', 1));
     }
 }

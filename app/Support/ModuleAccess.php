@@ -42,8 +42,8 @@ class ModuleAccess
             return true;
         }
 
-        // Албан хаагчийн самбар болон системүүд — бүх нэвтэрсэн хэрэглэгчид нээлттэй.
-        if (in_array($moduleKey, ['dept_dashboard', 'systems'], true)) {
+        // Албан хаагчийн самбар — бүх нэвтэрсэн хэрэглэгчид нээлттэй.
+        if ($moduleKey === 'dept_dashboard') {
             return true;
         }
 

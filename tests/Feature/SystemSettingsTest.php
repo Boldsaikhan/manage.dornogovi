@@ -150,7 +150,7 @@ class SystemSettingsTest extends TestCase
         $this->assertSame(3, $second->refresh()->sort_order);
 
         $this->actingAs(User::factory()->create())
-            ->get(route('dashboard'))
+            ->get(route('dept.dashboard'))
             ->assertInertia(fn ($page) => $page
                 ->where('nav.0.name', 'Gamma')
                 ->where('nav.1.name', 'Alpha')
@@ -195,7 +195,7 @@ class SystemSettingsTest extends TestCase
         $this->assertSame(2, $externalA->refresh()->sort_order);
 
         $this->actingAs(User::factory()->create())
-            ->get(route('dashboard'))
+            ->get(route('dept.dashboard'))
             ->assertInertia(fn ($page) => $page
                 ->where('nav.0.name', 'External B')
                 ->where('nav.0.is_internal', false)

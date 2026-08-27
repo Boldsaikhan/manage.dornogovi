@@ -22,20 +22,14 @@ class CredentialVaultTest extends TestCase
         ]);
     }
 
-    public function test_dashboard_lists_active_systems(): void
+    public function test_old_systems_hub_redirects_home(): void
     {
         $user = User::factory()->create();
         $this->system();
 
         $this->actingAs($user)
             ->get(route('dashboard'))
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page
-                ->component('Dashboard')
-                ->has('systems', 1)
-                ->where('systems.0.name', 'Туршилтын систем')
-                ->where('systems.0.has_credential', false)
-                ->where('stats.saved', 0));
+            ->assertRedirect(route('dept.dashboard'));
     }
 
     public function test_credential_is_stored_encrypted_at_rest(): void
