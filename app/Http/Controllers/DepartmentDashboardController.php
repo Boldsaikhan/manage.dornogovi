@@ -47,6 +47,7 @@ class DepartmentDashboardController extends Controller
             ],
             'recentLeaves' => $leaveQuery->with('user:id,name')->latest('id')->limit(5)->get(),
             'recentAssignments' => $assignQuery->with('user:id,name')->latest('id')->limit(5)->get(),
+            'recentPlans' => $planQuery->latest('id')->limit(5)->get(['id', 'title', 'year', 'period', 'status']),
             'workGroups' => $groupQuery->latest('id')->limit(5)->get()->map(fn (WorkGroup $g) => [
                 'id' => $g->id,
                 'name' => $g->name,
