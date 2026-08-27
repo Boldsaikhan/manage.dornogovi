@@ -1,12 +1,14 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import AppExtensionManager from '@/Components/AppExtensionManager.vue';
+import { isMobileDevice } from '@/utils/mobileClient';
 
 /**
- * Толгой icon — өргөтгөл суугаагүй бол улаан.
+ * Толгой icon — өргөтгөл суугаагүй бол улаан. Утсан дээр харагдахгүй.
  */
 const open = ref(false);
 const root = ref(null);
+const onPhone = ref(false);
 const extensionReady = ref(false);
 const extensionChecked = ref(false);
 
@@ -55,6 +57,11 @@ const onEscape = (event) => {
 };
 
 onMounted(() => {
+    onPhone.value = isMobileDevice();
+    if (onPhone.value) {
+        return;
+    }
+
     extensionReady.value = document.documentElement.dataset.mdExtension === '1';
     verifyExtension();
     document.addEventListener('click', onOutside);
@@ -75,7 +82,7 @@ const toggle = () => {
 </script>
 
 <template>
-    <div ref="root" class="relative">
+    <div v-if="! onPhone" ref="root" class="relative">
         <button
             type="button"
             class="relative flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm transition"

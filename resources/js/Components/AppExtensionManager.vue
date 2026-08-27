@@ -1,9 +1,10 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { downloadExtensionLoose } from '@/utils/extensionInstall';
+import { isMobileDevice } from '@/utils/mobileClient';
 
 /**
- * Chrome/Edge өргөтгөл суулгах. Утсаар апп суулгалт байхгүй — зөвхөн хөтөч.
+ * Chrome/Edge өргөтгөл суулгах. Утсаар харагдахгүй — зөвхөн компьютер.
  */
 const props = defineProps({
     /** true бол зөвхөн өргөтгөл суугаагүй үеийн мэдэгдэл. */
@@ -17,6 +18,7 @@ const canVerifyExtension = ref(false);
 const message = ref('');
 const showHelp = ref(false);
 const bannerDismissed = ref(false);
+const onPhone = ref(false);
 
 const FALLBACK_ID = 'hoiannpahebnneonhkjianfpmjfhpdmm';
 const DISMISS_KEY = 'md_extension_missing_dismissed';
@@ -57,7 +59,7 @@ const verifyExtension = () => {
 const extensionMissing = computed(() => extensionChecked.value && ! extensionReady.value);
 
 const showMissingNotice = computed(() => (
-    extensionMissing.value && ! bannerDismissed.value
+    ! onPhone.value && extensionMissing.value && ! bannerDismissed.value
 ));
 
 const dismissMissingNotice = () => {
@@ -70,6 +72,11 @@ const dismissMissingNotice = () => {
 };
 
 onMounted(() => {
+    onPhone.value = isMobileDevice();
+    if (onPhone.value) {
+        return;
+    }
+
     extensionId.value = document.documentElement.dataset.mdExtensionId ?? '';
     extensionReady.value = document.documentElement.dataset.mdExtension === '1';
     canVerifyExtension.value = !! window.chrome?.runtime?.sendMessage;
@@ -142,6 +149,8 @@ const downloadExtension = async () => {
 </script>
 
 <template>
+    <!-- Утсан дээр өргөтгөлийн UI бүү харуул -->
+    <template v-if="! onPhone">
     <div
         v-if="props.notifyOnly && showMissingNotice"
         class="mb-4 rounded-2xl border border-rose-300 bg-rose-50 px-4 py-3 shadow-sm"
@@ -304,4 +313,5 @@ const downloadExtension = async () => {
             </div>
         </div>
     </section>
+    </template>
 </template>
