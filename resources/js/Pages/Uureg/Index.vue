@@ -13,6 +13,7 @@ const props = defineProps({
     tasks: { type: Array, default: () => [] },
     documents: { type: Array, default: () => [] },
     people: { type: Array, default: () => [] },
+    canEdit: { type: Boolean, default: false },
     canManage: { type: Boolean, default: false },
     undoCount: { type: Number, default: 0 },
 });
@@ -794,7 +795,7 @@ const directiveNoteColWidth = computed(() => {
 
 const directiveTableMinWidth = computed(() => {
     // checkbox + № + хариуцах + хяналт + хувь + устгах + текст + хэрэгжилт
-    const fixed = 48 + 180 + 200 + 96 + (props.canManage ? 48 + 40 : 0);
+    const fixed = 48 + 180 + 200 + 96 + (props.canEdit ? 48 + 40 : 0);
     return fixed + directiveTextColWidth.value + directiveNoteColWidth.value;
 });
 
@@ -815,7 +816,7 @@ const prepNoteColWidth = computed(() => {
 });
 
 const prepTableMinWidth = computed(() => {
-    const fixed = 48 + 140 + 110 + 140 + 150 + 96 + (props.canManage ? 48 + 40 : 0);
+    const fixed = 48 + 140 + 110 + 140 + 150 + 96 + (props.canEdit ? 48 + 40 : 0);
     return fixed + prepTextColWidth.value + prepNoteColWidth.value;
 });
 </script>
@@ -841,7 +842,7 @@ const prepTableMinWidth = computed(() => {
                         @change="onFileChange"
                     />
                     <button
-                        v-if="canManage"
+                        v-if="canEdit"
                         type="button"
                         class="ui-btn-ghost w-full sm:w-auto"
                         :disabled="undoCount < 1 || undoing"
@@ -909,7 +910,7 @@ const prepTableMinWidth = computed(() => {
                         Хэсэг устгах
                     </button>
                     <button
-                        v-if="canManage"
+                        v-if="canEdit"
                         type="button"
                         class="ui-btn-accent w-full sm:w-auto"
                         @click="openAddForm"
@@ -991,7 +992,7 @@ const prepTableMinWidth = computed(() => {
 
             <!-- Шинэ мөр нэмэх форм -->
             <section
-                v-if="canManage && showAddForm"
+                v-if="canEdit && showAddForm"
                 ref="addFormRoot"
                 class="rounded-2xl border border-brand-navy-200 bg-white p-4 shadow-soft sm:p-5"
             >
@@ -1187,7 +1188,7 @@ const prepTableMinWidth = computed(() => {
 
             <!-- Олон мөрөнд ижил мэдээлэл оруулах -->
             <div
-                v-if="canManage && selectedCount"
+                v-if="canEdit && selectedCount"
                 class="sticky top-2 z-20 rounded-2xl border border-brand-navy-200 bg-white/95 p-3 shadow-soft backdrop-blur"
             >
                 <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
@@ -1281,18 +1282,18 @@ const prepTableMinWidth = computed(() => {
                     :style="{ minWidth: `${directiveTableMinWidth}px` }"
                 >
                     <colgroup>
-                        <col v-if="canManage" style="width: 40px" />
+                        <col v-if="canEdit" style="width: 40px" />
                         <col style="width: 48px" />
                         <col :style="{ width: `${directiveTextColWidth}px` }" />
                         <col style="width: 180px" />
                         <col style="width: 200px" />
                         <col :style="{ width: `${directiveNoteColWidth}px` }" />
                         <col style="width: 96px" />
-                        <col v-if="canManage" style="width: 48px" />
+                        <col v-if="canEdit" style="width: 48px" />
                     </colgroup>
                     <thead>
                         <tr>
-                            <th v-if="canManage" class="sticky top-0 z-20 bg-brand-navy-50 text-center">
+                            <th v-if="canEdit" class="sticky top-0 z-20 bg-brand-navy-50 text-center">
                                 <input
                                     type="checkbox"
                                     class="rounded border-slate-300 text-brand-navy-600"
@@ -1308,7 +1309,7 @@ const prepTableMinWidth = computed(() => {
                             <th class="sticky top-0 z-20 bg-brand-navy-50">Хяналт тавих албан тушаалтан</th>
                             <th class="sticky top-0 z-20 bg-brand-navy-50">Хэрэгжилт</th>
                             <th class="sticky top-0 z-20 bg-brand-navy-50 text-center">Биелэлтийн хувь</th>
-                            <th v-if="canManage" class="sticky top-0 z-20 bg-brand-navy-50 text-center" />
+                            <th v-if="canEdit" class="sticky top-0 z-20 bg-brand-navy-50 text-center" />
                         </tr>
                     </thead>
                     <tbody>
@@ -1317,7 +1318,7 @@ const prepTableMinWidth = computed(() => {
                             :key="task.id"
                             :class="isSelected(task.id) ? 'bg-brand-navy-50/70' : ''"
                         >
-                            <td v-if="canManage" class="text-center align-middle">
+                            <td v-if="canEdit" class="text-center align-middle">
                                 <input
                                     type="checkbox"
                                     class="rounded border-slate-300 text-brand-navy-600"
@@ -1331,7 +1332,7 @@ const prepTableMinWidth = computed(() => {
                                     v-if="drafts[task.id]"
                                     v-model="drafts[task.id].text"
                                     multiline
-                                    :editable="canManage"
+                                    :editable="canEdit"
                                     @commit="(v) => saveField(task.id, 'text', v)"
                                 />
                             </td>
@@ -1339,7 +1340,7 @@ const prepTableMinWidth = computed(() => {
                                 <SheetCell
                                     v-if="drafts[task.id]"
                                     v-model="drafts[task.id].responsible"
-                                    :editable="canManage"
+                                    :editable="canEdit"
                                     :options="people"
                                     multiple
                                     placeholder="Утасны жагсаалтаас сонгох…"
@@ -1350,7 +1351,7 @@ const prepTableMinWidth = computed(() => {
                                 <SheetCell
                                     v-if="drafts[task.id]"
                                     v-model="drafts[task.id].collaborator"
-                                    :editable="canManage"
+                                    :editable="canEdit"
                                     :options="people"
                                     multiple
                                     placeholder="Утасны жагсаалтаас сонгох…"
@@ -1363,7 +1364,7 @@ const prepTableMinWidth = computed(() => {
                                     v-model="drafts[task.id].note"
                                     multiline
                                     placeholder="Хэрэгжилт…"
-                                    :editable="canManage"
+                                    :editable="canEdit"
                                     @commit="(v) => saveField(task.id, 'note', v)"
                                 />
                             </td>
@@ -1373,7 +1374,7 @@ const prepTableMinWidth = computed(() => {
                                     v-model="drafts[task.id].progress"
                                     type="number"
                                     align="center"
-                                    :editable="canManage"
+                                    :editable="canEdit"
                                     @commit="() => saveProgress(task.id)"
                                 >
                                     <span :class="progressTextClass(drafts[task.id].progress)">
@@ -1381,7 +1382,7 @@ const prepTableMinWidth = computed(() => {
                                     </span>
                                 </SheetCell>
                             </td>
-                            <td v-if="canManage" class="text-center align-middle">
+                            <td v-if="canEdit" class="text-center align-middle">
                                 <button
                                     type="button"
                                     class="ui-icon-btn"
@@ -1396,7 +1397,7 @@ const prepTableMinWidth = computed(() => {
                             </td>
                         </tr>
                         <tr v-if="!visibleTasks.length">
-                            <td :colspan="canManage ? 8 : 6" class="!py-14 text-center text-slate-400">
+                            <td :colspan="canEdit ? 8 : 6" class="!py-14 text-center text-slate-400">
                                 {{ filter ? 'Энэ шүүлтэд тохирох үүрэг чиглэл алга.' : 'Одоогоор мөр алга. «Мөр нэмэх» дарж эхлүүлнэ үү.' }}
                             </td>
                         </tr>
@@ -1414,7 +1415,7 @@ const prepTableMinWidth = computed(() => {
                     :style="{ minWidth: `${prepTableMinWidth}px` }"
                 >
                     <colgroup>
-                        <col v-if="canManage" style="width: 40px" />
+                        <col v-if="canEdit" style="width: 40px" />
                         <col style="width: 48px" />
                         <col style="width: 140px" />
                         <col :style="{ width: `${prepTextColWidth}px` }" />
@@ -1423,11 +1424,11 @@ const prepTableMinWidth = computed(() => {
                         <col style="width: 150px" />
                         <col :style="{ width: `${prepNoteColWidth}px` }" />
                         <col style="width: 96px" />
-                        <col v-if="canManage" style="width: 48px" />
+                        <col v-if="canEdit" style="width: 48px" />
                     </colgroup>
                     <thead>
                         <tr>
-                            <th v-if="canManage" class="sticky top-0 z-20 bg-brand-navy-50 text-center">
+                            <th v-if="canEdit" class="sticky top-0 z-20 bg-brand-navy-50 text-center">
                                 <input
                                     type="checkbox"
                                     class="rounded border-slate-300 text-brand-navy-600"
@@ -1445,7 +1446,7 @@ const prepTableMinWidth = computed(() => {
                             <th class="sticky top-0 z-20 bg-brand-navy-50">Хамтран хэрэгжүүлэх</th>
                             <th class="sticky top-0 z-20 bg-brand-navy-50">Хэрэгжилт</th>
                             <th class="sticky top-0 z-20 bg-brand-navy-50 text-center">Биелэлтийн хувь</th>
-                            <th v-if="canManage" class="sticky top-0 z-20 bg-brand-navy-50 text-center" />
+                            <th v-if="canEdit" class="sticky top-0 z-20 bg-brand-navy-50 text-center" />
                         </tr>
                     </thead>
                     <tbody>
@@ -1454,7 +1455,7 @@ const prepTableMinWidth = computed(() => {
                             :key="task.id"
                             :class="isSelected(task.id) ? 'bg-brand-navy-50/70' : ''"
                         >
-                            <td v-if="canManage" class="text-center align-middle">
+                            <td v-if="canEdit" class="text-center align-middle">
                                 <input
                                     type="checkbox"
                                     class="rounded border-slate-300 text-brand-navy-600"
@@ -1467,7 +1468,7 @@ const prepTableMinWidth = computed(() => {
                                 <SheetCell
                                     v-if="drafts[task.id]"
                                     v-model="drafts[task.id].sector"
-                                    :editable="canManage"
+                                    :editable="canEdit"
                                     @commit="(v) => saveField(task.id, 'sector', v)"
                                 />
                             </td>
@@ -1476,7 +1477,7 @@ const prepTableMinWidth = computed(() => {
                                     v-if="drafts[task.id]"
                                     v-model="drafts[task.id].text"
                                     multiline
-                                    :editable="canManage"
+                                    :editable="canEdit"
                                     @commit="(v) => saveField(task.id, 'text', v)"
                                 />
                             </td>
@@ -1484,7 +1485,7 @@ const prepTableMinWidth = computed(() => {
                                 <SheetCell
                                     v-if="drafts[task.id]"
                                     v-model="drafts[task.id].period"
-                                    :editable="canManage"
+                                    :editable="canEdit"
                                     @commit="(v) => saveField(task.id, 'period', v)"
                                 />
                             </td>
@@ -1492,7 +1493,7 @@ const prepTableMinWidth = computed(() => {
                                 <SheetCell
                                     v-if="drafts[task.id]"
                                     v-model="drafts[task.id].responsible"
-                                    :editable="canManage"
+                                    :editable="canEdit"
                                     :options="people"
                                     multiple
                                     placeholder="Утасны жагсаалтаас сонгох…"
@@ -1503,7 +1504,7 @@ const prepTableMinWidth = computed(() => {
                                 <SheetCell
                                     v-if="drafts[task.id]"
                                     v-model="drafts[task.id].collaborator"
-                                    :editable="canManage"
+                                    :editable="canEdit"
                                     :options="people"
                                     multiple
                                     placeholder="Утасны жагсаалтаас сонгох…"
@@ -1516,7 +1517,7 @@ const prepTableMinWidth = computed(() => {
                                     v-model="drafts[task.id].note"
                                     multiline
                                     placeholder="Хэрэгжилт…"
-                                    :editable="canManage"
+                                    :editable="canEdit"
                                     @commit="(v) => saveField(task.id, 'note', v)"
                                 />
                             </td>
@@ -1526,7 +1527,7 @@ const prepTableMinWidth = computed(() => {
                                     v-model="drafts[task.id].progress"
                                     type="number"
                                     align="center"
-                                    :editable="canManage"
+                                    :editable="canEdit"
                                     @commit="() => saveProgress(task.id)"
                                 >
                                     <span :class="progressTextClass(drafts[task.id].progress)">
@@ -1534,7 +1535,7 @@ const prepTableMinWidth = computed(() => {
                                     </span>
                                 </SheetCell>
                             </td>
-                            <td v-if="canManage" class="text-center align-middle">
+                            <td v-if="canEdit" class="text-center align-middle">
                                 <button
                                     type="button"
                                     class="ui-icon-btn"
@@ -1549,7 +1550,7 @@ const prepTableMinWidth = computed(() => {
                             </td>
                         </tr>
                         <tr v-if="!visibleTasks.length">
-                            <td :colspan="canManage ? 10 : 8" class="!py-14 text-center text-slate-400">
+                            <td :colspan="canEdit ? 10 : 8" class="!py-14 text-center text-slate-400">
                                 {{ filter ? 'Энэ шүүлтэд тохирох үүрэг чиглэл алга.' : 'Одоогоор мөр алга. «Мөр нэмэх» дарж эхлүүлнэ үү.' }}
                             </td>
                         </tr>

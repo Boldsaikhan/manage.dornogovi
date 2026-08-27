@@ -84,7 +84,7 @@ class ModuleOwnScope
      */
     public static function assertCanCreate(User $user, string $moduleKey, array $data = []): void
     {
-        if ($user->is_admin || ! ModuleAccess::manageOwnOnly($user, $moduleKey)) {
+        if ($user->is_admin || ! ModuleAccess::scopeOwnOnly($user, $moduleKey)) {
             return;
         }
 

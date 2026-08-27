@@ -49,7 +49,7 @@ class RolePermission extends Model
             'ai' => 'manage',
         ],
         'specialist' => [
-            'dept_dashboard' => 'view', 'tasks' => 'manage', 'work_groups' => 'view',
+            'dept_dashboard' => 'view', 'tasks' => 'manage_own', 'work_groups' => 'view',
             'plans' => 'view', 'meetings' => 'view', 'reports' => 'manage',
             'leaves' => 'manage', 'assignments' => 'manage', 'phone_directory' => 'view',
             'awards' => 'manage',

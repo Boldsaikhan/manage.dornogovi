@@ -47,13 +47,13 @@ class WorkGroupController extends Controller
 
         return Inertia::render('Modules/WorkGroups', [
             'groups' => $groups,
-            'canManage' => ModuleAccess::canManage($request->user(), 'work_groups'),
+            'canManage' => ModuleAccess::canEdit($request->user(), 'work_groups'),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), 'work_groups'), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), 'work_groups'), 403);
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -72,7 +72,7 @@ class WorkGroupController extends Controller
 
     public function storeTask(Request $request, WorkGroup $workGroup): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), 'work_groups'), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), 'work_groups'), 403);
         abort_unless(ModuleOwnScope::allows($request->user(), 'work_groups', $workGroup), 403);
 
         $data = $request->validate([
@@ -109,7 +109,7 @@ class WorkGroupController extends Controller
 
     public function updateTask(Request $request, WorkGroupTask $task): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), 'work_groups'), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), 'work_groups'), 403);
         abort_unless(ModuleOwnScope::allows($request->user(), 'work_groups', $task->workGroup), 403);
 
         $data = $request->validate([
