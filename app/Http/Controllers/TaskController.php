@@ -27,15 +27,51 @@ use Throwable;
 
 class TaskController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request): Response|RedirectResponse
     {
         abort_unless(ModuleAccess::canView($request->user(), 'tasks'), 403);
 
-        $source = $this->resolveSource($request->string('kind')->toString());
+        $user = $request->user();
+        $kinds = $this->kindTabs($user);
+        $requested = $request->string('kind')->toString();
+
+        if (! $user->is_admin) {
+            $allowed = collect($kinds)->pluck('key');
+
+            if ($allowed->isEmpty()) {
+                return Inertia::render('Uureg/Index', [
+                    'kind' => '',
+                    'kinds' => [],
+                    'source' => [
+                        'id' => null,
+                        'key' => '',
+                        'name' => 'Үүрэг даалгавар',
+                        'layout' => TaskSource::KEY_DIRECTIVE,
+                        'is_system' => true,
+                    ],
+                    'tasks' => [],
+                    'documents' => [],
+                    'people' => $this->phoneDirectoryPeople(),
+                    'canManage' => ModuleAccess::canManage($user, 'tasks'),
+                    'undoCount' => EditUndo::query()->where('user_id', $user->id)->count(),
+                ]);
+            }
+
+            if ($requested === '' || ! $allowed->contains($requested)) {
+                return redirect()->route('tasks.index', ['kind' => $allowed->first()]);
+            }
+        }
+
+        $source = $this->resolveSource($requested);
         $kind = $source->key;
 
         $tasksQuery = $source->tasks();
-        ModuleOwnScope::apply($tasksQuery, $request->user(), 'tasks');
+        if ($user->is_admin) {
+            ModuleOwnScope::apply($tasksQuery, $user, 'tasks');
+        } else {
+            // Зөвхөн тухайн албан хаагчид хамаатай мөр.
+            ModuleOwnScope::restrictTasksToAssignee($tasksQuery, $user);
+        }
         $tasks = $tasksQuery
             ->get([
                 'id', 'task_source_id', 'text', 'period', 'responsible',
@@ -67,7 +103,7 @@ class TaskController extends Controller
 
         return Inertia::render('Uureg/Index', [
             'kind' => $kind,
-            'kinds' => $this->kindTabs(),
+            'kinds' => $kinds,
             'source' => [
                 'id' => $source->id,
                 'key' => $source->key,
@@ -102,7 +138,11 @@ class TaskController extends Controller
         abort_unless(in_array($format, ['docx', 'xlsx', 'pdf'], true), 404);
 
         $tasksQuery = $source->tasks();
-        ModuleOwnScope::apply($tasksQuery, $request->user(), 'tasks');
+        if ($request->user()->is_admin) {
+            ModuleOwnScope::apply($tasksQuery, $request->user(), 'tasks');
+        } else {
+            ModuleOwnScope::restrictTasksToAssignee($tasksQuery, $request->user());
+        }
         $tasks = $tasksQuery
             ->get([
                 'id', 'text', 'period', 'responsible', 'collaborator', 'sector', 'note', 'progress', 'sort_order',
@@ -700,11 +740,31 @@ class TaskController extends Controller
     /**
      * @return list<array{key: string, label: string, layout: string, is_system: bool}>
      */
-    private function kindTabs(): array
+    private function kindTabs(\App\Models\User $user): array
     {
-        return TaskSource::query()
+        $query = TaskSource::query()
             ->orderBy('sort_order')
-            ->orderBy('id')
+            ->orderBy('id');
+
+        // Админ бүх хэсгийг харна; бусад — зөвхөн өөрт хамаатай үүрэгтэй хэсэг.
+        if (! $user->is_admin) {
+            $patterns = PersonName::matchPatterns($user);
+
+            if ($patterns === []) {
+                return [];
+            }
+
+            $query->whereHas('tasks', function ($tasks) use ($patterns) {
+                $tasks->where(function ($w) use ($patterns) {
+                    foreach ($patterns as $pattern) {
+                        $w->orWhere('responsible', 'like', '%'.$pattern.'%')
+                            ->orWhere('collaborator', 'like', '%'.$pattern.'%');
+                    }
+                });
+            });
+        }
+
+        return $query
             ->get()
             ->map(fn (TaskSource $source) => [
                 'key' => $source->key,
