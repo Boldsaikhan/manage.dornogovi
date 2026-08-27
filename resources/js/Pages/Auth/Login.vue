@@ -1,9 +1,11 @@
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import QRCode from 'qrcode';
 import StateEmblem from '@/Components/StateEmblem.vue';
 import OrnamentMark from '@/Components/OrnamentMark.vue';
+import QrScanButton from '@/Components/QrScanButton.vue';
+import { isMobileDevice } from '@/utils/mobileClient';
 
 defineProps({
     canResetPassword: {
@@ -16,6 +18,8 @@ defineProps({
 
 /** 'phone' — үндсэн арга, 'email' — нөөц арга */
 const mode = ref('phone');
+const onPhone = ref(false);
+const qrScanner = ref(null);
 const showPassword = ref(false);
 
 /** public/images/building.jpg байхгүй бол градиент дэвсгэрээр орлуулна */
@@ -138,6 +142,10 @@ const qrCountdown = computed(() => {
     return `${m}:${String(sec).padStart(2, '0')}`;
 });
 
+onMounted(() => {
+    onPhone.value = isMobileDevice();
+});
+
 onBeforeUnmount(stopQrTimers);
 
 const submit = () => {
@@ -184,11 +192,12 @@ const submit = () => {
                         </div>
                     </div>
 
-                    <h2
-                        class="mt-6 text-sm font-bold tracking-wide text-brand-navy-700"
-                    >
-                        НЭВТРЭХ
-                    </h2>
+                    <div class="mt-6 flex items-center justify-between gap-3">
+                        <h2 class="text-sm font-bold tracking-wide text-brand-navy-700">
+                            НЭВТРЭХ
+                        </h2>
+                        <QrScanButton ref="qrScanner" />
+                    </div>
 
                     <div
                         v-if="status"
@@ -430,8 +439,8 @@ const submit = () => {
                         </button>
                     </form>
 
-                    <!-- QR кодоор нэвтрэх -->
-                    <div v-else class="mt-4">
+                    <!-- QR кодоор нэвтрэх — зөвхөн компьютер дээр код харуулна -->
+                    <div v-else-if="! onPhone" class="mt-4">
                         <div class="relative mx-auto flex h-[248px] w-[248px] items-center justify-center rounded-2xl border-2 border-slate-200 bg-white p-3">
                             <img
                                 v-if="qrImage && qrState === 'waiting'"
@@ -503,7 +512,19 @@ const submit = () => {
                     </button>
 
                     <button
-                        v-if="! isQr"
+                        v-if="! isQr && onPhone"
+                        type="button"
+                        class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-200 px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-brand-navy-300 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-brand-navy-600/10"
+                        @click="qrScanner?.open()"
+                    >
+                        <svg class="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.5h4.5v4.5h-4.5zM15.75 4.5h4.5v4.5h-4.5zM3.75 15h4.5v4.5h-4.5zM15.75 15h1.5v1.5h-1.5zM19.5 15h.75v.75h-.75zM15.75 18.75h1.5v.75h-1.5zM19.5 18h.75v1.5h-.75zM12 3.75v6M12 12.75v7.5M3.75 12h4.5M12 12h8.25" />
+                        </svg>
+                        QR уншуулах
+                    </button>
+
+                    <button
+                        v-if="! isQr && ! onPhone"
                         type="button"
                         class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-200 px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-brand-navy-300 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-brand-navy-600/10"
                         @click="openQr"
