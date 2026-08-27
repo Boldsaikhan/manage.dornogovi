@@ -470,7 +470,7 @@ const pageTitle = computed(() => props.categories[props.tab] || 'Шагнал');
                                 <input v-model="form.supporting_org" type="text" class="ui-input">
                             </div>
                             <div>
-                                <label class="ui-label">ЕТГ-т уламжилсан бичиг</label>
+                                <label class="ui-label">ЕТГ-т уламжилсан албан бичгийн огноо дугаар</label>
                                 <input v-model="form.presidential_letter" type="text" class="ui-input">
                             </div>
                         </div>
