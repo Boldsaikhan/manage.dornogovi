@@ -297,15 +297,15 @@ class AwardController extends Controller
                 ['key' => 'register_no', 'label' => 'Регистрийн дугаар'],
                 ['key' => 'age', 'label' => 'Нас'],
                 ['key' => 'gender', 'label' => 'Хүйс'],
-                ['key' => 'years_in_country', 'label' => 'Улсад ажилласан жил'],
-                ['key' => 'years_in_sector', 'label' => 'Тухайн салбартаа ажилласан жил'],
+                ['key' => 'years_in_country', 'label' => 'Улсад ажилласан жил', 'vertical' => true],
+                ['key' => 'years_in_sector', 'label' => 'Тухайн салбартаа ажилласан жил', 'vertical' => true],
                 ['key' => 'award_date_display', 'label' => 'Огноо'],
                 ['key' => 'resolution_number', 'label' => 'Тогтоолын дугаар'],
                 ['key' => 'position', 'label' => 'Албан тушаал'],
                 ['key' => 'address', 'label' => 'Оршин суугаа хаяг'],
                 ['key' => 'last_award', 'label' => 'Сүүлд авсан шагнал, он'],
                 ['key' => 'supporting_org', 'label' => 'Дэмжсэн байгууллага'],
-                ['key' => 'presidential_letter', 'label' => 'ЕТГ-т уламжилсан бичгийн огноо, дугаар'],
+                ['key' => 'presidential_letter', 'label' => 'Ерөнхийлөгчийн Тамгын газарт уламжилсан албан бичгийн огноо дугаар'],
             ];
         }
 
