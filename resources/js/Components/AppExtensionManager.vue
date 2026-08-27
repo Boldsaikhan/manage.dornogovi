@@ -159,8 +159,10 @@ const downloadExtension = async () => {
     message.value = '';
 
     try {
-        downloadExtensionLoose();
-        message.value = '«manage-dornogovi-extension.zip» татагдлаа. Задаалбал нэг хавтас гарна — түүнийг Load unpacked-аар суулгана (эсвэл доторх install.bat-ыг ажиллуулна).';
+        const result = await downloadExtensionLoose();
+        message.value = result.method === 'folder'
+            ? `«${result.folder}» хавтас үүслээ (${result.count} файл). Доторх install.bat эсвэл СУУЛГАХ.txt-ийн дагуу Load unpacked хийнэ.`
+            : `«${result.folder}.zip» татагдлаа. Задаад гарсан хавтсыг Load unpacked-аар суулгана (install.bat ажиллуулж болно).`;
         showHelp.value = true;
     } catch (e) {
         if (e?.name === 'AbortError') {
@@ -321,7 +323,7 @@ const downloadExtension = async () => {
                             </span>
                         </div>
                         <p class="mt-1 text-xs leading-relaxed text-slate-500">
-                            Нэг ZIP татна. Задаалбал manage-dornogovi-extension хавтас гарна.
+                            Хавтас сонгоод manage-dornogovi-extension шууд бичнэ (ZIP биш).
                         </p>
                         <button
                             type="button"
@@ -411,8 +413,8 @@ const downloadExtension = async () => {
                         </div>
 
                         <ol v-if="showHelp" class="mt-3 list-decimal space-y-1.5 rounded-lg bg-slate-50 px-3 py-2.5 pl-5 text-xs leading-relaxed text-slate-600">
-                            <li>«Өргөтгөл татах» — <b>нэг ZIP</b> татагдана (файл тус бүр биш).</li>
-                            <li>ZIP-ийг задаана — <b>manage-dornogovi-extension</b> хавтас гарна.</li>
+                            <li>«Өргөтгөл татах» дарж хадгалах <b>хавтсыг сонгоно</b> (Downloads гэх мэт).</li>
+                            <li>Дотор нь <b>manage-dornogovi-extension</b> хавтас автоматаар үүснэ.</li>
                             <li>Хавтас доторх <b>install.bat</b> ажиллуулна (эсвэл chrome://extensions нээнэ).</li>
                             <li><b>Developer mode</b> асаагаад <b>Load unpacked</b> → тэр хавтсыг сонгоно.</li>
                             <li v-if="extensionReady">Устгах: энэ товч эсвэл chrome://extensions → Remove.</li>
