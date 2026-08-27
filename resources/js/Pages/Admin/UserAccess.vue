@@ -278,27 +278,33 @@ const pickFromDirectory = (value) => {
 
 <template>
     <AuthenticatedLayout title="Хандах эрх">
-        <div v-if="notice" class="mb-4 rounded-xl border px-4 py-3 text-sm shadow-sm" :class="noticeClass">
+        <div class="flex min-h-0 flex-col gap-4 lg:h-[calc(100dvh-9rem)]">
+        <div v-if="notice" class="shrink-0 rounded-xl border px-4 py-3 text-sm shadow-sm" :class="noticeClass">
             {{ notice.text }}
         </div>
 
-        <div class="grid gap-4 lg:grid-cols-[280px_1fr]">
-            <div class="ui-card overflow-hidden">
-                <div class="border-b border-slate-100 px-4 py-3 text-sm font-bold text-brand-navy-800">Албан хаагчид</div>
-                <button
-                    v-for="u in users"
-                    :key="u.id"
-                    type="button"
-                    class="flex w-full flex-col border-b border-slate-50 px-4 py-3 text-left text-sm transition hover:bg-brand-navy-50"
-                    :class="selectedId === u.id ? 'bg-brand-navy-50' : ''"
-                    @click="selectUser(u.id)"
-                >
-                    <span class="font-semibold text-brand-navy-800">{{ u.name }}</span>
-                    <span class="text-xs text-slate-400">{{ u.email }} · {{ u.phone || 'утасгүй' }}</span>
-                </button>
-            </div>
+        <div class="grid min-h-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[280px_1fr]">
+            <aside class="ui-card flex max-h-[42vh] min-h-0 flex-col overflow-hidden lg:max-h-none">
+                <div class="shrink-0 border-b border-slate-100 px-4 py-3 text-sm font-bold text-brand-navy-800">
+                    Албан хаагчид
+                    <span class="ml-1 font-medium text-slate-400">{{ users.length }}</span>
+                </div>
+                <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                    <button
+                        v-for="u in users"
+                        :key="u.id"
+                        type="button"
+                        class="flex w-full flex-col border-b border-slate-50 px-4 py-3 text-left text-sm transition hover:bg-brand-navy-50"
+                        :class="selectedId === u.id ? 'bg-brand-navy-50' : ''"
+                        @click="selectUser(u.id)"
+                    >
+                        <span class="font-semibold text-brand-navy-800">{{ u.name }}</span>
+                        <span class="text-xs text-slate-400">{{ u.email }} · {{ u.phone || 'утасгүй' }}</span>
+                    </button>
+                </div>
+            </aside>
 
-            <div class="space-y-4">
+            <div class="min-h-0 space-y-4 overflow-y-auto overscroll-contain">
                 <section class="ui-card-pad space-y-3">
                     <h3 class="ui-title text-base">Хэлтсийн албан хаагчид</h3>
                     <p class="text-xs text-slate-500">
@@ -532,6 +538,7 @@ const pickFromDirectory = (value) => {
                     <button class="ui-btn-accent" :disabled="createForm.processing || !createForm.name">Нэмэх</button>
                 </form>
             </div>
+        </div>
         </div>
     </AuthenticatedLayout>
 </template>
