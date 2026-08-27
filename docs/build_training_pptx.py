@@ -17,6 +17,7 @@ from pptx.util import Emu, Inches, Pt
 
 NAVY = RGBColor(0x0F, 0x2F, 0x63)
 NAVY2 = RGBColor(0x1C, 0x55, 0xA5)
+NAVY700 = RGBColor(0x1E, 0x40, 0x6B)
 NAVY_SOFT = RGBColor(0xE8, 0xEE, 0xF6)
 ORANGE = RGBColor(0xEA, 0x58, 0x0C)
 WHITE = RGBColor(0xFF, 0xFF, 0xFF)
@@ -65,7 +66,6 @@ def add_text_box(slide, l, t, w, h, text, size=14, bold=False, color=DARK, align
 
 
 def add_lines(slide, l, t, w, h, lines, size=13, color=DARK, spacing=6, bold=False):
-    """lines: str | (text, bold, color)."""
     box = slide.shapes.add_textbox(l, t, w, h)
     tf = box.text_frame
     tf.word_wrap = True
@@ -152,7 +152,6 @@ def fit_picture(slide, path, l, t, max_w, max_h):
     scale = min(max_w / pw, max_h / ph)
     w = int(pw * scale)
     h = int(ph * scale)
-    # Center in the box.
     x = int(l + (max_w - w) / 2)
     y = int(t + (max_h - h) / 2)
     return slide.shapes.add_picture(str(path), Emu(x), Emu(y), width=Emu(w), height=Emu(h))
@@ -163,153 +162,140 @@ def maybe_emblem(slide, l, t, size):
         slide.shapes.add_picture(str(EMBLEM_PNG), l, t, width=size, height=size)
 
 
-# ── Slide 1 ──────────────────────────────────────────────────────────────────
-
 def slide_login(prs):
     s = prs.slides.add_slide(prs.slide_layouts[6])
     add_rect(s, 0, 0, W, H, LIGHT)
-    add_rect(s, 0, 0, W, Inches(1.55), NAVY)
-    add_rect(s, 0, Inches(1.55), W, Inches(0.08), ORANGE)
+    add_rect(s, 0, 0, W, Inches(1.48), NAVY)
+    add_rect(s, 0, Inches(1.48), W, Inches(0.08), ORANGE)
 
-    maybe_emblem(s, Inches(0.4), Inches(0.28), Inches(0.95))
+    maybe_emblem(s, Inches(0.4), Inches(0.26), Inches(0.92))
     add_text_box(
-        s, Inches(1.5), Inches(0.22), Inches(11.4), Inches(0.55),
-        "Дорноговь аймгийн ЗДТГ — Дотоод нэгдсэн систем (manage)",
+        s, Inches(1.5), Inches(0.18), Inches(11.4), Inches(0.5),
+        "Дорноговь аймгийн ЗДТГ — Дотоод нэгдсэн систем",
         size=24, bold=True, color=WHITE,
     )
     add_text_box(
-        s, Inches(1.5), Inches(0.78), Inches(11.4), Inches(0.4),
+        s, Inches(1.5), Inches(0.7), Inches(11.4), Inches(0.32),
         "https://manage.dornogovi.gov.mn",
         size=16, bold=True, color=RGBColor(0xFD, 0xBA, 0x74),
     )
     add_text_box(
-        s, Inches(1.5), Inches(1.12), Inches(11.4), Inches(0.32),
-        "Албан хаагчдад зориулсан сургалт  ·  нэвтрэх боломжууд",
+        s, Inches(1.5), Inches(1.04), Inches(11.4), Inches(0.3),
+        "Сургалт  ·  нэвтрэх боломжууд  ·  бодит нэвтрэх хуудас",
         size=13, color=RGBColor(0xBF, 0xDB, 0xFE),
     )
 
-    # Left: methods
-    add_round(s, Inches(0.35), Inches(1.82), Inches(6.55), Inches(5.18), WHITE, LINE, adj=0.04)
-    add_text_box(s, Inches(0.55), Inches(1.95), Inches(6.15), Inches(0.36), "Нэвтрэх боломжууд", size=16, bold=True, color=NAVY)
+    add_round(s, Inches(0.32), Inches(1.74), Inches(4.55), Inches(5.28), WHITE, LINE, adj=0.04)
+    add_text_box(
+        s, Inches(0.48), Inches(1.82), Inches(4.25), Inches(0.28),
+        "Харагдах байдал — нэвтрэх", size=12, bold=True, color=NAVY,
+    )
+    if LOGIN_PNG.exists():
+        fit_picture(s, LOGIN_PNG, Inches(0.55), Inches(2.12), Inches(4.1), Inches(4.72))
+    else:
+        add_text_box(s, Inches(0.5), Inches(4.0), Inches(4.2), Inches(0.4), "login.png олдсонгүй", size=13, color=MUTED, align=PP_ALIGN.CENTER)
+
+    add_text_box(s, Inches(5.1), Inches(1.74), Inches(7.85), Inches(0.34), "Нэвтрэх боломжууд — 3 арга", size=16, bold=True, color=NAVY)
 
     methods = [
-        ("Үндсэн", "Утасны дугаар (8 орон) + нууц үг. Нэвтрэх товч."),
-        ("QR кодоор", "Компьютер дээр QR гарна. Утаснаасаа уншуулаад зөвшөөрнө."),
-        ("И-мэйл + нууц үг", "«И-мэйлээр нэвтрэх» — нөөц арга."),
-        ("Намайг сана", "Дараагийн удаа энэ төхөөрөмж дээр нэрийг санана."),
+        ("1", "Утас + нууц үг", "Үндсэн арга. 8 оронтой дугаар, нууц үг, «Нэвтрэх»."),
+        ("2", "QR кодоор нэвтрэх", "Компьютер дээр код гарна. Утаснаасаа уншуулаад зөвшөөрнө."),
+        ("3", "И-мэйлээр нэвтрэх", "Нөөц арга. «И-мэйлээр нэвтрэх» дарж хаяг + нууц үг оруулна."),
     ]
-    y = Inches(2.38)
-    for title, body in methods:
-        add_round(s, Inches(0.55), y, Inches(0.18), Inches(0.18), ORANGE, adj=0.5)
-        add_text_box(s, Inches(0.85), y - Inches(0.04), Inches(5.85), Inches(0.28), title, size=13, bold=True, color=NAVY)
-        add_text_box(s, Inches(0.85), y + Inches(0.22), Inches(5.85), Inches(0.38), body, size=12, color=SLATE)
-        y += Inches(0.64)
+    y = Inches(2.14)
+    for num, title, body in methods:
+        add_round(s, Inches(5.1), y, Inches(7.85), Inches(0.92), WHITE, LINE, adj=0.08)
+        add_round(s, Inches(5.28), y + Inches(0.22), Inches(0.48), Inches(0.48), NAVY, adj=0.2)
+        add_text_box(s, Inches(5.28), y + Inches(0.28), Inches(0.48), Inches(0.38), num, size=16, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
+        add_text_box(s, Inches(5.95), y + Inches(0.14), Inches(6.8), Inches(0.32), title, size=15, bold=True, color=NAVY)
+        add_text_box(s, Inches(5.95), y + Inches(0.48), Inches(6.8), Inches(0.36), body, size=13, color=SLATE)
+        y += Inches(1.02)
 
-    add_rect(s, Inches(0.55), Inches(5.0), Inches(6.15), Inches(0.015), LINE)
-    add_text_box(s, Inches(0.55), Inches(5.08), Inches(6.15), Inches(0.28), "Нууц үгийн дүрэм (нийтийн)", size=13, bold=True, color=NAVY)
+    add_round(s, Inches(5.1), Inches(5.24), Inches(7.85), Inches(0.82), RGBColor(0xFF, 0xF7, 0xED), RGBColor(0xFD, 0xBA, 0x74), adj=0.06)
+    add_text_box(s, Inches(5.28), Inches(5.32), Inches(7.5), Inches(0.28), "Нууц үг", size=13, bold=True, color=ORANGE)
     add_text_box(
-        s, Inches(0.55), Inches(5.36), Inches(6.15), Inches(0.7),
-        "Утасны сүүлийн 4 орон + нэрийн латин бичлэг.\n"
-        "А.Номин / 99178904  →  8904Nomin     ·     А.Бадрал / 94588599  →  8599Badral",
-        size=12, color=DARK,
-    )
-    add_text_box(
-        s, Inches(0.55), Inches(6.08), Inches(6.15), Inches(0.72),
-        "Хэлтсийн и-мэйл: nomin@dornogovi.gov.mn хэлбэртэй. "
-        "Гэхдээ нэвтрэх нэр нь үндсэндээ утас (и-мэйлээр ч нэвтэрч болно).",
-        size=12, color=MUTED,
+        s, Inches(5.28), Inches(5.6), Inches(7.5), Inches(0.38),
+        "Утасны сүүлийн 4 орон + нэрийн латин бичлэг.   Жишээ: А.Номин / 99178904  →  8904Nomin",
+        size=13, color=DARK,
     )
 
-    # Right: real screenshot (portrait crop — phone-like frame)
-    add_round(s, Inches(7.1), Inches(1.82), Inches(5.85), Inches(5.18), WHITE, LINE, adj=0.04)
-    add_text_box(s, Inches(7.28), Inches(1.92), Inches(5.5), Inches(0.28), "Бодит нэвтрэх хуудас", size=12, bold=True, color=NAVY)
-    if LOGIN_PNG.exists():
-        # 650×1080 → ~2.85" × 4.72" inside the 5.18" card
-        pic_w, pic_h = Inches(2.9), Inches(4.72)
-        pic_l = Inches(7.1) + (Inches(5.85) - pic_w) / 2
-        pic_t = Inches(2.18)
-        add_round(s, pic_l - Inches(0.08), pic_t - Inches(0.08), pic_w + Inches(0.16), pic_h + Inches(0.16), RGBColor(0xE2, 0xE8, 0xF0), adj=0.06)
-        fit_picture(s, LOGIN_PNG, pic_l, pic_t, pic_w, pic_h)
-    else:
-        add_text_box(s, Inches(7.4), Inches(4.0), Inches(5.2), Inches(0.5), "login.png олдсонгүй", size=14, color=MUTED, align=PP_ALIGN.CENTER)
+    add_round(s, Inches(5.1), Inches(6.16), Inches(7.85), Inches(0.82), WHITE, LINE, adj=0.06)
+    add_text_box(
+        s, Inches(5.28), Inches(6.28), Inches(7.5), Inches(0.58),
+        "«Намайг сана» — энэ төхөөрөмж дээр дараагийн удаа нэрийг санана.\n"
+        "И-мэйл: nomin@dornogovi.gov.mn хэлбэртэй. Нэвтрэх нэр нь үндсэндээ утас.",
+        size=13, color=SLATE,
+    )
 
     footer(s, 1)
 
 
-# ── Slide 2 ──────────────────────────────────────────────────────────────────
-
 def _sidebar_item(slide, x, y, w, label, active=False):
-    bg = NAVY_SOFT if active else WHITE
-    fg = NAVY if active else DARK
-    add_round(slide, x, y, w, Inches(0.24), bg, adj=0.12)
-    if active:
-        add_rect(slide, x, y, Inches(0.05), Inches(0.24), ORANGE)
-    add_text_box(slide, x + Inches(0.14), y + Inches(0.01), w - Inches(0.18), Inches(0.22), label, size=9, bold=active, color=fg)
+    bg = NAVY if active else WHITE
+    fg = WHITE if active else DARK
+    add_round(slide, x, y, w, Inches(0.28), bg, adj=0.12)
+    add_text_box(slide, x + Inches(0.12), y + Inches(0.02), w - Inches(0.16), Inches(0.24), label, size=10, bold=active, color=fg)
 
 
 def slide_chrome(prs):
     s = prs.slides.add_slide(prs.slide_layouts[6])
     add_rect(s, 0, 0, W, H, LIGHT)
-    header_bar(s, "Харагдах байдал", "Зүүн цэс · толгой · ажлын хэсэг  ·  компьютер / утас")
+    header_bar(s, "Харагдах байдал", "Зүүн цэс · толгой · ажлын хэсэг   ·   компьютер / утас")
 
-    # Desktop chrome mock
-    frame_l, frame_t = Inches(0.35), Inches(1.28)
-    frame_w, frame_h = Inches(8.95), Inches(5.72)
-    add_round(s, frame_l, frame_t, frame_w, frame_h, RGBColor(0xCB, 0xD5, 0xE1), adj=0.03)
-    inner_l, inner_t = frame_l + Inches(0.06), frame_t + Inches(0.06)
-    inner_w, inner_h = frame_w - Inches(0.12), frame_h - Inches(0.12)
+    frame_l, frame_t = Inches(0.32), Inches(1.26)
+    frame_w, frame_h = Inches(9.05), Inches(5.76)
+    add_round(s, frame_l, frame_t, frame_w, frame_h, RGBColor(0xCB, 0xD5, 0xE1), adj=0.025)
+    inner_l, inner_t = frame_l + Inches(0.05), frame_t + Inches(0.05)
+    inner_w, inner_h = frame_w - Inches(0.1), frame_h - Inches(0.1)
 
-    # Sidebar
-    side_w = Inches(2.55)
+    side_w = Inches(2.62)
     add_rect(s, inner_l, inner_t, side_w, inner_h, WHITE)
-    add_rect(s, inner_l + side_w, inner_t, Inches(0.015), inner_h, LINE)
+    add_rect(s, inner_l + side_w, inner_t, Inches(0.012), inner_h, LINE)
 
-    maybe_emblem(s, inner_l + Inches(0.12), inner_t + Inches(0.12), Inches(0.38))
-    add_text_box(s, inner_l + Inches(0.55), inner_t + Inches(0.1), Inches(1.9), Inches(0.22), "manage", size=12, bold=True, color=NAVY)
-    add_text_box(s, inner_l + Inches(0.55), inner_t + Inches(0.3), Inches(1.9), Inches(0.2), "дотоод систем", size=9, color=MUTED)
-    add_rect(s, inner_l, inner_t + Inches(0.55), side_w, Inches(0.012), LINE)
+    maybe_emblem(s, inner_l + Inches(0.1), inner_t + Inches(0.1), Inches(0.36))
+    add_text_box(s, inner_l + Inches(0.52), inner_t + Inches(0.08), Inches(2.0), Inches(0.22), "manage", size=12, bold=True, color=NAVY)
+    add_text_box(s, inner_l + Inches(0.52), inner_t + Inches(0.28), Inches(2.0), Inches(0.18), "дотоод систем", size=9, color=MUTED)
+    add_rect(s, inner_l, inner_t + Inches(0.5), side_w, Inches(0.01), LINE)
 
     groups = [
         ("САМБАР", [("Албан хаагчийн самбар", True)]),
-        ("ХОЛБООСОН СИСТЕМҮҮД", [("Төрийн ERP", False)]),
+        ("ХОЛБООСОН СИСТЕМҮҮД", [("Төрийн ERP", False), ("Шилэн данс", False)]),
         ("АЖЛЫН УДИРДЛАГА", [("Үүрэг даалгавар", False), ("Ажлын хэсэг", False), ("Төлөвлөгөө", False)]),
-        ("БИЧИГ ХЭРЭГ", [("Захирамж, тушаал", False), ("Архив", False)]),
+        ("БИЧИГ ХЭРЭГ", [("Захирамж, тушаал", False)]),
         ("ХҮНИЙ НӨӨЦ", [("Утасны жагсаалт", False), ("Чөлөөний бүртгэл", False)]),
         ("МЭДЭЭЛЭЛ, СУРГАЛТ", [("Гарын авлага, сургалт", False)]),
     ]
-    y = inner_t + Inches(0.62)
-    ix = inner_l + Inches(0.1)
-    iw = side_w - Inches(0.2)
+    y = inner_t + Inches(0.56)
+    ix = inner_l + Inches(0.08)
+    iw = side_w - Inches(0.16)
     for gname, items in groups:
-        add_text_box(s, ix, y, iw, Inches(0.18), gname, size=8, bold=True, color=MUTED)
-        y += Inches(0.18)
+        add_text_box(s, ix, y, iw, Inches(0.16), gname, size=7, bold=True, color=MUTED)
+        y += Inches(0.16)
         for label, active in items:
             _sidebar_item(s, ix, y, iw, label, active=active)
-            y += Inches(0.26)
+            y += Inches(0.3)
         y += Inches(0.02)
 
-    add_rect(s, inner_l, inner_t + inner_h - Inches(0.7), side_w, Inches(0.012), LINE)
-    add_text_box(s, ix, inner_t + inner_h - Inches(0.62), iw, Inches(0.22), "Сан", size=10, color=SLATE)
-    add_text_box(s, ix, inner_t + inner_h - Inches(0.4), iw, Inches(0.22), "Хандах эрх", size=10, color=SLATE)
-    add_text_box(s, ix, inner_t + inner_h - Inches(0.2), iw, Inches(0.18), "Системийн тохиргоо", size=9, color=MUTED)
+    add_rect(s, inner_l, inner_t + inner_h - Inches(0.62), side_w, Inches(0.01), LINE)
+    add_text_box(s, ix, inner_t + inner_h - Inches(0.56), iw, Inches(0.2), "Сан", size=10, color=SLATE)
+    add_text_box(s, ix, inner_t + inner_h - Inches(0.36), iw, Inches(0.2), "Хандах эрх", size=10, color=SLATE)
+    add_text_box(s, ix, inner_t + inner_h - Inches(0.18), iw, Inches(0.16), "Системийн тохиргоо", size=9, color=MUTED)
 
-    # Header + content
     main_l = inner_l + side_w
     main_w = inner_w - side_w
-    add_rect(s, main_l, inner_t, main_w, Inches(0.52), WHITE)
-    add_rect(s, main_l, inner_t + Inches(0.52), main_w, Inches(0.012), LINE)
-    add_text_box(s, main_l + Inches(0.18), inner_t + Inches(0.12), Inches(3.6), Inches(0.32), "Албан хаагчийн самбар", size=13, bold=True, color=NAVY)
+    add_rect(s, main_l, inner_t, main_w, Inches(0.5), WHITE)
+    add_rect(s, main_l, inner_t + Inches(0.5), main_w, Inches(0.01), LINE)
+    add_text_box(s, main_l + Inches(0.16), inner_t + Inches(0.1), Inches(4.0), Inches(0.3), "Албан хаагчийн самбар", size=13, bold=True, color=NAVY)
 
-    # Header right: QR / bell / user
-    ux = main_l + main_w - Inches(1.85)
-    add_round(s, ux, inner_t + Inches(0.1), Inches(1.7), Inches(0.32), LIGHT, LINE, adj=0.2)
-    add_round(s, ux + Inches(0.06), inner_t + Inches(0.14), Inches(0.24), Inches(0.24), NAVY, adj=0.5)
-    add_text_box(s, ux + Inches(0.34), inner_t + Inches(0.12), Inches(1.3), Inches(0.26), "А.Номин", size=10, bold=True, color=NAVY)
+    ux = main_l + main_w - Inches(1.78)
+    add_round(s, ux, inner_t + Inches(0.09), Inches(1.62), Inches(0.32), LIGHT, LINE, adj=0.2)
+    add_round(s, ux + Inches(0.06), inner_t + Inches(0.13), Inches(0.24), Inches(0.24), NAVY, adj=0.5)
+    add_text_box(s, ux + Inches(0.34), inner_t + Inches(0.11), Inches(1.22), Inches(0.26), "А.Номин", size=10, bold=True, color=NAVY)
 
-    add_rect(s, main_l, inner_t + Inches(0.532), main_w, inner_h - Inches(0.532), RGBColor(0xF8, 0xFA, 0xFC))
-    add_text_box(s, main_l + Inches(0.2), inner_t + Inches(0.64), Inches(5.8), Inches(0.28), "Хэлтэс  ·  Албан хаагчийн товч үзүүлэлт, явц.", size=11, color=MUTED)
+    add_rect(s, main_l, inner_t + Inches(0.51), main_w, inner_h - Inches(0.51), RGBColor(0xF8, 0xFA, 0xFC))
+    add_text_box(s, main_l + Inches(0.18), inner_t + Inches(0.6), Inches(5.9), Inches(0.26), "Засаг даргын Тамгын газар", size=13, bold=True, color=NAVY)
+    add_text_box(s, main_l + Inches(0.18), inner_t + Inches(0.86), Inches(5.9), Inches(0.22), "Албан хаагчийн товч үзүүлэлт, явц.", size=11, color=MUTED)
 
-    # Mini 5 cards in content
     card_specs = [
         ("Чөлөө", "3", RGBColor(0xFF, 0xFB, 0xEB), RGBColor(0xB4, 0x53, 0x09), AMBER),
         ("Томилолт", "1", RGBColor(0xF0, 0xF9, 0xFF), RGBColor(0x03, 0x69, 0xA1), SKY),
@@ -317,182 +303,167 @@ def slide_chrome(prs):
         ("Ажлын хэсэг", "4", RGBColor(0xF5, 0xF3, 0xFF), RGBColor(0x6D, 0x28, 0xD9), VIOLET),
         ("Үүрэг %", "68%", RGBColor(0xF8, 0xFA, 0xFC), RGBColor(0x33, 0x41, 0x55), MUTED),
     ]
-    cw = Inches(1.12)
+    cw = Inches(1.14)
     for i, (lab, val, bg, fg, dot) in enumerate(card_specs):
-        cx = main_l + Inches(0.18) + i * Inches(1.22)
-        cy = inner_t + Inches(1.05)
-        add_round(s, cx, cy, cw, Inches(0.95), bg, LINE, adj=0.1)
+        cx = main_l + Inches(0.16) + i * Inches(1.22)
+        cy = inner_t + Inches(1.18)
+        add_round(s, cx, cy, cw, Inches(0.92), bg, LINE, adj=0.1)
         add_round(s, cx + cw - Inches(0.18), cy + Inches(0.1), Inches(0.1), Inches(0.1), dot, adj=0.5)
-        add_text_box(s, cx + Inches(0.08), cy + Inches(0.12), cw - Inches(0.16), Inches(0.28), lab, size=9, bold=True, color=fg)
-        add_text_box(s, cx + Inches(0.08), cy + Inches(0.42), cw - Inches(0.16), Inches(0.4), val, size=16, bold=True, color=fg)
+        add_text_box(s, cx + Inches(0.08), cy + Inches(0.1), cw - Inches(0.16), Inches(0.24), lab, size=9, bold=True, color=fg)
+        add_text_box(s, cx + Inches(0.08), cy + Inches(0.4), cw - Inches(0.16), Inches(0.4), val, size=16, bold=True, color=fg)
 
-    add_round(s, main_l + Inches(0.18), inner_t + Inches(2.2), main_w - Inches(0.36), Inches(2.85), WHITE, LINE, adj=0.04)
-    add_text_box(
-        s, main_l + Inches(0.32), inner_t + Inches(2.32), main_w - Inches(0.6), Inches(2.55),
-        "Ажлын хэсэг — энд хуудасны агуулга орно.\n"
-        "Зүүн цэсээр бүх модуль руу орно. Цэс эрхээс хамаарна.\n\n"
+    add_round(s, main_l + Inches(0.16), inner_t + Inches(2.26), main_w - Inches(0.32), Inches(3.1), WHITE, LINE, adj=0.04)
+    add_text_box(s, main_l + Inches(0.32), inner_t + Inches(2.4), main_w - Inches(0.6), Inches(0.28), "Зүүн цэсээр бүх хуудас руу орно", size=13, bold=True, color=NAVY)
+    add_lines(s, main_l + Inches(0.32), inner_t + Inches(2.74), main_w - Inches(0.6), Inches(2.4), [
+        "Цэс эрхээс хамаарна — хаасан цэс харагдахгүй.",
         "Толгой: хуудасны нэр · QR уншигч · мэдэгдэл · апп суулгах · хэрэглэгч.",
-        size=12, color=SLATE,
-    )
+        "Цэсийг компьютераар хурааж болно.",
+        "«Үүрэг даалгавар» — Ажлын удирдлага бүлэгт.",
+        "Эхний хуудас — Албан хаагчийн самбар.",
+    ], size=12, color=SLATE, spacing=6)
 
-    # Right callouts
-    add_round(s, Inches(9.5), Inches(1.28), Inches(3.48), Inches(2.55), WHITE, LINE, adj=0.05)
-    add_rect(s, Inches(9.5), Inches(1.28), Inches(0.1), Inches(2.55), NAVY)
-    add_text_box(s, Inches(9.75), Inches(1.4), Inches(3.1), Inches(0.32), "Компьютер", size=14, bold=True, color=NAVY)
-    add_lines(s, Inches(9.75), Inches(1.75), Inches(3.1), Inches(1.9), [
-        "Зүүн цэс байнга харагдана (хурааж болно).",
-        "Бүлэг: Самбар → Холбосон системүүд → Ажлын удирдлага → Бичиг хэрэг → Хүний нөөц.",
+    add_round(s, Inches(9.55), Inches(1.26), Inches(3.42), Inches(2.7), WHITE, LINE, adj=0.05)
+    add_rect(s, Inches(9.55), Inches(1.26), Inches(0.1), Inches(2.7), NAVY)
+    add_text_box(s, Inches(9.8), Inches(1.38), Inches(3.0), Inches(0.3), "Компьютер", size=14, bold=True, color=NAVY)
+    add_lines(s, Inches(9.8), Inches(1.74), Inches(3.0), Inches(2.05), [
+        "Зүүн цэс байнга харагдана.",
+        "Дараалал: Самбар → Холбосон системүүд → Ажлын удирдлага → Бичиг хэрэг → Хүний нөөц.",
         "Доор: Сан, Хандах эрх, тохиргоо.",
-    ], size=11, color=SLATE, spacing=5)
+    ], size=12, color=SLATE, spacing=5)
 
-    add_round(s, Inches(9.5), Inches(4.0), Inches(3.48), Inches(3.0), WHITE, LINE, adj=0.05)
-    add_rect(s, Inches(9.5), Inches(4.0), Inches(0.1), Inches(3.0), ORANGE)
-    add_text_box(s, Inches(9.75), Inches(4.12), Inches(3.1), Inches(0.32), "Утас / PWA", size=14, bold=True, color=NAVY)
-    add_lines(s, Inches(9.75), Inches(4.48), Inches(3.1), Inches(2.35), [
+    add_round(s, Inches(9.55), Inches(4.12), Inches(3.42), Inches(2.9), WHITE, LINE, adj=0.05)
+    add_rect(s, Inches(9.55), Inches(4.12), Inches(0.1), Inches(2.9), ORANGE)
+    add_text_box(s, Inches(9.8), Inches(4.24), Inches(3.0), Inches(0.3), "Утас / PWA", size=14, bold=True, color=NAVY)
+    add_lines(s, Inches(9.8), Inches(4.58), Inches(3.0), Inches(2.25), [
         "Цэс товчоор зүүн цэс нээгдэнэ.",
-        "Chrome/Android: апп болгон суулгана.",
+        "Android: Chrome → апп болгон суулгана.",
         "iPhone: Safari → «Нүүр дэлгэцэд нэмэх».",
         "Апп горимд хөтчийн хаяг харагдахгүй.",
-    ], size=11, color=SLATE, spacing=5)
+    ], size=12, color=SLATE, spacing=5)
 
     footer(s, 2)
 
 
-# ── Slide 3 ──────────────────────────────────────────────────────────────────
-
 def _dash_card(slide, l, t, w, h, label, value, hint, bg, fg, dot):
     add_round(slide, l, t, w, h, bg, RGBColor(0xD6, 0xD3, 0xD1), adj=0.08)
-    add_round(slide, l + w - Inches(0.28), t + Inches(0.16), Inches(0.14), Inches(0.14), dot, adj=0.5)
-    add_text_box(slide, l + Inches(0.14), t + Inches(0.12), w - Inches(0.42), Inches(0.42), label, size=11, bold=True, color=fg)
-    add_text_box(slide, l + Inches(0.14), t + Inches(0.52), w - Inches(0.28), Inches(0.42), value, size=22, bold=True, color=fg)
-    add_text_box(slide, l + Inches(0.14), t + Inches(0.98), w - Inches(0.28), Inches(0.28), hint, size=10, color=fg)
+    add_round(slide, l + w - Inches(0.28), t + Inches(0.14), Inches(0.14), Inches(0.14), dot, adj=0.5)
+    add_text_box(slide, l + Inches(0.12), t + Inches(0.1), w - Inches(0.4), Inches(0.4), label, size=11, bold=True, color=fg)
+    add_text_box(slide, l + Inches(0.12), t + Inches(0.5), w - Inches(0.24), Inches(0.4), value, size=22, bold=True, color=fg)
+    if hint:
+        add_text_box(slide, l + Inches(0.12), t + Inches(0.96), w - Inches(0.24), Inches(0.26), hint, size=10, color=fg)
 
 
 def slide_dashboard(prs):
     s = prs.slides.add_slide(prs.slide_layouts[6])
     add_rect(s, 0, 0, W, H, LIGHT)
-    header_bar(s, "Албан хаагчийн самбар", "Нэвтэрсний дараах эхний хуудас  ·  хэлтсийн товч үзүүлэлт")
+    header_bar(s, "Албан хаагчийн самбар", "Нэвтэрсний дараах эхний хуудас  ·  зүүн цэс: Самбар → Албан хаагчийн самбар")
 
     cards = [
         ("Хүлээгдэж буй чөлөө", "3", "Дэлгэрэнгүй харах", RGBColor(0xFF, 0xFB, 0xEB), RGBColor(0xB4, 0x53, 0x09), AMBER),
         ("Идэвхтэй томилолт", "1", "Дэлгэрэнгүй харах", RGBColor(0xF0, 0xF9, 0xFF), RGBColor(0x03, 0x69, 0xA1), SKY),
         ("Идэвхтэй төлөвлөгөө", "2", "Дэлгэрэнгүй харах", RGBColor(0xEC, 0xFD, 0xF5), RGBColor(0x04, 0x78, 0x57), EMERALD),
         ("Ажлын хэсэг", "4", "Дэлгэрэнгүй харах", RGBColor(0xF5, 0xF3, 0xFF), RGBColor(0x6D, 0x28, 0xD9), VIOLET),
-        ("Үүргийн дундаж", "68%", "Зөвхөн харуулна", RGBColor(0xF8, 0xFA, 0xFC), RGBColor(0x33, 0x41, 0x55), MUTED),
+        ("Үүргийн дундаж", "68%", "", RGBColor(0xF8, 0xFA, 0xFC), RGBColor(0x33, 0x41, 0x55), MUTED),
     ]
     gap = Inches(0.14)
     card_w = Inches(2.42)
     x0 = Inches(0.4)
     for i, (lab, val, hint, bg, fg, dot) in enumerate(cards):
-        _dash_card(s, x0 + i * (card_w + gap), Inches(1.32), card_w, Inches(1.38), lab, val, hint, bg, fg, dot)
+        _dash_card(s, x0 + i * (card_w + gap), Inches(1.28), card_w, Inches(1.32), lab, val, hint, bg, fg, dot)
 
-    # Selected panel (leaves)
-    add_round(s, Inches(0.4), Inches(2.88), Inches(8.35), Inches(4.12), WHITE, LINE, adj=0.04)
-    add_text_box(s, Inches(0.6), Inches(3.02), Inches(5.8), Inches(0.32), "Сүүлийн чөлөө", size=15, bold=True, color=NAVY)
-    add_text_box(s, Inches(7.35), Inches(3.04), Inches(1.15), Inches(0.3), "Бүгд →", size=13, bold=True, color=NAVY2, align=PP_ALIGN.RIGHT)
+    add_round(s, Inches(0.4), Inches(2.78), Inches(8.4), Inches(4.22), WHITE, LINE, adj=0.04)
+    add_text_box(s, Inches(0.58), Inches(2.9), Inches(6.2), Inches(0.32), "Сүүлийн чөлөө", size=15, bold=True, color=NAVY)
+    add_text_box(s, Inches(7.15), Inches(2.92), Inches(1.4), Inches(0.3), "Бүгд", size=13, bold=True, color=NAVY2, align=PP_ALIGN.RIGHT)
 
     rows = [
         ("Б.Бат", "Ээлжийн амралт", "хүлээгдэж буй"),
         ("Д.Саран", "Өвчний чөлөө", "хүлээгдэж буй"),
         ("Г.Эрдэнэ", "Цалинтай чөлөө", "батлагдсан"),
     ]
-    y = Inches(3.48)
+    y = Inches(3.36)
     for name, typ, st in rows:
-        add_rect(s, Inches(0.6), y + Inches(0.52), Inches(7.95), Inches(0.012), LINE)
-        add_text_box(s, Inches(0.6), y, Inches(5.4), Inches(0.32), f"{name}  ·  {typ}", size=13, color=DARK)
-        add_text_box(s, Inches(6.1), y, Inches(2.4), Inches(0.32), st, size=12, color=MUTED, align=PP_ALIGN.RIGHT)
-        y += Inches(0.58)
+        add_rect(s, Inches(0.58), y + Inches(0.5), Inches(8.04), Inches(0.01), LINE)
+        add_text_box(s, Inches(0.58), y, Inches(5.5), Inches(0.3), f"{name}  ·  {typ}", size=13, color=DARK)
+        add_text_box(s, Inches(6.2), y, Inches(2.4), Inches(0.3), st, size=12, color=MUTED, align=PP_ALIGN.RIGHT)
+        y += Inches(0.56)
 
-    add_text_box(
-        s, Inches(0.6), Inches(5.5), Inches(7.95), Inches(1.2),
-        "Карт дээр дарахад доор сүүлийн бүртгэл нээгдэнэ. «Бүгд» дарвал тухайн бүртгэлийн хуудас руу орно.\n"
-        "Дахин дарахад хаагдана. Үүргийн дундаж карт нээгдэхгүй — зөвхөн хувь харуулна.",
-        size=13, color=SLATE,
-    )
+    add_round(s, Inches(0.58), Inches(5.2), Inches(8.04), Inches(1.58), RGBColor(0xF8, 0xFA, 0xFC), LINE, adj=0.06)
+    add_lines(s, Inches(0.74), Inches(5.32), Inches(7.72), Inches(1.36), [
+        "1.  Карт дээр дарна → доор сүүлийн бүртгэл нээгдэнэ.",
+        "2.  «Бүгд» → тухайн бүртгэлийн хуудас руу орно.",
+        "3.  Дахин дарахад самбар хаагдана.",
+        "4.  Үүргийн дундаж нээгдэхгүй — зөвхөн хувь харуулна.",
+    ], size=13, color=SLATE, spacing=4)
 
-    # How-to
-    add_round(s, Inches(8.95), Inches(2.88), Inches(3.98), Inches(4.12), WHITE, LINE, adj=0.04)
-    add_rect(s, Inches(8.95), Inches(2.88), Inches(0.1), Inches(4.12), ORANGE)
-    add_text_box(s, Inches(9.22), Inches(3.04), Inches(3.5), Inches(0.32), "Юу харна вэ", size=15, bold=True, color=NAVY)
-    add_lines(s, Inches(9.22), Inches(3.42), Inches(3.5), Inches(3.35), [
-        "1.  Чөлөө — хүлээгдэж буй тоо.",
-        "2.  Томилолт — идэвхтэй явц.",
-        "3.  Төлөвлөгөө — нээлттэй төлөвлөгөө.",
-        "4.  Ажлын хэсэг — багийн тоо, явц %.",
-        "5.  Үүргийн дундаж — бүх үүргийн %.",
+    add_round(s, Inches(8.98), Inches(2.78), Inches(3.95), Inches(4.22), WHITE, LINE, adj=0.04)
+    add_rect(s, Inches(8.98), Inches(2.78), Inches(0.1), Inches(4.22), ORANGE)
+    add_text_box(s, Inches(9.24), Inches(2.94), Inches(3.5), Inches(0.32), "Таван карт", size=15, bold=True, color=NAVY)
+    add_lines(s, Inches(9.24), Inches(3.36), Inches(3.5), Inches(3.4), [
+        "Чөлөө — хүлээгдэж буй тоо.",
+        "Томилолт — идэвхтэй явц.",
+        "Төлөвлөгөө — нээлттэй төлөвлөгөө.",
+        "Ажлын хэсэг — багийн тоо.",
+        "Үүргийн дундаж — бүх үүргийн %.",
         "",
-        "Өдөр тутмын тоймоо эндээс авна. Цэс хайх шаардлагагүй.",
-    ], size=12, color=SLATE, spacing=6)
+        "Өдөр тутмын тоймоо эндээс авна.",
+    ], size=13, color=SLATE, spacing=6)
 
     footer(s, 3)
 
 
-# ── Slide 4 ──────────────────────────────────────────────────────────────────
-
 def slide_tasks(prs):
     s = prs.slides.add_slide(prs.slide_layouts[6])
     add_rect(s, 0, 0, W, H, LIGHT)
-    header_bar(s, "Үүрэг даалгавар", "Хүснэгтээр шууд засна  ·  Word оруулах / татах  ·  хэрэгжилтийн %")
+    header_bar(s, "Үүрэг даалгавар", "Зүүн цэс: Ажлын удирдлага → Үүрэг даалгавар   ·   нүд дээр дарж шууд засна")
 
-    # Action chips
     actions = [
-        ("Word оруулах", NAVY, WHITE),
-        ("Татах  ▾", WHITE, NAVY),
-        ("Үүрэг чиглэл нэмэх", ORANGE, WHITE),
+        ("Word оруулах", NAVY, WHITE, Inches(1.85)),
+        ("Татах  ▾", WHITE, NAVY, Inches(1.45)),
+        ("Үүрэг чиглэл нэмэх", ORANGE, WHITE, Inches(2.2)),
     ]
     ax = Inches(0.4)
-    for label, bg, fg in actions:
-        w = Inches(2.05 if "Хэсэг" in label or "чиглэл" in label else 1.75)
-        add_round(s, ax, Inches(1.26), w, Inches(0.38), bg, LINE if bg == WHITE else None, adj=0.15)
-        add_text_box(s, ax, Inches(1.3), w, Inches(0.32), label, size=11, bold=True, color=fg, align=PP_ALIGN.CENTER)
-        ax += w + Inches(0.12)
+    for label, bg, fg, bw in actions:
+        add_round(s, ax, Inches(1.24), bw, Inches(0.36), bg, LINE if bg == WHITE else None, adj=0.15)
+        add_text_box(s, ax, Inches(1.27), bw, Inches(0.3), label, size=11, bold=True, color=fg, align=PP_ALIGN.CENTER)
+        ax += bw + Inches(0.1)
+    add_text_box(s, Inches(8.4), Inches(1.26), Inches(4.5), Inches(0.32), "Татах: Word · Excel · PDF", size=12, color=MUTED)
 
-    add_text_box(
-        s, Inches(8.55), Inches(1.28), Inches(4.4), Inches(0.36),
-        "Татах: Word · Excel · PDF",
-        size=12, color=MUTED,
-    )
+    add_round(s, Inches(0.4), Inches(1.7), Inches(12.55), Inches(0.46), WHITE, LINE, adj=0.08)
+    add_round(s, Inches(0.48), Inches(1.76), Inches(2.2), Inches(0.34), NAVY, adj=0.12)
+    add_text_box(s, Inches(0.48), Inches(1.8), Inches(2.2), Inches(0.28), "Үүрэг чиглэл", size=12, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
+    add_text_box(s, Inches(2.82), Inches(1.8), Inches(4.7), Inches(0.28), "Бэлтгэл ажил хангах төлөвлөгөө", size=12, color=SLATE)
+    add_text_box(s, Inches(7.7), Inches(1.8), Inches(2.4), Inches(0.28), "+ Хэсэг нэмэх", size=12, bold=True, color=NAVY2)
 
-    # Tabs
-    add_round(s, Inches(0.4), Inches(1.78), Inches(12.55), Inches(0.5), WHITE, LINE, adj=0.08)
-    add_round(s, Inches(0.48), Inches(1.84), Inches(2.35), Inches(0.38), NAVY, adj=0.12)
-    add_text_box(s, Inches(0.48), Inches(1.88), Inches(2.35), Inches(0.3), "Үүрэг чиглэл", size=12, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
-    add_text_box(s, Inches(2.95), Inches(1.88), Inches(4.6), Inches(0.3), "Бэлтгэл ажил хангах төлөвлөгөө", size=12, color=SLATE)
-    add_text_box(s, Inches(7.7), Inches(1.88), Inches(2.4), Inches(0.3), "+ Хэсэг нэмэх", size=12, bold=True, color=NAVY2)
+    add_round(s, Inches(0.4), Inches(2.28), Inches(12.55), Inches(0.7), WHITE, LINE, adj=0.06)
+    add_round(s, Inches(0.55), Inches(2.4), Inches(0.44), Inches(0.44), NAVY_SOFT, adj=0.15)
+    add_text_box(s, Inches(1.1), Inches(2.34), Inches(4.4), Inches(0.26), "Хэрэгжилтийн дашбоард", size=13, bold=True, color=NAVY)
+    add_text_box(s, Inches(1.1), Inches(2.58), Inches(4.4), Inches(0.28), "Дарж дэлгэрэнгүй графикаар харна    Нийт 12   Дууссан 5   Эхлээгүй 3", size=11, color=SLATE)
+    add_text_box(s, Inches(11.2), Inches(2.38), Inches(1.55), Inches(0.42), "62%", size=22, bold=True, color=NAVY, align=PP_ALIGN.RIGHT)
+    add_round(s, Inches(5.7), Inches(2.56), Inches(5.35), Inches(0.14), RGBColor(0xE2, 0xE8, 0xF0), adj=0.5)
+    add_round(s, Inches(5.7), Inches(2.56), Inches(3.3), Inches(0.14), EMERALD, adj=0.5)
 
-    # Implementation dashboard bar
-    add_round(s, Inches(0.4), Inches(2.4), Inches(12.55), Inches(0.72), WHITE, LINE, adj=0.06)
-    add_text_box(s, Inches(0.58), Inches(2.46), Inches(3.6), Inches(0.26), "Хэрэгжилтийн дашбоард", size=12, bold=True, color=NAVY)
-    add_text_box(s, Inches(0.58), Inches(2.7), Inches(3.6), Inches(0.28), "Нийт  12    Дууссан  5    Эхлээгүй  3", size=11, color=SLATE)
-    add_text_box(s, Inches(11.35), Inches(2.5), Inches(1.4), Inches(0.42), "62%", size=22, bold=True, color=NAVY, align=PP_ALIGN.RIGHT)
-    add_round(s, Inches(4.35), Inches(2.68), Inches(6.85), Inches(0.16), RGBColor(0xE2, 0xE8, 0xF0), adj=0.5)
-    add_round(s, Inches(4.35), Inches(2.68), Inches(4.25), Inches(0.16), EMERALD, adj=0.5)
-
-    # Table
     cols = [
-        (Inches(0.45), "№"),
-        (Inches(3.55), "Үүрэг чиглэл"),
-        (Inches(2.35), "Хариуцах эзэн"),
-        (Inches(2.55), "Хяналт тавих албан тушаалтан"),
+        (Inches(0.5), "№"),
+        (Inches(3.4), "Үүрэг чиглэл"),
+        (Inches(2.3), "Хариуцах эзэн"),
+        (Inches(2.7), "Хяналт тавих албан тушаалтан"),
         (Inches(2.15), "Хэрэгжилт"),
-        (Inches(1.5), "Биелэлт"),
+        (Inches(1.5), "Биелэлтийн хувь"),
     ]
-    tx, ty = Inches(0.4), Inches(3.26)
-    th = Inches(0.36)
-    # header
+    tx, ty = Inches(0.4), Inches(3.12)
+    th = Inches(0.34)
     x = tx
     for w, lab in cols:
-        add_rect(s, x, ty, w, th, NAVY)
-        add_text_box(s, x + Inches(0.06), ty + Inches(0.05), w - Inches(0.1), Inches(0.28), lab, size=10, bold=True, color=WHITE)
+        add_rect(s, x, ty, w, th, NAVY_SOFT, LINE)
+        add_text_box(s, x + Inches(0.05), ty + Inches(0.04), w - Inches(0.08), Inches(0.26), lab, size=9, bold=True, color=NAVY700)
         x += w
 
     data = [
         ("1", "Зудын эсрэг бэлтгэл хангах", "А.Номин", "Хэлтсийн дарга", "Хурлын шийдвэр гарсан", "80%"),
         ("2", "Сумдын тайлан нэгтгэх", "А.Бадрал / Ц.Саран", "Дэд дарга", "Цуглуулж байна", "45%"),
         ("3", "Сургалтын хуваарь батлуулах", "Б.Эрдэнэ", "Хэлтсийн дарга", "Эхлээгүй", "0%"),
-        ("4", "Хэвлэлийн мэдээ бэлтгэх", "Д.Мөнх", "Хэлтсийн дарга", "Ноорог бэлэн", "70%"),
     ]
-    row_h = Inches(0.38)
+    row_h = Inches(0.4)
     for r, row in enumerate(data):
         y = ty + th + r * row_h
         bg = WHITE if r % 2 == 0 else LIGHT
@@ -500,23 +471,27 @@ def slide_tasks(prs):
         for i, (w, _) in enumerate(cols):
             add_rect(s, x, y, w, row_h, bg, LINE)
             fg = EMERALD if i == 5 and row[i] not in ("0%", "45%") else (ORANGE if row[i] == "0%" else DARK)
-            add_text_box(s, x + Inches(0.06), y + Inches(0.05), w - Inches(0.1), Inches(0.28), row[i], size=11, bold=(i == 0 or i == 5), color=fg)
+            add_text_box(s, x + Inches(0.05), y + Inches(0.06), w - Inches(0.08), Inches(0.28), row[i], size=11, bold=(i in (0, 5)), color=fg)
             x += w
 
-    add_text_box(
-        s, Inches(0.4), Inches(5.55), Inches(12.55), Inches(1.45),
-        "Нүд дээр дарж шууд засна (SheetCell) — тусад нь «Хадгалах» дарахгүй. "
-        "Хариуцагч / хяналтыг утасны жагсаалтаас нэрээр сонгоно (олон хүн « / »-аар).\n"
-        "«+ Хэсэг нэмэх» — «Үүрэг чиглэл» эсвэл «Бэлтгэл ажил хангах төлөвлөгөө»-тэй ижил шинэ таб. "
-        "Төлөвлөгөөний хүснэгт: ажлын чиглэл, арга хэмжээ, хугацаа, хамтран хэрэгжүүлэх.\n"
-        "Хэрэгжилтийн дашбоард дээр дарвал нийт %, хэлтэс/хүнээр шүүсэн график нээгдэнэ.",
-        size=13, color=SLATE,
-    )
+    tips = [
+        ("Нүд засах", "Нүд дээр дарж шууд бичнэ. Тусдаа «Хадгалах» байхгүй."),
+        ("Хүн сонгох", "Хариуцагч / хяналтыг утасны жагсаалтаас нэрээр сонгоно."),
+        ("Хэсэг нэмэх", "«+ Хэсэг нэмэх» — шинэ таб. Загвар: Үүрэг чиглэл эсвэл Бэлтгэл ажил."),
+    ]
+    tw = Inches(4.1)
+    for i, (title, body) in enumerate(tips):
+        x = Inches(0.4) + i * (tw + Inches(0.12))
+        add_round(s, x, Inches(5.18), tw, Inches(1.82), WHITE, LINE, adj=0.06)
+        add_rect(s, x, Inches(5.18), Inches(0.1), Inches(1.82), ORANGE if i == 2 else NAVY)
+        add_text_box(s, x + Inches(0.22), Inches(5.28), tw - Inches(0.32), Inches(0.32), title, size=14, bold=True, color=NAVY)
+        add_text_box(s, x + Inches(0.22), Inches(5.62), tw - Inches(0.32), Inches(1.2), body, size=13, color=SLATE)
 
     footer(s, 4)
 
 
-def build():
+def build(out: Path | None = None):
+    path = out or OUT
     prs = Presentation()
     prs.slide_width = W
     prs.slide_height = H
@@ -524,8 +499,8 @@ def build():
     slide_chrome(prs)
     slide_dashboard(prs)
     slide_tasks(prs)
-    prs.save(OUT)
-    return OUT
+    prs.save(path)
+    return path
 
 
 def verify(path: Path):
@@ -535,6 +510,9 @@ def verify(path: Path):
         names = z.namelist()
         if "[Content_Types].xml" not in names or "ppt/presentation.xml" not in names:
             raise SystemExit("Not a valid PPTX zip")
+        media = [n for n in names if n.startswith("ppt/media/")]
+        if LOGIN_PNG.exists() and not media:
+            raise SystemExit("Expected embedded screenshot in PPTX")
     prs = Presentation(str(path))
     n = len(prs.slides)
     if n != TOTAL:
@@ -545,6 +523,12 @@ def verify(path: Path):
 
 
 if __name__ == "__main__":
-    out = build()
+    target = OUT
+    try:
+        out = build(target)
+    except PermissionError:
+        target = ROOT / "manage-dotood-sistem-surgalt.new.pptx"
+        out = build(target)
+        print(f"LOCKED — saved as {out}")
     verify(out)
     print(out)
