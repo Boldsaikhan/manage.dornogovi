@@ -39,6 +39,24 @@ const noticeClass = computed(() => ({
 
 const selectedId = ref(props.users[0]?.id ?? null);
 const selected = computed(() => props.users.find((u) => u.id === selectedId.value) || null);
+const userSearch = ref('');
+
+const filteredUsers = computed(() => {
+    const q = userSearch.value.trim().toLocaleLowerCase('mn');
+
+    if (! q) {
+        return props.users;
+    }
+
+    return props.users.filter((u) => {
+        const haystack = [u.name, u.email, u.phone, u.position, u.department]
+            .filter(Boolean)
+            .join(' ')
+            .toLocaleLowerCase('mn');
+
+        return haystack.includes(q);
+    });
+});
 
 const createForm = useForm({
     name: '',
@@ -285,13 +303,27 @@ const pickFromDirectory = (value) => {
 
         <div class="grid min-h-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[280px_1fr]">
             <aside class="ui-card flex max-h-[42vh] min-h-0 flex-col overflow-hidden lg:max-h-none">
-                <div class="shrink-0 border-b border-slate-100 px-4 py-3 text-sm font-bold text-brand-navy-800">
-                    Албан хаагчид
-                    <span class="ml-1 font-medium text-slate-400">{{ users.length }}</span>
+                <div class="shrink-0 space-y-2 border-b border-slate-100 px-3 py-3">
+                    <div class="px-1 text-sm font-bold text-brand-navy-800">
+                        Албан хаагчид
+                        <span class="ml-1 font-medium text-slate-400">
+                            {{ userSearch.trim() ? `${filteredUsers.length}/${users.length}` : users.length }}
+                        </span>
+                    </div>
+                    <input
+                        v-model="userSearch"
+                        type="search"
+                        class="ui-input !py-2 text-sm"
+                        placeholder="Нэр, и-мэйл, утсаар хайх…"
+                        autocomplete="off"
+                    />
                 </div>
                 <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                    <p v-if="!filteredUsers.length" class="px-4 py-8 text-center text-sm text-slate-400">
+                        Тохирох албан хаагч алга.
+                    </p>
                     <button
-                        v-for="u in users"
+                        v-for="u in filteredUsers"
                         :key="u.id"
                         type="button"
                         class="flex w-full flex-col border-b border-slate-50 px-4 py-3 text-left text-sm transition hover:bg-brand-navy-50"
