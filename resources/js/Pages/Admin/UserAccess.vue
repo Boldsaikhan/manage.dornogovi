@@ -40,6 +40,8 @@ const noticeClass = computed(() => ({
 const selectedId = ref(props.users[0]?.id ?? null);
 const selected = computed(() => props.users.find((u) => u.id === selectedId.value) || null);
 const userSearch = ref('');
+/** employee = албан хаагчийн эрх | templates = ролийн загвар */
+const panelMode = ref('employee');
 
 const filteredUsers = computed(() => {
     const q = userSearch.value.trim().toLocaleLowerCase('mn');
@@ -105,6 +107,7 @@ watch(() => props.users, () => {
 
 const selectUser = (id) => {
     selectedId.value = id;
+    panelMode.value = 'employee';
     loadSelected();
 };
 
@@ -419,6 +422,26 @@ const pickFromDirectory = (value) => {
             </aside>
 
             <div class="min-h-0 space-y-4 overflow-y-auto overscroll-contain">
+                <div class="ui-pill-row shrink-0">
+                    <button
+                        type="button"
+                        class="rounded-full px-4 py-2 text-sm font-semibold transition"
+                        :class="panelMode === 'employee' ? 'bg-brand-navy-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                        @click="panelMode = 'employee'"
+                    >
+                        Албан хаагчийн эрх
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-full px-4 py-2 text-sm font-semibold transition"
+                        :class="panelMode === 'templates' ? 'bg-brand-navy-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                        @click="panelMode = 'templates'"
+                    >
+                        Ролийн загвар
+                    </button>
+                </div>
+
+                <template v-if="panelMode === 'employee'">
                 <section class="ui-card-pad space-y-3">
                     <h3 class="ui-title text-base">Хэлтсийн албан хаагчид</h3>
                     <p class="text-xs text-slate-500">
@@ -474,7 +497,8 @@ const pickFromDirectory = (value) => {
                     </div>
                     <div class="space-y-2">
                         <p class="text-xs text-slate-500">
-                            Доорх «… загвар хэрэглэх» товчоор ролийн эрхийг онооно. Дараа нь модуль тус бүрд гараар засаж болно.
+                            Ролийн загвар сонгоод эрхийг онооно. Шаардлагатай бол доорх модуль тус бүрд гараар засана.
+                            Загварыг өөрчлөх бол дээрх «Ролийн загвар» таб руу орно.
                         </p>
                         <div class="flex flex-wrap gap-2">
                             <button
@@ -485,7 +509,7 @@ const pickFromDirectory = (value) => {
                                 :class="draftRoleHint === r.label ? '!border-brand-navy-400 !bg-brand-navy-50 !text-brand-navy-800' : ''"
                                 @click="applyRoleToUser(r.key)"
                             >
-                                {{ r.label }} загвар хэрэглэх
+                                {{ r.label }}
                             </button>
                         </div>
                     </div>
@@ -523,12 +547,45 @@ const pickFromDirectory = (value) => {
                     <button class="ui-btn-primary">Хадгалах</button>
                 </form>
 
-                <section class="ui-card-pad space-y-3">
+                <form class="ui-card space-y-3 border-dashed p-5" @submit.prevent="createUser">
+                    <h3 class="ui-title text-base">Шинэ албан хаагч</h3>
+                    <p class="text-xs text-slate-500">
+                        Утасны жагсаалтад бүртгэлтэй албан хаагчийг сонгоод нэвтрэх эрх өгнө.
+                    </p>
+                    <div class="grid gap-3 md:grid-cols-2">
+                        <div class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50/60 p-2">
+                            <label class="mb-1 block text-xs font-medium text-slate-600">Албан хаагч (утасны жагсаалт)</label>
+                            <SheetCell
+                                v-model="createForm.name"
+                                :editable="true"
+                                :options="people"
+                                placeholder="Нэрээр хайж сонгох…"
+                                @commit="pickFromDirectory"
+                            />
+                        </div>
+                        <input
+                            v-model="createForm.phone"
+                            placeholder="Утас (жагсаалтаас автоматаар)"
+                            class="ui-input"
+                        />
+                        <input v-model="createForm.position" placeholder="Албан тушаал" class="ui-input" />
+                        <input v-model="createForm.email" type="email" required placeholder="И-мэйл" class="ui-input" />
+                        <input v-model="createForm.password" type="password" required placeholder="Нууц үг" class="ui-input" />
+                    </div>
+                    <p v-if="createForm.errors.name" class="text-xs text-rose-600">{{ createForm.errors.name }}</p>
+                    <p v-if="createForm.errors.phone" class="text-xs text-rose-600">{{ createForm.errors.phone }}</p>
+                    <p v-if="createForm.errors.email" class="text-xs text-rose-600">{{ createForm.errors.email }}</p>
+                    <button class="ui-btn-accent" :disabled="createForm.processing || !createForm.name">Нэмэх</button>
+                </form>
+                </template>
+
+                <section v-else class="ui-card-pad space-y-3">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div>
                             <h3 class="ui-title text-base">Ролийн загвар</h3>
                             <p class="mt-0.5 text-xs text-slate-500">
                                 Түвшин тус бүрд ямар модульд ямар эрхтэй байхыг урьдчилан тодорхойлно.
+                                Загварыг хадгалсны дараа «Албан хаагчийн эрх» табаас хэрэглэнэ.
                             </p>
                         </div>
                         <div class="ui-pill-row">
@@ -616,9 +673,9 @@ const pickFromDirectory = (value) => {
                             v-if="selected && activeRole"
                             type="button"
                             class="ui-btn-ghost"
-                            @click="applyRoleToUser(activeRole.key)"
+                            @click="applyRoleToUser(activeRole.key); panelMode = 'employee'"
                         >
-                            «{{ selected.name }}»-д хэрэглэх
+                            «{{ selected.name }}»-д хэрэглээд буцах
                         </button>
                         <button
                             v-if="activeRole && ! activeRole.is_system"
@@ -630,37 +687,6 @@ const pickFromDirectory = (value) => {
                         </button>
                     </div>
                 </section>
-
-                <form class="ui-card space-y-3 border-dashed p-5" @submit.prevent="createUser">
-                    <h3 class="ui-title text-base">Шинэ албан хаагч</h3>
-                    <p class="text-xs text-slate-500">
-                        Утасны жагсаалтад бүртгэлтэй албан хаагчийг сонгоод нэвтрэх эрх өгнө.
-                    </p>
-                    <div class="grid gap-3 md:grid-cols-2">
-                        <div class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50/60 p-2">
-                            <label class="mb-1 block text-xs font-medium text-slate-600">Албан хаагч (утасны жагсаалт)</label>
-                            <SheetCell
-                                v-model="createForm.name"
-                                :editable="true"
-                                :options="people"
-                                placeholder="Нэрээр хайж сонгох…"
-                                @commit="pickFromDirectory"
-                            />
-                        </div>
-                        <input
-                            v-model="createForm.phone"
-                            placeholder="Утас (жагсаалтаас автоматаар)"
-                            class="ui-input"
-                        />
-                        <input v-model="createForm.position" placeholder="Албан тушаал" class="ui-input" />
-                        <input v-model="createForm.email" type="email" required placeholder="И-мэйл" class="ui-input" />
-                        <input v-model="createForm.password" type="password" required placeholder="Нууц үг" class="ui-input" />
-                    </div>
-                    <p v-if="createForm.errors.name" class="text-xs text-rose-600">{{ createForm.errors.name }}</p>
-                    <p v-if="createForm.errors.phone" class="text-xs text-rose-600">{{ createForm.errors.phone }}</p>
-                    <p v-if="createForm.errors.email" class="text-xs text-rose-600">{{ createForm.errors.email }}</p>
-                    <button class="ui-btn-accent" :disabled="createForm.processing || !createForm.name">Нэмэх</button>
-                </form>
             </div>
         </div>
         </div>
