@@ -72,7 +72,6 @@ class HandleInertiaRequests extends Middleware
             'moduleNav' => fn () => ModuleAccess::navFor($request->user()),
             'navBadges' => fn () => NavBadges::for($request->user()),
             'aiAssistant' => fn () => $this->aiAssistantMeta($request),
-            'systemsHubEnabled' => fn () => ModuleAccess::canView($request->user(), 'systems'),
             'webPush' => function () use ($request) {
                 if (! $request->user()) {
                     return ['enabled' => false, 'publicKey' => null];

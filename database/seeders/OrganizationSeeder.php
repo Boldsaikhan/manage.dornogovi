@@ -35,12 +35,9 @@ class OrganizationSeeder extends Seeder
             ]);
 
             foreach (ModuleAccess::definitions() as $module) {
-                if ($module['key'] === 'systems') {
-                    continue;
-                }
                 $admin->modulePermissions()->updateOrCreate(
                     ['module_key' => $module['key']],
-                    ['level' => 'manage']
+                    ['level' => 'manage'],
                 );
             }
         }

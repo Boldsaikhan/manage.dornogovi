@@ -65,7 +65,7 @@ class NavBadgesTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('dashboard'))
+            ->get(route('dept.dashboard'))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('navBadges.tasks', 1)

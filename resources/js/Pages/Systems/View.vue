@@ -94,10 +94,10 @@ const reload = () => {
                             Шинэ табд нээх
                         </a>
                         <Link
-                            :href="route('dashboard')"
+                            :href="route('dept.dashboard')"
                             class="rounded-md border border-brand-navy-200 px-4 py-1.5 text-sm font-medium text-brand-navy-700 hover:bg-brand-navy-50"
                         >
-                            Системүүд рүү буцах
+                            Самбар руу буцах
                         </Link>
                     </div>
                 </div>

@@ -17,7 +17,12 @@ class HomeRedirect
             return 'dept.dashboard';
         }
 
-        return 'dashboard';
+        // Fallback — самбар харагдахгүй бол үүрэг даалгавар эсвэл профайл.
+        if ($user && ModuleAccess::canView($user, 'tasks')) {
+            return 'tasks.index';
+        }
+
+        return 'profile.edit';
     }
 
     public static function path(?User $user = null): string

@@ -33,10 +33,8 @@ class SidebarGroupTest extends TestCase
         ]);
 
         $this->actingAs(User::factory()->create())
-            ->get(route('dashboard'))
+            ->get(route('dept.dashboard'))
             ->assertInertia(fn (AssertableInertia $page) => $page
-                // Дараалал нь sort_order/нэрээр тодорхойлогддог — бүлэглэлт нь
-                // хажуугийн цэсэнд хийгддэг тул зөвхөн тэмдэглэгээг шалгана.
                 ->has('nav', 2)
                 ->where('nav.0.name', 'Гадны систем')
                 ->where('nav.0.is_internal', false)

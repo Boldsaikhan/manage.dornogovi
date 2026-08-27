@@ -24,7 +24,7 @@ class ModuleMenuVisibilityTest extends TestCase
             ->assertForbidden();
 
         $this->actingAs($admin)
-            ->get(route('dashboard'))
+            ->get(route('dept.dashboard'))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->has('moduleNav')
