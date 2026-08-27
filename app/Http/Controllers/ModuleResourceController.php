@@ -84,7 +84,7 @@ class ModuleResourceController extends Controller
             'directory' => $this->directoryFor($config),
             'rows' => $rows,
             'rowActions' => $config['row_actions'] ?? [],
-            'canManage' => ModuleAccess::canManage($request->user(), $module),
+            'canManage' => ModuleAccess::canEdit($request->user(), $module),
             'storeUrl' => route('modules.store', $module),
             'destroyUrlTemplate' => url('/modules/'.$module).'/{id}',
         ]);
@@ -93,7 +93,7 @@ class ModuleResourceController extends Controller
     public function store(Request $request, string $module): RedirectResponse
     {
         $config = $this->configOrFail($module);
-        abort_unless(ModuleAccess::canManage($request->user(), $module), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), $module), 403);
 
         $config = $this->applyActiveScopeView($request, $config);
 
@@ -155,7 +155,7 @@ class ModuleResourceController extends Controller
     public function destroy(Request $request, string $module, int $id): RedirectResponse
     {
         $config = $this->configOrFail($module);
-        abort_unless(ModuleAccess::canManage($request->user(), $module), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), $module), 403);
 
         $row = $config['model']::query()->whereKey($id)->firstOrFail();
         abort_unless(ModuleOwnScope::allows($request->user(), $module, $row), 403);

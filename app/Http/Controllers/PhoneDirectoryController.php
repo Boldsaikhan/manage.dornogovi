@@ -61,7 +61,7 @@ class PhoneDirectoryController extends Controller
             'total' => $entries->count(),
             'orgNames' => $entries->pluck('org_name')->unique()->values(),
             'categories' => PhoneDirectoryEntry::CATEGORIES,
-            'canManage' => ModuleAccess::canManage($request->user(), self::MODULE),
+            'canManage' => ModuleAccess::canEdit($request->user(), self::MODULE),
         ]);
     }
 
@@ -103,7 +103,7 @@ class PhoneDirectoryController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
 
         $data = $request->validate([
             'org_name' => ['required', 'string', 'max:255'],
@@ -164,7 +164,7 @@ class PhoneDirectoryController extends Controller
 
     public function update(Request $request, PhoneDirectoryEntry $entry): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
 
         $data = $request->validate([
             'org_name' => ['required', 'string', 'max:255'],
@@ -205,7 +205,7 @@ class PhoneDirectoryController extends Controller
      */
     public function updateCategory(Request $request): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
 
         $request->merge([
             'category' => $request->input('category') === '' || $request->input('category') === null
@@ -237,7 +237,7 @@ class PhoneDirectoryController extends Controller
      */
     public function reorder(Request $request): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
 
         $data = $request->validate([
             'org_name' => ['required', 'string', 'max:255'],
@@ -296,7 +296,7 @@ class PhoneDirectoryController extends Controller
      */
     public function reorderRow(Request $request): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
 
         $data = $request->validate([
             'id' => ['required', 'integer', 'exists:phone_directory_entries,id'],
@@ -345,7 +345,7 @@ class PhoneDirectoryController extends Controller
 
     public function destroy(Request $request, PhoneDirectoryEntry $entry): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
 
         $entry->delete();
 
@@ -354,7 +354,7 @@ class PhoneDirectoryController extends Controller
 
     public function import(Request $request, PhoneDirectoryDocxParser $parser): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
 
         $request->validate([
             'file' => ['required', 'file', 'max:10240'],

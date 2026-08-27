@@ -281,8 +281,9 @@ const roleSummary = (roleKey) => {
     }
 
     const manage = entries.filter(([, l]) => l === 'manage' || l === 'manage_own').length;
+    const edit = entries.filter(([, l]) => l === 'edit' || l === 'edit_own').length;
 
-    return entries.length + ' модуль нээлттэй · ' + manage + ' удирдах';
+    return entries.length + ' модуль нээлттэй · ' + edit + ' оруулах · ' + manage + ' удирдах';
 };
 
 const levelOptions = (module) => {
@@ -291,12 +292,14 @@ const levelOptions = (module) => {
     if (module.own_scope) {
         options.push(
             { value: 'view_own', label: 'Харах (хамааралтай)' },
+            { value: 'edit_own', label: 'Оруулах (хамааралтай)' },
             { value: 'manage_own', label: 'Удирдах (хамааралтай)' },
         );
     }
 
     options.push(
         { value: 'view', label: 'Харах (бүгд)' },
+        { value: 'edit', label: 'Оруулах (бүгд)' },
         { value: 'manage', label: 'Удирдах (бүгд)' },
     );
 

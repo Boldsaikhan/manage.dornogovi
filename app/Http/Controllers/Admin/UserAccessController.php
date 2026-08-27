@@ -103,7 +103,7 @@ class UserAccessController extends Controller
 
         $permissions = collect($data['permissions'] ?? [])
             ->filter(fn ($level, $key) => ModuleAccess::find($key) !== null)
-            ->filter(fn ($level, $key) => ! in_array($level, ['view_own', 'manage_own'], true) || ModuleAccess::supportsOwnScope($key))
+            ->filter(fn ($level, $key) => ! ModuleAccess::isOwnLevel($level) || ModuleAccess::supportsOwnScope($key))
             ->all();
 
         RolePermission::replaceFor($model->key, $permissions);
@@ -248,7 +248,7 @@ class UserAccessController extends Controller
                 continue;
             }
 
-            if (in_array($level, ['view_own', 'manage_own'], true) && ! ModuleAccess::supportsOwnScope($key)) {
+            if (ModuleAccess::isOwnLevel($level) && ! ModuleAccess::supportsOwnScope($key)) {
                 continue;
             }
 

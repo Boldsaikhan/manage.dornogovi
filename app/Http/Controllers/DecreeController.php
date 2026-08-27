@@ -84,7 +84,7 @@ class DecreeController extends Controller
             'people' => PhoneDirectoryEntry::peopleOptions(),
             'pendingOfficials' => $this->pendingOfficialsForTab($tab),
             'nextNumber' => isset(self::KIND_TABS[$tab]) ? $this->nextDocumentNumber($tab) : null,
-            'canManage' => ModuleAccess::canManage($request->user(), 'decrees'),
+            'canManage' => ModuleAccess::canEdit($request->user(), 'decrees'),
             'undoCount' => EditUndo::query()->where('user_id', $request->user()->id)->count(),
         ]);
     }
@@ -454,7 +454,7 @@ class DecreeController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), 'decrees'), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), 'decrees'), 403);
 
         $tab = $this->normalizeTab((string) $request->input('tab', 'zahiramj_a'));
 
@@ -545,7 +545,7 @@ class DecreeController extends Controller
 
     public function update(Request $request, Decree $decree): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), 'decrees'), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), 'decrees'), 403);
 
         if ($decree->category === 'blank' || $decree->kind === 'blank') {
             $data = $request->validate([
@@ -693,7 +693,7 @@ class DecreeController extends Controller
 
     public function destroy(Request $request, Decree $decree): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), 'decrees'), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), 'decrees'), 403);
 
         $tab = $this->tabForDecree($decree);
         $this->deleteImageFile($decree);
@@ -706,7 +706,7 @@ class DecreeController extends Controller
 
     public function uploadImage(Request $request, Decree $decree): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), 'decrees'), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), 'decrees'), 403);
         abort_if($decree->category === 'blank' || $decree->kind === 'blank', 422);
 
         $request->validate([
@@ -738,7 +738,7 @@ class DecreeController extends Controller
 
     public function destroyImage(Request $request, Decree $decree): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), 'decrees'), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), 'decrees'), 403);
 
         $this->deleteImageFile($decree);
         $decree->update(['file_path' => null]);

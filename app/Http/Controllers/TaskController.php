@@ -52,6 +52,7 @@ class TaskController extends Controller
                     'tasks' => [],
                     'documents' => [],
                     'people' => $this->phoneDirectoryPeople(),
+                    'canEdit' => ModuleAccess::canEdit($user, 'tasks'),
                     'canManage' => ModuleAccess::canManage($user, 'tasks'),
                     'undoCount' => EditUndo::query()->where('user_id', $user->id)->count(),
                 ]);
@@ -66,12 +67,7 @@ class TaskController extends Controller
         $kind = $source->key;
 
         $tasksQuery = $source->tasks();
-        if ($user->is_admin) {
-            ModuleOwnScope::apply($tasksQuery, $user, 'tasks');
-        } else {
-            // Зөвхөн тухайн албан хаагчид хамаатай мөр.
-            ModuleOwnScope::restrictTasksToAssignee($tasksQuery, $user);
-        }
+        $this->applyTaskListScope($tasksQuery, $user);
         $tasks = $tasksQuery
             ->get([
                 'id', 'task_source_id', 'text', 'period', 'responsible',
@@ -114,9 +110,9 @@ class TaskController extends Controller
             'tasks' => $tasks,
             'documents' => $documents,
             'people' => $this->phoneDirectoryPeople(),
-            'canManage' => ModuleAccess::canManage($request->user(), 'tasks')
-                || (bool) $request->user()->is_admin,
-            'undoCount' => EditUndo::query()->where('user_id', $request->user()->id)->count(),
+            'canEdit' => ModuleAccess::canEdit($user, 'tasks'),
+            'canManage' => ModuleAccess::canManage($user, 'tasks'),
+            'undoCount' => EditUndo::query()->where('user_id', $user->id)->count(),
         ]);
     }
 
@@ -138,11 +134,7 @@ class TaskController extends Controller
         abort_unless(in_array($format, ['docx', 'xlsx', 'pdf'], true), 404);
 
         $tasksQuery = $source->tasks();
-        if ($request->user()->is_admin) {
-            ModuleOwnScope::apply($tasksQuery, $request->user(), 'tasks');
-        } else {
-            ModuleOwnScope::restrictTasksToAssignee($tasksQuery, $request->user());
-        }
+        $this->applyTaskListScope($tasksQuery, $request->user());
         $tasks = $tasksQuery
             ->get([
                 'id', 'text', 'period', 'responsible', 'collaborator', 'sector', 'note', 'progress', 'sort_order',
@@ -295,10 +287,7 @@ class TaskController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        abort_unless(
-            ModuleAccess::canManage($request->user(), 'tasks') || $request->user()->is_admin,
-            403
-        );
+        abort_unless(ModuleAccess::canEdit($request->user(), 'tasks'), 403);
 
         $data = $request->validate([
             'kind' => ['required', $this->kindRule()],
@@ -338,10 +327,7 @@ class TaskController extends Controller
 
     public function update(Request $request, Task $task): RedirectResponse
     {
-        abort_unless(
-            ModuleAccess::canManage($request->user(), 'tasks') || $request->user()->is_admin,
-            403
-        );
+        abort_unless(ModuleAccess::canEdit($request->user(), 'tasks'), 403);
         abort_unless(ModuleOwnScope::allows($request->user(), 'tasks', $task), 403);
 
         $data = $request->validate([
@@ -386,10 +372,7 @@ class TaskController extends Controller
      */
     public function bulkUpdate(Request $request): RedirectResponse
     {
-        abort_unless(
-            ModuleAccess::canManage($request->user(), 'tasks') || $request->user()->is_admin,
-            403
-        );
+        abort_unless(ModuleAccess::canEdit($request->user(), 'tasks'), 403);
 
         $data = $request->validate([
             'ids' => ['required', 'array', 'min:1'],
@@ -430,10 +413,7 @@ class TaskController extends Controller
 
     public function destroy(Request $request, Task $task): RedirectResponse
     {
-        abort_unless(
-            ModuleAccess::canManage($request->user(), 'tasks') || $request->user()->is_admin,
-            403
-        );
+        abort_unless(ModuleAccess::canEdit($request->user(), 'tasks'), 403);
         abort_unless(ModuleOwnScope::allows($request->user(), 'tasks', $task), 403);
 
         EditUndo::recordDelete(
@@ -738,6 +718,14 @@ class TaskController extends Controller
     }
 
     /**
+     * «Хамааралтай» эрх — зөвхөн assignee-тай мөр; «бүгд» — бүх мөр.
+     */
+    private function applyTaskListScope($query, \App\Models\User $user): void
+    {
+        ModuleOwnScope::apply($query, $user, 'tasks');
+    }
+
+    /**
      * @return list<array{key: string, label: string, layout: string, is_system: bool}>
      */
     private function kindTabs(\App\Models\User $user): array
@@ -746,8 +734,8 @@ class TaskController extends Controller
             ->orderBy('sort_order')
             ->orderBy('id');
 
-        // Админ бүх хэсгийг харна; бусад — зөвхөн өөрт хамаатай үүрэгтэй хэсэг.
-        if (! $user->is_admin) {
+        // Хамааралтай эрх — зөвхөн өөрт хамаатай үүрэгтэй хэсэг.
+        if (ModuleAccess::scopeOwnOnly($user, 'tasks')) {
             $patterns = PersonName::matchPatterns($user);
 
             if ($patterns === []) {

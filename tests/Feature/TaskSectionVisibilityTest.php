@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\RolePermission;
 use App\Models\Task;
 use App\Models\TaskSource;
 use App\Models\User;
-use App\Models\UserModulePermission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -16,15 +16,14 @@ class TaskSectionVisibilityTest extends TestCase
 
     public function test_specialist_only_sees_sections_with_their_tasks(): void
     {
+        RolePermission::replaceFor('specialist', [
+            'tasks' => 'manage_own',
+        ]);
+
         $user = User::factory()->create([
             'name' => 'Ариунболдын Бадрал',
             'is_admin' => false,
             'is_specialist' => true,
-        ]);
-        UserModulePermission::create([
-            'user_id' => $user->id,
-            'module_key' => 'tasks',
-            'level' => 'manage',
         ]);
 
         $directive = TaskSource::where('key', TaskSource::KEY_DIRECTIVE)->firstOrFail();
@@ -81,6 +80,8 @@ class TaskSectionVisibilityTest extends TestCase
                 ->where('kinds.0.key', 'surgaltyn_idevx_orolcoo')
                 ->has('tasks', 1)
                 ->where('tasks.0.responsible', 'А.Бадрал')
+                ->where('canEdit', true)
+                ->where('canManage', true)
             );
 
         $this->actingAs($user)

@@ -24,7 +24,7 @@ class RolePermissionTemplateTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->has('roles', 3)
-                ->where('rolePermissions.specialist.tasks', 'manage'));
+                ->where('rolePermissions.specialist.tasks', 'manage_own'));
     }
 
     public function test_admin_can_save_role_template(): void

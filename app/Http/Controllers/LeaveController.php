@@ -58,7 +58,7 @@ class LeaveController extends Controller
             'tabs' => $tabs,
             'rows' => $rows,
             'directory' => $this->directory(),
-            'canManage' => ModuleAccess::canManage($request->user(), self::MODULE),
+            'canManage' => ModuleAccess::canEdit($request->user(), self::MODULE),
             'scopes' => self::SCOPES,
             'types' => Leave::TYPES,
             'signers' => Leave::SIGNERS,
@@ -67,7 +67,7 @@ class LeaveController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
 
         $data = $request->validate([
             'scope' => ['required', Rule::in(array_keys(self::SCOPES))],
@@ -113,7 +113,7 @@ class LeaveController extends Controller
 
     public function destroy(Request $request, Leave $leave): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
         abort_unless(ModuleOwnScope::allows($request->user(), self::MODULE, $leave), 403);
 
         $scope = $leave->scope ?: 'baiguullaga';

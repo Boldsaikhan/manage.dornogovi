@@ -10,8 +10,13 @@ use Illuminate\Support\Collection;
 
 class ModuleAccess
 {
-    /** @var array<int, string> */
-    public const LEVELS = ['view', 'manage', 'view_own', 'manage_own'];
+    /**
+     * view / edit / manage (+ _own хамааралтай хувилбар).
+     * edit = хүснэгтэнд мэдээлэл оруулах; manage = хэсэг/импорт гэх мэт удирдлага.
+     *
+     * @var list<string>
+     */
+    public const LEVELS = ['view', 'edit', 'manage', 'view_own', 'edit_own', 'manage_own'];
 
     public static function definitions(): Collection
     {
@@ -51,9 +56,34 @@ class ModuleAccess
 
         $level = self::level($user, $moduleKey);
 
-        return in_array($level, ['view', 'manage', 'view_own', 'manage_own'], true);
+        return in_array($level, self::LEVELS, true);
     }
 
+    /**
+     * Хүснэгтийн мөр нэмэх/засах/устгах.
+     */
+    public static function canEdit(?User $user, string $moduleKey): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        if (! ModuleVisibility::isEnabled($moduleKey)) {
+            return false;
+        }
+
+        if ($user->is_admin) {
+            return true;
+        }
+
+        $level = self::level($user, $moduleKey);
+
+        return in_array($level, ['edit', 'manage', 'edit_own', 'manage_own'], true);
+    }
+
+    /**
+     * Модулийн удирдлага (хэсэг нэмэх, Word импорт, ангилал гэх мэт).
+     */
     public static function canManage(?User $user, string $moduleKey): bool
     {
         if (! $user) {
@@ -140,7 +170,7 @@ class ModuleAccess
                     continue;
                 }
 
-                if (in_array($level, ['view_own', 'manage_own'], true) && ! self::supportsOwnScope($module)) {
+                if (in_array($level, ['view_own', 'edit_own', 'manage_own'], true) && ! self::supportsOwnScope($module)) {
                     continue;
                 }
 
@@ -161,7 +191,7 @@ class ModuleAccess
             return false;
         }
 
-        return in_array(self::level($user, $moduleKey), ['view_own', 'manage_own'], true);
+        return in_array(self::level($user, $moduleKey), ['view_own', 'edit_own', 'manage_own'], true);
     }
 
     public static function manageOwnOnly(?User $user, string $moduleKey): bool
@@ -178,11 +208,18 @@ class ModuleAccess
         return filled(self::find($moduleKey)['own_scope'] ?? null);
     }
 
+    public static function isOwnLevel(?string $level): bool
+    {
+        return in_array($level, ['view_own', 'edit_own', 'manage_own'], true);
+    }
+
     public static function levelLabel(?string $level): string
     {
         return match ($level) {
             'manage' => 'Удирдах (бүгд)',
             'manage_own' => 'Удирдах (хамааралтай)',
+            'edit' => 'Оруулах (бүгд)',
+            'edit_own' => 'Оруулах (хамааралтай)',
             'view' => 'Харах (бүгд)',
             'view_own' => 'Харах (хамааралтай)',
             default => 'Хаалттай',

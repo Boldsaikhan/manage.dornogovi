@@ -72,7 +72,7 @@ class AwardController extends Controller
             'years' => $years,
             'columns' => $this->columnsFor($tab),
             'rows' => $rows,
-            'canManage' => ModuleAccess::canManage($request->user(), self::MODULE),
+            'canManage' => ModuleAccess::canEdit($request->user(), self::MODULE),
             'categories' => Award::CATEGORIES,
             'allSubtypes' => Award::SUBTYPES,
             'categorySubtypes' => Award::CATEGORY_SUBTYPES,
@@ -81,7 +81,7 @@ class AwardController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
 
         $data = $this->validated($request);
         ModuleOwnScope::assertCanCreate($request->user(), self::MODULE, $data);
@@ -100,7 +100,7 @@ class AwardController extends Controller
 
     public function update(Request $request, Award $award): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
         abort_unless(ModuleOwnScope::allows($request->user(), self::MODULE, $award), 403);
 
         $data = $this->validatedPartial($request, $award);
@@ -111,7 +111,7 @@ class AwardController extends Controller
 
     public function destroy(Request $request, Award $award): RedirectResponse
     {
-        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
         abort_unless(ModuleOwnScope::allows($request->user(), self::MODULE, $award), 403);
 
         $tab = $award->category;
