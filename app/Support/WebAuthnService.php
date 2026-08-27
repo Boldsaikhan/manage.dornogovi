@@ -15,7 +15,7 @@ class WebAuthnService
     public static function make(Request $request): WebAuthn
     {
         $rpId = self::rpId($request);
-        $rpName = config('app.name', 'Дорноговь');
+        $rpName = config('app.name', 'manage дотоод систем');
 
         // Зөвхөн 'none' — Android/iOS passkey бүртгэл найдвартай (attestation: none).
         return new WebAuthn($rpName, $rpId, ['none'], true);

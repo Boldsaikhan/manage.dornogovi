@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Link, router, usePage } from '@inertiajs/vue3';
+import { Link, router, usePage, Head } from '@inertiajs/vue3';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import StateEmblem from '@/Components/StateEmblem.vue';
@@ -184,6 +184,7 @@ const isCurrent = (routeName) => {
 
 <template>
     <div class="min-h-screen bg-slate-100">
+        <Head v-if="title" :title="title" />
         <MobileAppGate />
         <aside
             class="fixed inset-y-0 left-0 z-40 flex flex-col border-r border-slate-200/80 bg-white shadow-soft transition-[width,transform] duration-200 ease-out lg:translate-x-0"
@@ -200,15 +201,15 @@ const isCurrent = (routeName) => {
                     :href="route('dept.dashboard')"
                     class="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-2 transition hover:bg-slate-50"
                     :class="sidebarCollapsed ? 'lg:flex-none lg:justify-center lg:px-2' : ''"
-                    :title="sidebarCollapsed ? 'Дорноговь — Нэгдсэн систем' : undefined"
+                    :title="sidebarCollapsed ? 'manage дотоод систем' : undefined"
                 >
                     <StateEmblem class="h-10 w-10 shrink-0" />
                     <div
                         class="min-w-0 leading-tight"
                         :class="sidebarCollapsed ? 'lg:hidden' : ''"
                     >
-                        <div class="truncate text-sm font-bold tracking-tight text-brand-navy-800">Дорноговь</div>
-                        <div class="text-[11px] font-medium tracking-wide text-slate-500">Нэгдсэн систем</div>
+                        <div class="truncate text-sm font-bold tracking-tight text-brand-navy-800">manage</div>
+                        <div class="text-[11px] font-medium tracking-wide text-slate-500">дотоод систем</div>
                     </div>
                 </Link>
 

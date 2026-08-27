@@ -202,7 +202,7 @@ self.addEventListener('fetch', (event) => {
 /** Push мэдэгдэл — албан хаагчид холбоотой мэдээлэл */
 self.addEventListener('push', (event) => {
     let data = {
-        title: 'Дорноговь',
+        title: 'manage дотоод систем',
         body: 'Шинэ мэдэгдэл байна.',
         url: '/dept-dashboard',
         tag: 'manage-dornogovi',
@@ -224,7 +224,7 @@ self.addEventListener('push', (event) => {
 
     event.waitUntil(
         Promise.all([
-            self.registration.showNotification(data.title || 'Дорноговь', {
+            self.registration.showNotification(data.title || 'manage дотоод систем', {
                 body: data.body || '',
                 icon: data.icon || '/icons/icon-192.png',
                 badge: data.badge || '/icons/icon-192.png',
