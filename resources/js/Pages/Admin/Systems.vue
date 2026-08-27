@@ -16,6 +16,59 @@ const props = defineProps({
 
 const page = usePage();
 
+const SETTINGS_TABS = [
+    { id: 'menus', label: 'Цэс нээх / хаах' },
+    { id: 'ai', label: 'Manage AI' },
+    { id: 'push', label: 'Push мэдэгдэл' },
+    { id: 'systems', label: 'Холбосон системүүд' },
+];
+
+const readSettingsTab = () => {
+    const allowed = SETTINGS_TABS.map((t) => t.id);
+    try {
+        const fromUrl = new URL(window.location.href).searchParams.get('tab');
+        if (allowed.includes(fromUrl)) {
+            return fromUrl;
+        }
+    } catch {
+        // ignore
+    }
+    try {
+        const stored = sessionStorage.getItem('admin_settings_tab');
+        if (allowed.includes(stored)) {
+            return stored;
+        }
+    } catch {
+        // ignore
+    }
+
+    return 'menus';
+};
+
+const activeTab = ref(readSettingsTab());
+
+const selectTab = (id) => {
+    activeTab.value = id;
+    try {
+        sessionStorage.setItem('admin_settings_tab', id);
+    } catch {
+        // ignore
+    }
+    try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', id);
+        window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}`);
+    } catch {
+        // ignore
+    }
+};
+
+const settingsTabs = computed(() => SETTINGS_TABS.map((tab) => (
+    tab.id === 'ai'
+        ? { ...tab, label: props.ai?.display_name || 'Manage AI' }
+        : tab
+)));
+
 /** Цэсэнд харагдах системүүд — ▲▼ энэ жагсаалтын дарааллыг хадгална. */
 const orderedSystems = ref(
     [...(props.systems ?? [])].filter((s) => ! s.is_internal),
@@ -268,7 +321,32 @@ const saveAi = () => {
             {{ page.props.flash.success }}
         </div>
 
-        <section class="mb-8 rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm">
+        <div
+            class="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200"
+            role="tablist"
+            aria-label="Системийн тохиргоо"
+        >
+            <button
+                v-for="tab in settingsTabs"
+                :key="tab.id"
+                type="button"
+                role="tab"
+                class="-mb-px shrink-0 border-b-2 px-3.5 py-2.5 text-sm font-semibold transition sm:px-4"
+                :class="activeTab === tab.id
+                    ? 'border-brand-navy-600 text-brand-navy-800'
+                    : 'border-transparent text-slate-500 hover:text-brand-navy-700'"
+                :aria-selected="activeTab === tab.id"
+                @click="selectTab(tab.id)"
+            >
+                {{ tab.label }}
+            </button>
+        </div>
+
+        <section
+            v-show="activeTab === 'menus'"
+            class="rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm"
+            role="tabpanel"
+        >
             <div class="mb-4">
                 <h2 class="text-base font-semibold text-brand-navy-900">Цэс нээх / хаах</h2>
                 <p class="mt-1 max-w-2xl text-sm text-brand-navy-400">
@@ -316,7 +394,11 @@ const saveAi = () => {
             </form>
         </section>
 
-        <section class="mb-8 rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm">
+        <section
+            v-show="activeTab === 'ai'"
+            class="rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm"
+            role="tabpanel"
+        >
             <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h2 class="text-base font-semibold text-brand-navy-900">{{ ai?.display_name || 'Manage AI' }}</h2>
@@ -457,7 +539,11 @@ const saveAi = () => {
             </form>
         </section>
 
-        <section class="mb-8 rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm">
+        <section
+            v-show="activeTab === 'push'"
+            class="rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm"
+            role="tabpanel"
+        >
             <div class="mb-4">
                 <h2 class="text-base font-semibold text-brand-navy-900">Push мэдэгдэл</h2>
                 <p class="mt-1 max-w-2xl text-sm text-brand-navy-400">
@@ -468,6 +554,7 @@ const saveAi = () => {
             <PushSubscribe class="max-w-xl" />
         </section>
 
+        <div v-show="activeTab === 'systems'" role="tabpanel">
         <section class="mb-6 rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -622,6 +709,7 @@ const saveAi = () => {
                     </tr>
                 </tbody>
             </table>
+        </div>
         </div>
 
         <Modal :show="modal" max-width="xl" @close="modal = false">
