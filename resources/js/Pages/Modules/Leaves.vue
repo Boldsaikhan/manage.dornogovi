@@ -224,54 +224,74 @@ const emptyMessage = computed(() => {
                 {{ emptyMessage }}
             </div>
 
-            <!-- Бүртгэлийн хүснэгт -->
-            <div v-else-if="view === 'table'" class="ui-table-wrap overflow-x-auto">
-                <table class="ui-table min-w-[1150px] table-fixed">
+            <!-- Бүртгэлийн хүснэгт — баганууд дэлгэцийн өргөнд багтана -->
+            <div v-else-if="view === 'table'" class="ui-table-wrap leave-table-wrap">
+                <table class="ui-table leave-table table-fixed">
+                    <colgroup>
+                        <col style="width: 3.2%" />
+                        <col style="width: 6.2%" />
+                        <col style="width: 8.2%" />
+                        <col style="width: 12%" />
+                        <col style="width: 10%" />
+                        <col style="width: 9%" />
+                        <col style="width: 7.4%" />
+                        <col style="width: 4.4%" />
+                        <col style="width: 7.4%" />
+                        <col style="width: 11.2%" />
+                        <col style="width: 12%" />
+                        <col style="width: 9%" />
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th class="w-12 text-center">№</th>
-                            <th class="w-24 text-center">Хуудас №</th>
-                            <th class="w-28">Хамрах хүрээ</th>
-                            <th class="w-56">Байгууллага / хэлтэс</th>
-                            <th class="w-40">Албан хаагч</th>
-                            <th class="w-32">Төрөл</th>
-                            <th class="w-28 text-center">Эхлэх</th>
-                            <th class="w-16 text-center">Хоног</th>
-                            <th class="w-28 text-center">Дуусах</th>
+                            <th class="text-center">№</th>
+                            <th class="text-center">Хуудас №</th>
+                            <th>Хамрах хүрээ</th>
+                            <th>Байгууллага / хэлтэс</th>
+                            <th>Албан хаагч</th>
+                            <th>Төрөл</th>
+                            <th class="text-center">Эхлэх</th>
+                            <th class="text-center">Хоног</th>
+                            <th class="text-center">Дуусах</th>
                             <th>Үндэслэл</th>
-                            <th class="w-44">Гарын үсэг</th>
-                            <th class="w-28" />
+                            <th>Гарын үсэг</th>
+                            <th />
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="(row, index) in rows" :key="row.id">
                             <td class="text-center">{{ index + 1 }}</td>
                             <td class="text-center">{{ row.slip_number || '—' }}</td>
-                            <td>{{ row.scope_label }}</td>
+                            <td><span class="ui-clamp-2" :title="row.scope_label">{{ row.scope_label }}</span></td>
                             <td><span class="ui-clamp-2" :title="row.org_name">{{ row.org_name }}</span></td>
                             <td><span class="ui-clamp-2" :title="row.person_name">{{ row.person_name }}</span></td>
-                            <td>{{ row.type_label }}</td>
-                            <td class="text-center">{{ row.start_date || '—' }}</td>
+                            <td><span class="ui-clamp-2" :title="row.type_label">{{ row.type_label }}</span></td>
+                            <td class="leave-table__date text-center">{{ row.start_date || '—' }}</td>
                             <td class="text-center">{{ row.days || '—' }}</td>
-                            <td class="text-center">{{ row.end_date || '—' }}</td>
+                            <td class="leave-table__date text-center">{{ row.end_date || '—' }}</td>
                             <td><span class="ui-clamp-2" :title="row.reason || ''">{{ row.reason || '—' }}</span></td>
-                            <td><span class="ui-clamp-2">{{ signers[row.signer] || '—' }}</span></td>
-                            <td class="whitespace-nowrap text-right">
-                                <a
-                                    :href="slipPrintUrl(row)"
-                                    target="_blank"
-                                    class="ui-btn-ghost mr-1 !py-1 text-xs"
-                                >
-                                    Хэвлэх
-                                </a>
-                                <button
-                                    v-if="canManage"
-                                    type="button"
-                                    class="ui-btn-danger !py-1 text-xs"
-                                    @click="destroyRow(row.id)"
-                                >
-                                    Устгах
-                                </button>
+                            <td>
+                                <span class="ui-clamp-2" :title="signers[row.signer] || ''">
+                                    {{ signers[row.signer] || '—' }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="leave-table__actions">
+                                    <a
+                                        :href="slipPrintUrl(row)"
+                                        target="_blank"
+                                        class="leave-table__btn leave-table__btn--ghost"
+                                    >
+                                        Хэвлэх
+                                    </a>
+                                    <button
+                                        v-if="canManage"
+                                        type="button"
+                                        class="leave-table__btn leave-table__btn--danger"
+                                        @click="destroyRow(row.id)"
+                                    >
+                                        Устгах
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
@@ -447,6 +467,67 @@ const emptyMessage = computed(() => {
 </template>
 
 <style scoped>
+.leave-table-wrap {
+    overflow-x: hidden;
+    width: 100%;
+}
+
+.leave-table {
+    width: 100%;
+    table-layout: fixed;
+    font-size: 0.75rem;
+}
+
+.leave-table th,
+.leave-table td {
+    overflow: hidden;
+    vertical-align: top;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+.leave-table th {
+    white-space: normal;
+    line-height: 1.25;
+    letter-spacing: 0.02em;
+}
+
+.leave-table__date {
+    font-variant-numeric: tabular-nums;
+}
+
+.leave-table__actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.2rem;
+}
+
+.leave-table__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1.5rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 0.375rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.leave-table__btn--ghost {
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: #1e3a8a;
+}
+
+.leave-table__btn--danger {
+    border: 0;
+    background: #e11d48;
+    color: #fff;
+}
+
 /* Хуудасны загварт тохирсон — доогуур зураастай, тунгалаг оруулга */
 .slip-input {
     display: inline-block;

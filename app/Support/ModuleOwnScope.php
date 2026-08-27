@@ -6,32 +6,38 @@ use App\Models\Award;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 /**
  * «Хамааралтай» эрх — зөвхөн тухайн албан хаагчид холбоотой бүртгэл.
  */
 class ModuleOwnScope
 {
-    public static function apply(Builder $query, User $user, string $moduleKey): Builder
+    /**
+     * @param  Builder|Relation  $query
+     */
+    public static function apply(Builder|Relation $query, User $user, string $moduleKey): Builder
     {
+        $builder = $query instanceof Relation ? $query->getQuery() : $query;
+
         if ($user->is_admin || ! ModuleAccess::scopeOwnOnly($user, $moduleKey)) {
-            return $query;
+            return $builder;
         }
 
         $type = ModuleAccess::find($moduleKey)['own_scope'] ?? null;
 
         if (! $type) {
-            return $query;
+            return $builder;
         }
 
         return match ($type) {
-            'user_id' => $query->where('user_id', $user->id),
-            'created_by' => $query->where('created_by', $user->id),
-            'lead_user_id' => $query->where('lead_user_id', $user->id),
-            'person_name' => self::applyPersonNameScope($query, $user, 'person_name'),
-            'award_person' => self::applyAwardPersonScope($query, $user),
-            'task_assignee' => self::applyTaskAssigneeScope($query, $user),
-            default => $query,
+            'user_id' => $builder->where('user_id', $user->id),
+            'created_by' => $builder->where('created_by', $user->id),
+            'lead_user_id' => $builder->where('lead_user_id', $user->id),
+            'person_name' => self::applyPersonNameScope($builder, $user, 'person_name'),
+            'award_person' => self::applyAwardPersonScope($builder, $user),
+            'task_assignee' => self::applyTaskAssigneeScope($builder, $user),
+            default => $builder,
         };
     }
 
