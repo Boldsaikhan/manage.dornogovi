@@ -15,6 +15,7 @@ use App\Http\Controllers\LaunchController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\LeaveSlipController;
 use App\Http\Controllers\ModuleResourceController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PhoneDirectoryController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PwaManifestController;
@@ -54,6 +55,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/push/vapid-public-key', [PushSubscriptionController::class, 'publicKey'])->name('push.vapid');
     Route::post('/push/subscribe', [PushSubscriptionController::class, 'store'])->name('push.subscribe');
     Route::delete('/push/subscribe', [PushSubscriptionController::class, 'destroy'])->name('push.unsubscribe');
+
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::post('/notifications/clear', [NotificationController::class, 'clear'])->name('notifications.clear');
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
 
     Route::post('/app-lock', [AppLockController::class, 'lock'])->name('app.lock');
     Route::post('/app-unlock', [AppLockController::class, 'unlock'])->name('app.unlock');

@@ -86,6 +86,16 @@ class HandleInertiaRequests extends Middleware
                     'subscribed' => $request->user()->pushSubscriptions()->exists(),
                 ];
             },
+            'notificationUnread' => function () use ($request) {
+                if (! $request->user()) {
+                    return 0;
+                }
+
+                return \App\Models\UserNotification::query()
+                    ->where('user_id', $request->user()->id)
+                    ->whereNull('read_at')
+                    ->count();
+            },
         ];
     }
 
