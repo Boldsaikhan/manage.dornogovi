@@ -341,7 +341,7 @@ const fitColPercents = computed(() => {
 
                                 <template v-else-if="isEditable(col) && drafts[row.id]">
                                     <select
-                                        v-else-if="col.input === 'gender'"
+                                        v-if="col.input === 'gender'"
                                         v-model="drafts[row.id][fieldFor(col)]"
                                         class="ui-table-input text-center"
                                         @change="saveField(row.id, fieldFor(col), drafts[row.id][fieldFor(col)])"
