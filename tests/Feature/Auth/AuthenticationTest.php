@@ -3,7 +3,10 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
+use Illuminate\Session\TokenMismatchException;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -15,6 +18,7 @@ class AuthenticationTest extends TestCase
         $response = $this->get('/login');
 
         $response->assertStatus(200);
+        $response->assertSee('name="csrf-token"', false);
     }
 
     public function test_users_can_authenticate_using_the_login_screen(): void
@@ -106,5 +110,23 @@ class AuthenticationTest extends TestCase
 
         $this->assertGuest();
         $response->assertRedirect('/');
+    }
+
+    public function test_csrf_mismatch_redirects_back_instead_of_419_page(): void
+    {
+        $request = Request::create('/login', 'POST', [
+            'login' => '99111234',
+            'password' => 'secret',
+        ]);
+        $request->headers->set('Accept', 'text/html');
+        $request->setLaravelSession($this->app['session']->driver());
+
+        $response = $this->app->make(ExceptionHandler::class)->render(
+            $request,
+            new TokenMismatchException(),
+        );
+
+        $this->assertSame(303, $response->getStatusCode());
+        $this->assertStringContainsString('/login', (string) $response->headers->get('Location'));
     }
 }

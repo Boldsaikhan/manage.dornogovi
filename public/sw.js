@@ -5,7 +5,7 @@
  * Build файлууд: сүлжээ эхлээд, дараа нь кэш (шинэ deploy эвдэрэхгүй).
  */
 
-const VERSION = 'v9-20260826-net-retry';
+const VERSION = 'v10-20260827-ios-csrf';
 const SHELL_CACHE = `shell-${VERSION}`;
 const ASSET_CACHE = `assets-${VERSION}`;
 
@@ -177,7 +177,14 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+    // Хуудас нээхэд SW бүү зуучил. iOS/WebKit дээр SW-ийн fetch-ийн
+    // Set-Cookie cookie jar-д орохгүй → CSRF тасарч 419 PAGE EXPIRED гарна.
+    // Офлайн үед л өөрийн хуудсыг харуулна.
     if (request.mode === 'navigate') {
+        if (navigator.onLine) {
+            return;
+        }
+
         event.respondWith(networkFirstPage(request));
 
         return;

@@ -141,7 +141,9 @@ const qrCountdown = computed(() => {
 onBeforeUnmount(stopQrTimers);
 
 const submit = () => {
-    form.post(route('login'), {
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    form.transform((data) => (token ? { ...data, _token: token } : data)).post(route('login'), {
         onFinish: () => form.reset('password'),
     });
 };

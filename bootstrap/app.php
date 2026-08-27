@@ -14,6 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustProxies(at: '*');
+
         $middleware->web(append: [
             \App\Http\Middleware\EnsurePwaBiometricLock::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
@@ -26,6 +28,25 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // iPhone/Safari дээр CSRF тасрахад 419 модал биш, нэвтрэх хуудас руу буцаана.
+        $exceptions->respond(function ($response, $e, Request $request) {
+            if ($response->getStatusCode() !== 419) {
+                return $response;
+            }
+
+            $message = 'Холболтын хугацаа дууссан тул дахин оролдоно уу.';
+
+            if ($request->expectsJson() && ! $request->header('X-Inertia')) {
+                return response()->json(['message' => $message], 419);
+            }
+
+            if (! $request->user()) {
+                return redirect()->route('login', [], 303)->with('status', $message);
+            }
+
+            return back(303)->with('status', $message);
+        });
+
         // Устгагдсан мөр дээр засвар/устгал илгээхэд 404 биш, эелдэг мэдэгдэл.
         $exceptions->render(function (NotFoundHttpException $e, Request $request) {
             $isMissingRow = $e->getPrevious() instanceof ModelNotFoundException;
