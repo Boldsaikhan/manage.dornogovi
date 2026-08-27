@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Support\AppLock;
 use App\Support\HomeRedirect;
-use App\Support\MobileClient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -36,15 +35,9 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        // Нууц үгээр нэвтэрсэн тул дахин биометрик асуухгүй.
+        // Түгжээ зөвхөн дэлгэц/апп алга болоход (клиент) тавигдана.
         AppLock::unlock($request);
-
-        // Зөвхөн гар утаснаас нэвтэрсэн бол биометрик асууна; desktop — нууц үг л хангалттай.
-        if (
-            MobileClient::isMobileRequest($request)
-            && $request->user()->webauthnCredentials()->exists()
-        ) {
-            AppLock::lock($request, AppLock::MODE_BIOMETRIC);
-        }
 
         return redirect()->intended(HomeRedirect::path());
     }

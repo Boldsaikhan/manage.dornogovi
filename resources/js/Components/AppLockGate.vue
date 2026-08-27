@@ -5,6 +5,8 @@ import { assertBiometric, isWebAuthnSupported } from '@/utils/webauthn';
 import { isMobileDevice } from '@/utils/mobileClient';
 
 const LOCK_KEY = 'md_app_locked';
+/** Биометрик цонх / unlock-ийн дараа visibility-ээр дахин түгжихгүй байх (мс). */
+const HIDE_GRACE_MS = 4000;
 
 const page = usePage();
 
@@ -18,6 +20,14 @@ const webauthnOk = ref(typeof window !== 'undefined' && isWebAuthnSupported());
 const clientLocked = ref(false);
 
 let locking = false;
+/** WebAuthn/unlock явж байхад эсвэл дөнгөж тайлагдсаны дараа — hide event үл тоомсорлоно. */
+let suppressHideUntil = 0;
+
+const suppressHideLock = (ms = HIDE_GRACE_MS) => {
+    suppressHideUntil = Date.now() + ms;
+};
+
+const isHideSuppressed = () => Date.now() < suppressHideUntil;
 
 const lock = computed(() => page.props.appLock ?? {
     locked: false,
@@ -109,6 +119,7 @@ const requestLockBeacon = () => {
 /** Дэлгэц/апп алга болоход — сүлжээгүй байсан ч ШУУД түгжинэ */
 const onAppHidden = () => {
     if (! shouldGuard()) return;
+    if (busy.value || locking || isHideSuppressed()) return;
     if (document.visibilityState === 'visible' && ! document.hidden) return;
 
     setClientLock(true);
@@ -123,16 +134,23 @@ const onVisibilityChange = () => {
 
     // Буцаж ирэхэд зөвхөн өмнө түгжсэн бол харуулна — цэс солиход түгжихгүй
     offline.value = ! navigator.onLine;
+    if (busy.value || isHideSuppressed()) return;
     if (readClientLock()) {
         clientLocked.value = true;
     }
 };
 
 const onPageShow = (event) => {
-    if (event.persisted && shouldGuard()) {
+    if (busy.value || isHideSuppressed()) {
+        if (readClientLock() && ! lock.value.locked) {
+            // Unlock-ийн дараах bfcache/pageshow — хуучин клиент түгжээг бүү сэргээ
+            return;
+        }
+    }
+    if (event.persisted && shouldGuard() && ! isHideSuppressed() && ! busy.value) {
         setClientLock(true);
     }
-    if (readClientLock()) {
+    if (readClientLock() && ! isHideSuppressed()) {
         clientLocked.value = true;
     }
 };
@@ -147,9 +165,14 @@ const onOffline = () => {
 };
 
 onMounted(() => {
-    // Хуудас/цэс солиход layout дахин mount болж болно — зөвхөн хадгалсан түгжээг сэргээнэ
-    if (shouldGuard() && readClientLock()) {
-        clientLocked.value = true;
+    // Хуудас/цэс солиход layout дахин mount болж болно — зөвхөн хадгалсан түгжээг сэргээнэ.
+    // Сервер түгжээгүй үед хуучин localStorage түгжээг цэвэрлэ (нэвтрэлтийн дараах үлдэгдэл).
+    if (shouldGuard()) {
+        if (! lock.value.locked && readClientLock()) {
+            setClientLock(false);
+        } else if (readClientLock()) {
+            clientLocked.value = true;
+        }
     }
 
     document.addEventListener('visibilitychange', onVisibilityChange);
@@ -209,7 +232,10 @@ const unlock = async () => {
 
         if (useBiometric) {
             try {
+                // Системийн биометрик цонх visibility=hidden болгодог — дахин бүү түгж.
+                suppressHideLock(HIDE_GRACE_MS * 2);
                 payload.assertion = await assertBiometric();
+                suppressHideLock(HIDE_GRACE_MS);
             } catch (e) {
                 const name = e?.name || '';
                 if (/NotAllowedError|AbortError/i.test(name + String(e?.message))) {
@@ -228,6 +254,7 @@ const unlock = async () => {
         // Серверт түгжээ байхгүй бол (зөвхөн клиент) эхлээд тавина
         if (! lock.value.locked) {
             locking = true;
+            suppressHideLock(HIDE_GRACE_MS);
             try {
                 await window.axios.post(route('app.lock'));
             } catch {
@@ -240,6 +267,7 @@ const unlock = async () => {
         await window.axios.post(route('app.unlock'), payload);
         password.value = '';
         clearLockLocal();
+        suppressHideLock(HIDE_GRACE_MS);
         router.reload({ only: ['appLock', 'vault'] });
     } catch (e) {
         if (! navigator.onLine) {
@@ -286,6 +314,7 @@ const unlockPasswordOnly = async () => {
         hint.value = data?.hint || '';
         password.value = '';
         clearLockLocal();
+        suppressHideLock(HIDE_GRACE_MS);
         router.reload({ only: ['appLock', 'vault'] });
     } catch (e) {
         error.value = e?.response?.data?.errors?.password?.[0]

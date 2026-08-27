@@ -15,7 +15,7 @@ class AppLockTest extends TestCase
 
     private const DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0';
 
-    public function test_mobile_login_locks_for_biometric_when_user_has_webauthn(): void
+    public function test_mobile_login_does_not_lock_immediately(): void
     {
         $user = User::factory()->create([
             'password' => bcrypt('secret-pass'),
@@ -34,8 +34,8 @@ class AppLockTest extends TestCase
                 'password' => 'secret-pass',
             ])->assertRedirect();
 
-        $this->assertTrue(session(AppLock::SESSION_KEY));
-        $this->assertSame(AppLock::MODE_BIOMETRIC, session(AppLock::MODE_KEY));
+        // Нууц үгээр нэвтэрсэн тул шууд биометрик дахин асуухгүй.
+        $this->assertFalse((bool) session(AppLock::SESSION_KEY));
     }
 
     public function test_desktop_login_does_not_lock_even_with_webauthn(): void
