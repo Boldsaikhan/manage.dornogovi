@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, toRaw, watch } from 'vue';
 import { useForm, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import SheetCell from '@/Components/SheetCell.vue';
@@ -48,8 +48,20 @@ const noticeClass = computed(() => ({
 const selectedId = ref(null);
 const selected = computed(() => props.users.find((u) => u.id === selectedId.value) || null);
 const userSearch = ref('');
+
+const queryParam = (name) => {
+    const href = page.url || '';
+    const qIndex = href.indexOf('?');
+    if (qIndex === -1) {
+        return '';
+    }
+
+    return new URLSearchParams(href.slice(qIndex)).get(name) || '';
+};
+
+const initialTab = queryParam('tab');
 /** employee | templates | create */
-const panelMode = ref('employee');
+const panelMode = ref(['employee', 'templates', 'create'].includes(initialTab) ? initialTab : 'employee');
 /** Албан хаагчид оноож буй ролийн түлхүүр */
 const selectedRoleKey = ref('');
 
@@ -132,36 +144,40 @@ const selectUser = (id) => {
 };
 
 // ── Ролийн загвар ──
-const roleTab = ref(props.roles?.[0]?.key ?? 'specialist');
+const initialRole = queryParam('role');
+const roleTab = ref(
+    (initialRole && props.roles?.some((r) => r.key === initialRole) ? initialRole : null)
+        || props.roles?.[0]?.key
+        || 'specialist',
+);
 const roleLabel = ref('');
 const roleState = reactive({});
+const rolesDirty = ref(false);
 
-const loadRoles = () => {
+const loadRoles = (force = false) => {
+    if (rolesDirty.value && ! force) {
+        return;
+    }
     props.roles?.forEach((r) => {
-        roleState[r.key] = { ...(props.rolePermissions?.[r.key] ?? {}) };
+        const next = { ...(props.rolePermissions?.[r.key] ?? {}) };
+        props.modules?.forEach((m) => {
+            if (! Object.prototype.hasOwnProperty.call(next, m.key)) {
+                next[m.key] = '';
+            }
+        });
+        roleState[r.key] = next;
     });
 };
 
-loadRoles();
+loadRoles(true);
 
-watch(() => props.rolePermissions, loadRoles, { deep: true });
+watch(() => props.rolePermissions, () => loadRoles(), { deep: true });
 
 const activeRole = computed(() => props.roles?.find((r) => r.key === roleTab.value) ?? null);
 
 watch(activeRole, (role) => {
     roleLabel.value = role?.label ?? '';
 }, { immediate: true });
-
-const setRoleLevel = (roleKey, moduleKey, level) => {
-    if (! roleState[roleKey]) {
-        roleState[roleKey] = {};
-    }
-    if (!level) {
-        delete roleState[roleKey][moduleKey];
-        return;
-    }
-    roleState[roleKey][moduleKey] = level;
-};
 
 const cleanPermissions = (raw = {}) => Object.fromEntries(
     Object.entries(raw || {}).filter(([, level]) => Boolean(level) && level !== '__none__'),
@@ -173,13 +189,15 @@ const saveRole = () => {
     if (!activeRole.value || saving.value) return;
     saving.value = true;
     const payload = {
-        permissions: cleanPermissions(roleState[activeRole.value.key]),
+        permissions: cleanPermissions({ ...(toRaw(roleState[activeRole.value.key]) || {}) }),
     };
     if (! activeRole.value.is_system) {
         payload.label = roleLabel.value;
     }
     router.patch(route('admin.roles.update', { role: activeRole.value.key }), payload, {
         preserveScroll: true,
+        preserveState: false,
+        onSuccess: () => { rolesDirty.value = false; },
         onFinish: () => { saving.value = false; },
     });
 };
@@ -305,7 +323,7 @@ const userRoleLabels = (user) => {
 
 const roleSummary = (roleKey) => {
     const entries = Object.entries(roleState[roleKey] ?? {})
-        .filter(([key]) => props.modules.some((m) => m.key === key));
+        .filter(([key, level]) => Boolean(level) && props.modules.some((m) => m.key === key));
 
     if (entries.length === 0) {
         return 'Бүх модуль хаалттай';
@@ -664,8 +682,8 @@ const pickFromDirectory = (value) => {
                                     <td>
                                         <select
                                             class="ui-input !py-1.5"
-                                            :value="roleState[activeRole.key]?.[m.key] || ''"
-                                            @change="setRoleLevel(activeRole.key, m.key, $event.target.value)"
+                                            v-model="roleState[activeRole.key][m.key]"
+                                            @change="rolesDirty = true"
                                         >
                                             <option
                                                 v-for="option in levelOptions(m)"

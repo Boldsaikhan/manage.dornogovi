@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\User;
+use App\Models\UserModulePermission;
 use App\Services\Ai\AiSettings;
 use Illuminate\Support\Collection;
 
@@ -163,6 +164,19 @@ class ModuleAccess
         }
 
         $map = RolePermission::map()[$roleKey] ?? [];
+        $desired = [];
+        foreach ($map as $module => $level) {
+            if ($module === '__none__' || ! self::find($module) || ! in_array($level, self::LEVELS, true)) {
+                continue;
+            }
+
+            if (in_array($level, ['view_own', 'edit_own', 'manage_own'], true) && ! self::supportsOwnScope($module)) {
+                continue;
+            }
+
+            $desired[$module] = $level;
+        }
+
         $query = User::query()->where($field, true)->where('is_admin', false);
 
         // Мэргэжилтэн загвар — дарга нарт бүү хүр.
@@ -172,18 +186,11 @@ class ModuleAccess
 
         $count = 0;
         foreach ($query->get() as $user) {
-            $user->modulePermissions()->delete();
+            UserModulePermission::query()->where('user_id', $user->id)->delete();
 
-            foreach ($map as $module => $level) {
-                if ($module === '__none__' || ! self::find($module) || ! in_array($level, self::LEVELS, true)) {
-                    continue;
-                }
-
-                if (in_array($level, ['view_own', 'edit_own', 'manage_own'], true) && ! self::supportsOwnScope($module)) {
-                    continue;
-                }
-
-                $user->modulePermissions()->create([
+            foreach ($desired as $module => $level) {
+                UserModulePermission::query()->create([
+                    'user_id' => $user->id,
                     'module_key' => $module,
                     'level' => $level,
                 ]);
