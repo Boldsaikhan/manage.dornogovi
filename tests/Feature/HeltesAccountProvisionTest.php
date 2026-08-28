@@ -41,7 +41,7 @@ class HeltesAccountProvisionTest extends TestCase
         $this->assertTrue($head->is_department_head);
         $this->assertFalse($head->is_specialist);
         $this->assertFalse($head->is_admin);
-        $this->assertTrue(Hash::check('ZDTG91116259', $head->password));
+        $this->assertTrue(Hash::check(HeltesAccountProvisioner::STAFF_LOGIN_PASSWORD, $head->password));
         $this->assertSame('sansarmaa@dornogovi.gov.mn', $head->email);
         $this->assertTrue(
             UserModulePermission::query()->where('user_id', $head->id)->where('module_key', 'tasks')->exists()
@@ -50,7 +50,7 @@ class HeltesAccountProvisionTest extends TestCase
         $specialist = User::query()->where('phone', '89239655')->first();
         $this->assertTrue($specialist->is_specialist);
         $this->assertFalse($specialist->is_department_head);
-        $this->assertTrue(Hash::check('ZDTG89239655', $specialist->password));
+        $this->assertTrue(Hash::check(HeltesAccountProvisioner::STAFF_LOGIN_PASSWORD, $specialist->password));
         $this->assertSame('boldsaikhan@dornogovi.gov.mn', $specialist->email);
     }
 
@@ -66,7 +66,7 @@ class HeltesAccountProvisionTest extends TestCase
 
         $this->assertSame('badral@dornogovi.gov.mn', $first->email);
         $this->assertSame('badral2@dornogovi.gov.mn', $second->email);
-        $this->assertTrue(Hash::check('ZDTG94588599', $first->password));
+        $this->assertTrue(Hash::check(HeltesAccountProvisioner::STAFF_LOGIN_PASSWORD, $first->password));
     }
 
     public function test_sync_staff_emails_rewrites_phone_domain_without_resetting_password(): void
@@ -99,8 +99,8 @@ class HeltesAccountProvisionTest extends TestCase
         app(HeltesAccountProvisioner::class)->run();
 
         $this->post(route('login'), [
-            'login' => '91116259',
-            'password' => 'ZDTG91116259',
+            'login' => '9111 6259',
+            'password' => HeltesAccountProvisioner::STAFF_LOGIN_PASSWORD,
         ])->assertRedirect();
 
         $this->assertAuthenticated();
@@ -155,7 +155,7 @@ class HeltesAccountProvisionTest extends TestCase
 
         $existing->refresh();
         $this->assertSame('Ц.Сансармаа', $existing->name);
-        $this->assertTrue(Hash::check('ZDTG91116259', $existing->password));
+        $this->assertTrue(Hash::check(HeltesAccountProvisioner::STAFF_LOGIN_PASSWORD, $existing->password));
         $this->assertSame(1, User::query()->where('phone', '91116259')->count());
     }
 
@@ -174,7 +174,7 @@ class HeltesAccountProvisionTest extends TestCase
 
         $this->assertSame(1, $result['updated']);
         $existing->refresh();
-        $this->assertTrue(Hash::check('ZDTG99178904', $existing->password));
+        $this->assertTrue(Hash::check(HeltesAccountProvisioner::STAFF_LOGIN_PASSWORD, $existing->password));
         $this->assertTrue(
             UserModulePermission::query()->where('user_id', $existing->id)->where('module_key', 'tasks')->exists()
         );
@@ -204,6 +204,21 @@ class HeltesAccountProvisionTest extends TestCase
         $this->assertTrue(Hash::check('ZDTG@22026', $staff->fresh()->password));
         $this->assertTrue(Hash::check('Boldoo@1134', $admin->fresh()->password));
         $this->assertNull($admin->fresh()->remember_token);
+    }
+
+    public function test_sets_staff_login_password_without_changing_super_admin(): void
+    {
+        $staff = User::factory()->create(['password' => 'old-staff', 'is_admin' => false]);
+        $admin = User::factory()->create(['password' => 'Boldoo@1134', 'is_admin' => true]);
+
+        $updated = app(HeltesAccountProvisioner::class)->setStaffLoginPasswords(
+            HeltesAccountProvisioner::STAFF_LOGIN_PASSWORD
+        );
+
+        $this->assertSame(1, $updated);
+        $this->assertTrue(Hash::check(HeltesAccountProvisioner::STAFF_LOGIN_PASSWORD, $staff->fresh()->password));
+        $this->assertTrue(Hash::check('Boldoo@1134', $admin->fresh()->password));
+        $this->assertNull($staff->fresh()->remember_token);
     }
 
     public function test_does_not_overwrite_admin_password(): void

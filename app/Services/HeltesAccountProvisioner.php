@@ -17,10 +17,12 @@ use Illuminate\Support\Facades\Schema;
  *
  * Нэвтрэх нэр: гар утас.
  * И-мэйл: латин нэр @dornogovi.gov.mn (жнь: badral@dornogovi.gov.mn).
- * Нууц үг: ZDTG + утасны дугаар (жнь: ZDTG99178904).
+ * Нууц үг: ZDTG@2026 (супер админ биш).
  */
 class HeltesAccountProvisioner
 {
+    public const STAFF_LOGIN_PASSWORD = 'ZDTG@2026';
+
     /**
      * @return array{created: int, updated: int, skipped: list<array{name: string, reason: string}>, dry_run: bool}
      */
@@ -168,39 +170,18 @@ class HeltesAccountProvisioner
         ];
     }
 
-    /** Нууц үг: ZDTG + утас (жнь: ZDTG99178904). */
+    /** Албан хаагчийн нэвтрэх нууц үг. */
     public static function passwordFromPhone(string $phone): string
     {
-        $digits = User::normalizePhone($phone) ?? preg_replace('/\D+/', '', $phone) ?? '';
-
-        return 'ZDTG'.$digits;
+        return self::STAFF_LOGIN_PASSWORD;
     }
 
     /**
-     * Хандах эрхтэй (админ биш) бүх хэрэглэгчийн нууц үгийг ZDTG+утас болгоно.
+     * Хандах эрхтэй (админ биш) бүх хэрэглэгчийн нууц үгийг ZDTG@2026 болгоно.
      */
     public function syncStaffPasswords(): int
     {
-        $updated = 0;
-
-        User::query()
-            ->where('is_admin', false)
-            ->whereNotNull('phone')
-            ->where('phone', '!=', '')
-            ->orderBy('id')
-            ->each(function (User $user) use (&$updated): void {
-                $phone = User::normalizePhone($user->phone);
-
-                if ($phone === null || strlen($phone) < 4) {
-                    return;
-                }
-
-                $user->password = self::passwordFromPhone($phone);
-                $user->save();
-                $updated++;
-            });
-
-        return $updated;
+        return $this->setStaffLoginPasswords(self::STAFF_LOGIN_PASSWORD);
     }
 
     /** Бүх хэрэглэгчийн нэвтрэх нууц үгийг нэг утгаар солино. */
@@ -232,6 +213,30 @@ class HeltesAccountProvisioner
 
         User::query()
             ->where('is_admin', true)
+            ->orderBy('id')
+            ->each(function (User $user) use ($plain, &$updated, &$ids): void {
+                $user->password = $plain;
+                $user->setRememberToken(null);
+                $user->save();
+                $ids[] = $user->id;
+                $updated++;
+            });
+
+        if ($ids !== [] && Schema::hasTable('sessions')) {
+            DB::table('sessions')->whereIn('user_id', $ids)->delete();
+        }
+
+        return $updated;
+    }
+
+    /** Зөвхөн супер админ биш хэрэглэгчдийн нэвтрэх нууц үгийг солино. */
+    public function setStaffLoginPasswords(string $plain): int
+    {
+        $updated = 0;
+        $ids = [];
+
+        User::query()
+            ->where('is_admin', false)
             ->orderBy('id')
             ->each(function (User $user) use ($plain, &$updated, &$ids): void {
                 $user->password = $plain;
