@@ -1,14 +1,14 @@
 
 ---
 
-# mcloud.gov.mn дэмжлэгийн формд тавих (2026-08-26 оройн байдал)
+# mcloud.gov.mn дэмжлэгийн формд тавих (2026-08-28)
 
 Зам: mcloud.gov.mn → **«Холбоо барих»**. Давхар: `admin@ndc.gov.mn`
 
 **Сэдэв:**
 
 ```
-ЯАРАЛТАЙ: manage.dornogovi.gov.mn — NS зөрүү / NXDOMAIN (сертификатын DNS-01-ийн дараа)
+ЯАРАЛТАЙ: manage.dornogovi.gov.mn — ns4.gov.mn NXDOMAIN (8.8.8.8 / 1.1.1.1 кэш хордож байна)
 ```
 
 **Агуулга:**
@@ -21,32 +21,27 @@
 
 АСУУДАЛ
 ---------
-Let's Encrypt сертификат суулгахын тулд DNS TXT (_acme-challenge) нэмсний
-дараагаас хэрэглэгчдэд маш ихээр:
+manage.dornogovi.gov.mn нэр ns.gov.mn / ns1 / ns3 дээр зөв,
+харин ns4.gov.mn дээр AUTHORITATIVE NXDOMAIN буцааж байна.
 
-  • Chrome: ERR_NAME_NOT_RESOLVED
-  • iPhone Safari: server can't be found
+Иймээс Google (8.8.8.8) болон Cloudflare (1.1.1.1) заримдаа зөв,
+заримдаа «байхгүй» гэж кэшэлдэг. Гар утас (Brave/Chrome)
+DNS_PROBE_POSSIBLE / This site can’t be reached гэж харуулна.
+Сервер, nginx, SSL буруу биш.
 
-гарч байна. Сертификат/nginx өөрөө буруу биш — IP-гээр HTTPS 302 өгч байна.
-Асуудал нь DNS нэрийн шийдэлт.
+НОТЛОХ ТУРШИЛТ (2026-08-28, сервер дээрээс, authoritative)
+----------------------------------------------------------
+dig A manage.dornogovi.gov.mn @ns.gov.mn   → 202.37.109.67   (OK)
+dig A manage.dornogovi.gov.mn @ns1.gov.mn  → 202.37.109.67   (OK)
+dig A manage.dornogovi.gov.mn @ns3.gov.mn  → 202.37.109.67   (OK)
+dig A manage.dornogovi.gov.mn @ns4.gov.mn  → NXDOMAIN + AA
+     SOA dornogovi.gov.mn serial 2022112701
 
-НОТЛОХ ТУРШИЛТ (ижил цагт)
---------------------------
-Google DNS (8.8.8.8):
-  manage.dornogovi.gov.mn A → 202.37.109.67   (OK)
-
-Cloudflare (1.1.1.1):
-  manage.dornogovi.gov.mn A → 202.37.109.67   (OK)
-
-Univision ISP DNS (ns3.univision.mn / 59.153.112.2):
-  manage.dornogovi.gov.mn → Non-existent domain (NXDOMAIN)   ← АЛДАА
-
-Google DoH заримдаа ns4 (103.43.117.102)-аас NXDOMAIN авч байна.
-Parent SOA: dornogovi.gov.mn serial 2022112701 (хуучин)
+Google 8.8.8.8:     A → 202.37.109.67  (одоогоор OK, TTL 60 сек)
+Cloudflare 1.1.1.1: A → 202.37.109.67  (одоогоор OK)
 Тусад бүс SOA: a.misconfigured.dns.server.invalid (буруу)
 
-Иймээс Монголын ISP DNS ашигласан Mac/iPhone ихэнхдээ унана,
-8.8.8.8 ашигласан компьютер заримдаа нээгдэнэ.
+ns4 NXDOMAIN-ийг 8.8.8.8/1.1.1.1 кэшэлбэл бүх хэрэглэгч унана.
 
 ХҮСЭЛТ
 ------
@@ -64,12 +59,16 @@ Parent SOA: dornogovi.gov.mn serial 2022112701 (хуучин)
 4) Сертификатын _acme-challenge TXT үлдсэн бол устгаж болно
    (сертификат аль хэдийн суусан).
 
-Шалгах:
+Шалгах (дөрвүүлэнд ижил байх):
   dig +short A manage.dornogovi.gov.mn @ns.gov.mn
   dig +short A manage.dornogovi.gov.mn @ns1.gov.mn
   dig +short A manage.dornogovi.gov.mn @ns3.gov.mn
   dig +short A manage.dornogovi.gov.mn @ns4.gov.mn
-  → дөрвүүлэнд 202.37.109.67
+  → 202.37.109.67
+
+  dig +short A manage.dornogovi.gov.mn @8.8.8.8
+  dig +short A manage.dornogovi.gov.mn @1.1.1.1
+  → 202.37.109.67
 
 Яаралтай шийдвэрлэж өгнө үү. Баярлалаа.
 it@dornogovi.gov.mn

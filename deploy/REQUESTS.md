@@ -7,19 +7,19 @@
 | DNS удирдагч | `ns.gov.mn` / `ns1` / `ns3` / `ns4.gov.mn` |
 | Хариуцагч | **mcloud.gov.mn → Холбоо барих**, `admin@ndc.gov.mn` |
 
-> A бичлэг зарим resolver дээр зөв (`202.37.109.67`) гарч байгаа ч бүс
-> **буруу тохируулагдсан** тул iPhone Safari / гар утасны сүлжээнд
-> «server can't be found» / `ERR_NAME_NOT_RESOLVED` давтагдана.
-> Энэ нь **сайтын Laravel код биш** — gov.mn DNS бүс.
+> `8.8.8.8` болон `1.1.1.1` одоогоор A → `202.37.109.67` өгч байгаа ч
+> **ns4.gov.mn AUTHORITATIVE NXDOMAIN** буцаадаг. Resolver ns4-ийг оноовол
+> «байхгүй» гэж кэшэлж, утас дээр `DNS_PROBE_POSSIBLE` гардаг.
+> Энэ нь **сайтын Laravel код биш** — gov.mn DNS бүс. НДТ л засна.
 
-### Гол алдаанууд (сертификатын DNS-01-ийн дараа илүү тод)
-Сертификат өөрөө буруу биш. DNS TXT нэмэх үед бүс эвдэрч, **NS-үүд зөрүүтэй** болсон.
+### Гол алдаанууд (2026-08-28, сервер дээрээс authoritative)
+Сертификат/nginx буруу биш. NS-үүд зөрүүтэй — ns4 бүсийг мэдэхгүй.
 
 | DNS | Үр дүн |
 |---|---|
-| `8.8.8.8` / `1.1.1.1` | A → `202.37.109.67` (OK) |
-| Univision `ns3.univision.mn` | **NXDOMAIN** (Non-existent domain) |
-| `ns4.gov.mn` | заримдаа NXDOMAIN |
+| `ns.gov.mn` / `ns1` / `ns3` | A → `202.37.109.67` (OK) |
+| **`ns4.gov.mn`** | **NXDOMAIN + AA** (serial `2022112701`) |
+| `8.8.8.8` / `1.1.1.1` | A → `202.37.109.67` (одоогоор OK, TTL 60 сек — ns4 кэш хордож болно) |
 
 1. Тусад бүс: SOA = `a.misconfigured.dns.server.invalid`
 2. Parent `dornogovi.gov.mn` serial `2022112701` (хуучин)

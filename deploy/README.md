@@ -95,9 +95,10 @@ sudo /opt/manage-dornogovi/deploy/auto-update.sh
 
 ## 6. Гаднаас хандалт + DNS (iPhone/Safari алдаа)
 
-Нийтийн IP (`202.37.109.67`) болон HTTPS ажиллаж байгаа. Гэхдээ **DNS бүс
-буруу** (SOA `a.misconfigured.dns.server.invalid`, NS timeout) тул зарим
-төхөөрөмж (ялангуяа iPhone Safari) «server can't be found» алдаа авна.
+Нийтийн IP (`202.37.109.67`) болон HTTPS ажиллаж байгаа. `8.8.8.8` /
+`1.1.1.1` одоогоор зөв A өгнө. Гэхдээ **ns4.gov.mn NXDOMAIN** тул тэр
+resolver кэш хордож, утас дээр `DNS_PROBE_POSSIBLE` гардаг. SOA ч буруу
+(`a.misconfigured.dns.server.invalid`).
 
 Энэ нь **сайтын кодоор засагдахгүй** — НДТ/gov.mn DNS админ засна.
 Хүсэлтийн бэлэн текст: [dns-request-email.md](dns-request-email.md),
