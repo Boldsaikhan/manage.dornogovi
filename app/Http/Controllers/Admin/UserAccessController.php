@@ -13,7 +13,6 @@ use App\Services\HeltesAccountProvisioner;
 use App\Support\ModuleAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -111,18 +110,38 @@ class UserAccessController extends Controller
             ->filter(fn ($level, $key) => ! ModuleAccess::isOwnLevel($level) || ModuleAccess::supportsOwnScope($key))
             ->all();
 
-        $synced = 0;
-        DB::transaction(function () use ($model, $permissions, &$synced): void {
-            RolePermission::replaceFor($model->key, $permissions);
-            $synced = ModuleAccess::syncUsersToRole($model->key);
-        });
+        // Загварыг эхлээд хадгална. Хэрэглэгчдийн эрх хуулах нь тусдаа —
+        // олон мэргэжилтэн дээр sync алдаа/timeout гарахад загвар буцаж DEFAULTS болохгүй.
+        RolePermission::replaceFor($model->key, $permissions);
 
-        return back()->with('success', sprintf(
+        $synced = 0;
+        $syncFailed = false;
+        try {
+            $synced = ModuleAccess::syncUsersToRole($model->key);
+        } catch (\Throwable $e) {
+            report($e);
+            $syncFailed = true;
+        }
+
+        $redirect = redirect()->route('admin.users.index', [
+            'tab' => 'templates',
+            'role' => $model->key,
+        ]);
+
+        $message = sprintf(
             '«%s» ролийн загвар хадгалагдлаа (%d модуль)%s.',
             $model->label,
             count($permissions),
             $synced > 0 ? sprintf(', %d хэрэглэгчийн эрх шинэчлэгдлээ', $synced) : '',
-        ));
+        );
+
+        if ($syncFailed) {
+            return $redirect
+                ->with('success', $message)
+                ->with('warning', 'Загвар хадгалагдсан. Хэрэглэгчийн эрх хуулахад алдаа гарлаа.');
+        }
+
+        return $redirect->with('success', $message);
     }
 
     /**

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\User;
+use App\Models\UserModulePermission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -97,5 +98,56 @@ class RolePermissionTemplateTest extends TestCase
         $this->actingAs($this->admin())
             ->delete(route('admin.roles.destroy', 'specialist'))
             ->assertForbidden();
+    }
+
+    public function test_specialist_template_keeps_view_own_after_save(): void
+    {
+        $admin = $this->admin();
+        $defaults = RolePermission::DEFAULTS['specialist'];
+
+        foreach (range(1, 8) as $i) {
+            $user = User::factory()->create([
+                'is_admin' => false,
+                'is_specialist' => true,
+                'is_department_head' => false,
+            ]);
+
+            foreach ($defaults as $module => $level) {
+                UserModulePermission::create([
+                    'user_id' => $user->id,
+                    'module_key' => $module,
+                    'level' => $level,
+                ]);
+            }
+        }
+
+        $permissions = [...$defaults, 'tasks' => 'view_own'];
+
+        $this->actingAs($admin)
+            ->patch(route('admin.roles.update', 'specialist'), [
+                'permissions' => $permissions,
+            ])
+            ->assertRedirect(route('admin.users.index', [
+                'tab' => 'templates',
+                'role' => 'specialist',
+            ]))
+            ->assertSessionHas('success');
+
+        $this->assertSame('view_own', RolePermission::query()
+            ->where('role', 'specialist')
+            ->where('module_key', 'tasks')
+            ->value('level'));
+        $this->assertSame('view_own', RolePermission::map()['specialist']['tasks']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.users.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('rolePermissions.specialist.tasks', 'view_own'));
+
+        $this->assertSame(8, UserModulePermission::query()
+            ->where('module_key', 'tasks')
+            ->where('level', 'view_own')
+            ->count());
     }
 }
