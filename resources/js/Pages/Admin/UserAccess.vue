@@ -17,6 +17,14 @@ const props = defineProps({
 const page = usePage();
 
 const notice = computed(() => {
+    const errors = page.props.errors ?? {};
+    const errorText = Object.values(errors)
+        .flatMap((value) => (Array.isArray(value) ? value : [value]))
+        .filter(Boolean)
+        .join(' ');
+    if (errorText) {
+        return { type: 'warning', text: errorText };
+    }
     const flash = page.props.flash ?? {};
     if (flash.success) {
         return { type: 'success', text: flash.success };
@@ -145,6 +153,9 @@ watch(activeRole, (role) => {
 }, { immediate: true });
 
 const setRoleLevel = (roleKey, moduleKey, level) => {
+    if (! roleState[roleKey]) {
+        roleState[roleKey] = {};
+    }
     if (!level) {
         delete roleState[roleKey][moduleKey];
         return;
@@ -152,12 +163,25 @@ const setRoleLevel = (roleKey, moduleKey, level) => {
     roleState[roleKey][moduleKey] = level;
 };
 
+const cleanPermissions = (raw = {}) => Object.fromEntries(
+    Object.entries(raw || {}).filter(([, level]) => Boolean(level) && level !== '__none__'),
+);
+
+const saving = ref(false);
+
 const saveRole = () => {
-    if (!activeRole.value) return;
-    router.patch(route('admin.roles.update', activeRole.value.key), {
-        permissions: { ...roleState[activeRole.value.key] },
-        label: activeRole.value.is_system ? null : roleLabel.value,
-    }, { preserveScroll: true });
+    if (!activeRole.value || saving.value) return;
+    saving.value = true;
+    const payload = {
+        permissions: cleanPermissions(roleState[activeRole.value.key]),
+    };
+    if (! activeRole.value.is_system) {
+        payload.label = roleLabel.value;
+    }
+    router.patch(route('admin.roles.update', { role: activeRole.value.key }), payload, {
+        preserveScroll: true,
+        onFinish: () => { saving.value = false; },
+    });
 };
 
 // ── Шинэ роль ──
@@ -226,7 +250,7 @@ const detectRoleKey = (user) => {
 // Тухайн ролийн загварыг сонгосон албан хаагчид хэрэглэнэ.
 const applyRoleToUser = (roleKey) => {
     selectedRoleKey.value = roleKey;
-    editState.permissions = { ...(roleState[roleKey] ?? {}) };
+    editState.permissions = { ...cleanPermissions(roleState[roleKey]) };
 
     editState.is_admin = false;
     editState.is_department_head = false;
@@ -236,6 +260,13 @@ const applyRoleToUser = (roleKey) => {
     if (role?.field) {
         editState[role.field] = true;
     }
+};
+
+const applyRoleToSelectedAndSave = () => {
+    if (! selected.value || ! activeRole.value || saving.value) return;
+    applyRoleToUser(activeRole.value.key);
+    panelMode.value = 'employee';
+    saveUser();
 };
 
 /** Сонгосон албан хаагчийн одоогийн роль — хадгалагдсан төлөв. */
@@ -307,7 +338,8 @@ const levelOptions = (module) => {
 };
 
 const saveUser = () => {
-    if (!selected.value) return;
+    if (!selected.value || saving.value) return;
+    saving.value = true;
     router.patch(route('admin.users.update', selected.value.id), {
         name: selected.value.name,
         email: selected.value.email,
@@ -317,10 +349,11 @@ const saveUser = () => {
         is_admin: editState.is_admin,
         is_department_head: editState.is_department_head,
         is_specialist: editState.is_specialist,
-        permissions: { ...editState.permissions },
+        permissions: cleanPermissions(editState.permissions),
     }, {
         preserveScroll: true,
         onSuccess: () => loadSelected(),
+        onFinish: () => { saving.value = false; },
     });
 };
 
@@ -515,7 +548,7 @@ const pickFromDirectory = (value) => {
                         </p>
                     </div>
 
-                    <button class="ui-btn-primary">Хадгалах</button>
+                    <button class="ui-btn-primary" :disabled="saving">Хадгалах</button>
                 </form>
                 </template>
 
@@ -649,12 +682,13 @@ const pickFromDirectory = (value) => {
                     </div>
 
                     <div class="flex flex-wrap gap-2">
-                        <button type="button" class="ui-btn-primary" @click="saveRole">Загвар хадгалах</button>
+                        <button type="button" class="ui-btn-primary" :disabled="saving" @click="saveRole">Загвар хадгалах</button>
                         <button
                             v-if="selected && activeRole"
                             type="button"
                             class="ui-btn-ghost"
-                            @click="applyRoleToUser(activeRole.key); panelMode = 'employee'"
+                            :disabled="saving"
+                            @click="applyRoleToSelectedAndSave"
                         >
                             «{{ selected.name }}»-д хэрэглээд буцах
                         </button>

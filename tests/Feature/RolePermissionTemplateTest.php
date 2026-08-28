@@ -41,6 +41,30 @@ class RolePermissionTemplateTest extends TestCase
         );
     }
 
+    public function test_role_template_save_ignores_empty_permission_values(): void
+    {
+        $this->actingAs($this->admin())
+            ->patch(route('admin.roles.update', 'specialist'), [
+                'permissions' => [
+                    'tasks' => 'edit_own',
+                    'work_groups' => '',
+                    '__none__' => 'view',
+                ],
+                'label' => null,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertSame('edit_own', RolePermission::query()
+            ->where('role', 'specialist')
+            ->where('module_key', 'tasks')
+            ->value('level'));
+        $this->assertDatabaseMissing('role_permissions', [
+            'role' => 'specialist',
+            'module_key' => 'work_groups',
+        ]);
+    }
+
     public function test_unknown_role_is_rejected(): void
     {
         $this->actingAs($this->admin())
