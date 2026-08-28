@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\PhoneDirectoryEntry;
+use App\Services\PhoneDirectoryStaffSyncer;
 use App\Support\ModuleAccess;
 use App\Support\PhoneDirectoryDocxParser;
 use App\Support\PhoneDirectoryDocxWriter;
+use App\Support\PhoneDirectoryStaffListParser;
+use App\Support\XlsxTableReader;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -362,13 +365,41 @@ class PhoneDirectoryController extends Controller
         ]);
 
         $extension = strtolower((string) $request->file('file')->getClientOriginalExtension());
+        $path = $request->file('file')->getRealPath();
+
+        if (in_array($extension, ['xlsx', 'xlsm'], true)) {
+            try {
+                $raw = app(XlsxTableReader::class)->rows($path);
+            } catch (RuntimeException $e) {
+                return back()->withErrors(['file' => $e->getMessage()]);
+            } catch (Throwable) {
+                return back()->withErrors(['file' => 'Excel файлыг уншиж чадсангүй. .xlsx хэлбэрээр хадгалж дахин оруулна уу.']);
+            }
+
+            $staffParser = app(PhoneDirectoryStaffListParser::class);
+
+            if (! $staffParser->looksLikeStaffList($raw)) {
+                return back()->withErrors(['file' => 'Excel-ийн эхний мөр «Овог / Нэр / Гар утас / И-мэйл» байх ёстой.']);
+            }
+
+            $result = app(PhoneDirectoryStaffSyncer::class)->sync($staffParser->fromRows($raw));
+
+            return redirect()
+                ->route('phone-directory.index')
+                ->with('success', sprintf(
+                    'Excel-ээс таарууллаа: %d шинэчилсэн, %d нэмсэн, %d хэрэглэгч.',
+                    $result['updated'],
+                    $result['created'],
+                    $result['users'],
+                ));
+        }
 
         if (! in_array($extension, ['docx', 'docm'], true)) {
-            return back()->withErrors(['file' => 'Зөвхөн .docx файл дэмжинэ. Word дээр «Save as → .docx» хийж оруулна уу.']);
+            return back()->withErrors(['file' => 'Зөвхөн .docx эсвэл .xlsx файл дэмжинэ.']);
         }
 
         try {
-            $rows = $parser->parse($request->file('file')->getRealPath());
+            $rows = $parser->parse($path);
         } catch (RuntimeException $e) {
             return back()->withErrors(['file' => $e->getMessage()]);
         } catch (Throwable) {
