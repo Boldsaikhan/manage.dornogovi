@@ -1,4 +1,4 @@
-/** Гар утас эсэх — desktop PWA-д биометрик хэрэглэхгүй */
+/** Гар утас эсэх — desktop PWA-д апп түгжээ хэрэглэхгүй */
 export const isMobileDevice = () => {
     if (typeof navigator === 'undefined') return false;
 

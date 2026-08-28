@@ -1,12 +1,10 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
-import { assertBiometric, isWebAuthnSupported } from '@/utils/webauthn';
 import { isMobileDevice } from '@/utils/mobileClient';
 
 const LOCK_KEY = 'md_app_locked';
 const LAST_ACTIVE_KEY = 'md_last_active';
-/** Биометрик цонх / unlock-ийн дараа visibility-ээр дахин түгжихгүй байх (мс). */
 const HIDE_GRACE_MS = 4000;
 
 const page = usePage();
@@ -14,19 +12,14 @@ const page = usePage();
 const password = ref('');
 const busy = ref(false);
 const error = ref('');
-const hint = ref('');
-const showPasswordFallback = ref(false);
 const offline = ref(typeof navigator !== 'undefined' ? ! navigator.onLine : false);
-const webauthnOk = ref(typeof window !== 'undefined' && isWebAuthnSupported());
 const clientLocked = ref(false);
 
-let locking = false;
 let suppressHideUntil = 0;
 
 const lock = computed(() => page.props.appLock ?? {
     locked: false,
     mode: null,
-    hasWebAuthn: false,
     idleMinutes: 30,
 });
 
@@ -37,39 +30,12 @@ const userId = computed(() => page.props.auth?.user?.id ?? null);
 const storageKey = () => `${LOCK_KEY}:${userId.value || 0}`;
 const lastActiveKey = () => `${LAST_ACTIVE_KEY}:${userId.value || 0}`;
 
-/** Гар утас + нэвтэрсэн */
 const shouldGuard = () => (
     !! page.props.auth?.user
     && isMobileDevice()
 );
 
-const hasWebAuthn = computed(() => !! lock.value.hasWebAuthn && webauthnOk.value);
-
 const showLock = computed(() => shouldGuard() && (clientLocked.value || !! lock.value.locked));
-
-const isBiometricOnly = computed(() => (
-    hasWebAuthn.value
-    && (lock.value.mode === 'biometric' || clientLocked.value)
-    && ! showPasswordFallback.value
-));
-
-const needsPassword = computed(() => ! isBiometricOnly.value || showPasswordFallback.value);
-
-const title = computed(() => (
-    isBiometricOnly.value && ! showPasswordFallback.value
-        ? 'Хуруу / нүүрээр баталгаажуулна уу'
-        : 'Дахин нэвтрэх'
-));
-
-const subtitle = computed(() => {
-    if (offline.value) {
-        return 'Сүлжээгүй үед апп түгжигдсэн байна. Интернэт холбогдсоны дараа нээнэ үү.';
-    }
-
-    return isBiometricOnly.value && ! showPasswordFallback.value
-        ? `${lock.value.idleMinutes || 30} минут идэвхгүй болсон тул дахин баталгаажуулна.`
-        : `${lock.value.idleMinutes || 30} минут идэвхгүй болсон тул нууц үгээр дахин нээнэ үү.`;
-});
 
 const suppressHideLock = (ms = HIDE_GRACE_MS) => {
     suppressHideUntil = Date.now() + ms;
@@ -97,14 +63,6 @@ const minutesIdle = () => {
 
 const idleExpired = () => minutesIdle() >= idleMs.value;
 
-const readClientLock = () => {
-    try {
-        return localStorage.getItem(storageKey()) === '1';
-    } catch {
-        return false;
-    }
-};
-
 const setClientLock = (on) => {
     clientLocked.value = on;
     try {
@@ -117,8 +75,6 @@ const setClientLock = (on) => {
         // ignore
     }
 };
-
-const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
 const requestIdleLock = async () => {
     if (! shouldGuard() || ! idleExpired()) {
@@ -239,8 +195,6 @@ watch(showLock, (v) => {
     if (v) {
         password.value = '';
         error.value = '';
-        hint.value = '';
-        showPasswordFallback.value = false;
     }
 });
 
@@ -258,55 +212,25 @@ const unlock = async () => {
         return;
     }
 
+    if (! password.value) {
+        error.value = 'Нууц үгээ оруулна уу.';
+        return;
+    }
+
     busy.value = true;
     error.value = '';
-    hint.value = '';
 
     try {
-        const useBiometric = hasWebAuthn.value && ! showPasswordFallback.value;
-        const payload = { require_biometric: useBiometric };
-
-        if (! useBiometric) {
-            if (! password.value) {
-                error.value = 'Нууц үгээ оруулна уу.';
-                return;
-            }
-            payload.password = password.value;
-        }
-
-        if (useBiometric) {
-            try {
-                suppressHideLock(HIDE_GRACE_MS * 2);
-                payload.assertion = await assertBiometric();
-                suppressHideLock(HIDE_GRACE_MS);
-            } catch (e) {
-                const name = e?.name || '';
-                if (/NotAllowedError|AbortError/i.test(name + String(e?.message))) {
-                    error.value = 'Биометрик цуцлагдлаа.';
-                    showPasswordFallback.value = true;
-                    return;
-                }
-                showPasswordFallback.value = true;
-                error.value = e?.response?.data?.message
-                    || e?.message
-                    || 'Биометрик амжилтгүй. Нууц үгээр үргэлжлүүлнэ үү.';
-                return;
-            }
-        }
-
         if (! lock.value.locked) {
-            locking = true;
             suppressHideLock(HIDE_GRACE_MS);
             try {
                 await window.axios.post(route('app.lock'), { idle: true });
             } catch {
                 // ignore
-            } finally {
-                locking = false;
             }
         }
 
-        await window.axios.post(route('app.unlock'), payload);
+        await window.axios.post(route('app.unlock'), { password: password.value });
         password.value = '';
         clearLockLocal();
         suppressHideLock(HIDE_GRACE_MS);
@@ -316,56 +240,9 @@ const unlock = async () => {
             error.value = 'Сүлжээгүй байна. Холбогдсоны дараа дахин оролдоно уу.';
         } else {
             error.value = e?.response?.data?.errors?.password?.[0]
-                || e?.response?.data?.errors?.webauthn?.[0]
                 || e?.response?.data?.message
                 || 'Түгжээ тайлагдахгүй байна.';
-            if (e?.response?.data?.errors?.webauthn) {
-                showPasswordFallback.value = true;
-            }
         }
-    } finally {
-        busy.value = false;
-    }
-};
-
-const unlockPasswordOnly = async () => {
-    if (busy.value) return;
-    if (! navigator.onLine) {
-        error.value = 'Сүлжээгүй байна. Холбогдсоны дараа дахин оролдоно уу.';
-        return;
-    }
-    if (! password.value) {
-        error.value = 'Нууц үгээ оруулна уу.';
-        return;
-    }
-
-    busy.value = true;
-    error.value = '';
-    try {
-        if (! lock.value.locked) {
-            try {
-                const body = new FormData();
-                const token = csrfToken();
-                if (token) body.append('_token', token);
-                body.append('idle', '1');
-                await window.axios.post(route('app.lock'), body);
-            } catch {
-                // ignore
-            }
-        }
-
-        const { data } = await window.axios.post(route('app.unlock.password'), {
-            password: password.value,
-        });
-        hint.value = data?.hint || '';
-        password.value = '';
-        clearLockLocal();
-        suppressHideLock(HIDE_GRACE_MS);
-        router.reload({ only: ['appLock', 'vault'] });
-    } catch (e) {
-        error.value = e?.response?.data?.errors?.password?.[0]
-            || e?.response?.data?.message
-            || 'Нууц үг буруу байна.';
     } finally {
         busy.value = false;
     }
@@ -389,10 +266,12 @@ const unlockPasswordOnly = async () => {
             </div>
 
             <h2 id="app-lock-title" class="mt-4 text-center text-lg font-bold text-brand-navy-900">
-                {{ title }}
+                Дахин нэвтрэх
             </h2>
             <p class="mt-1 text-center text-sm text-slate-500">
-                {{ subtitle }}
+                {{ offline
+                    ? 'Сүлжээгүй үед апп түгжигдсэн байна. Интернэт холбогдсоны дараа нээнэ үү.'
+                    : `${lock.idleMinutes || 30} минут идэвхгүй болсон тул нууц үгээр дахин нээнэ үү.` }}
             </p>
 
             <div
@@ -403,7 +282,7 @@ const unlockPasswordOnly = async () => {
             </div>
 
             <form class="mt-6 space-y-4" @submit.prevent="unlock">
-                <div v-if="needsPassword && !offline">
+                <div v-if="!offline">
                     <label class="mb-1 block text-xs font-medium text-slate-600">Нууц үг</label>
                     <input
                         v-model="password"
@@ -415,7 +294,6 @@ const unlockPasswordOnly = async () => {
                 </div>
 
                 <p v-if="error" class="text-center text-sm text-red-600">{{ error }}</p>
-                <p v-if="hint" class="text-center text-sm text-amber-700">{{ hint }}</p>
 
                 <button
                     type="submit"
@@ -424,20 +302,7 @@ const unlockPasswordOnly = async () => {
                 >
                     <span v-if="busy">Шалгаж байна…</span>
                     <span v-else-if="offline">Дахин оролдох</span>
-                    <span v-else-if="hasWebAuthn && !showPasswordFallback">
-                        Хуруу / нүүрээр нээх
-                    </span>
                     <span v-else>Нээх</span>
-                </button>
-
-                <button
-                    v-if="showPasswordFallback && hasWebAuthn && !offline"
-                    type="button"
-                    class="ui-btn-ghost w-full"
-                    :disabled="busy"
-                    @click="unlockPasswordOnly"
-                >
-                    Зөвхөн нууц үгээр үргэлжлүүлэх
                 </button>
             </form>
 
