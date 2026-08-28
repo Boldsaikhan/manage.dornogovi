@@ -13,6 +13,7 @@ use App\Services\HeltesAccountProvisioner;
 use App\Support\ModuleAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -90,6 +91,10 @@ class UserAccessController extends Controller
     {
         $model = Role::query()->where('key', $role)->firstOrFail();
 
+        $request->merge([
+            'permissions' => $this->normalizedPermissions($request->input('permissions')),
+        ]);
+
         $data = $request->validate([
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['in:'.implode(',', ModuleAccess::LEVELS)],
@@ -106,9 +111,11 @@ class UserAccessController extends Controller
             ->filter(fn ($level, $key) => ! ModuleAccess::isOwnLevel($level) || ModuleAccess::supportsOwnScope($key))
             ->all();
 
-        RolePermission::replaceFor($model->key, $permissions);
-
-        $synced = ModuleAccess::syncUsersToRole($model->key);
+        $synced = 0;
+        DB::transaction(function () use ($model, $permissions, &$synced): void {
+            RolePermission::replaceFor($model->key, $permissions);
+            $synced = ModuleAccess::syncUsersToRole($model->key);
+        });
 
         return back()->with('success', sprintf(
             '«%s» ролийн загвар хадгалагдлаа (%d модуль)%s.',
@@ -193,6 +200,13 @@ class UserAccessController extends Controller
 
     public function update(Request $request, User $user): RedirectResponse
     {
+        $request->merge([
+            'permissions' => $this->normalizedPermissions($request->input('permissions')),
+            'department_id' => $request->input('department_id') ?: null,
+            'phone' => $request->input('phone') ?: null,
+            'position' => $request->input('position') ?: null,
+        ]);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
@@ -366,6 +380,23 @@ class UserAccessController extends Controller
         }
 
         return $lines;
+    }
+
+    /**
+     * Хоосон / хүчингүй түвшинг хасна — хадгалах үед 422 гаргахгүй.
+     *
+     * @return array<string, string>
+     */
+    private function normalizedPermissions(mixed $permissions): array
+    {
+        if (! is_array($permissions)) {
+            return [];
+        }
+
+        return collect($permissions)
+            ->filter(fn ($level, $key) => is_string($key) && $key !== '' && $key !== '__none__')
+            ->filter(fn ($level) => is_string($level) && in_array($level, ModuleAccess::LEVELS, true))
+            ->all();
     }
 
     private function levelLabel(?string $level): string
