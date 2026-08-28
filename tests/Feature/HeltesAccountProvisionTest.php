@@ -180,6 +180,19 @@ class HeltesAccountProvisionTest extends TestCase
         );
     }
 
+    public function test_sets_the_same_login_password_for_every_user(): void
+    {
+        $staff = User::factory()->create(['password' => 'old-staff', 'is_admin' => false]);
+        $admin = User::factory()->create(['password' => 'old-admin', 'is_admin' => true]);
+
+        $updated = app(HeltesAccountProvisioner::class)->setAllLoginPasswords('ZDTG@22026');
+
+        $this->assertSame(2, $updated);
+        $this->assertTrue(Hash::check('ZDTG@22026', $staff->fresh()->password));
+        $this->assertTrue(Hash::check('ZDTG@22026', $admin->fresh()->password));
+        $this->assertNull($staff->fresh()->remember_token);
+    }
+
     public function test_does_not_overwrite_admin_password(): void
     {
         $this->heltesPerson(name: 'Ц.Сансармаа', mobile: '91116259');

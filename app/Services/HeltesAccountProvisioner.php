@@ -10,6 +10,7 @@ use App\Support\ModuleAccess;
 use App\Support\PersonName;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Утасны жагсаалтын «Хэлтэс» ангиллын албан хаагчдад нэвтрэх эрх үүсгэнэ.
@@ -198,6 +199,27 @@ class HeltesAccountProvisioner
                 $user->save();
                 $updated++;
             });
+
+        return $updated;
+    }
+
+    /** Бүх хэрэглэгчийн нэвтрэх нууц үгийг нэг утгаар солино. */
+    public function setAllLoginPasswords(string $plain): int
+    {
+        $updated = 0;
+
+        User::query()
+            ->orderBy('id')
+            ->each(function (User $user) use ($plain, &$updated): void {
+                $user->password = $plain;
+                $user->setRememberToken(null);
+                $user->save();
+                $updated++;
+            });
+
+        if (Schema::hasTable('sessions')) {
+            DB::table('sessions')->truncate();
+        }
 
         return $updated;
     }
