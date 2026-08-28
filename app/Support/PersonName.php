@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\PhoneDirectoryEntry;
 use App\Models\User;
 
 /**
@@ -34,13 +35,36 @@ class PersonName
     /** @return array<int, string> */
     public static function matchPatterns(User $user): array
     {
-        $patterns = array_values(array_unique(array_filter([
+        $candidates = [
             self::short($user->name),
-            trim($user->name),
+            trim((string) $user->name),
             self::splitUserName($user)[1],
-        ], fn (string $value) => $value !== '')));
+            ...PhoneDirectoryEntry::namesMatchingUser($user),
+        ];
 
-        return $patterns;
+        $patterns = [];
+
+        foreach ($candidates as $value) {
+            $value = trim((string) $value);
+
+            if ($value === '') {
+                continue;
+            }
+
+            $patterns[] = $value;
+
+            $short = self::short($value);
+            if ($short !== '' && $short !== $value) {
+                $patterns[] = $short;
+            }
+
+            $compact = preg_replace('/\s+/u', '', $short !== '' ? $short : $value) ?? '';
+            if ($compact !== '' && $compact !== $value) {
+                $patterns[] = $compact;
+            }
+        }
+
+        return array_values(array_unique($patterns));
     }
 
     public static function matchesUser(User $user, ?string $value): bool

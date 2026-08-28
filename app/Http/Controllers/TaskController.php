@@ -742,13 +742,8 @@ class TaskController extends Controller
                 return [];
             }
 
-            $query->whereHas('tasks', function ($tasks) use ($patterns) {
-                $tasks->where(function ($w) use ($patterns) {
-                    foreach ($patterns as $pattern) {
-                        $w->orWhere('responsible', 'like', '%'.$pattern.'%')
-                            ->orWhere('collaborator', 'like', '%'.$pattern.'%');
-                    }
-                });
+            $query->whereHas('tasks', function ($tasks) use ($user): void {
+                ModuleOwnScope::restrictTasksToAssignee($tasks, $user);
             });
         }
 

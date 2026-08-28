@@ -103,13 +103,7 @@ class ModuleOwnScope
 
     private static function applyPersonNameScope(Builder $query, User $user, string $column): Builder
     {
-        $patterns = PersonName::matchPatterns($user);
-
-        return $query->where(function (Builder $inner) use ($column, $patterns) {
-            foreach ($patterns as $pattern) {
-                $inner->orWhere($column, 'like', '%'.$pattern.'%');
-            }
-        });
+        return self::applyNameLikeScope($query, $user, [$column]);
     }
 
     private static function applyAwardPersonScope(Builder $query, User $user): Builder
@@ -136,12 +130,29 @@ class ModuleOwnScope
 
     private static function applyTaskAssigneeScope(Builder $query, User $user): Builder
     {
+        return self::applyNameLikeScope($query, $user, ['responsible', 'collaborator']);
+    }
+
+    /**
+     * @param  list<string>  $columns
+     */
+    private static function applyNameLikeScope(Builder $query, User $user, array $columns): Builder
+    {
         $patterns = PersonName::matchPatterns($user);
 
-        return $query->where(function (Builder $inner) use ($patterns) {
-            foreach ($patterns as $pattern) {
-                $inner->orWhere('responsible', 'like', '%'.$pattern.'%')
-                    ->orWhere('collaborator', 'like', '%'.$pattern.'%');
+        if ($patterns === [] || $columns === []) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(function (Builder $inner) use ($columns, $patterns): void {
+            foreach ($columns as $column) {
+                foreach ($patterns as $pattern) {
+                    $inner->orWhere($column, 'like', '%'.$pattern.'%');
+                    $compact = preg_replace('/\s+/u', '', $pattern) ?? '';
+                    if ($compact !== '' && $compact !== $pattern) {
+                        $inner->orWhereRaw('REPLACE('.$column.", ' ', '') like ?", ['%'.$compact.'%']);
+                    }
+                }
             }
         });
     }
