@@ -75,7 +75,7 @@ class AppLockTest extends TestCase
         $this->assertFalse((bool) session(AppLock::SESSION_KEY));
     }
 
-    public function test_mobile_app_lock_uses_biometric_mode(): void
+    public function test_mobile_app_lock_uses_password_mode(): void
     {
         $user = User::factory()->create();
         $user->webauthnCredentials()->create([
@@ -91,7 +91,7 @@ class AppLockTest extends TestCase
             ->assertOk()
             ->assertJson([
                 'locked' => true,
-                'mode' => AppLock::MODE_BIOMETRIC,
+                'mode' => AppLock::MODE_FULL,
             ]);
     }
 
@@ -175,6 +175,28 @@ class AppLockTest extends TestCase
             ->assertStatus(422);
 
         $this->postJson(route('app.unlock.password'), ['password' => 'secret-pass'])
+            ->assertOk()
+            ->assertJson(['locked' => false]);
+    }
+
+    public function test_unlock_does_not_require_biometric(): void
+    {
+        $user = User::factory()->create([
+            'password' => bcrypt('secret-pass'),
+        ]);
+        $user->webauthnCredentials()->create([
+            'credential_id' => 'cred-no-bio-unlock',
+            'public_key' => 'pk',
+            'sign_count' => 0,
+            'device_name' => 'Phone',
+        ]);
+
+        $this->actingAs($user)
+            ->withHeader('User-Agent', self::MOBILE_UA)
+            ->postJson(route('app.lock'))
+            ->assertOk();
+
+        $this->postJson(route('app.unlock'), ['password' => 'secret-pass'])
             ->assertOk()
             ->assertJson(['locked' => false]);
     }
