@@ -193,6 +193,19 @@ class HeltesAccountProvisionTest extends TestCase
         $this->assertNull($staff->fresh()->remember_token);
     }
 
+    public function test_sets_login_password_only_for_super_admins(): void
+    {
+        $staff = User::factory()->create(['password' => 'ZDTG@22026', 'is_admin' => false]);
+        $admin = User::factory()->create(['password' => 'ZDTG@22026', 'is_admin' => true]);
+
+        $updated = app(HeltesAccountProvisioner::class)->setAdminLoginPasswords('Boldoo@1134');
+
+        $this->assertSame(1, $updated);
+        $this->assertTrue(Hash::check('ZDTG@22026', $staff->fresh()->password));
+        $this->assertTrue(Hash::check('Boldoo@1134', $admin->fresh()->password));
+        $this->assertNull($admin->fresh()->remember_token);
+    }
+
     public function test_does_not_overwrite_admin_password(): void
     {
         $this->heltesPerson(name: 'Ц.Сансармаа', mobile: '91116259');

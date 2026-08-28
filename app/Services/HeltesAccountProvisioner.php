@@ -224,6 +224,30 @@ class HeltesAccountProvisioner
         return $updated;
     }
 
+    /** Зөвхөн супер админ (is_admin) хэрэглэгчдийн нэвтрэх нууц үгийг солино. */
+    public function setAdminLoginPasswords(string $plain): int
+    {
+        $updated = 0;
+        $ids = [];
+
+        User::query()
+            ->where('is_admin', true)
+            ->orderBy('id')
+            ->each(function (User $user) use ($plain, &$updated, &$ids): void {
+                $user->password = $plain;
+                $user->setRememberToken(null);
+                $user->save();
+                $ids[] = $user->id;
+                $updated++;
+            });
+
+        if ($ids !== [] && Schema::hasTable('sessions')) {
+            DB::table('sessions')->whereIn('user_id', $ids)->delete();
+        }
+
+        return $updated;
+    }
+
     /**
      * «Ц.Сансармаа» → Sansarmaa, «А.Номин» → Nomin
      */
