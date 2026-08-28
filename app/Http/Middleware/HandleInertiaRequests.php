@@ -118,7 +118,7 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Хажуугийн самбарт харагдах системүүд.
+     * Хажуугийн самбарт харагдах гадны системүүд — зөвхөн сонгогдсон албан хаагчид.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -134,7 +134,8 @@ class HandleInertiaRequests extends Middleware
 
         return System::query()
             ->where('is_active', true)
-            ->visibleTo($request->user())
+            ->where('is_internal', false)
+            ->whereHas('viewers', fn ($q) => $q->whereKey($request->user()->id))
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get()

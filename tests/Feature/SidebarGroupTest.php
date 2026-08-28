@@ -14,7 +14,7 @@ class SidebarGroupTest extends TestCase
 
     public function test_navigation_marks_internal_systems(): void
     {
-        System::create([
+        $dotood = System::create([
             'slug' => 'dotood',
             'name' => 'Дотоод дашбоард',
             'url' => 'https://example.mn',
@@ -24,7 +24,7 @@ class SidebarGroupTest extends TestCase
             'sort_order' => 2,
         ]);
 
-        System::create([
+        $gadaad = System::create([
             'slug' => 'gadaad',
             'name' => 'Гадны систем',
             'url' => 'https://example.gov.mn',
@@ -32,15 +32,16 @@ class SidebarGroupTest extends TestCase
             'sort_order' => 1,
         ]);
 
-        $this->actingAs(User::factory()->create())
+        $staff = User::factory()->create();
+        $dotood->viewers()->sync([$staff->id]);
+        $gadaad->viewers()->sync([$staff->id]);
+
+        $this->actingAs($staff)
             ->get(route('dept.dashboard'))
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->has('nav', 2)
+                ->has('nav', 1)
                 ->where('nav.0.name', 'Гадны систем')
                 ->where('nav.0.is_internal', false)
-                ->where('nav.1.name', 'Дотоод дашбоард')
-                ->where('nav.1.is_internal', true)
-                ->where('nav.1.requires_login', false)
             );
     }
 

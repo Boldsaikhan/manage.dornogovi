@@ -5,6 +5,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
 import PushSubscribe from '@/Components/PushSubscribe.vue';
+import EmployeePicker from '@/Components/EmployeePicker.vue';
 
 const props = defineProps({
     systems: Array,
@@ -204,40 +205,93 @@ const resetForm = () => {
     form.requires_login = true;
     form.is_internal = false;
     form.viewer_ids = [];
-    viewerSearch.value = '';
-};
-
-// ── Системийг харах албан хаагчид ──
-const viewerSearch = ref('');
-
-const filteredEmployees = computed(() => {
-    const q = viewerSearch.value.trim().toLowerCase();
-
-    if (! q) {
-        return props.employees;
-    }
-
-    return props.employees.filter((e) => (e.name ?? '').toLowerCase().includes(q)
-        || (e.position ?? '').toLowerCase().includes(q));
-});
-
-const toggleViewer = (id) => {
-    const list = form.viewer_ids;
-
-    form.viewer_ids = list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
 };
 
 const viewerNames = (system) => {
     const ids = system.viewer_ids ?? [];
 
     if (ids.length === 0) {
-        return 'Бүгд харна';
+        return 'Цэсэнд харагдахгүй';
     }
 
     return props.employees
         .filter((e) => ids.includes(e.id))
         .map((e) => e.name)
         .join(', ');
+};
+
+const connectSearch = ref('');
+const viewerDrafts = ref({});
+const viewersSavingId = ref(null);
+
+watch(
+    () => props.systems,
+    (list) => {
+        const next = {};
+        for (const s of list ?? []) {
+            next[s.id] = [...(s.viewer_ids ?? [])];
+        }
+        viewerDrafts.value = next;
+    },
+    { immediate: true },
+);
+
+const connectableSystems = computed(() => {
+    const q = connectSearch.value.trim().toLowerCase();
+    const list = orderedSystems.value;
+
+    if (! q) {
+        return list;
+    }
+
+    return list.filter((s) => (s.name ?? '').toLowerCase().includes(q)
+        || (s.url ?? '').toLowerCase().includes(q)
+        || (s.login_url ?? '').toLowerCase().includes(q));
+});
+
+const saveViewers = (system) => {
+    viewersSavingId.value = system.id;
+    router.patch(
+        route('admin.systems.viewers', system.id),
+        { viewer_ids: viewerDrafts.value[system.id] ?? [] },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                viewersSavingId.value = null;
+            },
+        },
+    );
+};
+
+const viewersModal = ref(false);
+const viewersTarget = ref(null);
+const viewersModalIds = ref([]);
+
+const openViewers = (system) => {
+    viewersTarget.value = system;
+    viewersModalIds.value = [...(system.viewer_ids ?? [])];
+    viewersModal.value = true;
+};
+
+const saveViewersModal = () => {
+    if (! viewersTarget.value) {
+        return;
+    }
+
+    viewersSavingId.value = viewersTarget.value.id;
+    router.patch(
+        route('admin.systems.viewers', viewersTarget.value.id),
+        { viewer_ids: viewersModalIds.value },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                viewersModal.value = false;
+            },
+            onFinish: () => {
+                viewersSavingId.value = null;
+            },
+        },
+    );
 };
 
 const openCreate = () => {
@@ -262,7 +316,6 @@ const openEdit = (system) => {
     form.requires_login = system.requires_login;
     form.is_internal = system.is_internal;
     form.viewer_ids = [...(system.viewer_ids ?? [])];
-    viewerSearch.value = '';
     modal.value = true;
 };
 
@@ -392,6 +445,53 @@ const saveAi = () => {
                     Цэсийн тохиргоо хадгалах
                 </button>
             </form>
+
+            <div class="mt-8 border-t border-slate-200 pt-6">
+                <h2 class="text-base font-semibold text-brand-navy-900">Холбох систем хайх</h2>
+                <p class="mt-1 max-w-2xl text-sm text-brand-navy-400">
+                    Бүртгэлтэй гадны системээс хайж, аль албан хаагчийн цэсэнд харуулахаа сонгоно.
+                    Сонгоогүй бол тухайн систем ажилтны цэсэнд гарахгүй.
+                </p>
+
+                <input
+                    v-model="connectSearch"
+                    type="search"
+                    placeholder="Системийн нэр эсвэл хаягаар хайх…"
+                    class="ui-input mt-4 max-w-lg"
+                />
+
+                <p v-if="! connectableSystems.length" class="mt-4 text-sm text-slate-400">
+                    {{ connectSearch.trim() ? 'Илэрц олдсонгүй.' : 'Бүртгэлтэй гадны систем алга.' }}
+                </p>
+
+                <div class="mt-4 space-y-4">
+                    <div
+                        v-for="system in connectableSystems"
+                        :key="system.id"
+                        class="rounded-xl border border-slate-200 bg-slate-50/60 p-4"
+                    >
+                        <div class="mb-3 flex flex-wrap items-start justify-between gap-2">
+                            <div class="min-w-0">
+                                <h3 class="font-semibold text-brand-navy-800">{{ system.name }}</h3>
+                                <p class="truncate text-xs text-slate-400">{{ system.login_url || system.url }}</p>
+                            </div>
+                            <button
+                                type="button"
+                                class="ui-btn-primary shrink-0 py-1.5 text-xs"
+                                :disabled="viewersSavingId === system.id"
+                                @click="saveViewers(system)"
+                            >
+                                {{ viewersSavingId === system.id ? 'Хадгалж байна…' : 'Цэсэнд харуулахыг хадгалах' }}
+                            </button>
+                        </div>
+                        <EmployeePicker
+                            :employees="employees"
+                            :model-value="viewerDrafts[system.id] ?? []"
+                            @update:model-value="viewerDrafts[system.id] = $event"
+                        />
+                    </div>
+                </div>
+            </div>
         </section>
 
         <section
@@ -560,8 +660,8 @@ const saveAi = () => {
                 <div>
                     <h2 class="text-base font-semibold text-brand-navy-900">Гадны системүүд</h2>
                     <p class="mt-1 max-w-3xl text-sm text-brand-navy-400">
-                        Нэвтрэх URL, ДАН, автоматаар бөглөх тохиргоо. Ажилтны цэсэнд гарахгүй —
-                        зөвхөн админ удирдлага / өргөтгөлд ашиглана.
+                        Бүртгэлтэй системээс албан хаагч хайж сонговол зөвхөн тэдний хажуугийн цэсэнд
+                        («Холбосон системүүд») харагдана. Сонгоогүй бол цэсэнд гарахгүй.
                     </p>
                 </div>
                 <button type="button" class="ui-btn-primary shrink-0" @click="openCreate">
@@ -654,17 +754,27 @@ const saveAi = () => {
                             </span>
                         </td>
                         <td class="px-5 py-3">
-                            <span
-                                class="rounded-full px-2 py-0.5 text-xs"
-                                :class="(system.viewer_ids?.length ?? 0) > 0
-                                    ? 'bg-brand-orange-100 text-brand-orange-700'
-                                    : 'bg-brand-navy-100 text-brand-navy-600'"
+                            <button
+                                type="button"
+                                class="text-left"
+                                :title="viewerNames(system)"
+                                @click="openViewers(system)"
                             >
-                                {{ (system.viewer_ids?.length ?? 0) > 0 ? `${system.viewer_ids.length} албан хаагч` : 'Бүгд' }}
-                            </span>
-                            <div v-if="(system.viewer_ids?.length ?? 0) > 0" class="mt-1 max-w-xs truncate text-xs text-brand-navy-300" :title="viewerNames(system)">
-                                {{ viewerNames(system) }}
-                            </div>
+                                <span
+                                    class="rounded-full px-2 py-0.5 text-xs"
+                                    :class="(system.viewer_ids?.length ?? 0) > 0
+                                        ? 'bg-brand-orange-100 text-brand-orange-700'
+                                        : 'bg-brand-navy-100 text-brand-navy-600'"
+                                >
+                                    {{ (system.viewer_ids?.length ?? 0) > 0 ? `${system.viewer_ids.length} албан хаагч` : 'Сонгоогүй' }}
+                                </span>
+                                <div
+                                    v-if="(system.viewer_ids?.length ?? 0) > 0"
+                                    class="mt-1 max-w-xs truncate text-xs text-brand-navy-300"
+                                >
+                                    {{ viewerNames(system) }}
+                                </div>
+                            </button>
                         </td>
                         <td class="px-5 py-3 text-right whitespace-nowrap">
                             <button type="button" class="text-brand-navy-600 hover:underline" @click="openEdit(system)">
@@ -827,53 +937,13 @@ const saveAi = () => {
 
                     <!-- Харах албан хаагчид -->
                     <div class="rounded-xl border border-brand-navy-100 bg-slate-50/70 p-4">
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <div>
-                                <h3 class="text-sm font-semibold text-brand-navy-800">Харах албан хаагчид</h3>
-                                <p class="mt-0.5 text-xs text-brand-navy-400">
-                                    Хэнийг ч сонгоогүй бол бүх албан хаагчдад харагдана. Сонговол зөвхөн тэдний цэсэнд гарна.
-                                </p>
-                            </div>
-                            <span class="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold text-brand-navy-600 ring-1 ring-brand-navy-100">
-                                {{ form.viewer_ids.length ? form.viewer_ids.length + ' сонгогдсон' : 'Бүгд харна' }}
-                            </span>
-                        </div>
-
-                        <div class="mt-3 flex flex-wrap gap-2">
-                            <input
-                                v-model="viewerSearch"
-                                type="search"
-                                placeholder="Нэрээр хайх…"
-                                class="min-w-0 flex-1 rounded-md border border-brand-navy-200 px-3 py-1.5 text-sm"
-                            />
-                            <button
-                                type="button"
-                                class="rounded-md border border-brand-navy-200 px-3 py-1.5 text-xs"
-                                @click="form.viewer_ids = []"
-                            >
-                                Цэвэрлэх (бүгд харна)
-                            </button>
-                        </div>
-
-                        <div class="mt-3 max-h-56 overflow-y-auto rounded-lg border border-brand-navy-100 bg-white">
-                            <p v-if="! filteredEmployees.length" class="px-3 py-4 text-center text-xs text-slate-400">
-                                Илэрц олдсонгүй.
+                        <div class="mb-3">
+                            <h3 class="text-sm font-semibold text-brand-navy-800">Харах албан хаагчид</h3>
+                            <p class="mt-0.5 text-xs text-brand-navy-400">
+                                Хайж сонгосон албан хаагчдын цэсэнд энэ систем гарна. Хоосон бол цэсэнд харагдахгүй.
                             </p>
-                            <label
-                                v-for="e in filteredEmployees"
-                                :key="e.id"
-                                class="flex cursor-pointer items-center gap-2 border-b border-slate-50 px-3 py-2 text-sm last:border-0 hover:bg-brand-navy-50"
-                            >
-                                <input
-                                    type="checkbox"
-                                    class="rounded border-brand-navy-200 text-brand-orange-500"
-                                    :checked="form.viewer_ids.includes(e.id)"
-                                    @change="toggleViewer(e.id)"
-                                />
-                                <span class="font-medium text-brand-navy-800">{{ e.name }}</span>
-                                <span v-if="e.position" class="truncate text-xs text-brand-navy-300">{{ e.position }}</span>
-                            </label>
                         </div>
+                        <EmployeePicker v-model="form.viewer_ids" :employees="employees" />
                     </div>
                 </div>
 
@@ -884,6 +954,33 @@ const saveAi = () => {
                     </button>
                 </div>
             </form>
+        </Modal>
+
+        <Modal :show="viewersModal" max-width="lg" @close="viewersModal = false">
+            <div class="p-6">
+                <h2 class="text-base font-semibold text-brand-navy-900">
+                    {{ viewersTarget?.name }} — цэсэнд харуулах
+                </h2>
+                <p class="mt-1 text-sm text-slate-500">
+                    Албан хаагч хайж сонгоно. Сонгосон хүмүүсийн хажуугийн цэсэнд энэ систем гарна.
+                </p>
+                <div class="mt-4">
+                    <EmployeePicker v-model="viewersModalIds" :employees="employees" max-height-class="max-h-72" />
+                </div>
+                <div class="mt-6 flex justify-end gap-2">
+                    <button type="button" class="rounded-md border border-brand-navy-200 px-4 py-1.5 text-sm" @click="viewersModal = false">
+                        Болих
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-md bg-brand-orange-500 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+                        :disabled="viewersSavingId === viewersTarget?.id"
+                        @click="saveViewersModal"
+                    >
+                        Хадгалах
+                    </button>
+                </div>
+            </div>
         </Modal>
     </AuthenticatedLayout>
 </template>

@@ -155,6 +155,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/systems', [SystemSettingsController::class, 'store'])->name('systems.store');
         Route::patch('/systems/reorder', [SystemSettingsController::class, 'reorder'])->name('systems.reorder');
         Route::patch('/systems/{system}', [SystemSettingsController::class, 'update'])->name('systems.update');
+        Route::patch('/systems/{system}/viewers', [SystemSettingsController::class, 'updateViewers'])->name('systems.viewers');
         Route::delete('/systems/{system}', [SystemSettingsController::class, 'destroy'])->name('systems.destroy');
         Route::post('/systems/{system}/check-embed', [SystemSettingsController::class, 'checkEmbed'])->name('systems.check-embed');
         Route::patch('/ai-settings', [SystemSettingsController::class, 'updateAi'])->name('ai-settings.update');

@@ -26,6 +26,8 @@ class LaunchTest extends TestCase
 
     private function withCredential(System $system, User $user): UserCredential
     {
+        $system->viewers()->syncWithoutDetaching([$user->id]);
+
         return UserCredential::create([
             'user_id' => $user->id,
             'system_id' => $system->id,
@@ -137,6 +139,7 @@ class LaunchTest extends TestCase
     {
         $user = User::factory()->create();
         $system = $this->system();
+        $system->viewers()->sync([$user->id]);
 
         $this->actingAs($user);
         $this->withSession([Vault::SESSION_KEY => now()->addHour()->timestamp]);
@@ -150,6 +153,7 @@ class LaunchTest extends TestCase
         $other = User::factory()->create();
         $system = $this->system();
         $this->withCredential($system, $owner);
+        $system->viewers()->syncWithoutDetaching([$other->id]);
 
         $this->actingAs($other);
         $this->withSession([Vault::SESSION_KEY => now()->addHour()->timestamp]);

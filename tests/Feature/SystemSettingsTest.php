@@ -149,7 +149,12 @@ class SystemSettingsTest extends TestCase
         $this->assertSame(2, $first->refresh()->sort_order);
         $this->assertSame(3, $second->refresh()->sort_order);
 
-        $this->actingAs(User::factory()->create())
+        $staff = User::factory()->create();
+        foreach ([$third, $first, $second] as $system) {
+            $system->viewers()->sync([$staff->id]);
+        }
+
+        $this->actingAs($staff)
             ->get(route('dept.dashboard'))
             ->assertInertia(fn ($page) => $page
                 ->where('nav.0.name', 'Gamma')
@@ -194,14 +199,17 @@ class SystemSettingsTest extends TestCase
         $this->assertSame(1, $externalB->refresh()->sort_order);
         $this->assertSame(2, $externalA->refresh()->sort_order);
 
-        $this->actingAs(User::factory()->create())
+        $staff = User::factory()->create();
+        $externalB->viewers()->sync([$staff->id]);
+        $externalA->viewers()->sync([$staff->id]);
+
+        $this->actingAs($staff)
             ->get(route('dept.dashboard'))
             ->assertInertia(fn ($page) => $page
                 ->where('nav.0.name', 'External B')
                 ->where('nav.0.is_internal', false)
                 ->where('nav.1.name', 'External A')
-                ->where('nav.2.name', 'Internal X')
-                ->where('nav.2.is_internal', true)
+                ->has('nav', 2)
             );
     }
 
