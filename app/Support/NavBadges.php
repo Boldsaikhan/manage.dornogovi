@@ -29,7 +29,7 @@ class NavBadges
             return [];
         }
 
-        $variants = self::nameVariants($user);
+        $variants = PersonName::matchPatterns($user);
         $counts = [];
 
         $add = function (string $key, int $count) use (&$counts, $user): void {
@@ -48,17 +48,6 @@ class NavBadges
         $add('dept_dashboard', self::deptActionables($user));
 
         return $counts;
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private static function nameVariants(User $user): array
-    {
-        $full = trim((string) $user->name);
-        $short = PersonName::short($full);
-
-        return array_values(array_unique(array_filter([$full, $short], fn ($n) => $n !== '')));
     }
 
     /**

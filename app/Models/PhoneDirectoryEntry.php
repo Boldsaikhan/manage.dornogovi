@@ -130,6 +130,46 @@ class PhoneDirectoryEntry extends Model
             ->all();
     }
 
+    /**
+     * Нэвтрэх утастай таарах утасны жагсаалтын нэрс (бүтэн + богино).
+     *
+     * @return list<string>
+     */
+    public static function namesMatchingUser(\App\Models\User $user): array
+    {
+        $phone = \App\Models\User::normalizePhone($user->phone);
+
+        if ($phone === null) {
+            return [];
+        }
+
+        $names = [];
+
+        static::query()
+            ->get(['person_name', 'mobile_phone', 'office_phone'])
+            ->each(function (self $row) use ($phone, &$names): void {
+                $mobile = \App\Models\User::normalizePhone($row->mobile_phone);
+                $office = \App\Models\User::normalizePhone($row->office_phone);
+
+                if ($mobile !== $phone && $office !== $phone) {
+                    return;
+                }
+
+                $full = trim((string) $row->person_name);
+                if ($full === '') {
+                    return;
+                }
+
+                $names[] = $full;
+                $short = \App\Support\PersonName::short($full);
+                if ($short !== '' && $short !== $full) {
+                    $names[] = $short;
+                }
+            });
+
+        return array_values(array_unique($names));
+    }
+
     public static function preferredPhone(?string $mobile, ?string $office): ?string
     {
         foreach ([$mobile, $office] as $raw) {

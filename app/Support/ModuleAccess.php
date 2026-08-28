@@ -109,18 +109,27 @@ class ModuleAccess
             return null;
         }
 
-        // Системийн рольтой бол ролийн загвар л цэсийг тодорхойлно —
-        // загварт байхгүй / хаалттай модуль харагдахгүй.
+        $userLevel = $user->modulePermissions
+            ->firstWhere('module_key', $moduleKey)
+            ?->level;
+        $userLevel = in_array($userLevel, self::LEVELS, true) ? $userLevel : null;
+
+        // Системийн роль: загварт байхгүй модуль хаалттай хэвээр.
+        // Загварт байгаа модулийн түвшинг Хандах эрх дээрх хэрэглэгчийн тохиргоо дарж болно
+        // (жнь: «хамааралтай» ↔ «бүгд»).
         $roleKey = self::systemRoleKey($user);
         if ($roleKey) {
-            $level = RolePermission::map()[$roleKey][$moduleKey] ?? null;
+            $roleLevel = RolePermission::map()[$roleKey][$moduleKey] ?? null;
+            $roleLevel = in_array($roleLevel, self::LEVELS, true) ? $roleLevel : null;
 
-            return in_array($level, self::LEVELS, true) ? $level : null;
+            if ($roleLevel === null) {
+                return null;
+            }
+
+            return $userLevel ?? $roleLevel;
         }
 
-        return $user->modulePermissions()
-            ->where('module_key', $moduleKey)
-            ->value('level');
+        return $userLevel;
     }
 
     /**
