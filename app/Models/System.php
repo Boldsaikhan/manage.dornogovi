@@ -64,8 +64,8 @@ class System extends Model
     }
 
     /**
-     * Тухайн системийг харах эрхтэй албан хаагчид.
-     * Хоосон байвал бүх хэрэглэгчидэд нээлттэй.
+     * Тухайн системийг цэсэндээ харах эрхтэй албан хаагчид.
+     * Хоосон бол ажилтны цэсэнд гарахгүй (админ систем тохиргооноос удирдана).
      */
     public function viewers(): BelongsToMany
     {
@@ -73,30 +73,24 @@ class System extends Model
     }
 
     /**
-     * Тухайн хэрэглэгчийн харах боломжтой системүүд.
+     * Ажилтны цэсэнд гарах системүүд — зөвхөн сонгогдсон албан хаагчид.
      */
     public function scopeVisibleTo(Builder $query, ?User $user): Builder
     {
-        if ($user?->is_admin) {
+        if (! $user) {
+            return $query->whereRaw('0 = 1');
+        }
+
+        if ($user->is_admin) {
             return $query;
         }
 
-        return $query->where(function (Builder $q) use ($user) {
-            $q->whereDoesntHave('viewers');
-
-            if ($user) {
-                $q->orWhereHas('viewers', fn (Builder $v) => $v->whereKey($user->id));
-            }
-        });
+        return $query->whereHas('viewers', fn (Builder $v) => $v->whereKey($user->id));
     }
 
     public function isVisibleTo(?User $user): bool
     {
         if ($user?->is_admin) {
-            return true;
-        }
-
-        if ($this->viewers()->doesntExist()) {
             return true;
         }
 

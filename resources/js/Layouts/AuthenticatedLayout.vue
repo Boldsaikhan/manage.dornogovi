@@ -105,6 +105,7 @@ const navSections = computed(() =>
 
 const vaultUnlocked = computed(() => page.props.vault?.unlocked ?? false);
 const navBadges = computed(() => page.props.navBadges ?? {});
+const linkedSystems = computed(() => (page.props.nav ?? []).filter((s) => ! s.is_internal));
 
 const badgeFor = (key) => {
     const n = Number(navBadges.value?.[key] ?? 0);
@@ -117,6 +118,14 @@ const badgeLabel = (n) => (n > 99 ? '99+' : String(n));
 const isCurrent = (routeName) => {
     try {
         return route().current(routeName);
+    } catch {
+        return false;
+    }
+};
+
+const isLinkedSystemCurrent = (id) => {
+    try {
+        return route().current('systems.show') && String(route().params?.system) === String(id);
     } catch {
         return false;
     }
@@ -208,6 +217,34 @@ const isCurrent = (routeName) => {
                         >
                             {{ badgeLabel(badgeFor(item.key)) }}
                         </span>
+                    </Link>
+                </template>
+
+                <template v-if="linkedSystems.length">
+                    <div
+                        class="ui-section-label"
+                        :class="sidebarCollapsed ? 'lg:mx-auto lg:!mt-3 lg:h-px lg:w-6 lg:overflow-hidden lg:bg-slate-200 lg:p-0 lg:text-[0px]' : ''"
+                    >
+                        Холбосон системүүд
+                    </div>
+                    <Link
+                        v-for="sys in linkedSystems"
+                        :key="'sys-'+sys.id"
+                        :href="route('systems.show', sys.id)"
+                        class="ui-nav-link relative"
+                        :class="[
+                            isLinkedSystemCurrent(sys.id) ? 'ui-nav-link-active' : '',
+                            sidebarCollapsed ? 'lg:justify-center lg:px-0' : '',
+                        ]"
+                        @mouseenter="showNavTip($event, sys.name)"
+                        @mouseleave="hideNavTip"
+                        @focus="showNavTip($event, sys.name)"
+                        @blur="hideNavTip"
+                    >
+                        <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                            <path :d="iconPaths.globe" />
+                        </svg>
+                        <span class="min-w-0 flex-1 truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ sys.name }}</span>
                     </Link>
                 </template>
             </nav>

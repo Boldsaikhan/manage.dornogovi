@@ -27,8 +27,12 @@ class SystemViewTest extends TestCase
 
     public function test_viewer_shows_the_system_entry_url(): void
     {
-        $this->actingAs(User::factory()->create())
-            ->get(route('systems.show', $this->system()))
+        $user = User::factory()->create();
+        $system = $this->system();
+        $system->viewers()->sync([$user->id]);
+
+        $this->actingAs($user)
+            ->get(route('systems.show', $system))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Systems/View')
@@ -38,12 +42,14 @@ class SystemViewTest extends TestCase
 
     public function test_a_blocked_system_still_renders_with_the_reason(): void
     {
+        $user = User::factory()->create();
         $system = $this->system([
             'is_embeddable' => false,
             'embed_blocked_by' => 'X-Frame-Options: SAMEORIGIN',
         ]);
+        $system->viewers()->sync([$user->id]);
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($user)
             ->get(route('systems.show', $system))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
@@ -53,8 +59,12 @@ class SystemViewTest extends TestCase
 
     public function test_inactive_systems_are_not_viewable(): void
     {
-        $this->actingAs(User::factory()->create())
-            ->get(route('systems.show', $this->system(['is_active' => false])))
+        $user = User::factory()->create();
+        $system = $this->system(['is_active' => false]);
+        $system->viewers()->sync([$user->id]);
+
+        $this->actingAs($user)
+            ->get(route('systems.show', $system))
             ->assertNotFound();
     }
 

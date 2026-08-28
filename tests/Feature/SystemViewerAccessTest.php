@@ -27,14 +27,14 @@ class SystemViewerAccessTest extends TestCase
         return User::factory()->create(['is_admin' => false]);
     }
 
-    public function test_system_without_viewers_is_visible_to_everyone(): void
+    public function test_system_without_viewers_is_hidden_from_staff_menu(): void
     {
         $this->system();
 
         $this->actingAs($this->staff())
             ->get(route('dept.dashboard'))
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->has('nav', 1));
+            ->assertInertia(fn ($page) => $page->has('nav', 0));
     }
 
     public function test_system_is_hidden_from_users_who_were_not_added(): void
@@ -70,6 +70,24 @@ class SystemViewerAccessTest extends TestCase
             ->assertOk();
     }
 
+    public function test_internal_systems_are_not_listed_in_staff_menu(): void
+    {
+        $user = $this->staff();
+        $system = System::create([
+            'slug' => 'dotood',
+            'name' => 'Дотоод',
+            'url' => 'https://example.mn',
+            'is_active' => true,
+            'is_internal' => true,
+        ]);
+        $system->viewers()->sync([$user->id]);
+
+        $this->actingAs($user)
+            ->get(route('dept.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->has('nav', 0));
+    }
+
     public function test_admin_saves_the_viewer_list(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
@@ -91,14 +109,29 @@ class SystemViewerAccessTest extends TestCase
         $this->assertSame([$employee->id], $system->fresh()->viewers->pluck('id')->all());
     }
 
-    public function test_admin_always_sees_every_system(): void
+    public function test_admin_can_assign_viewers_without_full_update(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $system = $this->system();
+        $a = User::factory()->create();
+        $b = User::factory()->create();
+
+        $this->actingAs($admin)
+            ->patch(route('admin.systems.viewers', $system), [
+                'viewer_ids' => [$a->id, $b->id],
+            ])
+            ->assertRedirect();
+
+        $this->assertEqualsCanonicalizing([$a->id, $b->id], $system->fresh()->viewers->pluck('id')->all());
+    }
+
+    public function test_admin_always_can_open_every_system(): void
     {
         $system = $this->system();
         $system->viewers()->sync([User::factory()->create()->id]);
 
         $this->actingAs(User::factory()->create(['is_admin' => true]))
-            ->get(route('dept.dashboard'))
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page->has('nav', 1));
+            ->get(route('systems.show', $system))
+            ->assertOk();
     }
 }
