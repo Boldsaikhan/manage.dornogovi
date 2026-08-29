@@ -33,8 +33,13 @@ Chrome дээрх «not secure» нь DNS унасан үеийн UI — сер�
 | Нэр | Төрөл | Утга | TTL |
 |---|---|---|---|
 | `manage.dornogovi.gov.mn` | A | `202.37.109.67` | `3600` |
+| `www.manage.dornogovi.gov.mn` | CNAME → `manage.dornogovi.gov.mn` **эсвэл** A | `202.37.109.67` | `3600` |
 
 Бүх 4 NS дээр ижил байх. SOA-д `misconfigured` үлдэхгүй.
+
+**Утасны `DNS_PROBE_FINISHED_NXDOMAIN` (www):** apex A зөв ч www бичлэг
+байхгүй тул Chrome www руу оролдож унана. nginx www→apex redirect DNS-ийн
+**дараа** л ажиллана — эхлээд www A/CNAME нэмнэ.
 
 **Илгээх текст:** [dns-request-email.md](dns-request-email.md)
 
