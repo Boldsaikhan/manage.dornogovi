@@ -6,19 +6,22 @@ set -euo pipefail
 
 DOMAIN="${1:-manage.dornogovi.gov.mn}"
 EXPECT_IP="${2:-202.37.109.67}"
+WWW_DOMAIN="www.${DOMAIN}"
 NS_LIST=(ns.gov.mn ns1.gov.mn ns3.gov.mn ns4.gov.mn)
 PUB_LIST=(8.8.8.8 1.1.1.1)
 
 echo "== DNS check: ${DOMAIN} → ${EXPECT_IP} =="
 fail=0
+www_warn=0
 
 query_a() {
-  local at="$1"
-  dig +time=3 +tries=2 +short A "${DOMAIN}" "@${at}" 2>/dev/null | awk 'NF && $1 !~ /[Tt]imeout/ {print; exit}'
+  local name="$1"
+  local at="$2"
+  dig +time=3 +tries=2 +short A "${name}" "@${at}" 2>/dev/null | awk 'NF && $1 !~ /[Tt]imeout/ {print; exit}'
 }
 
 for ns in "${NS_LIST[@]}"; do
-  out="$(query_a "${ns}" || true)"
+  out="$(query_a "${DOMAIN}" "${ns}" || true)"
   if [[ "${out}" == "${EXPECT_IP}" ]]; then
     echo "OK   @${ns}  A=${out}"
   elif [[ -z "${out}" ]]; then
@@ -38,18 +41,41 @@ if echo "${soa}" | grep -qi 'misconfigured'; then
 fi
 
 for pub in "${PUB_LIST[@]}"; do
-  out="$(query_a "${pub}" || true)"
+  out="$(query_a "${DOMAIN}" "${pub}" || true)"
   echo "PUB  @${pub} A=${out:-TIMEOUT/EMPTY}"
   if [[ "${out}" != "${EXPECT_IP}" ]]; then
     fail=1
   fi
 done
 
+echo
+echo "== www: ${WWW_DOMAIN} =="
+www_ok=0
+for pub in "${PUB_LIST[@]}"; do
+  out="$(query_a "${WWW_DOMAIN}" "${pub}" || true)"
+  if [[ "${out}" == "${EXPECT_IP}" ]]; then
+    echo "OK   @${pub}  www A=${out}"
+    www_ok=1
+  elif [[ -z "${out}" ]]; then
+    echo "WARN @${pub}  www NXDOMAIN/EMPTY (утас www оруулвал ERR_NAME_NOT_RESOLVED)"
+    www_warn=1
+  else
+    echo "WARN @${pub}  www A=${out} (apex ${EXPECT_IP}-тай таарахгүй)"
+    www_warn=1
+  fi
+done
+
 code="$(curl -ksI --max-time 10 "https://${DOMAIN}/" | head -n1 || true)"
+echo
 echo "HTTP ${code:-NO_RESPONSE}"
 
 if [[ "${fail}" -eq 0 ]]; then
-  echo "ҮР ДҮН: DNS OK — 8.8.8.8 болон 1.1.1.1 хоёулаа зөв"
+  if [[ "${www_warn}" -eq 1 ]]; then
+    echo "ҮР ДҮН: apex DNS OK — www бичлэг байхгүй (DNS админ CNAME/A нэмнэ)"
+    echo "         deploy/dns-request-email.md-ийг НДТ руу илгээнэ үү"
+    exit 0
+  fi
+  echo "ҮР ДҮН: DNS OK — apex болон www хоёулаа зөв"
   exit 0
 fi
 

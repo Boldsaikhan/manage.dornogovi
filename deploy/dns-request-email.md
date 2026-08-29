@@ -59,6 +59,18 @@ ns4 NXDOMAIN-ийг 8.8.8.8/1.1.1.1 кэшэлбэл бүх хэрэглэгч �
 4) Сертификатын _acme-challenge TXT үлдсэн бол устгаж болно
    (сертификат аль хэдийн суусан).
 
+5) www.manage.dornogovi.gov.mn — одоо NXDOMAIN (утас Chrome
+   «www.manage… server IP could not be found» ERR_NAME_NOT_RESOLVED).
+   Дараах аль нэгийг нэмнэ үү:
+
+   www.manage.dornogovi.gov.mn.  IN  CNAME  manage.dornogovi.gov.mn.
+   эсвэл
+   www.manage.dornogovi.gov.mn.  IN  A  202.37.109.67
+
+   Сервер nginx www → apex redirect тохируулсан (deploy/nginx.conf).
+   DNS нэмсний дараа: sudo certbot --nginx -d manage.dornogovi.gov.mn
+   -d www.manage.dornogovi.gov.mn --expand
+
 Шалгах (дөрвүүлэнд ижил байх):
   dig +short A manage.dornogovi.gov.mn @ns.gov.mn
   dig +short A manage.dornogovi.gov.mn @ns1.gov.mn
@@ -69,6 +81,10 @@ ns4 NXDOMAIN-ийг 8.8.8.8/1.1.1.1 кэшэлбэл бүх хэрэглэгч �
   dig +short A manage.dornogovi.gov.mn @8.8.8.8
   dig +short A manage.dornogovi.gov.mn @1.1.1.1
   → 202.37.109.67
+
+  dig +short A www.manage.dornogovi.gov.mn @8.8.8.8
+  dig +short CNAME www.manage.dornogovi.gov.mn @8.8.8.8
+  → 202.37.109.67 эсвэл manage.dornogovi.gov.mn
 
 Яаралтай шийдвэрлэж өгнө үү. Баярлалаа.
 it@dornogovi.gov.mn

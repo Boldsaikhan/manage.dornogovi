@@ -100,7 +100,12 @@ sudo /opt/manage-dornogovi/deploy/auto-update.sh
 resolver кэш хордож, утас дээр `DNS_PROBE_POSSIBLE` гардаг. SOA ч буруу
 (`a.misconfigured.dns.server.invalid`).
 
-Энэ нь **сайтын кодоор засагдахгүй** — НДТ/gov.mn DNS админ засна.
+**www.manage.dornogovi.gov.mn** одоогоор DNS-д **байхгүй** (NXDOMAIN).
+Утасны Chrome заримдаа www оруулах эсвэл түүнийг оролдож
+`ERR_NAME_NOT_RESOLVED` харуулна. Код, nginx apex redirect буруу биш —
+**www A/CNAME** DNS админ нэмнэ (`deploy/dns-request-email.md`).
+
+Энэ нь **сайтын кодоор бүрэн засагдахгүй** — НДТ/gov.mn DNS админ засна.
 Хүсэлтийн бэлэн текст: [dns-request-email.md](dns-request-email.md),
 дэлгэрэнгүй: [REQUESTS.md](REQUESTS.md).
 
