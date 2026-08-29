@@ -9,6 +9,8 @@ import { isMobileDevice } from '@/utils/mobileClient';
 const props = defineProps({
     /** true бол зөвхөн өргөтгөл суугаагүй үеийн мэдэгдэл. */
     notifyOnly: { type: Boolean, default: false },
+    /** Толгой цэс — богино хэлбэр, давхардсан анхааруулгагүй. */
+    compact: { type: Boolean, default: false },
 });
 
 const extensionReady = ref(false);
@@ -59,7 +61,10 @@ const verifyExtension = () => {
 const extensionMissing = computed(() => extensionChecked.value && ! extensionReady.value);
 
 const showMissingNotice = computed(() => (
-    ! onPhone.value && extensionMissing.value && ! bannerDismissed.value
+    ! props.compact
+    && ! onPhone.value
+    && extensionMissing.value
+    && ! bannerDismissed.value
 ));
 
 const dismissMissingNotice = () => {
@@ -187,6 +192,72 @@ const downloadExtension = async () => {
             </div>
         </div>
     </div>
+
+    <section v-else-if="props.compact" class="space-y-2.5">
+        <div class="flex items-start justify-between gap-2">
+            <p class="min-w-0 text-xs text-slate-500">
+                <template v-if="extensionMissing">
+                    Chrome/Edge дээр суулгавал холбосон систем рүү автоматаар нэвтэрнэ.
+                </template>
+                <template v-else>
+                    Холбосон системд нэр, нууц үг автоматаар бөглөгдөнө.
+                </template>
+            </p>
+            <span
+                class="shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold"
+                :class="extensionReady ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+            >
+                {{ extensionReady ? 'идэвхтэй' : 'суугаагүй' }}
+            </span>
+        </div>
+
+        <div v-if="message" class="rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs text-slate-600">
+            {{ message }}
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+            <button
+                type="button"
+                class="!py-1.5 text-xs"
+                :class="extensionReady ? 'ui-btn-ghost' : 'ui-btn-primary'"
+                :disabled="downloading"
+                @click="downloadExtension"
+            >
+                {{ downloading ? 'Татаж байна…' : (extensionReady ? 'Дахин татах' : 'Өргөтгөл татах') }}
+            </button>
+            <button
+                v-if="extensionReady"
+                type="button"
+                class="ui-btn-danger !py-1.5 text-xs"
+                @click="removeExtension"
+            >
+                Устгах
+            </button>
+            <button
+                v-if="canVerifyExtension"
+                type="button"
+                class="ui-btn-ghost !py-1.5 text-xs"
+                @click="verifyExtension"
+            >
+                Шалгах
+            </button>
+            <button
+                type="button"
+                class="ui-btn-ghost !py-1.5 text-xs"
+                @click="showHelp = ! showHelp"
+            >
+                {{ showHelp ? 'Хаах' : 'Заавар' }}
+            </button>
+        </div>
+
+        <ol v-if="showHelp" class="list-decimal space-y-1 rounded-lg bg-slate-50 px-3 py-2 pl-5 text-xs leading-relaxed text-slate-600">
+            <li>«Өргөтгөл татах» дарж хадгалах <b>хавтсыг сонгоно</b> (Downloads гэх мэт).</li>
+            <li>Дотор нь <b>manage-dornogovi-extension</b> хавтас автоматаар үүснэ.</li>
+            <li>Хавтас доторх <b>install.bat</b> ажиллуулна (эсвэл chrome://extensions нээнэ).</li>
+            <li><b>Developer mode</b> асаагаад <b>Load unpacked</b> → тэр хавтсыг сонгоно.</li>
+            <li v-if="extensionReady">Устгах: энэ товч эсвэл chrome://extensions → Remove.</li>
+        </ol>
+    </section>
 
     <section v-else-if="! props.notifyOnly" class="space-y-3 sm:space-y-4">
         <div
