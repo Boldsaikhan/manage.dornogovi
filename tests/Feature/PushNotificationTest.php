@@ -65,6 +65,27 @@ class PushNotificationTest extends TestCase
         ]);
     }
 
+    public function test_employee_notifier_matches_compact_user_to_spaced_name(): void
+    {
+        $target = User::factory()->create(['name' => 'Б.Болдсайхан']);
+
+        $mock = Mockery::mock(WebPushNotifier::class);
+        $mock->shouldReceive('sendToUsers')
+            ->once()
+            ->withArgs(function ($users) use ($target) {
+                return collect($users)->contains(fn ($u) => is_object($u) && $u->id === $target->id);
+            })
+            ->andReturnNull();
+
+        $this->app->instance(WebPushNotifier::class, $mock);
+
+        app(EmployeePushNotifier::class)->notifyNamed('Б. Болдсайхан', [
+            'title' => 'Шинэ үүрэг даалгавар',
+            'body' => 'Тест',
+            'url' => '/uureg',
+        ]);
+    }
+
     public function test_leave_store_notifies_named_employee(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

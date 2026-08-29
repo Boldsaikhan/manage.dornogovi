@@ -2,12 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Task;
-use App\Models\User;
 use App\Models\UserNotification;
-use App\Support\ModuleAccess;
-use App\Support\PersonName;
-use Illuminate\Database\Eloquent\Builder;
+use App\Services\Notifications\OpenTaskAlertSync;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,7 +12,7 @@ class NotificationController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $this->syncOpenTaskAlerts($user);
+        app(OpenTaskAlertSync::class)->sync($user);
 
         $items = UserNotification::query()
             ->where('user_id', $user->id)
@@ -68,62 +64,5 @@ class NotificationController extends Controller
             ->delete();
 
         return response()->json(['ok' => true]);
-    }
-
-    /**
-     * Өөрт хамаатай нээлттэй үүргийг bell-д харуулах (NavBadges-тай ижил нэрээр).
-     * Push subscription байхгүй байсан ч мэдэгдэл харагдана.
-     */
-    private function syncOpenTaskAlerts(User $user): void
-    {
-        if (! ModuleAccess::canView($user, 'tasks')) {
-            return;
-        }
-
-        $variants = array_values(array_unique(array_filter([
-            trim((string) $user->name),
-            PersonName::short($user->name),
-        ], fn ($n) => $n !== '')));
-
-        if (! $variants) {
-            return;
-        }
-
-        $open = Task::query()
-            ->with('source:id,key,name')
-            ->where('progress', '<', 100)
-            ->where(function (Builder $w) use ($variants) {
-                foreach (['responsible', 'collaborator'] as $column) {
-                    foreach ($variants as $name) {
-                        $w->orWhere($column, 'like', '%'.$name.'%');
-                    }
-                }
-            })
-            ->orderByDesc('id')
-            ->limit(20)
-            ->get();
-
-        foreach ($open as $task) {
-            $tag = 'task-open-'.$task->id;
-
-            $exists = UserNotification::query()
-                ->where('user_id', $user->id)
-                ->where('tag', $tag)
-                ->exists();
-
-            if ($exists) {
-                continue;
-            }
-
-            UserNotification::query()->create([
-                'user_id' => $user->id,
-                'title' => 'Үүрэг даалгавар',
-                'body' => mb_substr(trim((string) $task->text), 0, 120) ?: 'Нээлттэй үүрэг байна.',
-                'url' => $task->source?->key
-                    ? '/uureg?kind='.$task->source->key
-                    : '/uureg',
-                'tag' => $tag,
-            ]);
-        }
     }
 }

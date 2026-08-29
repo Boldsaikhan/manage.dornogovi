@@ -9,9 +9,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ModuleResourceController extends Controller
 {
@@ -70,7 +72,7 @@ class ModuleResourceController extends Controller
             }
         }
 
-        $rows = $query->limit(200)->get()->map(fn (Model $row) => $this->serialize($row, $config));
+        $rows = $query->limit(200)->get()->map(fn (Model $row) => $this->serialize($row, $config, $module));
 
         return Inertia::render('Modules/ResourceIndex', [
             'scopeTabs' => $scopeTabs,
@@ -103,6 +105,12 @@ class ModuleResourceController extends Controller
         ModuleOwnScope::assertCanCreate($request->user(), $module, $data);
         $data = $this->applyCreateHooks($request, $config, $data);
         $data = $this->normalizeDecreeData($config, $data);
+        $data = $this->storeUploadedFiles($request, $config, $data);
+
+        if (collect($config['fields'])->contains(fn (array $f) => ($f['name'] ?? '') === 'published_at')
+            && empty($data['published_at'])) {
+            $data['published_at'] = now();
+        }
 
         $row = $config['model']::create($data);
 
@@ -160,9 +168,29 @@ class ModuleResourceController extends Controller
         $row = $config['model']::query()->whereKey($id)->firstOrFail();
         abort_unless(ModuleOwnScope::allows($request->user(), $module, $row), 403);
 
+        $this->deleteStoredFile($row);
         $row->delete();
 
         return back()->with('success', 'Устгалаа.');
+    }
+
+    public function download(Request $request, string $module, int $id): StreamedResponse
+    {
+        $config = $this->configOrFail($module);
+        $this->authorizeModule($request, $module);
+
+        $row = $config['model']::query()->whereKey($id)->firstOrFail();
+        abort_unless(ModuleOwnScope::allows($request->user(), $module, $row), 403);
+        abort_unless(
+            filled($row->file_path ?? null) && Storage::disk('local')->exists($row->file_path),
+            404
+        );
+
+        $name = filled($row->file_name ?? null)
+            ? $row->file_name
+            : basename($row->file_path);
+
+        return Storage::disk('local')->download($row->file_path, $name);
     }
 
     private function moduleFromRequest(Request $request): string
@@ -199,10 +227,18 @@ class ModuleResourceController extends Controller
                 'date' => 'date',
                 'datetime' => 'date',
                 'checkbox' => 'boolean',
+                'file' => 'file',
                 'select' => Rule::in(array_keys($field['options'] ?? [])),
                 'textarea', 'text', 'directory_org', 'directory_person' => 'string',
                 default => 'string',
             };
+
+            if (($field['type'] ?? '') === 'file') {
+                $mimes = (string) ($field['mimes'] ?? 'pdf,doc,docx');
+                $maxKb = (int) ($field['max_kb'] ?? 20480);
+                $rule[] = 'extensions:'.$mimes;
+                $rule[] = 'max:'.$maxKb;
+            }
 
             $rules[$name] = $rule;
         }
@@ -212,6 +248,9 @@ class ModuleResourceController extends Controller
         foreach ($config['fields'] as $field) {
             if (($field['type'] ?? '') === 'checkbox') {
                 $data[$field['name']] = $request->boolean($field['name']);
+            }
+            if (($field['type'] ?? '') === 'file') {
+                unset($data[$field['name']]);
             }
         }
 
@@ -286,6 +325,45 @@ class ModuleResourceController extends Controller
         return $data;
     }
 
+    /**
+     * @param  array<string, mixed>  $config
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function storeUploadedFiles(Request $request, array $config, array $data): array
+    {
+        foreach ($config['fields'] as $field) {
+            if (($field['type'] ?? '') !== 'file') {
+                continue;
+            }
+
+            $input = $field['name'];
+            unset($data[$input]);
+
+            if (! $request->hasFile($input)) {
+                continue;
+            }
+
+            $file = $request->file($input);
+            $folder = (string) ($field['folder'] ?? 'uploads');
+            $pathKey = (string) ($field['store_as'] ?? 'file_path');
+            $nameKey = (string) ($field['name_as'] ?? 'file_name');
+
+            $data[$pathKey] = $file->store($folder, 'local');
+            $data[$nameKey] = $file->getClientOriginalName();
+        }
+
+        return $data;
+    }
+
+    private function deleteStoredFile(Model $row): void
+    {
+        $path = $row->file_path ?? null;
+        if (filled($path) && Storage::disk('local')->exists($path)) {
+            Storage::disk('local')->delete($path);
+        }
+    }
+
     private function applyCreateHooks(Request $request, array $config, array $data): array
     {
         $user = $request->user();
@@ -343,17 +421,25 @@ class ModuleResourceController extends Controller
             ->all();
     }
 
-    private function serialize(Model $row, array $config): array
+    private function serialize(Model $row, array $config, string $module): array
     {
         $out = ['id' => $row->getKey()];
 
         foreach ($config['columns'] as $col) {
             $key = $col['key'];
             $out[$key] = match (true) {
+                $key === 'file_label' => $row->file_name ?: (filled($row->file_path ?? null) ? basename($row->file_path) : '—'),
                 $key === ($config['scope_column'] ?? 'scope') && ! empty($config['scopes'])
                     => $config['scopes'][$row->{$key}] ?? ($row->{$key} ?? '—'),
                 default => $this->serializeValue($row, $key),
             };
+        }
+
+        if (in_array('file_path', $row->getFillable(), true)) {
+            $out['has_file'] = filled($row->file_path ?? null);
+            $out['file_url'] = filled($row->file_path ?? null)
+                ? route('modules.file', ['module' => $module, 'id' => $row->getKey()])
+                : null;
         }
 
         return $out;

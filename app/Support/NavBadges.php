@@ -38,7 +38,7 @@ class NavBadges
             }
         };
 
-        $add('tasks', self::openTasks($variants));
+        $add('tasks', self::openTasks($user));
         $add('work_groups', self::openWorkGroupTasks($user, $variants));
         $add('leaves', self::relevantLeaves($user, $variants));
         $add('assignments', self::activeAssignments($user));
@@ -69,16 +69,12 @@ class NavBadges
         });
     }
 
-    /**
-     * @param  array<int, string>  $variants
-     */
-    private static function openTasks(array $variants): int
+    private static function openTasks(User $user): int
     {
-        return self::whereNameLike(
-            Task::query()->where('progress', '<', 100),
-            ['responsible', 'collaborator'],
-            $variants,
-        )->count();
+        $query = Task::query()->where('progress', '<', 100);
+        ModuleOwnScope::restrictTasksToAssignee($query, $user);
+
+        return $query->count();
     }
 
     /**

@@ -103,20 +103,17 @@ class EmployeePushNotifier
             return collect();
         }
 
-        $variants = $parts
-            ->flatMap(fn ($n) => array_filter([$n, PersonName::short($n)]))
-            ->map(fn ($n) => trim($n))
-            ->filter()
-            ->unique()
-            ->values();
-
-        // SQLite/MySQL LOWER() кирилл үсгийг найдвартай буулгадаггүй тул LIKE-аар хайна.
         return User::query()
-            ->where(function ($q) use ($variants) {
-                foreach ($variants as $name) {
-                    $q->orWhere('name', 'like', '%'.$name.'%');
+            ->get()
+            ->filter(function (User $user) use ($parts) {
+                foreach ($parts as $part) {
+                    if (PersonName::matchesUser($user, $part)) {
+                        return true;
+                    }
                 }
+
+                return false;
             })
-            ->get();
+            ->values();
     }
 }

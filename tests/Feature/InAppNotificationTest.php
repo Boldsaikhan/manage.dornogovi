@@ -61,6 +61,63 @@ class InAppNotificationTest extends TestCase
             ->assertJsonFragment(['title' => 'Үүрэг даалгавар']);
     }
 
+    public function test_inbox_matches_spaced_initial_to_compact_user_name(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Б.Болдсайхан',
+            'is_admin' => true,
+        ]);
+
+        $source = TaskSource::where('key', TaskSource::KEY_DIRECTIVE)->first();
+        Task::create([
+            'task_source_id' => $source->id,
+            'text' => 'Зайтай нэртэй үүрэг',
+            'responsible' => 'Б. Болдсайхан',
+            'progress' => 15,
+            'sort_order' => 1,
+        ]);
+
+        $this->actingAs($user)
+            ->getJson(route('notifications.index'))
+            ->assertOk()
+            ->assertJsonPath('unread', 1)
+            ->assertJsonFragment(['body' => 'Зайтай нэртэй үүрэг']);
+    }
+
+    public function test_inbox_matches_task_via_phone_directory(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Буруу Нэр',
+            'phone' => '89239655',
+            'is_admin' => true,
+        ]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'org_name' => 'Төрийн захиргааны удирдлагын хэлтэс',
+            'category' => 'heltes',
+            'person_name' => 'Батбаярын Болдсайхан',
+            'position' => 'Мэргэжилтэн',
+            'mobile_phone' => '89239655',
+            'org_order' => 1,
+            'sort_order' => 1,
+        ]);
+
+        $source = TaskSource::where('key', TaskSource::KEY_DIRECTIVE)->first();
+        Task::create([
+            'task_source_id' => $source->id,
+            'text' => 'Утасны жагсаалтаар таарсан үүрэг',
+            'responsible' => 'Б.Болдсайхан',
+            'progress' => 0,
+            'sort_order' => 1,
+        ]);
+
+        $this->actingAs($user)
+            ->getJson(route('notifications.index'))
+            ->assertOk()
+            ->assertJsonPath('unread', 1)
+            ->assertJsonFragment(['body' => 'Утасны жагсаалтаар таарсан үүрэг']);
+    }
+
     public function test_mark_read_and_clear(): void
     {
         $user = User::factory()->create();

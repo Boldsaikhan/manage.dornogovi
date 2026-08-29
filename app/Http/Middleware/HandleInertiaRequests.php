@@ -86,12 +86,15 @@ class HandleInertiaRequests extends Middleware
                 ];
             },
             'notificationUnread' => function () use ($request) {
-                if (! $request->user()) {
+                $user = $request->user();
+                if (! $user) {
                     return 0;
                 }
 
+                app(\App\Services\Notifications\OpenTaskAlertSync::class)->sync($user);
+
                 return \App\Models\UserNotification::query()
-                    ->where('user_id', $request->user()->id)
+                    ->where('user_id', $user->id)
                     ->whereNull('read_at')
                     ->count();
             },

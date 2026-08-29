@@ -25,7 +25,7 @@ const showForm = ref(false);
 const formState = reactive({});
 
 props.fields.forEach((f) => {
-    formState[f.name] = f.type === 'checkbox' ? false : '';
+    formState[f.name] = f.type === 'checkbox' ? false : (f.type === 'file' ? null : '');
 });
 
 if (props.scopeField && props.activeScope !== 'all') {
@@ -163,6 +163,8 @@ const switchScope = (value) => {
     );
 };
 
+const hasFileField = computed(() => props.fields.some((f) => f.type === 'file'));
+
 const submit = () => {
     form.transform(() => {
         const data = { ...form.data() };
@@ -171,6 +173,7 @@ const submit = () => {
         }
         return data;
     }).post(props.storeUrl, {
+        forceFormData: hasFileField.value,
         preserveScroll: true,
         onSuccess: () => {
             closeForm();
@@ -235,7 +238,18 @@ const destroyRow = (id) => {
                     <tbody>
                         <tr v-for="row in rows" :key="row.id">
                             <td v-for="col in columns" :key="col.key">
+                                <a
+                                    v-if="col.key === 'file_label' && row.file_url"
+                                    :href="row.file_url"
+                                    class="inline-flex items-center gap-1 font-medium text-brand-navy-700 hover:underline"
+                                >
+                                    <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                        <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                    {{ row[col.key] }}
+                                </a>
                                 <span
+                                    v-else
                                     class="ui-clamp-2"
                                     :title="row[col.key] != null && row[col.key] !== '' ? String(row[col.key]) : ''"
                                 >{{ row[col.key] != null && row[col.key] !== '' ? row[col.key] : '—' }}</span>
@@ -262,7 +276,7 @@ const destroyRow = (id) => {
                         </tr>
                         <tr v-if="!rows.length">
                             <td :colspan="columns.length + (canManage || rowActions.length ? 1 : 0)" class="!py-12 text-center text-slate-400">
-                                {{ activeScopeLabel && activeScope !== 'all' ? activeScopeLabel + '-ын бүртгэл алга.' : 'Одоогоор бүртгэл алга.' }}
+                                {{ activeScopeLabel && activeScope !== 'all' ? activeScopeLabel + ' — бүртгэл алга.' : 'Одоогоор бүртгэл алга.' }}
                             </td>
                         </tr>
                     </tbody>
@@ -275,7 +289,9 @@ const destroyRow = (id) => {
                 <div class="mb-5 flex items-start justify-between gap-3">
                     <div>
                         <h3 class="text-base font-semibold text-brand-navy-900">Шинэ бүртгэл</h3>
-                        <p class="mt-0.5 text-sm text-slate-500">{{ title }} — мэдээллээ оруулна уу.</p>
+                        <p class="mt-0.5 text-sm text-slate-500">
+                            {{ activeScopeLabel && activeScope !== 'all' ? activeScopeLabel : title }} — мэдээллээ оруулна уу.
+                        </p>
                     </div>
                     <button
                         type="button"
@@ -293,7 +309,7 @@ const destroyRow = (id) => {
                     <div
                         v-for="field in fields"
                         :key="field.name"
-                        :class="field.type === 'textarea' ? 'md:col-span-2' : ''"
+                        :class="field.type === 'textarea' || field.type === 'file' ? 'md:col-span-2' : ''"
                     >
                         <label v-if="field.type !== 'checkbox'" class="ui-label">{{ field.label }}</label>
                         <select
@@ -351,6 +367,18 @@ const destroyRow = (id) => {
                             rows="3"
                             class="ui-input"
                         />
+                        <div v-else-if="field.type === 'file'">
+                            <input
+                                type="file"
+                                class="ui-input file:mr-3 file:rounded-lg file:border-0 file:bg-brand-navy-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-brand-navy-800"
+                                :required="field.required"
+                                :accept="field.accept || '.pdf,.doc,.docx'"
+                                @change="form[field.name] = $event.target.files?.[0] || null"
+                            />
+                            <p class="mt-1 text-xs text-slate-500">
+                                Word (.doc, .docx) эсвэл PDF. Хэмжээ 20MB хүртэл.
+                            </p>
+                        </div>
                         <label
                             v-else-if="field.type === 'checkbox'"
                             class="flex items-center gap-2 text-sm font-medium text-slate-700"
