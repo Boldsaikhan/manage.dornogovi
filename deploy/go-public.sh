@@ -47,6 +47,15 @@ case "${RESOLVED}" in
         ;;
 esac
 
+WWW_DOMAIN="www.${APP_DOMAIN}"
+WWW_RESOLVED="$(getent ahostsv4 "${WWW_DOMAIN}" | awk 'NR==1{print $1}' || true)"
+echo "    ${WWW_DOMAIN} -> ${WWW_RESOLVED:-<олдсонгүй>}"
+if [ -z "${WWW_RESOLVED}" ]; then
+    echo
+    echo "АНХААР: www DNS байхгүй — утас www оруулвал ERR_NAME_NOT_RESOLVED."
+    echo "       deploy/dns-request-email.md-ийн www CNAME/A хүсэлтийг НДТ руу илгээнэ үү."
+fi
+
 if [ -n "${PUBLIC_IP}" ] && [ "${RESOLVED}" != "${PUBLIC_IP}" ]; then
     echo
     echo "АНХААР: DNS-ийн хаяг (${RESOLVED}) энэ серверийн гадаад IP (${PUBLIC_IP})-тай таарахгүй байна."
@@ -76,7 +85,13 @@ nginx -t && systemctl reload nginx
 # ------------------------------------------------- 4. Let's Encrypt гэрчилгээ
 echo "==> SSL гэрчилгээ авч байна (Let's Encrypt)"
 apt-get install -y certbot python3-certbot-nginx >/dev/null
-certbot --nginx -d "${APP_DOMAIN}" \
+CERT_ARGS=(-d "${APP_DOMAIN}")
+if [ -n "${WWW_RESOLVED}" ]; then
+    CERT_ARGS+=(-d "${WWW_DOMAIN}")
+else
+    echo "    (www DNS байхгүй тул зөвхөн apex сертификат)"
+fi
+certbot --nginx "${CERT_ARGS[@]}" \
         --non-interactive --agree-tos -m "${CERTBOT_EMAIL}" \
         --redirect --keep-until-expiring
 

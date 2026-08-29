@@ -117,7 +117,7 @@ find "${WEB_ROOT}/storage" "${WEB_ROOT}/bootstrap/cache" -type d -exec chmod 775
 
 log "8/8 Nginx"
 cp deploy/nginx.conf "/etc/nginx/sites-available/${APP_DOMAIN}"
-sed -i "s#/var/www/manage.dornogovi.gov.mn#${WEB_ROOT}#g; s#server_name .*#server_name ${APP_DOMAIN} _;#" \
+sed -i "s#/var/www/manage.dornogovi.gov.mn#${WEB_ROOT}#g" \
     "/etc/nginx/sites-available/${APP_DOMAIN}"
 ln -sf "/etc/nginx/sites-available/${APP_DOMAIN}" "/etc/nginx/sites-enabled/${APP_DOMAIN}"
 rm -f /etc/nginx/sites-enabled/default

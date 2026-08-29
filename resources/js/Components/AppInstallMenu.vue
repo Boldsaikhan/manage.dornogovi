@@ -119,11 +119,24 @@ const toggle = () => {
         >
             <div
                 v-if="open"
-                class="fixed inset-x-2 top-[4.25rem] z-40 max-h-[min(80dvh,calc(100dvh-5rem))] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-[min(94vw,36rem)] sm:max-h-[80vh]"
+                class="absolute right-0 z-50 mt-2 w-[min(92vw,20rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
                 @click.stop
             >
-                <div class="max-h-[inherit] overflow-y-auto overscroll-contain p-2 sm:p-2.5">
-                    <AppExtensionManager />
+                <div class="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+                    <p class="text-sm font-semibold text-slate-800">Өргөтгөл</p>
+                    <button
+                        type="button"
+                        class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                        aria-label="Хаах"
+                        @click="open = false"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="max-h-[min(70vh,24rem)] overflow-y-auto overscroll-contain p-2.5">
+                    <AppExtensionManager compact />
                 </div>
             </div>
         </Transition>
