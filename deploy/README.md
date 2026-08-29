@@ -102,8 +102,32 @@ resolver кэш хордож, утас дээр `DNS_PROBE_POSSIBLE` гарда�
 
 **www.manage.dornogovi.gov.mn** одоогоор DNS-д **байхгүй** (NXDOMAIN).
 Утасны Chrome заримдаа www оруулах эсвэл түүнийг оролдож
-`ERR_NAME_NOT_RESOLVED` харуулна. Код, nginx apex redirect буруу биш —
-**www A/CNAME** DNS админ нэмнэ (`deploy/dns-request-email.md`).
+`DNS_PROBE_FINISHED_NXDOMAIN` / `ERR_NAME_NOT_RESOLVED` харуулна.
+Код, nginx apex redirect буруу биш — **www A/CNAME** DNS админ нэмнэ
+(`deploy/dns-request-email.md`). nginx-ийн www→apex redirect нь зөвхөн
+**www DNS нэмсний дараа** ажиллана (DNS-ээс өмнө хүсэлт сервер хүрэхгүй).
+
+### Утас дээр шууд шалгах
+
+| Алдаа | Шалтгаан | Шийдэл |
+|---|---|---|
+| `DNS_PROBE_FINISHED_NXDOMAIN` + «www.manage…» | www A/CNAME байхгүй | НДТ www бичлэг нэмнэ (доор) |
+| `DNS_PROBE_POSSIBLE` (apex) | ns4.gov.mn NXDOMAIN, resolver кэш | НДТ ns4 засна |
+| Apex нээгдэж, www алдаатай | Chrome www автomat оролдож байна | www DNS нэмэх |
+
+**Хэрэглэгч түр зуур:** `https://manage.dornogovi.gov.mn` (www **гүй**) гэж
+яг бичнэ. Chrome → Settings → Privacy → Clear browsing data (Cached images).
+1.1.1.1 (Cloudflare DNS) апп суулгаж туршина.
+
+**Админ заавал хийнэ (НДТ / gov.mn DNS):**
+
+```
+www.manage.dornogovi.gov.mn.  IN  CNAME  manage.dornogovi.gov.mn.
+# эсвэл
+www.manage.dornogovi.gov.mn.  IN  A  202.37.109.67
+```
+
+DNS нэмсний дараа сервер дээр: `sudo certbot --nginx -d manage.dornogovi.gov.mn -d www.manage.dornogovi.gov.mn --expand`
 
 Энэ нь **сайтын кодоор бүрэн засагдахгүй** — НДТ/gov.mn DNS админ засна.
 Хүсэлтийн бэлэн текст: [dns-request-email.md](dns-request-email.md),
