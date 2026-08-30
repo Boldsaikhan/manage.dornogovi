@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import { isMobileDevice } from '@/utils/mobileClient';
+import { assertBiometric, isWebAuthnSupported } from '@/utils/webauthn';
 
 const LOCK_KEY = 'md_app_locked';
 const LAST_ACTIVE_KEY = 'md_last_active';
@@ -14,16 +15,22 @@ const busy = ref(false);
 const error = ref('');
 const offline = ref(typeof navigator !== 'undefined' ? ! navigator.onLine : false);
 const clientLocked = ref(false);
+const bioSupported = ref(false);
+const bioBusy = ref(false);
 
 let suppressHideUntil = 0;
 
 const lock = computed(() => page.props.appLock ?? {
     locked: false,
     mode: null,
+    hasWebAuthn: false,
     idleMinutes: 30,
 });
 
 const idleMs = computed(() => Math.max(1, Number(lock.value.idleMinutes || 30)) * 60 * 1000);
+
+/** Төхөөрөмж дээр биометрик бүртгүүлсэн бөгөөд хөтөч дэмждэг үед л санал болгоно. */
+const canBiometric = computed(() => bioSupported.value && !! lock.value.hasWebAuthn);
 
 const userId = computed(() => page.props.auth?.user?.id ?? null);
 
@@ -163,6 +170,8 @@ const onOffline = () => {
 };
 
 onMounted(() => {
+    bioSupported.value = isWebAuthnSupported();
+
     if (shouldGuard()) {
         if (idleExpired()) {
             evaluateLock();
@@ -247,6 +256,57 @@ const unlock = async () => {
         busy.value = false;
     }
 };
+
+/** Хуруу / царайгаар түгжээ тайлах. Амжилтгүй бол нууц үгийн талбар хэвээр үлдэнэ. */
+const unlockBiometric = async () => {
+    if (bioBusy.value || busy.value) return;
+
+    offline.value = ! navigator.onLine;
+    if (offline.value) {
+        error.value = 'Сүлжээгүй байна. Холбогдсоны дараа дахин оролдоно уу.';
+        return;
+    }
+
+    bioBusy.value = true;
+    error.value = '';
+
+    // Биометрик цонх нээгдэхэд апп нуугдсан гэж тооцогдож дахин түгжихээс сэргийлнэ.
+    suppressHideLock(30000);
+
+    try {
+        if (! lock.value.locked) {
+            try {
+                await window.axios.post(route('app.lock'), { idle: true });
+            } catch {
+                // ignore
+            }
+        }
+
+        const assertion = await assertBiometric();
+
+        await window.axios.post(route('app.unlock'), { assertion });
+        password.value = '';
+        clearLockLocal();
+        suppressHideLock(HIDE_GRACE_MS);
+        router.reload({ only: ['appLock', 'vault'] });
+    } catch (e) {
+        const name = e?.name || '';
+
+        if (/NotAllowedError|AbortError/i.test(name)) {
+            error.value = 'Үйлдэл цуцлагдлаа. Нууц үгээрээ нээж болно.';
+        } else if (! navigator.onLine) {
+            error.value = 'Сүлжээгүй байна. Холбогдсоны дараа дахин оролдоно уу.';
+        } else {
+            error.value = e?.response?.data?.errors?.webauthn?.[0]
+                || e?.response?.data?.message
+                || 'Баталгаажуулж чадсангүй. Нууц үгээрээ нээнэ үү.';
+        }
+
+        suppressHideLock(HIDE_GRACE_MS);
+    } finally {
+        bioBusy.value = false;
+    }
+};
 </script>
 
 <template>
@@ -271,7 +331,9 @@ const unlock = async () => {
             <p class="mt-1 text-center text-sm text-slate-500">
                 {{ offline
                     ? 'Сүлжээгүй үед апп түгжигдсэн байна. Интернэт холбогдсоны дараа нээнэ үү.'
-                    : `${lock.idleMinutes || 30} минут идэвхгүй болсон тул нууц үгээр дахин нээнэ үү.` }}
+                    : canBiometric
+                        ? `${lock.idleMinutes || 30} минут идэвхгүй болсон тул хуруу / царайгаар дахин нээнэ үү.`
+                        : `${lock.idleMinutes || 30} минут идэвхгүй болсон тул нууц үгээр дахин нээнэ үү.` }}
             </p>
 
             <div
@@ -281,7 +343,28 @@ const unlock = async () => {
                 Офлайн горимд апп нээгдэхгүй. Сүлжээ холбогдсоны дараа «Дахин оролдох» дарна.
             </div>
 
-            <form class="mt-6 space-y-4" @submit.prevent="unlock">
+            <button
+                v-if="canBiometric && !offline"
+                type="button"
+                class="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-navy-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-navy-700 disabled:opacity-60"
+                :disabled="bioBusy || busy"
+                @click="unlockBiometric"
+            >
+                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 11c1.657 0 3-1.567 3-3.5S13.657 4 12 4 9 5.567 9 7.5 10.343 11 12 11z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.5 20c.8-3.2 2.9-5 5.5-5s4.7 1.8 5.5 5" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 8.5c-.8.6-1.3 1.6-1.3 2.7 0 2.3 1.6 3.8 3.3 4.3M17 8.5c.8.6 1.3 1.6 1.3 2.7 0 2.3-1.6 3.8-3.3 4.3" />
+                </svg>
+                {{ bioBusy ? 'Хүлээж байна…' : 'Хуруу / царайгаар нээх' }}
+            </button>
+
+            <div v-if="canBiometric && !offline" class="mt-4 flex items-center gap-3">
+                <span class="h-px flex-1 bg-slate-200"></span>
+                <span class="text-xs text-slate-400">эсвэл нууц үгээр</span>
+                <span class="h-px flex-1 bg-slate-200"></span>
+            </div>
+
+            <form :class="canBiometric && !offline ? 'mt-4 space-y-4' : 'mt-6 space-y-4'" @submit.prevent="unlock">
                 <div v-if="!offline">
                     <label class="mb-1 block text-xs font-medium text-slate-600">Нууц үг</label>
                     <input

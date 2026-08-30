@@ -64,7 +64,7 @@ class HandleInertiaRequests extends Middleware
                 return [
                     'locked' => AppLock::isLocked($request),
                     'mode' => AppLock::mode($request),
-                    'hasWebAuthn' => false,
+                    'hasWebAuthn' => $user->webauthnCredentials()->exists(),
                     'idleMinutes' => (int) config('session.lifetime', 30),
                 ];
             },
