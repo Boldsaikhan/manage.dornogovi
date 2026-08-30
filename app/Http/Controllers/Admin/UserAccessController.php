@@ -10,6 +10,7 @@ use App\Models\RolePermission;
 use App\Models\User;
 use App\Models\UserModulePermission;
 use App\Services\HeltesAccountProvisioner;
+use App\Services\Sms\SmsSender;
 use App\Support\ModuleAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -75,12 +76,24 @@ class UserAccessController extends Controller
     {
         $result = $provisioner->run();
 
-        return back()->with('success', sprintf(
+        $message = sprintf(
             'Хэлтсийн албан хаагчдад эрх өглөө: %d шинэ, %d шинэчилсэн, %d алгассан.',
             $result['created'],
             $result['updated'],
             count($result['skipped']),
-        ));
+        );
+
+        if ($result['sms_sent'] > 0 || $result['sms_failed'] > 0) {
+            $message .= sprintf(' SMS: %d амжилттай', $result['sms_sent']);
+
+            if ($result['sms_failed'] > 0) {
+                $message .= sprintf(', %d амжилтгүй', $result['sms_failed']);
+            }
+
+            $message .= '.';
+        }
+
+        return back()->with('success', $message);
     }
 
     /**
@@ -205,7 +218,7 @@ class UserAccessController extends Controller
             'is_specialist' => ['boolean'],
         ]);
 
-        User::create([
+        $created = User::create([
             ...$data,
             'password' => Hash::make($data['password']),
             'email_verified_at' => now(),
@@ -213,6 +226,10 @@ class UserAccessController extends Controller
             'is_department_head' => $request->boolean('is_department_head'),
             'is_specialist' => $request->boolean('is_specialist'),
         ]);
+
+        if (! $created->is_admin && config('sms.send_on_admin_create')) {
+            app(SmsSender::class)->sendLoginCredentials($created, $data['password']);
+        }
 
         return back()->with('success', sprintf('«%s» нэмэгдлээ. Эрхийг дээрээс тохируулна уу.', $data['name']));
     }
@@ -273,6 +290,10 @@ class UserAccessController extends Controller
         }
 
         $user->save();
+
+        if ($passwordChanged && ! $user->is_admin && config('sms.send_on_password_reset')) {
+            app(SmsSender::class)->sendLoginCredentials($user, (string) $data['password']);
+        }
 
         $permissions = $data['permissions'] ?? [];
         $user->modulePermissions()->delete();
