@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Leave;
 use App\Models\Plan;
+use App\Models\Task;
 use App\Models\TravelAssignment;
 use App\Models\WorkGroup;
 use App\Support\ModuleAccess;
@@ -38,6 +39,26 @@ class DepartmentDashboardController extends Controller
         ModuleOwnScope::apply($planQuery, $user, 'plans');
         ModuleOwnScope::apply($groupQuery, $user, 'work_groups');
 
+        // Самбар: зөвхөн тухайн албан хаагчид хамаатай (хариуцагч/хамтран) үүрэг.
+        $taskQuery = Task::query()->with('source:id,key,name');
+        ModuleOwnScope::restrictTasksToAssignee($taskQuery, $user);
+
+        $tasks = $taskQuery->orderBy('sort_order')->orderBy('id')->get();
+
+        $recentTasks = $tasks
+            ->sortBy([
+                fn (Task $t) => $t->progress >= 100 ? 1 : 0,
+                fn (Task $t) => -$t->id,
+            ])
+            ->take(8)
+            ->values()
+            ->map(fn (Task $t) => [
+                'id' => $t->id,
+                'text' => $t->text,
+                'progress' => (int) $t->progress,
+                'source' => $t->source?->name,
+            ]);
+
         return Inertia::render('Modules/DepartmentDashboard', [
             'department' => $user->department?->only(['id', 'name', 'code']),
             'isAdmin' => (bool) $user->is_admin,
@@ -46,6 +67,7 @@ class DepartmentDashboardController extends Controller
                 'active_assignments' => (clone $assignQuery)->whereIn('status', ['pending', 'approved'])->count(),
                 'active_plans' => (clone $planQuery)->where('status', 'active')->count(),
                 'work_groups' => (clone $groupQuery)->count(),
+                'open_tasks' => $tasks->where('progress', '<', 100)->count(),
             ],
             'recentLeaves' => $leaveQuery->with('user:id,name')->latest('id')->limit(5)->get(),
             'recentAssignments' => $assignQuery->with('user:id,name')->latest('id')->limit(5)->get(),
@@ -56,6 +78,7 @@ class DepartmentDashboardController extends Controller
                 'progress' => (int) round($g->tasks->avg('progress') ?? 0),
                 'tasks' => $g->tasks->count(),
             ]),
+            'recentTasks' => $recentTasks,
         ]);
     }
 }

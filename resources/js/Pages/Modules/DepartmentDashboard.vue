@@ -12,6 +12,7 @@ const props = defineProps({
     recentAssignments: Array,
     recentPlans: Array,
     workGroups: Array,
+    recentTasks: { type: Array, default: () => [] },
 });
 
 const selectedKey = ref(null);
@@ -69,6 +70,19 @@ const statCards = computed(() => [
         dotClass: 'bg-violet-500',
         selectedRing: 'ring-2 ring-violet-400 ring-offset-2',
     },
+    {
+        key: 'tasks',
+        label: 'Үүрэг даалгавар',
+        value: props.stats.open_tasks,
+        panel: true,
+        route: 'tasks.index',
+        title: 'Үүрэг даалгаврын явц',
+        cardClass: 'border-rose-200 bg-gradient-to-br from-rose-50 to-pink-50 hover:border-rose-300',
+        labelClass: 'text-rose-700',
+        valueClass: 'text-rose-900',
+        dotClass: 'bg-rose-500',
+        selectedRing: 'ring-2 ring-rose-400 ring-offset-2',
+    },
 ]);
 
 const activeCard = computed(() => statCards.value.find((card) => card.key === selectedKey.value) ?? null);
@@ -94,7 +108,7 @@ function selectCard(card) {
 
             <AppExtensionManager notify-only />
 
-            <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
                 <button
                     v-for="card in statCards"
                     :key="card.key"
@@ -194,6 +208,23 @@ function selectCard(card) {
                         </div>
                     </li>
                     <li v-if="!workGroups.length" class="text-slate-400">Бүртгэл алга</li>
+                </ul>
+
+                <ul v-else-if="activeCard.key === 'tasks'" class="space-y-3 text-sm">
+                    <li v-for="t in recentTasks" :key="t.id">
+                        <div class="flex justify-between gap-3 font-medium text-slate-700">
+                            <span class="min-w-0 flex-1 truncate">{{ t.text }}</span>
+                            <span class="shrink-0">{{ t.progress }}%</span>
+                        </div>
+                        <div v-if="t.source" class="text-xs text-slate-400">{{ t.source }}</div>
+                        <div class="mt-1.5 h-2 rounded-full bg-slate-100">
+                            <div
+                                class="h-full rounded-full bg-rose-600"
+                                :style="{ width: t.progress + '%' }"
+                            />
+                        </div>
+                    </li>
+                    <li v-if="!recentTasks.length" class="text-slate-400">Бүртгэл алга</li>
                 </ul>
             </div>
         </div>
