@@ -63,7 +63,7 @@ class WebAuthnRoutesTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_profile_does_not_include_webauthn_credentials(): void
+    public function test_profile_includes_webauthn_credentials(): void
     {
         $user = User::factory()->create();
         WebAuthnCredential::query()->create([
@@ -79,7 +79,8 @@ class WebAuthnRoutesTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Profile/Edit')
-                ->missing('webauthnCredentials')
+                ->has('webauthnCredentials', 1)
+                ->where('webauthnCredentials.0.device_name', 'Утас')
             );
     }
 }

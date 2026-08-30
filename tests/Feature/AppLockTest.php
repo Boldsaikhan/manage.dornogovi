@@ -179,6 +179,52 @@ class AppLockTest extends TestCase
             ->assertJson(['locked' => false]);
     }
 
+    public function test_unlock_rejects_invalid_biometric_assertion(): void
+    {
+        $user = User::factory()->create([
+            'password' => bcrypt('secret-pass'),
+        ]);
+        $user->webauthnCredentials()->create([
+            'credential_id' => 'cred-bad-assertion',
+            'public_key' => 'pk',
+            'sign_count' => 0,
+            'device_name' => 'Phone',
+        ]);
+
+        $this->actingAs($user)
+            ->withHeader('User-Agent', self::MOBILE_UA)
+            ->postJson(route('app.lock'))
+            ->assertOk();
+
+        $this->postJson(route('app.unlock'), [
+            'assertion' => ['id' => 'zzz', 'clientDataJSON' => 'zzz'],
+        ])->assertStatus(422);
+
+        // Түгжээ хэвээр — буруу биометрикээр нэвтэрч болохгүй.
+        $this->assertTrue((bool) session(AppLock::SESSION_KEY));
+    }
+
+    public function test_password_only_route_ignores_biometric_assertion(): void
+    {
+        $user = User::factory()->create([
+            'password' => bcrypt('secret-pass'),
+        ]);
+
+        $this->actingAs($user)
+            ->withHeader('User-Agent', self::MOBILE_UA)
+            ->postJson(route('app.lock'))
+            ->assertOk();
+
+        // assertion явуулсан ч энэ маршрут нууц үг шаардана.
+        $this->postJson(route('app.unlock.password'), [
+            'assertion' => ['id' => 'zzz'],
+        ])->assertStatus(422);
+
+        $this->postJson(route('app.unlock.password'), ['password' => 'secret-pass'])
+            ->assertOk()
+            ->assertJson(['locked' => false]);
+    }
+
     public function test_unlock_does_not_require_biometric(): void
     {
         $user = User::factory()->create([
