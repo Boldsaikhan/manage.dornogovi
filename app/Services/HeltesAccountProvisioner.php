@@ -6,6 +6,7 @@ use App\Models\Department;
 use App\Models\PhoneDirectoryEntry;
 use App\Models\RolePermission;
 use App\Models\User;
+use App\Services\Sms\SmsSender;
 use App\Support\ModuleAccess;
 use App\Support\PersonName;
 use Illuminate\Support\Collection;
@@ -23,19 +24,30 @@ class HeltesAccountProvisioner
 {
     public const STAFF_LOGIN_PASSWORD = 'ZDTG@2026';
 
+    public function __construct(private SmsSender $sms) {}
+
     /**
-     * @return array{created: int, updated: int, skipped: list<array{name: string, reason: string}>, dry_run: bool}
+     * @return array{
+     *     created: int,
+     *     updated: int,
+     *     skipped: list<array{name: string, reason: string}>,
+     *     dry_run: bool,
+     *     sms_sent: int,
+     *     sms_failed: int
+     * }
      */
-    public function run(bool $dryRun = false): array
+    public function run(bool $dryRun = false, bool $withSms = false): array
     {
         $created = 0;
         $updated = 0;
         $skipped = [];
         $seenPhones = [];
+        $smsSent = 0;
+        $smsFailed = 0;
 
-        $apply = function () use ($dryRun, &$created, &$updated, &$skipped, &$seenPhones): void {
+        $apply = function () use ($dryRun, $withSms, &$created, &$updated, &$skipped, &$seenPhones, &$smsSent, &$smsFailed): void {
             foreach ($this->entries() as $entry) {
-                $result = $this->provisionOne($entry, $seenPhones, $dryRun);
+                $result = $this->provisionOne($entry, $seenPhones, $dryRun, $withSms);
 
                 if ($result['status'] === 'created') {
                     $created++;
@@ -47,6 +59,9 @@ class HeltesAccountProvisioner
                         'reason' => $result['reason'],
                     ];
                 }
+
+                $smsSent += $result['sms_sent'];
+                $smsFailed += $result['sms_failed'];
             }
         };
 
@@ -61,6 +76,8 @@ class HeltesAccountProvisioner
             'updated' => $updated,
             'skipped' => $skipped,
             'dry_run' => $dryRun,
+            'sms_sent' => $smsSent,
+            'sms_failed' => $smsFailed,
         ];
     }
 
@@ -309,19 +326,20 @@ class HeltesAccountProvisioner
 
     /**
      * @param  array<string, true>  $seenPhones
-     * @return array{status: string, name: string, reason: string}
+     * @return array{status: string, name: string, reason: string, sms_sent: int, sms_failed: int}
      */
-    private function provisionOne(PhoneDirectoryEntry $entry, array &$seenPhones, bool $dryRun): array
+    private function provisionOne(PhoneDirectoryEntry $entry, array &$seenPhones, bool $dryRun, bool $withSms): array
     {
+        $emptySms = ['sms_sent' => 0, 'sms_failed' => 0];
         $label = trim((string) $entry->person_name) ?: '#'.$entry->id;
         $creds = $this->credentials($entry);
 
         if ($creds === null) {
-            return ['status' => 'skipped', 'name' => $label, 'reason' => 'Нэр эсвэл утас дутуу'];
+            return ['status' => 'skipped', 'name' => $label, 'reason' => 'Нэр эсвэл утас дутуу', ...$emptySms];
         }
 
         if (isset($seenPhones[$creds['phone']])) {
-            return ['status' => 'skipped', 'name' => $creds['name'], 'reason' => 'Давхардсан утас'];
+            return ['status' => 'skipped', 'name' => $creds['name'], 'reason' => 'Давхардсан утас', ...$emptySms];
         }
 
         $seenPhones[$creds['phone']] = true;
@@ -334,24 +352,49 @@ class HeltesAccountProvisioner
                 'status' => $existing ? 'updated' : 'created',
                 'name' => $creds['name'],
                 'reason' => '',
+                ...$emptySms,
             ];
         }
 
         if ($existing) {
             $this->updateExisting($existing, $creds, $entry, $isHead);
+            $sms = $this->maybeSendLoginSms($existing, $creds['password'], 'updated', $withSms);
 
-            return ['status' => 'updated', 'name' => $creds['name'], 'reason' => ''];
+            return ['status' => 'updated', 'name' => $creds['name'], 'reason' => '', ...$sms];
         }
 
-        $this->createUser($creds, $entry, $isHead);
+        $user = $this->createUser($creds, $entry, $isHead);
+        $sms = $this->maybeSendLoginSms($user, $creds['password'], 'created', $withSms);
 
-        return ['status' => 'created', 'name' => $creds['name'], 'reason' => ''];
+        return ['status' => 'created', 'name' => $creds['name'], 'reason' => '', ...$sms];
+    }
+
+    /**
+     * @return array{sms_sent: int, sms_failed: int}
+     */
+    private function maybeSendLoginSms(User $user, string $plainPassword, string $event, bool $withSms): array
+    {
+        if ($user->is_admin) {
+            return ['sms_sent' => 0, 'sms_failed' => 0];
+        }
+
+        $shouldSend = $withSms
+            || ($event === 'created' && config('sms.send_on_provision'))
+            || ($event === 'updated' && config('sms.send_on_provision_update'));
+
+        if (! $shouldSend) {
+            return ['sms_sent' => 0, 'sms_failed' => 0];
+        }
+
+        return $this->sms->sendLoginCredentials($user, $plainPassword)
+            ? ['sms_sent' => 1, 'sms_failed' => 0]
+            : ['sms_sent' => 0, 'sms_failed' => 1];
     }
 
     /**
      * @param  array{name: string, phone: string, password: string, position: string, latin: string}  $creds
      */
-    private function createUser(array $creds, PhoneDirectoryEntry $entry, bool $isHead): void
+    private function createUser(array $creds, PhoneDirectoryEntry $entry, bool $isHead): User
     {
         $user = User::create([
             'name' => $creds['name'],
@@ -367,6 +410,8 @@ class HeltesAccountProvisioner
         ]);
 
         $this->applyRolePermissions($user, $isHead ? 'department_head' : 'specialist');
+
+        return $user;
     }
 
     /**

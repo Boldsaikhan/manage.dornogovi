@@ -9,6 +9,7 @@ class ProvisionHeltesAccounts extends Command
 {
     protected $signature = 'users:provision-heltes
                             {--dry-run : Зөвхөн тоолох, хадгалахгүй}
+                            {--with-sms : SMS илгээх (SMS_ENABLED=true байх ёстой)}
                             {--emails-only : Зөвхөн и-мэйлийг нэр@dornogovi.gov.mn болгох}
                             {--passwords-only : Нууц үгийг ZDTG@2026 болгох}';
 
@@ -33,7 +34,8 @@ class ProvisionHeltesAccounts extends Command
         }
 
         $dryRun = (bool) $this->option('dry-run');
-        $result = $provisioner->run($dryRun);
+        $withSms = (bool) $this->option('with-sms');
+        $result = $provisioner->run($dryRun, $withSms);
 
         if ($dryRun) {
             $this->comment('Dry-run — өөрчлөлт хадгалаагүй.');
@@ -45,6 +47,14 @@ class ProvisionHeltesAccounts extends Command
             $result['updated'],
             count($result['skipped']),
         ));
+
+        if ($result['sms_sent'] > 0 || $result['sms_failed'] > 0) {
+            $this->line(sprintf(
+                'SMS: %d амжилттай, %d амжилтгүй',
+                $result['sms_sent'],
+                $result['sms_failed'],
+            ));
+        }
 
         if ($result['skipped'] !== []) {
             $this->table(
