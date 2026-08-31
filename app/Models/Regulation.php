@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Regulation extends Model
 {
     protected $fillable = [
-        'title', 'category', 'body', 'file_path', 'published_at', 'created_by',
+        'title', 'category', 'body', 'file_path', 'file_name', 'published_at', 'created_by',
     ];
 
     protected function casts(): array

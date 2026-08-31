@@ -9,9 +9,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ModuleResourceController extends Controller
 {
@@ -70,7 +73,7 @@ class ModuleResourceController extends Controller
             }
         }
 
-        $rows = $query->limit(200)->get()->map(fn (Model $row) => $this->serialize($row, $config));
+        $rows = $query->limit(200)->get()->map(fn (Model $row) => $this->serialize($row, $config, $module));
 
         return Inertia::render('Modules/ResourceIndex', [
             'scopeTabs' => $scopeTabs,
@@ -98,13 +101,25 @@ class ModuleResourceController extends Controller
         $config = $this->applyActiveScopeView($request, $config);
 
         $data = $this->validated($request, $config);
+        $file = $request->file('file');
+        unset($data['file']);
+
         $data = array_merge($config['defaults'] ?? [], $data);
         $data = $this->applyScopeToData($request, $config, $data);
         ModuleOwnScope::assertCanCreate($request->user(), $module, $data);
         $data = $this->applyCreateHooks($request, $config, $data);
         $data = $this->normalizeDecreeData($config, $data);
 
+        if (in_array('published_at', $config['model']::make()->getFillable(), true)
+            && empty($data['published_at'])) {
+            $data['published_at'] = now();
+        }
+
         $row = $config['model']::create($data);
+
+        if ($file) {
+            $this->storeRowFile($module, $row, $file);
+        }
 
         $this->notifyRelatedEmployees($module, $row, $data);
 
@@ -160,9 +175,38 @@ class ModuleResourceController extends Controller
         $row = $config['model']::query()->whereKey($id)->firstOrFail();
         abort_unless(ModuleOwnScope::allows($request->user(), $module, $row), 403);
 
+        $this->deleteRowFile($row);
         $row->delete();
 
         return back()->with('success', 'Устгалаа.');
+    }
+
+    /**
+     * Оруулсан файлыг браузерт шууд харуулна (PDF) эсвэл татна.
+     */
+    public function showFile(Request $request, string $module, int $id): StreamedResponse
+    {
+        $config = $this->configOrFail($module);
+        $this->authorizeModule($request, $module);
+
+        $row = $config['model']::query()->whereKey($id)->firstOrFail();
+        abort_unless(ModuleOwnScope::allows($request->user(), $module, $row), 403);
+
+        $disk = $this->fileDisk($row->file_path ?? null);
+        abort_unless($disk, 404);
+
+        $name = (string) ($row->file_name ?: basename((string) $row->file_path));
+        $mime = Storage::disk($disk)->mimeType($row->file_path) ?: 'application/octet-stream';
+        if ($this->isPdfName($name)) {
+            $mime = 'application/pdf';
+        }
+
+        $ascii = preg_replace('/[^\x20-\x7E]/', '_', $name) ?: 'file';
+
+        return Storage::disk($disk)->response($row->file_path, $name, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => "inline; filename=\"{$ascii}\"; filename*=UTF-8''".rawurlencode($name),
+        ]);
     }
 
     private function moduleFromRequest(Request $request): string
@@ -199,10 +243,16 @@ class ModuleResourceController extends Controller
                 'date' => 'date',
                 'datetime' => 'date',
                 'checkbox' => 'boolean',
+                'file' => 'file',
                 'select' => Rule::in(array_keys($field['options'] ?? [])),
                 'textarea', 'text', 'directory_org', 'directory_person' => 'string',
                 default => 'string',
             };
+
+            if (($field['type'] ?? '') === 'file') {
+                $rule[] = 'max:20480';
+                $rule[] = 'mimes:pdf,doc,docx';
+            }
 
             $rules[$name] = $rule;
         }
@@ -343,20 +393,21 @@ class ModuleResourceController extends Controller
             ->all();
     }
 
-    private function serialize(Model $row, array $config): array
+    private function serialize(Model $row, array $config, string $module): array
     {
         $out = ['id' => $row->getKey()];
 
         foreach ($config['columns'] as $col) {
             $key = $col['key'];
             $out[$key] = match (true) {
+                $key === 'file' => $row->file_name ?: (basename((string) ($row->file_path ?? '')) ?: '—'),
                 $key === ($config['scope_column'] ?? 'scope') && ! empty($config['scopes'])
                     => $config['scopes'][$row->{$key}] ?? ($row->{$key} ?? '—'),
                 default => $this->serializeValue($row, $key),
             };
         }
 
-        return $out;
+        return $this->appendFileMeta($out, $row, $module);
     }
 
     private function serializeValue(Model $row, string $key): string
@@ -371,5 +422,63 @@ class ModuleResourceController extends Controller
             ) ?? '—',
             default => (string) ($row->{$key} ?? '—'),
         };
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function appendFileMeta(array $out, Model $row, string $module): array
+    {
+        if (! in_array('file_path', $row->getFillable(), true)) {
+            return $out;
+        }
+
+        $path = $row->file_path ?? null;
+        $name = (string) ($row->file_name ?: ($path ? basename((string) $path) : ''));
+        $out['file_name'] = $name !== '' ? $name : null;
+        $out['file_url'] = filled($path) ? route('modules.file', ['module' => $module, 'id' => $row->getKey()]) : null;
+        $out['file_is_pdf'] = $this->isPdfName($name);
+
+        return $out;
+    }
+
+    private function storeRowFile(string $module, Model $row, \Illuminate\Http\UploadedFile $file): void
+    {
+        $ext = strtolower($file->getClientOriginalExtension() ?: 'bin');
+        $path = $file->storeAs($module.'/'.$row->getKey(), Str::uuid()->toString().'.'.$ext, 'local');
+        $payload = ['file_path' => $path];
+        if (in_array('file_name', $row->getFillable(), true)) {
+            $payload['file_name'] = $file->getClientOriginalName();
+        }
+        $row->update($payload);
+    }
+
+    private function deleteRowFile(Model $row): void
+    {
+        $path = $row->file_path ?? null;
+        $disk = $this->fileDisk($path);
+        if ($disk) {
+            Storage::disk($disk)->delete($path);
+        }
+    }
+
+    private function fileDisk(?string $path): ?string
+    {
+        if (! filled($path)) {
+            return null;
+        }
+
+        foreach (['local', 'public'] as $disk) {
+            if (Storage::disk($disk)->exists($path)) {
+                return $disk;
+            }
+        }
+
+        return null;
+    }
+
+    private function isPdfName(?string $name): bool
+    {
+        return str_ends_with(strtolower((string) $name), '.pdf');
     }
 }

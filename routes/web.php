@@ -131,6 +131,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/modules/onboarding', [ModuleResourceController::class, 'index'])->name('onboarding.index');
 
     Route::post('/modules/{module}', [ModuleResourceController::class, 'store'])->name('modules.store');
+    Route::get('/modules/{module}/{id}/file', [ModuleResourceController::class, 'showFile'])->name('modules.file');
     Route::delete('/modules/{module}/{id}', [ModuleResourceController::class, 'destroy'])->name('modules.destroy');
 
     Route::get('/work-groups', [WorkGroupController::class, 'index'])->name('work-groups.index');
