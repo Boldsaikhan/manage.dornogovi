@@ -2,7 +2,9 @@
 import { nextTick, onBeforeUnmount, onMounted, onUpdated, ref, watch } from 'vue';
 
 const props = defineProps({
-    maxHeight: { type: String, default: 'min(70vh, calc(100dvh - 12rem))' },
+    maxHeight: { type: String, default: 'min(72vh, calc(100dvh - 11rem))' },
+    /** Контент өөрчлөгдөхөд дахин хэмжих (ж: хүснэгтийн өргөн) */
+    measureKey: { type: [String, Number], default: null },
 });
 
 const bodyRef = ref(null);
@@ -18,8 +20,13 @@ const measure = () => {
         return;
     }
 
-    trackWidth.value = el.scrollWidth;
-    showHBar.value = el.scrollWidth > el.clientWidth + 1;
+    const inner = el.firstElementChild;
+    const innerWidth = inner instanceof HTMLElement
+        ? Math.max(inner.scrollWidth, inner.offsetWidth, inner.clientWidth)
+        : 0;
+
+    trackWidth.value = Math.max(el.scrollWidth, innerWidth);
+    showHBar.value = trackWidth.value > el.clientWidth + 1;
 };
 
 const syncFromBody = () => {
@@ -42,23 +49,34 @@ const syncFromBar = () => {
     syncing = false;
 };
 
+const bindObservers = () => {
+    resizeObserver?.disconnect();
+    resizeObserver = new ResizeObserver(() => measure());
+
+    if (! bodyRef.value) {
+        return;
+    }
+
+    resizeObserver.observe(bodyRef.value);
+
+    const inner = bodyRef.value.firstElementChild;
+    if (inner instanceof Element) {
+        resizeObserver.observe(inner);
+    }
+};
+
 onMounted(async () => {
     await nextTick();
     measure();
-
-    resizeObserver = new ResizeObserver(() => measure());
-    if (bodyRef.value) {
-        resizeObserver.observe(bodyRef.value);
-        if (bodyRef.value.firstElementChild) {
-            resizeObserver.observe(bodyRef.value.firstElementChild);
-        }
-    }
-
+    bindObservers();
     window.addEventListener('resize', measure);
 });
 
 onUpdated(() => {
-    nextTick(measure);
+    nextTick(() => {
+        bindObservers();
+        measure();
+    });
 });
 
 onBeforeUnmount(() => {
@@ -67,12 +85,13 @@ onBeforeUnmount(() => {
 });
 
 watch(() => props.maxHeight, () => nextTick(measure));
+watch(() => props.measureKey, () => nextTick(measure));
 </script>
 
 <template>
     <div
         class="ui-card ui-table-scroll flex w-full flex-col overflow-hidden"
-        :style="{ maxHeight }"
+        :style="{ height: maxHeight, maxHeight }"
     >
         <div
             ref="bodyRef"
@@ -88,7 +107,7 @@ watch(() => props.maxHeight, () => nextTick(measure));
             aria-hidden="true"
             @scroll="syncFromBar"
         >
-            <div :style="{ width: `${trackWidth}px`, height: '1px' }" />
+            <div class="ui-table-hscroll-track" :style="{ width: `${trackWidth}px` }" />
         </div>
     </div>
 </template>

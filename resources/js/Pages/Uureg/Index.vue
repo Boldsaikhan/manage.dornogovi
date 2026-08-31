@@ -1522,10 +1522,11 @@ const prepTableMinWidth = computed(() => {
             <!-- Үүрэг чиглэл — доод талын хэвтээ гүйлгэх хэсэг үргэлж харагдана -->
             <TableScrollViewport
                 v-if="isDirective && viewMode === 'table'"
+                :measure-key="directiveTableMinWidth"
             >
+                <div :style="{ width: `${directiveTableMinWidth}px` }">
                 <table
                     class="ui-table table-fixed w-full"
-                    :style="{ minWidth: `${directiveTableMinWidth}px` }"
                 >
                     <colgroup>
                         <col v-if="canEdit" style="width: 40px" />
@@ -1661,15 +1662,17 @@ const prepTableMinWidth = computed(() => {
                         </tr>
                     </tbody>
                 </table>
+                </div>
             </TableScrollViewport>
 
             <!-- Бэлтгэл ажил хангах төлөвлөгөө -->
             <TableScrollViewport
                 v-else-if="viewMode === 'table'"
+                :measure-key="prepTableMinWidth"
             >
+                <div :style="{ width: `${prepTableMinWidth}px` }">
                 <table
                     class="ui-table table-fixed w-full"
-                    :style="{ minWidth: `${prepTableMinWidth}px` }"
                 >
                     <colgroup>
                         <col v-if="canEdit" style="width: 40px" />
@@ -1815,6 +1818,7 @@ const prepTableMinWidth = computed(() => {
                         </tr>
                     </tbody>
                 </table>
+                </div>
             </TableScrollViewport>
         </div>
 

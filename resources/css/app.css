@@ -139,6 +139,11 @@
         overflow-y: hidden;
         scrollbar-gutter: stable;
         -webkit-overflow-scrolling: touch;
+        min-height: 14px;
+    }
+
+    .ui-table-hscroll-track {
+        height: 1px;
     }
 
     .ui-table-hscroll::-webkit-scrollbar {
