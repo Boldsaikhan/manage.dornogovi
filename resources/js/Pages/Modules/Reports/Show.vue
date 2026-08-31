@@ -3,6 +3,8 @@ import { computed } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ReportNavTree from '@/Components/Reports/ReportNavTree.vue';
+import ReportSectionTabs from '@/Components/Reports/ReportSectionTabs.vue';
+import { findReportSection } from '@/utils/reportsNavigation';
 
 const props = defineProps({
     title: String,
@@ -13,6 +15,14 @@ const props = defineProps({
 });
 
 const hasColumns = computed(() => (props.report.columns?.length ?? 0) > 0);
+
+const activeSectionKey = computed(() => props.report.section_key || null);
+
+const sectionNavItems = computed(() => {
+    const section = findReportSection(props.navigation, activeSectionKey.value);
+
+    return section?.children ?? [];
+});
 </script>
 
 <template>
@@ -22,7 +32,7 @@ const hasColumns = computed(() => (props.report.columns?.length ?? 0) > 0);
         <div class="ui-page">
             <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div class="min-w-0">
-                    <Link :href="route('reports.index')" class="text-sm text-brand-navy-600 hover:underline">
+                    <Link :href="route('reports.index', { section: activeSectionKey })" class="text-sm text-brand-navy-600 hover:underline">
                         ← Тайлан мэдээлэл
                     </Link>
                     <h2 class="ui-title mt-1">
@@ -56,13 +66,21 @@ const hasColumns = computed(() => (props.report.columns?.length ?? 0) > 0);
                 </div>
             </div>
 
+            <div class="mb-4">
+                <ReportSectionTabs
+                    :sections="navigation"
+                    :active-section-key="activeSectionKey"
+                    mode="show"
+                />
+            </div>
+
             <div class="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
-                <aside class="ui-card max-h-[calc(100dvh-10rem)] overflow-y-auto p-3 lg:sticky lg:top-24 lg:self-start">
+                <aside class="ui-card max-h-[calc(100dvh-12rem)] overflow-y-auto p-3 lg:sticky lg:top-24 lg:self-start">
                     <p class="mb-2 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                        Тайлангийн бүтэц
+                        Дэд тайлан
                     </p>
-                    <nav>
-                        <ReportNavTree :items="navigation" :active-key="report.key" />
+                    <nav v-if="sectionNavItems.length">
+                        <ReportNavTree :items="sectionNavItems" :active-key="report.key" />
                     </nav>
                 </aside>
 

@@ -16,11 +16,17 @@ class ReportCatalogController extends Controller
         $this->authorizeReports($request);
 
         $config = ReportsCatalog::config();
+        $navigation = ReportsCatalog::navigationTree();
+        $activeSection = ReportsCatalog::resolveSectionKey(
+            $request->query('section'),
+            $navigation[0]['key'] ?? null,
+        );
 
         return Inertia::render('Modules/Reports/Index', [
             'title' => $config['title'] ?? 'Тайлан мэдээлэл',
             'subtitle' => $config['subtitle'] ?? null,
-            'navigation' => ReportsCatalog::navigationTree(),
+            'navigation' => $navigation,
+            'activeSection' => $activeSection,
             'dashboard' => ReportsCatalog::dashboard(),
             'sources' => ReportsCatalog::sources(),
             'canManage' => ModuleAccess::canManage($request->user(), 'reports'),

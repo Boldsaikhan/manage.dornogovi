@@ -93,6 +93,19 @@ class ReportsCatalog
         return self::config()['sources'] ?? [];
     }
 
+    public static function resolveSectionKey(?string $key, ?string $fallback = null): ?string
+    {
+        if ($key !== null) {
+            foreach (self::sections() as $section) {
+                if (($section['key'] ?? null) === $key) {
+                    return $key;
+                }
+            }
+        }
+
+        return $fallback;
+    }
+
     /**
      * @return array<int, array<string, mixed>>
      */

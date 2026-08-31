@@ -1,16 +1,28 @@
 <script setup>
+import { computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ReportNavTree from '@/Components/Reports/ReportNavTree.vue';
+import ReportSectionTabs from '@/Components/Reports/ReportSectionTabs.vue';
 import ReportsDashboard from '@/Components/Reports/ReportsDashboard.vue';
+import { findReportSection } from '@/utils/reportsNavigation';
 
-defineProps({
+const props = defineProps({
     title: String,
     subtitle: String,
     navigation: { type: Array, default: () => [] },
+    activeSection: { type: String, default: null },
     dashboard: { type: Object, default: () => ({}) },
     sources: { type: Array, default: () => [] },
     canManage: { type: Boolean, default: false },
+});
+
+const activeSectionKey = computed(() => props.activeSection || props.navigation[0]?.key || null);
+
+const sectionNavItems = computed(() => {
+    const section = findReportSection(props.navigation, activeSectionKey.value);
+
+    return section?.children ?? [];
 });
 </script>
 
@@ -24,14 +36,23 @@ defineProps({
                 <p v-if="subtitle" class="ui-subtitle">{{ subtitle }}</p>
             </div>
 
+            <div class="mb-4">
+                <ReportSectionTabs
+                    :sections="navigation"
+                    :active-section-key="activeSectionKey"
+                    mode="index"
+                />
+            </div>
+
             <div class="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
-                <aside class="ui-card max-h-[calc(100dvh-10rem)] overflow-y-auto p-3 lg:sticky lg:top-24 lg:self-start">
+                <aside class="ui-card max-h-[calc(100dvh-12rem)] overflow-y-auto p-3 lg:sticky lg:top-24 lg:self-start">
                     <p class="mb-2 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                        Тайлангийн бүтэц
+                        Дэд тайлан
                     </p>
-                    <nav>
-                        <ReportNavTree :items="navigation" />
+                    <nav v-if="sectionNavItems.length">
+                        <ReportNavTree :items="sectionNavItems" />
                     </nav>
+                    <p v-else class="px-2 py-4 text-sm text-slate-400">Тайлан байхгүй</p>
                 </aside>
 
                 <section class="space-y-4">

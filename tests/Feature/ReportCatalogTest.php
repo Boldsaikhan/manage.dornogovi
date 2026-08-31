@@ -25,10 +25,17 @@ class ReportCatalogTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Modules/Reports/Index')
                 ->has('navigation', 6)
+                ->where('activeSection', 'state_policy')
                 ->has('dashboard.kpis', 6)
                 ->has('dashboard.sections', 6)
                 ->has('sources', 10)
                 ->where('title', 'Тайлан мэдээлэл'));
+
+        $this->actingAs($user)
+            ->get(route('reports.index', ['section' => 'contracts']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('activeSection', 'contracts'));
     }
 
     public function test_reports_show_loads_known_report_with_columns(): void
