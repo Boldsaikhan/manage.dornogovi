@@ -125,6 +125,38 @@
         display: none;
     }
 
+    /* Хүснэгт — доод талын хэвтээ гүйлгэх хэсэг үргэлж харагдана */
+    .ui-table-scroll-body {
+        scrollbar-gutter: stable;
+    }
+
+    .ui-table-scroll-body::-webkit-scrollbar:horizontal {
+        height: 0;
+    }
+
+    .ui-table-hscroll {
+        overflow-x: scroll;
+        overflow-y: hidden;
+        scrollbar-gutter: stable;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .ui-table-hscroll::-webkit-scrollbar {
+        height: 12px;
+    }
+
+    .ui-table-hscroll::-webkit-scrollbar-track {
+        @apply bg-slate-100;
+    }
+
+    .ui-table-hscroll::-webkit-scrollbar-thumb {
+        @apply rounded-full bg-slate-400/80;
+    }
+
+    .ui-table-hscroll::-webkit-scrollbar-thumb:hover {
+        @apply bg-slate-500;
+    }
+
     /* Урт бичвэрийг 2 мөрөнд багтаана — бүтэн утга title-аар */
     .ui-clamp-2 {
         display: -webkit-box;

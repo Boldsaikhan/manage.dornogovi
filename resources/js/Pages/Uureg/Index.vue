@@ -5,6 +5,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import SheetCell from '@/Components/SheetCell.vue';
 import TaskPeriodCell from '@/Components/TaskPeriodCell.vue';
+import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import TaskCalendar from '@/Components/TaskCalendar.vue';
 import { expandPersonNames, GROUP_LABELS } from '@/utils/soumGovernors';
 import { formatTaskPeriodMd } from '@/utils/taskPeriod';
@@ -1413,10 +1414,9 @@ const prepTableMinWidth = computed(() => {
                 </div>
             </div>
 
-            <!-- Үүрэг чиглэл — өндөр хязгаарлаж хажуугийн scroll viewport-д үлдэнэ -->
-            <div
+            <!-- Үүрэг чиглэл — доод талын хэвтээ гүйлгэх хэсэг үргэлж харагдана -->
+            <TableScrollViewport
                 v-if="isDirective && viewMode === 'table'"
-                class="ui-card max-h-[min(70vh,calc(100dvh-12rem))] w-full overflow-auto overscroll-contain"
             >
                 <table
                     class="ui-table table-fixed w-full"
@@ -1556,12 +1556,11 @@ const prepTableMinWidth = computed(() => {
                         </tr>
                     </tbody>
                 </table>
-            </div>
+            </TableScrollViewport>
 
             <!-- Бэлтгэл ажил хангах төлөвлөгөө -->
-            <div
+            <TableScrollViewport
                 v-else-if="viewMode === 'table'"
-                class="ui-card max-h-[min(70vh,calc(100dvh-12rem))] w-full overflow-auto overscroll-contain"
             >
                 <table
                     class="ui-table table-fixed w-full"
@@ -1711,7 +1710,7 @@ const prepTableMinWidth = computed(() => {
                         </tr>
                     </tbody>
                 </table>
-            </div>
+            </TableScrollViewport>
         </div>
 
         <!-- Дэлгэц дүүрэн график дашбоард -->
