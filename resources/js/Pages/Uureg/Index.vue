@@ -94,8 +94,20 @@ const submitNewKind = () => {
     });
 };
 
+const kindError = ref('');
+
 const removeKind = () => {
-    if (props.source?.is_system || ! props.kind) {
+    kindError.value = '';
+
+    if (props.source?.is_system) {
+        kindError.value = 'Суурь хэсгийг устгах боломжгүй.';
+
+        return;
+    }
+
+    if (! props.kind) {
+        kindError.value = 'Хэсэг тодорхойгүй байна. Хуудсыг дахин ачаална уу.';
+
         return;
     }
 
@@ -103,8 +115,24 @@ const removeKind = () => {
         return;
     }
 
+    let url;
+
+    // Серверийн route жагсаалт хуучирсан бол route() алдаа өгөж, товч чимээгүй болдог.
+    try {
+        url = route('tasks.sources.destroy', props.kind);
+    } catch (e) {
+        kindError.value = 'Устгах хаяг олдсонгүй. Хуудсыг шинэчлээд дахин оролдоно уу.';
+
+        return;
+    }
+
     deletingKind.value = true;
-    router.delete(route('tasks.sources.destroy', props.kind), {
+    router.delete(url, {
+        preserveScroll: true,
+        onError: (errors) => {
+            kindError.value = Object.values(errors ?? {})[0]
+                || 'Хэсгийг устгаж чадсангүй.';
+        },
         onFinish: () => {
             deletingKind.value = false;
         },
@@ -920,6 +948,7 @@ const prepTableMinWidth = computed(() => {
                 </div>
             </div>
             <p v-if="uploadForm.errors.file" class="text-sm text-red-600">{{ uploadForm.errors.file }}</p>
+            <p v-if="kindError" class="text-sm text-red-600">{{ kindError }}</p>
 
             <div
                 class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:rounded-2xl sm:border sm:border-slate-200 sm:bg-white sm:p-1.5 sm:shadow-soft sm:[&::-webkit-scrollbar]:auto [&::-webkit-scrollbar]:hidden"
