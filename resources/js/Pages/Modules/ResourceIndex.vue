@@ -13,6 +13,8 @@ const props = defineProps({
     fields: Array,
     rows: Array,
     canManage: Boolean,
+    canManageScopes: { type: Boolean, default: false },
+    scopeCategories: { type: Array, default: () => [] },
     storeUrl: String,
     scopeTabs: { type: Array, default: () => [] },
     activeScope: { type: String, default: 'all' },
@@ -20,6 +22,52 @@ const props = defineProps({
     directory: { type: Array, default: () => [] },
     rowActions: { type: Array, default: () => [] },
 });
+
+const showScopePanel = ref(false);
+const showNewScope = ref(false);
+const newScopeForm = useForm({ label: '' });
+const scopeEdits = reactive({});
+
+const syncScopeEdits = () => {
+    props.scopeCategories.forEach((category) => {
+        scopeEdits[category.id] = {
+            label: category.label,
+            sort_order: category.sort_order,
+        };
+    });
+};
+
+watch(
+    () => props.scopeCategories,
+    () => syncScopeEdits(),
+    { immediate: true, deep: true },
+);
+
+const submitNewScope = () => {
+    newScopeForm.post(route('regulations.categories.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            newScopeForm.reset();
+            showNewScope.value = false;
+        },
+    });
+};
+
+const saveScope = (category) => {
+    const draft = scopeEdits[category.id];
+    if (!draft) return;
+
+    router.patch(route('regulations.categories.update', category.id), {
+        label: draft.label,
+        sort_order: draft.sort_order,
+    }, { preserveScroll: true });
+};
+
+const destroyScope = (category) => {
+    if (!confirm(`«${category.label}» табыг устгах уу?`)) return;
+
+    router.delete(route('regulations.categories.destroy', category.id), { preserveScroll: true });
+};
 
 const showForm = ref(false);
 const formState = reactive({});
@@ -256,7 +304,7 @@ const destroyRow = (id) => {
                 </button>
             </div>
 
-            <nav v-if="scopeTabs.length" class="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
+            <nav v-if="scopeTabs.length" class="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
                 <button
                     v-for="tab in scopeTabs"
                     :key="tab.value"
@@ -272,7 +320,100 @@ const destroyRow = (id) => {
                     {{ tab.label }}
                     <span class="ml-1 text-xs opacity-70">{{ tab.count }}</span>
                 </button>
+                <button
+                    v-if="canManageScopes"
+                    type="button"
+                    class="rounded-xl border border-dashed border-brand-navy-300 px-3.5 py-2.5 text-sm font-semibold text-brand-navy-600 transition hover:bg-brand-navy-50"
+                    @click="showNewScope = !showNewScope"
+                >
+                    + Таб нэмэх
+                </button>
+                <button
+                    v-if="canManageScopes"
+                    type="button"
+                    class="rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50"
+                    @click="showScopePanel = !showScopePanel"
+                >
+                    {{ showScopePanel ? 'Таб засах хаах' : 'Таб засах' }}
+                </button>
             </nav>
+
+            <section
+                v-if="canManageScopes && showNewScope"
+                class="rounded-2xl border border-brand-navy-200 bg-white p-4 shadow-soft sm:p-5"
+            >
+                <div class="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-800">Шинэ таб нэмэх</h3>
+                        <p class="mt-0.5 text-xs text-slate-500">
+                            Жишээ нь: «Дотоод журам», «Хөдөлмөрийн тухай хууль» гэх мэт ангилал үүсгэнэ.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="rounded-lg px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100"
+                        @click="showNewScope = false"
+                    >
+                        Хаах
+                    </button>
+                </div>
+                <form class="flex flex-col gap-3 sm:flex-row" @submit.prevent="submitNewScope">
+                    <input
+                        v-model="newScopeForm.label"
+                        type="text"
+                        class="ui-input flex-1"
+                        placeholder="Табын нэр"
+                        required
+                    />
+                    <button type="submit" class="ui-btn-accent whitespace-nowrap" :disabled="newScopeForm.processing">
+                        {{ newScopeForm.processing ? 'Нэмэж байна…' : 'Нэмэх' }}
+                    </button>
+                </form>
+                <p v-if="newScopeForm.errors.label" class="mt-2 text-xs text-red-600">{{ newScopeForm.errors.label }}</p>
+            </section>
+
+            <section
+                v-if="canManageScopes && showScopePanel"
+                class="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft sm:p-5"
+            >
+                <h3 class="text-sm font-semibold text-slate-800">Табууд засах</h3>
+                <p class="mt-0.5 text-xs text-slate-500">Нэр, дарааллыг өөрчилж хадгална. Бүртгэлтэй табыг устгахгүй.</p>
+                <div class="mt-4 space-y-3">
+                    <div
+                        v-for="category in scopeCategories"
+                        :key="category.id"
+                        v-if="scopeEdits[category.id]"
+                        class="grid gap-2 rounded-xl border border-slate-100 bg-slate-50/60 p-3 sm:grid-cols-[1fr_6rem_auto_auto]"
+                    >
+                        <input
+                            v-model="scopeEdits[category.id].label"
+                            type="text"
+                            class="ui-input"
+                            placeholder="Табын нэр"
+                        />
+                        <input
+                            v-model.number="scopeEdits[category.id].sort_order"
+                            type="number"
+                            min="0"
+                            max="9999"
+                            class="ui-input"
+                            placeholder="Дараалал"
+                        />
+                        <button type="button" class="ui-btn-primary !py-2 text-xs" @click="saveScope(category)">
+                            Хадгалах
+                        </button>
+                        <button
+                            type="button"
+                            class="ui-btn-danger !py-2 text-xs"
+                            :disabled="category.count > 0"
+                            :title="category.count > 0 ? `${category.count} бүртгэлтэй` : 'Устгах'"
+                            @click="destroyScope(category)"
+                        >
+                            Устгах
+                        </button>
+                    </div>
+                </div>
+            </section>
 
             <div class="ui-table-wrap overflow-x-auto">
                 <table class="ui-table min-w-full">

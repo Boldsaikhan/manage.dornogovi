@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PhoneDirectoryEntry;
+use App\Models\RegulationCategory;
 use App\Support\ModuleAccess;
 use App\Support\ModuleOwnScope;
 use Illuminate\Database\Eloquent\Model;
@@ -20,7 +21,7 @@ class ModuleResourceController extends Controller
     public function index(Request $request): Response
     {
         $module = $this->moduleFromRequest($request);
-        $config = $this->configOrFail($module);
+        $config = $this->configFor($module);
         $this->authorizeModule($request, $module);
 
         $modelClass = $config['model'];
@@ -58,6 +59,7 @@ class ModuleResourceController extends Controller
         }
 
         $scopeTabs = [];
+        $counts = collect();
         if ($scopes) {
             $counts = $modelClass::query()
                 ->selectRaw("{$scopeColumn} as scope_key, count(*) as aggregate")
@@ -74,10 +76,16 @@ class ModuleResourceController extends Controller
 
         $rows = $query->limit(200)->get()->map(fn (Model $row) => $this->serialize($row, $config, $module));
 
+        $canManageScopes = $module === 'regulations' && ModuleAccess::canManage($request->user(), $module);
+
         return Inertia::render('Modules/ResourceIndex', [
             'scopeTabs' => $scopeTabs,
             'activeScope' => $activeScope,
             'scopeField' => $scopes ? $scopeColumn : null,
+            'scopeCategories' => $canManageScopes
+                ? RegulationCategory::manageList($counts->all())
+                : [],
+            'canManageScopes' => $canManageScopes,
             'module' => $module,
             'title' => $config['title'],
             'description' => $config['description'] ?? '',
@@ -94,7 +102,7 @@ class ModuleResourceController extends Controller
 
     public function store(Request $request, string $module): RedirectResponse
     {
-        $config = $this->configOrFail($module);
+        $config = $this->configFor($module);
         abort_unless(ModuleAccess::canEdit($request->user(), $module), 403);
 
         $config = $this->applyActiveScopeView($request, $config);
@@ -162,7 +170,7 @@ class ModuleResourceController extends Controller
 
     public function destroy(Request $request, string $module, int $id): RedirectResponse
     {
-        $config = $this->configOrFail($module);
+        $config = $this->configFor($module);
         abort_unless(ModuleAccess::canEdit($request->user(), $module), 403);
 
         $row = $config['model']::query()->whereKey($id)->firstOrFail();
@@ -179,7 +187,7 @@ class ModuleResourceController extends Controller
      */
     public function download(Request $request, string $module, int $id): StreamedResponse
     {
-        $config = $this->configOrFail($module);
+        $config = $this->configFor($module);
         $this->authorizeModule($request, $module);
 
         $row = $config['model']::query()->whereKey($id)->firstOrFail();
@@ -214,6 +222,26 @@ class ModuleResourceController extends Controller
     {
         $config = config("module_resources.{$module}");
         abort_unless(is_array($config), 404);
+
+        return $config;
+    }
+
+    private function configFor(string $module): array
+    {
+        return $this->withDynamicScopes($module, $this->configOrFail($module));
+    }
+
+    /**
+     * @param  array<string, mixed>  $config
+     * @return array<string, mixed>
+     */
+    private function withDynamicScopes(string $module, array $config): array
+    {
+        if (empty($config['dynamic_scopes']) || $module !== 'regulations') {
+            return $config;
+        }
+
+        $config['scopes'] = RegulationCategory::scopeMap();
 
         return $config;
     }

@@ -89,11 +89,7 @@ return [
         'scope_label' => 'Ангилал',
         'hide_all_scope' => true,
         'default_scope' => 'internal',
-        'scopes' => [
-            'internal' => 'Дотоод журам',
-            'labor_law' => 'Хөдөлмөрийн тухай хууль',
-            'cyber_security' => 'Кибер аюулгүй байдлын дотоод журам',
-        ],
+        'dynamic_scopes' => true,
         'columns' => [
             ['key' => 'title', 'label' => 'Гарчиг'],
             ['key' => 'file_label', 'label' => 'Файл', 'type' => 'file'],

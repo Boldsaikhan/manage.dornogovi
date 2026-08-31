@@ -19,6 +19,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PhoneDirectoryController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PwaManifestController;
+use App\Http\Controllers\RegulationCategoryController;
 use App\Http\Controllers\SystemViewController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UndoController;
@@ -107,6 +108,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/modules/assignments', [ModuleResourceController::class, 'index'])->name('assignments.index');
     Route::get('/modules/regulations', [ModuleResourceController::class, 'index'])->name('regulations.index');
+    Route::post('/modules/regulations/categories', [RegulationCategoryController::class, 'store'])->name('regulations.categories.store');
+    Route::patch('/modules/regulations/categories/{category}', [RegulationCategoryController::class, 'update'])->name('regulations.categories.update');
+    Route::delete('/modules/regulations/categories/{category}', [RegulationCategoryController::class, 'destroy'])->name('regulations.categories.destroy');
     Route::post('/undo', [UndoController::class, 'store'])->name('undo.store');
 
     Route::get('/modules/decrees', [DecreeController::class, 'index'])->name('decrees.index');

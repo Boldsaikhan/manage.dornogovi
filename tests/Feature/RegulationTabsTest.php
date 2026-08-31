@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Regulation;
+use App\Models\RegulationCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -14,7 +15,7 @@ class RegulationTabsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_page_shows_three_tabs_and_defaults_to_internal(): void
+    public function test_page_shows_seeded_tabs_and_defaults_to_internal(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
 
@@ -119,5 +120,71 @@ class RegulationTabsTest extends TestCase
 
         $this->assertSame(0, Regulation::query()->count());
         Storage::disk('local')->assertMissing($path);
+    }
+
+    public function test_admin_can_add_update_and_delete_empty_tab(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->post(route('regulations.categories.store'), ['label' => 'Мэдээллийн аюулгүй байдал'])
+            ->assertRedirect();
+
+        $category = RegulationCategory::query()->where('label', 'Мэдээллийн аюулгүй байдал')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->patch(route('regulations.categories.update', $category), [
+                'label' => 'Мэдээллийн аюулгүй байдлын журам',
+                'sort_order' => 9,
+            ])
+            ->assertRedirect();
+
+        $category->refresh();
+        $this->assertSame('Мэдээллийн аюулгүй байдлын журам', $category->label);
+        $this->assertSame(9, $category->sort_order);
+
+        $this->actingAs($admin)
+            ->get(route('regulations.index', ['scope' => $category->key]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('canManageScopes', true)
+                ->has('scopeCategories', 4));
+
+        $this->actingAs($admin)
+            ->delete(route('regulations.categories.destroy', $category))
+            ->assertRedirect(route('regulations.index', ['scope' => 'internal']));
+
+        $this->assertDatabaseMissing('regulation_categories', ['id' => $category->id]);
+    }
+
+    public function test_cannot_delete_tab_with_documents(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $category = RegulationCategory::query()->where('key', 'internal')->firstOrFail();
+
+        Regulation::create([
+            'title' => 'Журам',
+            'category' => $category->key,
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('regulations.categories.destroy', $category))
+            ->assertRedirect()
+            ->assertSessionHas('warning');
+
+        $this->assertDatabaseHas('regulation_categories', ['id' => $category->id]);
+    }
+
+    public function test_specialist_cannot_manage_tabs(): void
+    {
+        $user = User::factory()->create([
+            'is_admin' => false,
+            'is_specialist' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('regulations.categories.store'), ['label' => 'Шинэ таб'])
+            ->assertForbidden();
     }
 }
