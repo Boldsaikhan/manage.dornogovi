@@ -15,6 +15,7 @@ use App\Http\Controllers\LaunchController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\LeaveSlipController;
 use App\Http\Controllers\ModuleResourceController;
+use App\Http\Controllers\ReportCatalogController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PhoneDirectoryController;
 use App\Http\Controllers\ProfileController;
@@ -131,7 +132,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/document-standards/{standard}', [DocumentStandardController::class, 'destroyStandard'])->name('document-standards.destroy');
     Route::get('/modules/plans', [ModuleResourceController::class, 'index'])->name('plans.index');
     Route::get('/modules/meetings', [ModuleResourceController::class, 'index'])->name('meetings.index');
-    Route::get('/modules/reports', [ModuleResourceController::class, 'index'])->name('reports.index');
+    Route::get('/modules/reports', [ReportCatalogController::class, 'index'])->name('reports.index');
+    Route::get('/modules/reports/{report}', [ReportCatalogController::class, 'show'])->name('reports.show');
     Route::get('/modules/onboarding', [ModuleResourceController::class, 'index'])->name('onboarding.index');
 
     Route::post('/modules/{module}', [ModuleResourceController::class, 'store'])->name('modules.store');

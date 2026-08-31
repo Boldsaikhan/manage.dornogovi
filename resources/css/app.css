@@ -164,7 +164,7 @@
 
     .ui-table--pin-actions tbody tr.bg-brand-navy-50\/70 td.ui-sticky-progress,
     .ui-table--pin-actions tbody tr.bg-brand-navy-50\/70 td.ui-sticky-actions {
-        @apply bg-brand-navy-50/70;
+        background-color: inherit;
     }
 
     .ui-table--pin-actions tbody tr:focus-within td.ui-sticky-progress,
