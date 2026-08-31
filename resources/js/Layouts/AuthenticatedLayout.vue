@@ -426,19 +426,29 @@ const isLinkedSystemCurrent = (id) => {
             </main>
         </div>
 
-        <!-- AI товч: баруун доор хүснэгтийн scroll/устгах товчтой давхардахгүйн тулд зүүн доор -->
         <button
             v-if="page.props.aiAssistant?.available && !aiOpen"
             type="button"
-            class="fixed bottom-5 z-30 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-navy-700 text-white shadow-lg shadow-brand-navy-700/30 transition hover:-translate-y-0.5 hover:bg-brand-navy-800 sm:h-auto sm:w-auto sm:gap-2 sm:px-4 sm:py-3"
-            :class="sidebarCollapsed ? 'left-5 lg:left-[5.5rem]' : 'left-5 lg:left-[18.75rem]'"
+            class="ai-fab relative fixed bottom-5 right-5 z-30 flex h-12 w-12 items-center justify-center overflow-visible rounded-full bg-brand-navy-700 text-white shadow-lg shadow-brand-navy-700/30 transition hover:-translate-y-0.5 hover:bg-brand-navy-800"
             :title="page.props.aiAssistant?.name || 'Manage AI'"
+            :aria-label="page.props.aiAssistant?.name || 'Manage AI'"
             @click="toggleAiPanel(true)"
         >
-            <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                <path :d="iconPaths.sparkles" stroke-linecap="round" stroke-linejoin="round" />
+            <span class="ai-fab-ping" aria-hidden="true" />
+            <svg class="relative h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                <path
+                    class="ai-fab-star"
+                    d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+                <path
+                    class="ai-fab-glint"
+                    d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2z"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
             </svg>
-            <span class="hidden text-sm font-semibold sm:inline">{{ page.props.aiAssistant?.name || 'Manage AI' }}</span>
         </button>
 
         <AiPanel
