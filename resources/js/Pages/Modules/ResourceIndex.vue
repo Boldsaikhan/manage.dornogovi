@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
@@ -36,20 +36,51 @@ const form = useForm({ ...formState });
 
 const hasFileField = computed(() => props.fields.some((f) => f.type === 'file'));
 
-const previewId = ref(props.rows.find((r) => r.file_is_pdf)?.id ?? null);
+const previewId = ref(null);
 
 watch(
     () => props.rows,
     (rows) => {
-        if (previewId.value && rows.some((r) => r.id === previewId.value && r.file_is_pdf)) {
-            return;
+        if (previewId.value && ! rows.some((r) => r.id === previewId.value && r.file_is_pdf)) {
+            previewId.value = null;
         }
-        previewId.value = rows.find((r) => r.file_is_pdf)?.id ?? null;
     },
     { deep: true },
 );
 
 const previewRow = computed(() => props.rows.find((r) => r.id === previewId.value) ?? null);
+
+const openPreview = (row) => {
+    if (row?.file_url && row.file_is_pdf) {
+        previewId.value = row.id;
+
+        return;
+    }
+
+    if (row?.file_url) {
+        window.open(row.file_url, '_blank', 'noopener');
+    }
+};
+
+const closePreview = () => {
+    previewId.value = null;
+};
+
+const onPreviewKey = (event) => {
+    if (event.key === 'Escape') {
+        closePreview();
+    }
+};
+
+onMounted(() => document.addEventListener('keydown', onPreviewKey));
+onBeforeUnmount(() => {
+    document.removeEventListener('keydown', onPreviewKey);
+    document.body.style.overflow = '';
+});
+
+watch(previewId, (id) => {
+    document.body.style.overflow = id ? 'hidden' : '';
+});
 
 const isFileColumn = (col) => col.type === 'file' || col.key === 'file' || col.key === 'file_label';
 const fieldNames = computed(() => props.fields.map((f) => f.name));
@@ -255,7 +286,11 @@ const destroyRow = (id) => {
                         <tr
                             v-for="row in rows"
                             :key="row.id"
-                            :class="row.id === previewId && row.file_is_pdf ? 'bg-brand-navy-50/60' : ''"
+                            :class="[
+                                row.file_url ? 'cursor-pointer hover:bg-slate-50' : '',
+                                row.id === previewId && row.file_is_pdf ? 'bg-brand-navy-50/60' : '',
+                            ]"
+                            @click="openPreview(row)"
                         >
                             <td v-for="col in columns" :key="col.key">
                                 <template v-if="isFileColumn(col)">
@@ -263,7 +298,7 @@ const destroyRow = (id) => {
                                         v-if="row.file_url && row.file_is_pdf"
                                         type="button"
                                         class="inline-flex max-w-xs items-center gap-1.5 text-left text-sm font-medium text-brand-navy-700 hover:underline"
-                                        @click="previewId = row.id"
+                                        @click.stop="openPreview(row)"
                                     >
                                         <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M7 3h6l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
@@ -277,6 +312,7 @@ const destroyRow = (id) => {
                                         target="_blank"
                                         rel="noopener"
                                         class="inline-flex max-w-xs items-center gap-1.5 text-sm font-medium text-brand-navy-700 hover:underline"
+                                        @click.stop
                                     >
                                         <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2M8 12l4 4 4-4M12 4v12" />
@@ -291,7 +327,7 @@ const destroyRow = (id) => {
                                     :title="row[col.key] != null && row[col.key] !== '' ? String(row[col.key]) : ''"
                                 >{{ row[col.key] != null && row[col.key] !== '' ? row[col.key] : '—' }}</span>
                             </td>
-                            <td v-if="canManage || rowActions.length" class="whitespace-nowrap text-right">
+                            <td v-if="canManage || rowActions.length" class="whitespace-nowrap text-right" @click.stop>
                                 <a
                                     v-for="action in rowActions"
                                     :key="action.label"
@@ -320,30 +356,43 @@ const destroyRow = (id) => {
                 </table>
             </div>
 
-            <section
-                v-if="previewRow?.file_is_pdf && previewRow.file_url"
-                class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-soft"
-            >
-                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
-                    <div>
-                        <h3 class="text-sm font-semibold text-brand-navy-900">{{ previewRow.title || previewRow.file_name }}</h3>
-                        <p class="text-xs text-slate-500">PDF шууд харагдана</p>
+            <Teleport to="body">
+                <div
+                    v-if="previewRow?.file_is_pdf && previewRow.file_url"
+                    class="fixed inset-0 z-[80] flex flex-col bg-slate-900"
+                    role="dialog"
+                    aria-modal="true"
+                >
+                    <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-slate-200 bg-white px-3 py-2.5 sm:px-4">
+                        <div class="min-w-0 flex-1">
+                            <h3 class="truncate text-sm font-semibold text-brand-navy-900">
+                                {{ previewRow.title || previewRow.file_name }}
+                            </h3>
+                            <p class="truncate text-xs text-slate-500">{{ previewRow.file_name }}</p>
+                        </div>
+                        <a
+                            :href="previewRow.file_url"
+                            target="_blank"
+                            rel="noopener"
+                            class="ui-btn-ghost !py-1.5 text-xs"
+                        >
+                            Шинэ цонхонд нээх
+                        </a>
+                        <button
+                            type="button"
+                            class="ui-btn-primary !py-1.5 text-xs"
+                            @click="closePreview"
+                        >
+                            Хаах
+                        </button>
                     </div>
-                    <a
-                        :href="previewRow.file_url"
-                        target="_blank"
-                        rel="noopener"
-                        class="ui-btn-ghost !py-1.5 text-xs"
-                    >
-                        Шинэ цонхонд нээх
-                    </a>
+                    <iframe
+                        :src="previewRow.file_url + '#view=FitH'"
+                        class="min-h-0 w-full flex-1 bg-slate-200"
+                        :title="previewRow.file_name || 'PDF'"
+                    />
                 </div>
-                <iframe
-                    :src="previewRow.file_url"
-                    class="h-[min(80vh,920px)] w-full bg-slate-50"
-                    :title="previewRow.file_name || 'PDF'"
-                />
-            </section>
+            </Teleport>
         </div>
 
         <Modal :show="showForm && canManage" max-width="2xl" @close="closeForm">

@@ -84,7 +84,7 @@ return [
     'regulations' => [
         'model' => App\Models\Regulation::class,
         'title' => 'Дотоод журам',
-        'description' => 'Журмыг Word эсвэл PDF-ээр оруулж, табаар харна. PDF шууд хуудсан дээр нээгдэнэ.',
+        'description' => 'Журмыг Word эсвэл PDF-ээр оруулж, табаар харна. Мөр дээр дарж бүтэн дэлгэцэнд нээнэ.',
         'scope_column' => 'category',
         'scope_label' => 'Ангилал',
         'hide_all_scope' => true,
