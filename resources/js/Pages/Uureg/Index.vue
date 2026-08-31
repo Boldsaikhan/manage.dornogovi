@@ -4,6 +4,7 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import SheetCell from '@/Components/SheetCell.vue';
+import TaskCalendar from '@/Components/TaskCalendar.vue';
 import { expandPersonNames, GROUP_LABELS } from '@/utils/soumGovernors';
 
 const props = defineProps({
@@ -44,6 +45,8 @@ const kindTabs = computed(() => (
 ));
 
 const isDirective = computed(() => (props.source?.layout || props.kind) !== 'prep_plan');
+
+const viewMode = ref('table');
 
 const downloadOpen = ref(false);
 const downloadRoot = ref(null);
@@ -419,9 +422,10 @@ const incompleteDashboardTasks = computed(() => props.tasks
 
 const highlightedTaskId = ref(null);
 
-const focusTaskFromDashboard = (task) => {
+const focusTaskRow = (task) => {
     filter.value = null;
     showDashboard.value = false;
+    viewMode.value = 'table';
     highlightedTaskId.value = task.id;
     nextTick(() => {
         document.getElementById(`task-row-${task.id}`)?.scrollIntoView({
@@ -429,6 +433,10 @@ const focusTaskFromDashboard = (task) => {
             block: 'center',
         });
     });
+};
+
+const focusTaskFromDashboard = (task) => {
+    focusTaskRow(task);
 };
 
 const shortOrgLabel = (label) => {
@@ -567,12 +575,14 @@ const visibleTasks = computed(() => {
 const selectedIds = ref([]);
 const bulkSaving = ref(false);
 const bulk = reactive({
+    period: '',
     responsible: '',
     collaborator: '',
     note: '',
     progress: '',
 });
 const bulkApply = reactive({
+    period: false,
     responsible: false,
     collaborator: false,
     note: false,
@@ -617,10 +627,12 @@ const clearSelection = () => {
 };
 
 const resetBulkForm = () => {
+    bulk.period = '';
     bulk.responsible = '';
     bulk.collaborator = '';
     bulk.note = '';
     bulk.progress = '';
+    bulkApply.period = false;
     bulkApply.responsible = false;
     bulkApply.collaborator = false;
     bulkApply.note = false;
@@ -636,6 +648,7 @@ const applyBulk = () => {
     if (! selectedIds.value.length) return;
 
     const fields = {};
+    if (bulkApply.period) fields.period = bulk.period ?? '';
     if (bulkApply.responsible) fields.responsible = bulk.responsible ?? '';
     if (bulkApply.collaborator) fields.collaborator = bulk.collaborator ?? '';
     if (bulkApply.note) fields.note = bulk.note ?? '';
@@ -679,6 +692,7 @@ watch(
     () => {
         clearSelection();
         resetBulkForm();
+        viewMode.value = 'table';
     },
 );
 
@@ -849,8 +863,8 @@ const directiveNoteColWidth = computed(() => {
 });
 
 const directiveTableMinWidth = computed(() => {
-    // checkbox + № + хариуцах + хяналт + хувь + устгах + текст + хэрэгжилт
-    const fixed = 48 + 180 + 200 + 96 + (props.canEdit ? 48 + 40 : 0);
+    // checkbox + № + хугацаа + хариуцах + хяналт + хувь + устгах + текст + хэрэгжилт
+    const fixed = 48 + 120 + 180 + 200 + 96 + (props.canEdit ? 48 + 40 : 0);
     return fixed + directiveTextColWidth.value + directiveNoteColWidth.value;
 });
 
@@ -1071,12 +1085,12 @@ const prepTableMinWidth = computed(() => {
                 </div>
 
                 <form class="space-y-3" @submit.prevent="submitAddForm">
-                    <div v-if="! isDirective" class="grid gap-3 sm:grid-cols-2">
-                        <label class="block">
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <label v-if="! isDirective" class="block">
                             <span class="mb-1 block text-xs font-semibold text-slate-600">Ажлын чиглэл</span>
                             <input v-model="addForm.sector" type="text" class="ui-input w-full" placeholder="Ж: Зудын эсрэг" />
                         </label>
-                        <label class="block">
+                        <label class="block" :class="isDirective ? 'sm:col-span-2' : ''">
                             <span class="mb-1 block text-xs font-semibold text-slate-600">Хугацаа</span>
                             <input v-model="addForm.period" type="text" class="ui-input w-full" placeholder="Ж: 08.01–09.30" />
                         </label>
@@ -1232,6 +1246,36 @@ const prepTableMinWidth = computed(() => {
                 </span>
             </button>
 
+            <!-- Харагдах горим -->
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Харагдах байдал</span>
+                <div class="inline-flex rounded-xl border border-slate-200 bg-white p-0.5 shadow-soft">
+                    <button
+                        type="button"
+                        class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
+                        :class="viewMode === 'table' ? 'bg-brand-navy-600 text-white' : 'text-slate-600 hover:bg-slate-50'"
+                        @click="viewMode = 'table'"
+                    >
+                        Хүснэгт
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
+                        :class="viewMode === 'calendar' ? 'bg-brand-navy-600 text-white' : 'text-slate-600 hover:bg-slate-50'"
+                        @click="viewMode = 'calendar'"
+                    >
+                        Цаглалт
+                    </button>
+                </div>
+            </div>
+
+            <!-- Цаглалт / төлөвлөгөө -->
+            <TaskCalendar
+                v-if="viewMode === 'calendar'"
+                :tasks="visibleTasks"
+                @focus-task="focusTaskRow"
+            />
+
             <!-- Идэвхтэй шүүлт -->
             <div v-if="filter" class="flex flex-wrap items-center gap-2 text-sm">
                 <span class="text-slate-500">Шүүлт:</span>
@@ -1244,7 +1288,7 @@ const prepTableMinWidth = computed(() => {
 
             <!-- Олон мөрөнд ижил мэдээлэл оруулах -->
             <div
-                v-if="canEdit && selectedCount"
+                v-if="canEdit && selectedCount && viewMode === 'table'"
                 class="sticky top-2 z-20 rounded-2xl border border-brand-navy-200 bg-white/95 p-3 shadow-soft backdrop-blur"
             >
                 <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
@@ -1255,7 +1299,20 @@ const prepTableMinWidth = computed(() => {
                         Сонголт цуцлах
                     </button>
                 </div>
-                <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                    <label class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-2">
+                        <span class="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                            <input v-model="bulkApply.period" type="checkbox" class="rounded border-slate-300 text-brand-navy-600" />
+                            Хугацаа
+                        </span>
+                        <input
+                            v-model="bulk.period"
+                            type="text"
+                            class="ui-input w-full text-sm"
+                            placeholder="Ж: 08.01–09.30"
+                            @input="markBulkField('period', bulk.period)"
+                        />
+                    </label>
                     <label class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-2">
                         <span class="flex items-center gap-2 text-xs font-medium text-slate-600">
                             <input v-model="bulkApply.responsible" type="checkbox" class="rounded border-slate-300 text-brand-navy-600" />
@@ -1330,7 +1387,7 @@ const prepTableMinWidth = computed(() => {
 
             <!-- Үүрэг чиглэл — өндөр хязгаарлаж хажуугийн scroll viewport-д үлдэнэ -->
             <div
-                v-if="isDirective"
+                v-if="isDirective && viewMode === 'table'"
                 class="ui-card max-h-[min(70vh,calc(100dvh-12rem))] w-full overflow-auto overscroll-contain"
             >
                 <table
@@ -1341,6 +1398,7 @@ const prepTableMinWidth = computed(() => {
                         <col v-if="canEdit" style="width: 40px" />
                         <col style="width: 48px" />
                         <col :style="{ width: `${directiveTextColWidth}px` }" />
+                        <col style="width: 120px" />
                         <col style="width: 180px" />
                         <col style="width: 200px" />
                         <col :style="{ width: `${directiveNoteColWidth}px` }" />
@@ -1361,6 +1419,7 @@ const prepTableMinWidth = computed(() => {
                             </th>
                             <th class="sticky top-0 z-20 bg-brand-navy-50 text-center">№</th>
                             <th class="sticky top-0 z-20 bg-brand-navy-50">Үүрэг чиглэл</th>
+                            <th class="sticky top-0 z-20 bg-brand-navy-50">Хугацаа</th>
                             <th class="sticky top-0 z-20 bg-brand-navy-50">Хариуцах эзэн</th>
                             <th class="sticky top-0 z-20 bg-brand-navy-50">Хяналт тавих албан тушаалтан</th>
                             <th class="sticky top-0 z-20 bg-brand-navy-50">Хэрэгжилт</th>
@@ -1391,6 +1450,15 @@ const prepTableMinWidth = computed(() => {
                                     multiline
                                     :editable="canEdit"
                                     @commit="(v) => saveField(task.id, 'text', v)"
+                                />
+                            </td>
+                            <td class="ui-sheet-td">
+                                <SheetCell
+                                    v-if="drafts[task.id]"
+                                    v-model="drafts[task.id].period"
+                                    :editable="canEdit"
+                                    placeholder="08.01–09.30"
+                                    @commit="(v) => saveField(task.id, 'period', v)"
                                 />
                             </td>
                             <td class="ui-sheet-td">
@@ -1454,7 +1522,7 @@ const prepTableMinWidth = computed(() => {
                             </td>
                         </tr>
                         <tr v-if="!visibleTasks.length">
-                            <td :colspan="canEdit ? 8 : 6" class="!py-14 text-center text-slate-400">
+                            <td :colspan="canEdit ? 9 : 7" class="!py-14 text-center text-slate-400">
                                 {{ filter ? 'Энэ шүүлтэд тохирох үүрэг чиглэл алга.' : 'Одоогоор мөр алга. «Мөр нэмэх» дарж эхлүүлнэ үү.' }}
                             </td>
                         </tr>
@@ -1464,7 +1532,7 @@ const prepTableMinWidth = computed(() => {
 
             <!-- Бэлтгэл ажил хангах төлөвлөгөө -->
             <div
-                v-else
+                v-else-if="viewMode === 'table'"
                 class="ui-card max-h-[min(70vh,calc(100dvh-12rem))] w-full overflow-auto overscroll-contain"
             >
                 <table

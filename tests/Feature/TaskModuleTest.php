@@ -27,6 +27,7 @@ class TaskModuleTest extends TestCase
         $task = Task::create([
             'task_source_id' => $source->id,
             'text' => 'Шинэ үүрэг',
+            'period' => '08.01-09.30',
             'responsible' => 'А.Болд',
             'collaborator' => 'Хяналт',
             'sort_order' => 1,
@@ -40,7 +41,27 @@ class TaskModuleTest extends TestCase
                 ->where('kind', 'directive')
                 ->has('tasks', 1)
                 ->where('tasks.0.text', $task->text)
+                ->where('tasks.0.period', '08.01-09.30')
             );
+    }
+
+    public function test_admin_can_store_directive_with_period(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->post(route('tasks.store'), [
+                'kind' => 'directive',
+                'text' => 'Хугацаатай үүрэг',
+                'period' => '07.15-08.20',
+                'responsible' => 'Б.Тест',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('tasks', [
+            'text' => 'Хугацаатай үүрэг',
+            'period' => '07.15-08.20',
+        ]);
     }
 
     public function test_admin_can_store_and_update_row(): void

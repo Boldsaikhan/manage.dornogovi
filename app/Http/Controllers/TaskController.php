@@ -243,11 +243,11 @@ class TaskController extends Controller
         }
 
         $headings = [
-            '№', 'Үүрэг чиглэл', 'Хариуцах эзэн',
+            '№', 'Үүрэг чиглэл', 'Хугацаа', 'Хариуцах эзэн',
             'Хяналт тавих албан тушаалтан', 'Хэрэгжилт', 'Биелэлтийн хувь',
         ];
-        $widths = [600, 4800, 1600, 1800, 2400, 1000];
-        $center = [0, 5];
+        $widths = [600, 4200, 1200, 1600, 1800, 2400, 1000];
+        $center = [0, 6];
         $sheetRows = [];
         $docxRows = [];
 
@@ -255,6 +255,7 @@ class TaskController extends Controller
             $cells = [
                 (string) ($i + 1),
                 (string) ($task->text ?? ''),
+                (string) ($task->period ?? ''),
                 PersonName::shortList($task->responsible),
                 PersonName::shortList($task->collaborator),
                 (string) ($task->note ?? ''),

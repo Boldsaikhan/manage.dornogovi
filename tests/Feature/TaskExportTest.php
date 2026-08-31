@@ -20,6 +20,7 @@ class TaskExportTest extends TestCase
         Task::create([
             'task_source_id' => $source->id,
             'text' => 'Туршилтын үүрэг чиглэл',
+            'period' => '08.01-09.30',
             'responsible' => 'Б.Дулмаа',
             'collaborator' => 'АЗДТГ-ын дарга',
             'note' => 'Явцтай',
