@@ -53,14 +53,37 @@ class ModuleMenuVisibilityTest extends TestCase
         $this->assertTrue(ModuleVisibility::isEnabled('tasks'));
     }
 
-    public function test_dashboard_group_is_last_in_sidebar_nav(): void
+    public function test_nav_uses_saved_group_order(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
+
+        ModuleOrder::setOrder(
+            ['dashboard', 'work', 'documents', 'hr', 'knowledge', 'admin'],
+            ModuleOrder::itemKeys(),
+        );
+
         $keys = collect(ModuleAccess::navFor($admin))->pluck('key')->all();
 
-        $this->assertContains('dashboard', $keys);
-        $this->assertSame('dashboard', end($keys));
-        $this->assertNotSame('dashboard', $keys[0] ?? null);
+        $this->assertSame('dashboard', $keys[0] ?? null);
+        $this->assertSame('work', $keys[1] ?? null);
+    }
+
+    public function test_non_admin_sees_same_group_order_with_visible_items(): void
+    {
+        $specialist = User::factory()->create(['is_specialist' => true]);
+
+        ModuleOrder::setOrder(
+            ['dashboard', 'work', 'hr', 'documents', 'knowledge', 'admin'],
+            ModuleOrder::itemKeys(),
+        );
+
+        $this->actingAs($specialist)
+            ->get(route('dept.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('moduleNav.0.key', 'dashboard')
+                ->where('moduleNav.1.key', 'work')
+            );
     }
 
     public function test_admin_can_reorder_menu_modules(): void

@@ -258,20 +258,36 @@ class ModuleAccess
         }
 
         $groups = config('modules.groups', []);
-        $groupOrder = array_flip(ModuleOrder::groupKeys());
+        $definitions = self::definitions()->keyBy('key');
+        $result = [];
 
-        return ModuleOrder::sortDefinitions(self::definitions())
-            ->filter(fn (array $item) => self::canView($user, $item['key']))
-            ->groupBy('group')
-            ->map(function (Collection $items, string $groupKey) use ($groups) {
-                return [
-                    'key' => $groupKey,
-                    'label' => $groups[$groupKey] ?? $groupKey,
-                    'items' => $items->values()->all(),
-                ];
-            })
-            ->sortBy(fn (array $group) => $groupOrder[$group['key']] ?? 1000)
-            ->values()
-            ->all();
+        foreach (ModuleOrder::groupKeys() as $groupKey) {
+            $items = [];
+
+            foreach (ModuleOrder::itemKeys() as $itemKey) {
+                $definition = $definitions->get($itemKey);
+                if (! $definition || ($definition['group'] ?? null) !== $groupKey) {
+                    continue;
+                }
+
+                if (! self::canView($user, $itemKey)) {
+                    continue;
+                }
+
+                $items[] = $definition;
+            }
+
+            if ($items === []) {
+                continue;
+            }
+
+            $result[] = [
+                'key' => $groupKey,
+                'label' => $groups[$groupKey] ?? $groupKey,
+                'items' => $items,
+            ];
+        }
+
+        return $result;
     }
 }

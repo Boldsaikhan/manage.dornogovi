@@ -101,13 +101,7 @@ const iconPaths = {
 
 const user = computed(() => page.props.auth.user);
 const moduleNav = computed(() => page.props.moduleNav ?? []);
-const navSections = computed(() => {
-    const groups = moduleNav.value.map((group) => ({ type: 'group', group }));
-    const dashboard = groups.filter((section) => section.group.key === 'dashboard');
-    const rest = groups.filter((section) => section.group.key !== 'dashboard');
-
-    return [...rest, ...dashboard];
-});
+const navSections = computed(() => moduleNav.value.map((group) => ({ type: 'group', group })));
 
 const sidebarBlocks = computed(() => {
     const blocks = [...navSections.value];
@@ -116,23 +110,9 @@ const sidebarBlocks = computed(() => {
         return blocks;
     }
 
-    const workIndex = blocks.findIndex((block) => block.group.key === 'work');
-    if (workIndex >= 0) {
-        blocks.splice(workIndex + 1, 0, { type: 'linked-systems' });
-
-        return blocks;
-    }
-
-    const knowledgeIndex = blocks.findIndex((block) => block.group.key === 'knowledge');
-    const insertAt = knowledgeIndex >= 0
-        ? knowledgeIndex
-        : blocks.findIndex((block) => block.group.key === 'dashboard');
-
-    if (insertAt >= 0) {
-        blocks.splice(insertAt, 0, { type: 'linked-systems' });
-    } else {
-        blocks.push({ type: 'linked-systems' });
-    }
+    const workIndex = blocks.findIndex((block) => block.group?.key === 'work');
+    const insertAt = workIndex >= 0 ? workIndex + 1 : blocks.length;
+    blocks.splice(insertAt, 0, { type: 'linked-systems' });
 
     return blocks;
 });
