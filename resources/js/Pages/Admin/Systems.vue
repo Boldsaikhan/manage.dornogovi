@@ -48,6 +48,18 @@ const readSettingsTab = () => {
 
 const activeTab = ref(readSettingsTab());
 
+watch(() => page.url, () => {
+    const next = readSettingsTab();
+    if (next && next !== activeTab.value) {
+        activeTab.value = next;
+        try {
+            sessionStorage.setItem('admin_settings_tab', next);
+        } catch {
+            // ignore
+        }
+    }
+});
+
 const selectTab = (id) => {
     activeTab.value = id;
     try {
@@ -350,6 +362,46 @@ const checkEmbed = (system) => {
     router.post(route('admin.systems.check-embed', system.id), {}, { preserveScroll: true });
 };
 
+const notice = computed(() => {
+    const formErrors = [
+        ...Object.values(aiForm.errors ?? {}),
+        ...Object.values(menuForm.errors ?? {}),
+        ...Object.values(form.errors ?? {}),
+    ]
+        .flatMap((value) => (Array.isArray(value) ? value : [value]))
+        .filter(Boolean);
+
+    if (formErrors.length) {
+        return { type: 'warning', text: String(formErrors[0]) };
+    }
+
+    const pageErrors = Object.values(page.props.errors ?? {})
+        .flatMap((value) => (Array.isArray(value) ? value : [value]))
+        .filter(Boolean);
+    if (pageErrors.length) {
+        return { type: 'warning', text: pageErrors.join(' ') };
+    }
+
+    const flash = page.props.flash ?? {};
+    if (flash.success) {
+        return { type: 'success', text: flash.success };
+    }
+    if (flash.warning) {
+        return { type: 'warning', text: flash.warning };
+    }
+    if (flash.info) {
+        return { type: 'info', text: flash.info };
+    }
+
+    return null;
+});
+
+const noticeClass = computed(() => ({
+    success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+    warning: 'border-amber-200 bg-amber-50 text-amber-900',
+    info: 'border-sky-200 bg-sky-50 text-sky-800',
+}[notice.value?.type] ?? 'border-slate-200 bg-white text-slate-700'));
+
 const saveAi = () => {
     aiForm.patch(route('admin.ai-settings.update'), {
         preserveScroll: true,
@@ -368,10 +420,12 @@ const saveAi = () => {
         <template #header>Системийн тохиргоо</template>
 
         <div
-            v-if="page.props.flash.success"
-            class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-700"
+            v-if="notice"
+            class="sticky top-[4.75rem] z-30 mb-4 rounded-xl border px-4 py-3 text-sm shadow-md"
+            :class="noticeClass"
+            role="status"
         >
-            {{ page.props.flash.success }}
+            {{ notice.text }}
         </div>
 
         <div
@@ -633,10 +687,19 @@ const saveAi = () => {
                     </div>
                 </div>
 
-                <div class="md:col-span-2">
+                <div class="md:col-span-2 space-y-2">
+                    <div
+                        v-if="notice"
+                        class="rounded-lg border px-3 py-2 text-sm"
+                        :class="noticeClass"
+                        role="status"
+                    >
+                        {{ notice.text }}
+                    </div>
                     <button type="submit" class="ui-btn-primary" :disabled="aiForm.processing">
                         Тохиргоо хадгалах
                     </button>
+                    <p v-if="aiForm.processing" class="text-xs text-slate-500">Хадгалж байна…</p>
                 </div>
             </form>
         </section>

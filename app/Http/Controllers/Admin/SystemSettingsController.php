@@ -136,7 +136,9 @@ class SystemSettingsController extends Controller
             $aiSettings->setOpenAiApiKey($data['openai_api_key']);
         }
 
-        return back()->with('success', 'Manage AI тохиргоо хадгалагдлаа.');
+        return redirect()
+            ->route('admin.systems.index', ['tab' => 'ai'])
+            ->with('success', 'Manage AI тохиргоо хадгалагдлаа.');
     }
 
     public function store(Request $request): RedirectResponse

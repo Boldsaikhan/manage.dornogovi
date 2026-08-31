@@ -32,7 +32,8 @@ class AiModuleAccessTest extends TestCase
                 'leaves' => 'write',
                 'decrees' => 'read',
             ],
-        ])->assertRedirect();
+        ])->assertRedirect(route('admin.systems.index', ['tab' => 'ai']))
+            ->assertSessionHas('success', 'Manage AI тохиргоо хадгалагдлаа.');
 
         $settings = app(AiSettings::class);
         $this->assertSame('none', $settings->accessFor('tasks'));

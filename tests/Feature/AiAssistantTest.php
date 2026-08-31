@@ -57,6 +57,7 @@ class AiAssistantTest extends TestCase
         $admin = User::factory()->create(['is_admin' => true]);
 
         $this->actingAs($admin)
+            ->from(route('admin.systems.index', ['tab' => 'ai']))
             ->patch(route('admin.ai-settings.update'), [
                 'enabled' => true,
                 'display_name' => 'Manage AI',
@@ -66,7 +67,8 @@ class AiAssistantTest extends TestCase
                 'openai_api_key' => 'sk-test-secret-key-123456',
                 'clear_api_key' => false,
             ])
-            ->assertRedirect();
+            ->assertRedirect(route('admin.systems.index', ['tab' => 'ai']))
+            ->assertSessionHas('success', 'Manage AI тохиргоо хадгалагдлаа.');
 
         $this->actingAs($admin)
             ->get(route('admin.systems.index'))
@@ -77,6 +79,7 @@ class AiAssistantTest extends TestCase
                 ->where('ai.display_name', 'Manage AI')
                 ->where('ai.daily_question_limit', 20)
                 ->where('ai.provider', 'openai')
+                ->where('flash.success', 'Manage AI тохиргоо хадгалагдлаа.')
                 ->missing('ai.openai_api_key')
             );
 
