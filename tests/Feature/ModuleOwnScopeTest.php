@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Decree;
 use App\Models\Leave;
 use App\Models\Regulation;
 use App\Models\RolePermission;
@@ -142,5 +143,119 @@ class ModuleOwnScopeTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->has('rows', 1)
                 ->where('rows.0.title', 'Кибер аюулгүй байдлын журам'));
+    }
+
+    public function test_access_page_exposes_decrees_own_scope(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.users.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('modules')
+                ->where('modules', fn ($modules) => collect($modules)
+                    ->contains(fn ($m) => ($m['key'] ?? null) === 'decrees' && ($m['own_scope'] ?? false) === true)));
+    }
+
+    public function test_role_template_saves_decrees_own_scope_levels(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.roles.update', 'specialist'), [
+                'permissions' => ['decrees' => 'view_own'],
+            ])
+            ->assertRedirect();
+
+        $this->assertSame('view_own', RolePermission::query()
+            ->where('role', 'specialist')
+            ->where('module_key', 'decrees')
+            ->value('level'));
+
+        $this->actingAs($admin)
+            ->patch(route('admin.roles.update', 'specialist'), [
+                'permissions' => ['decrees' => 'edit_own'],
+            ])
+            ->assertRedirect();
+
+        $this->assertSame('edit_own', RolePermission::query()
+            ->where('role', 'specialist')
+            ->where('module_key', 'decrees')
+            ->value('level'));
+    }
+
+    public function test_user_with_view_own_sees_only_own_decrees(): void
+    {
+        $viewer = User::factory()->create();
+        $other = User::factory()->create();
+        UserModulePermission::create([
+            'user_id' => $viewer->id,
+            'module_key' => 'decrees',
+            'level' => 'view_own',
+        ]);
+
+        Decree::query()->create([
+            'category' => 'zahiramj',
+            'kind' => 'zahiramj_a',
+            'number' => '01',
+            'title' => 'Өөрийн захирамж',
+            'created_by' => $viewer->id,
+        ]);
+        Decree::query()->create([
+            'category' => 'zahiramj',
+            'kind' => 'zahiramj_a',
+            'number' => '02',
+            'title' => 'Бусдын захирамж',
+            'created_by' => $other->id,
+        ]);
+
+        $this->actingAs($viewer)
+            ->get(route('decrees.index', ['tab' => 'zahiramj_a']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('rows', 1)
+                ->where('rows.0.title', 'Өөрийн захирамж'));
+    }
+
+    public function test_edit_own_cannot_update_or_delete_others_decrees(): void
+    {
+        $editor = User::factory()->create();
+        $other = User::factory()->create();
+        UserModulePermission::create([
+            'user_id' => $editor->id,
+            'module_key' => 'decrees',
+            'level' => 'edit_own',
+        ]);
+
+        $own = Decree::query()->create([
+            'category' => 'zahiramj',
+            'kind' => 'zahiramj_a',
+            'number' => '01',
+            'title' => 'Миний',
+            'created_by' => $editor->id,
+        ]);
+        $foreign = Decree::query()->create([
+            'category' => 'zahiramj',
+            'kind' => 'zahiramj_a',
+            'number' => '02',
+            'title' => 'Бусдын',
+            'created_by' => $other->id,
+        ]);
+
+        $this->actingAs($editor)
+            ->patch(route('decrees.update', $own), ['title' => 'Шинэчилсэн'])
+            ->assertRedirect();
+        $this->assertSame('Шинэчилсэн', $own->fresh()->title);
+
+        $this->actingAs($editor)
+            ->patch(route('decrees.update', $foreign), ['title' => 'Хакед'])
+            ->assertForbidden();
+        $this->assertSame('Бусдын', $foreign->fresh()->title);
+
+        $this->actingAs($editor)
+            ->delete(route('decrees.destroy', $foreign))
+            ->assertForbidden();
+        $this->assertDatabaseHas('decrees', ['id' => $foreign->id]);
     }
 }

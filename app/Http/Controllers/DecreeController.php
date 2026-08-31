@@ -8,6 +8,7 @@ use App\Models\DocumentFormat;
 use App\Models\PhoneDirectoryEntry;
 use App\Support\DocxTableWriter;
 use App\Support\ModuleAccess;
+use App\Support\ModuleOwnScope;
 use App\Support\PdfTableWriter;
 use App\Support\PersonName;
 use App\Support\XlsxTableWriter;
@@ -16,8 +17,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
-use Inertia\Inertia;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
+use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -49,15 +51,15 @@ class DecreeController extends Controller
         $tab = $this->normalizeTab((string) $request->query('tab', 'zahiramj_a'));
 
         $counts = [
-            'blank' => Decree::query()->where('category', 'blank')->count(),
-            'zahiramj_a' => Decree::query()->where('kind', 'zahiramj_a')->count(),
-            'zahiramj_b' => Decree::query()->where('kind', 'zahiramj_b')->count(),
-            'tushaal_a' => Decree::query()->where('kind', 'tushaal_a')->count(),
-            'tushaal_b' => Decree::query()->where('kind', 'tushaal_b')->count(),
-            'niit' => Decree::query()->whereIn('kind', self::DOC_KINDS)->count(),
+            'blank' => $this->scopedDecrees($request)->where('category', 'blank')->count(),
+            'zahiramj_a' => $this->scopedDecrees($request)->where('kind', 'zahiramj_a')->count(),
+            'zahiramj_b' => $this->scopedDecrees($request)->where('kind', 'zahiramj_b')->count(),
+            'tushaal_a' => $this->scopedDecrees($request)->where('kind', 'tushaal_a')->count(),
+            'tushaal_b' => $this->scopedDecrees($request)->where('kind', 'tushaal_b')->count(),
+            'niit' => $this->scopedDecrees($request)->whereIn('kind', self::DOC_KINDS)->count(),
         ];
 
-        $query = Decree::query()->orderBy('id');
+        $query = $this->scopedDecrees($request)->orderBy('id');
 
         if ($tab === 'blank') {
             $query->where('category', 'blank');
@@ -98,7 +100,7 @@ class DecreeController extends Controller
 
         $tab = $this->normalizeTab((string) $request->query('tab', 'zahiramj_a'));
 
-        $query = Decree::query()->orderBy('id');
+        $query = $this->scopedDecrees($request)->orderBy('id');
 
         if ($tab === 'blank') {
             $query->where('category', 'blank');
@@ -152,7 +154,7 @@ class DecreeController extends Controller
 
         abort_unless(in_array($format, ['docx', 'xlsx', 'pdf'], true), 404);
 
-        $query = Decree::query()->orderBy('id');
+        $query = $this->scopedDecrees($request)->orderBy('id');
 
         if ($tab === 'blank') {
             $query->where('category', 'blank');
@@ -455,6 +457,7 @@ class DecreeController extends Controller
     public function store(Request $request): RedirectResponse
     {
         abort_unless(ModuleAccess::canEdit($request->user(), 'decrees'), 403);
+        ModuleOwnScope::assertCanCreate($request->user(), 'decrees');
 
         $tab = $this->normalizeTab((string) $request->input('tab', 'zahiramj_a'));
 
@@ -546,6 +549,7 @@ class DecreeController extends Controller
     public function update(Request $request, Decree $decree): RedirectResponse
     {
         abort_unless(ModuleAccess::canEdit($request->user(), 'decrees'), 403);
+        abort_unless(ModuleOwnScope::allows($request->user(), 'decrees', $decree), 403);
 
         if ($decree->category === 'blank' || $decree->kind === 'blank') {
             $data = $request->validate([
@@ -694,6 +698,7 @@ class DecreeController extends Controller
     public function destroy(Request $request, Decree $decree): RedirectResponse
     {
         abort_unless(ModuleAccess::canEdit($request->user(), 'decrees'), 403);
+        abort_unless(ModuleOwnScope::allows($request->user(), 'decrees', $decree), 403);
 
         $tab = $this->tabForDecree($decree);
         $this->deleteImageFile($decree);
@@ -707,6 +712,7 @@ class DecreeController extends Controller
     public function uploadImage(Request $request, Decree $decree): RedirectResponse
     {
         abort_unless(ModuleAccess::canEdit($request->user(), 'decrees'), 403);
+        abort_unless(ModuleOwnScope::allows($request->user(), 'decrees', $decree), 403);
         abort_if($decree->category === 'blank' || $decree->kind === 'blank', 422);
 
         $request->validate([
@@ -727,6 +733,7 @@ class DecreeController extends Controller
     public function showImage(Request $request, Decree $decree): StreamedResponse
     {
         abort_unless(ModuleAccess::canView($request->user(), 'decrees'), 403);
+        abort_unless(ModuleOwnScope::allows($request->user(), 'decrees', $decree), 403);
         abort_unless($decree->file_path && Storage::disk('local')->exists($decree->file_path), 404);
 
         return Storage::disk('local')->response(
@@ -739,11 +746,20 @@ class DecreeController extends Controller
     public function destroyImage(Request $request, Decree $decree): RedirectResponse
     {
         abort_unless(ModuleAccess::canEdit($request->user(), 'decrees'), 403);
+        abort_unless(ModuleOwnScope::allows($request->user(), 'decrees', $decree), 403);
 
         $this->deleteImageFile($decree);
         $decree->update(['file_path' => null]);
 
         return back(303)->with('success', 'Зураг устгалаа.');
+    }
+
+    private function scopedDecrees(Request $request): Builder
+    {
+        $query = Decree::query();
+        ModuleOwnScope::apply($query, $request->user(), 'decrees');
+
+        return $query;
     }
 
     private function deleteImageFile(Decree $decree): void

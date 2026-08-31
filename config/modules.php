@@ -77,6 +77,7 @@ return [
             'route' => 'decrees.index',
             'group' => 'documents',
             'icon' => 'file',
+            'own_scope' => 'created_by',
         ],
         [
             'key' => 'contracts',
