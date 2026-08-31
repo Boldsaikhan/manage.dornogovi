@@ -66,4 +66,44 @@ class PhoneDirectoryActionsTest extends TestCase
         $this->assertSame('Б.Дулмаа', $people[0]['label']);
         $this->assertSame('Батбаярын Дулмаа', $people[0]['full']);
     }
+
+    public function test_people_options_keeps_all_rows_when_short_names_collide(): void
+    {
+        PhoneDirectoryEntry::create([
+            'org_name' => 'Улаанбадрах сум',
+            'category' => 'sum',
+            'person_name' => 'Батбаярын Дөлгөөн',
+            'position' => 'Цэцэрлэгийн эрхлэгч',
+            'org_order' => 1,
+            'sort_order' => 1,
+        ]);
+        PhoneDirectoryEntry::create([
+            'org_name' => 'Сайншанд сум',
+            'category' => 'sum',
+            'person_name' => 'Болдын Дөлгөөн',
+            'position' => 'Сургуулийн захирал',
+            'org_order' => 2,
+            'sort_order' => 1,
+        ]);
+        PhoneDirectoryEntry::create([
+            'org_name' => 'Дорноговь аймаг',
+            'category' => 'baiguullaga',
+            'person_name' => 'Дөлгөөнгийн Бат',
+            'position' => 'Мэргэжилтэн',
+            'org_order' => 3,
+            'sort_order' => 1,
+        ]);
+
+        $people = PhoneDirectoryEntry::peopleOptions();
+
+        $this->assertCount(3, $people);
+        $this->assertSame(
+            ['Батбаярын Дөлгөөн', 'Болдын Дөлгөөн', 'Д.Бат'],
+            collect($people)->pluck('value')->all(),
+        );
+        $this->assertSame(
+            ['Б.Дөлгөөн', 'Б.Дөлгөөн', 'Д.Бат'],
+            collect($people)->pluck('label')->all(),
+        );
+    }
 }

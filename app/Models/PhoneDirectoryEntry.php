@@ -63,32 +63,47 @@ class PhoneDirectoryEntry extends Model
      */
     public static function peopleOptions(): array
     {
-        $items = [];
-
-        static::query()
+        $rows = static::query()
             ->orderBy('org_order')
             ->orderBy('sort_order')
             ->orderBy('id')
-            ->get(['person_name', 'position', 'org_name', 'category'])
-            ->each(function (self $row) use (&$items) {
-                $full = trim((string) $row->person_name);
-                $name = \App\Support\PersonName::short($full);
+            ->get(['id', 'person_name', 'position', 'org_name', 'category']);
 
-                if ($name === '') {
-                    return;
-                }
+        $shortCounts = [];
+        foreach ($rows as $row) {
+            $full = trim((string) $row->person_name);
+            $short = \App\Support\PersonName::short($full);
 
-                $items[$name] = [
-                    'value' => $name,
-                    'label' => $name,
-                    'hint' => trim((string) $row->position),
-                    'org' => trim((string) $row->org_name),
-                    'category' => $row->category ?: (self::guessCategory($row->org_name) ?: 'baiguullaga'),
-                    'full' => $full,
-                ];
-            });
+            if ($short !== '') {
+                $shortCounts[$short] = ($shortCounts[$short] ?? 0) + 1;
+            }
+        }
 
-        return array_values($items);
+        $items = [];
+
+        foreach ($rows as $row) {
+            $full = trim((string) $row->person_name);
+            $short = \App\Support\PersonName::short($full);
+
+            if ($short === '') {
+                continue;
+            }
+
+            $duplicateShort = ($shortCounts[$short] ?? 0) > 1;
+
+            $items[] = [
+                'id' => $row->id,
+                // Ижил богино нэртэй хоёр хүн байвал бүтэн нэрээр ялгана.
+                'value' => $duplicateShort ? $full : $short,
+                'label' => $short,
+                'hint' => trim((string) $row->position),
+                'org' => trim((string) $row->org_name),
+                'category' => $row->category ?: (self::guessCategory($row->org_name) ?: 'baiguullaga'),
+                'full' => $full,
+            ];
+        }
+
+        return $items;
     }
 
     /**
