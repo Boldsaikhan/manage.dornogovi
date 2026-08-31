@@ -59,7 +59,7 @@ class PhoneDirectoryEntry extends Model
     /**
      * SheetCell / сонголтын жагсаалтад зориулсан богино нэрс.
      *
-     * @return array<int, array{value: string, label: string, hint: string, org: string, category: string}>
+     * @return array<int, array{value: string, label: string, hint: string, org: string, category: string, full: string}>
      */
     public static function peopleOptions(): array
     {
@@ -71,7 +71,8 @@ class PhoneDirectoryEntry extends Model
             ->orderBy('id')
             ->get(['person_name', 'position', 'org_name', 'category'])
             ->each(function (self $row) use (&$items) {
-                $name = \App\Support\PersonName::short(trim((string) $row->person_name));
+                $full = trim((string) $row->person_name);
+                $name = \App\Support\PersonName::short($full);
 
                 if ($name === '') {
                     return;
@@ -83,6 +84,7 @@ class PhoneDirectoryEntry extends Model
                     'hint' => trim((string) $row->position),
                     'org' => trim((string) $row->org_name),
                     'category' => $row->category ?: (self::guessCategory($row->org_name) ?: 'baiguullaga'),
+                    'full' => $full,
                 ];
             });
 

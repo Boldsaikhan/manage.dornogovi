@@ -66,7 +66,11 @@ class TaskDashboardSmokeTest extends TestCase
                 ->where('tasks.0.progress', 60)
                 ->where('tasks.1.progress', 100)
                 ->has('people', 4)
-                ->where('people.0.category', fn ($c) => in_array($c, ['agentlag', 'heltes'], true)));
+                ->where('people.0.category', fn ($c) => in_array($c, ['agentlag', 'heltes'], true))
+                ->where('people', fn ($people) => collect($people)->contains(
+                    fn ($p) => ($p['label'] ?? '') === 'Ц.Мөнх-Эрдэнэ'
+                        && ($p['full'] ?? '') === 'Ц.Мөнх-Эрдэнэ'
+                )));
 
         // Утасны жагсаалтад 2 хэлтэс тэмдэглэгдсэн.
         $heltesOrgs = collect(\App\Models\PhoneDirectoryEntry::query()->where('category', 'heltes')->pluck('org_name'))->unique();

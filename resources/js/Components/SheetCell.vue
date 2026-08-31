@@ -157,6 +157,20 @@ const selectedChips = computed(() => {
     ];
 });
 
+const compactText = (value) => String(value ?? '').toLowerCase().replace(/[.\s\-‑]/g, '');
+
+const optionMatchesSearch = (opt, q) => {
+    if (! q) {
+        return true;
+    }
+
+    const blob = [opt.label, opt.value, opt.hint, opt.org, opt.full, opt.full_name]
+        .map((part) => String(part ?? '').toLowerCase())
+        .join(' ');
+
+    return blob.includes(q) || compactText(blob).includes(compactText(q));
+};
+
 const filteredOptions = computed(() => {
     if (! hasOptions.value) {
         return [];
@@ -165,22 +179,14 @@ const filteredOptions = computed(() => {
     const q = String(search.value ?? '').trim().toLowerCase();
     const cats = categoryOn.value;
 
-    const list = props.options.filter((opt) => {
+    return props.options.filter((opt) => {
         const cat = opt.category || 'baiguullaga';
-        if (! cats[cat]) {
+        if (Object.prototype.hasOwnProperty.call(cats, cat) && ! cats[cat]) {
             return false;
         }
-        if (! q) {
-            return true;
-        }
-        const label = String(opt.label ?? opt.value ?? '').toLowerCase();
-        const hint = String(opt.hint ?? '').toLowerCase();
-        const org = String(opt.org ?? '').toLowerCase();
 
-        return label.includes(q) || hint.includes(q) || org.includes(q);
+        return optionMatchesSearch(opt, q);
     });
-
-    return list.slice(0, 200);
 });
 
 const updateMenuPosition = () => {
@@ -574,7 +580,7 @@ onBeforeUnmount(() => {
                         </svg>
                         <span class="min-w-0 flex-1 truncate text-xs text-slate-500">
                             <template v-if="search">«{{ search }}» — {{ filteredOptions.length }} илэрц</template>
-                            <template v-else>Нэрээр бичиж хайна · {{ filteredOptions.length }}/{{ options.length }} хүн</template>
+                            <template v-else>Нэрээр бичиж хайна · {{ filteredOptions.length }} хүн</template>
                         </span>
                         <button
                             type="button"

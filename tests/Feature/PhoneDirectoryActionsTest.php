@@ -48,4 +48,22 @@ class PhoneDirectoryActionsTest extends TestCase
 
         $this->assertSame(0, PhoneDirectoryEntry::query()->count());
     }
+
+    public function test_people_options_include_full_name_for_picker_search(): void
+    {
+        PhoneDirectoryEntry::create([
+            'org_name' => 'Төрийн захиргааны удирдлагын хэлтэс',
+            'category' => 'heltes',
+            'person_name' => 'Батбаярын Дулмаа',
+            'position' => 'Мэргэжилтэн',
+            'org_order' => 1,
+            'sort_order' => 1,
+        ]);
+
+        $people = PhoneDirectoryEntry::peopleOptions();
+
+        $this->assertCount(1, $people);
+        $this->assertSame('Б.Дулмаа', $people[0]['label']);
+        $this->assertSame('Батбаярын Дулмаа', $people[0]['full']);
+    }
 }
