@@ -4,12 +4,17 @@ namespace App\Support;
 
 class ReportsData
 {
+    public static function path(string $reportKey): string
+    {
+        return database_path("data/reports/{$reportKey}.json");
+    }
+
     /**
      * @return array<int, array<string, mixed>>
      */
     public static function rows(string $reportKey): array
     {
-        $path = storage_path("app/reports/{$reportKey}.json");
+        $path = self::path($reportKey);
 
         if (! is_file($path)) {
             return [];
@@ -25,7 +30,7 @@ class ReportsData
      */
     public static function meta(string $reportKey): ?array
     {
-        $path = storage_path("app/reports/{$reportKey}.json");
+        $path = self::path($reportKey);
 
         if (! is_file($path)) {
             return null;

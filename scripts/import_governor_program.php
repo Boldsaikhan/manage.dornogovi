@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 $baseDir = dirname(__DIR__);
 $source = $argv[1] ?? 'C:/Users/IT-PC/Desktop/хяналт шинжилгээ/АЗДҮАХ-2024-2028-2026-оны-хагас-жил-ТАЙЛАН-хуваарилалт.xlsx';
-$output = $baseDir.'/storage/app/reports/local_policy.governor_program.json';
+$output = $baseDir.'/database/data/reports/local_policy.governor_program.json';
 
 function readSharedStrings(ZipArchive $zip): array
 {
