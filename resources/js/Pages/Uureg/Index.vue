@@ -1270,60 +1270,91 @@ const prepTableMinWidth = computed(() => {
                 </ul>
             </div>
 
-            <!-- Дашбоард: товч хураангуй, дарахад дэлгэц дүүрэн нээгдэнэ -->
-            <button
-                type="button"
-                class="flex w-full flex-wrap items-center gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-soft transition hover:border-brand-navy-300"
-                @click="openDashboard"
-            >
-                <span class="flex items-center gap-2.5">
-                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-navy-50 text-brand-navy-700">
+            <!-- Дашбоард + төлөвийн шүүлт — нэг мөр -->
+            <div class="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-soft">
+                <button
+                    type="button"
+                    class="flex min-w-[min(100%,16rem)] flex-1 items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-slate-50"
+                    @click="openDashboard"
+                >
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-navy-50 text-brand-navy-700">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                             <path d="M4 20V10M10 20V4M16 20v-6M22 20H2" stroke-linecap="round" />
                         </svg>
                     </span>
-                    <span>
+                    <span class="min-w-0 shrink">
                         <span class="block text-sm font-semibold text-slate-800">Хэрэгжилтийн дашбоард</span>
-                        <span class="block text-xs text-slate-500">Дарж дэлгэрэнгүй графикаар харна</span>
+                        <span class="block text-xs text-slate-500">Нийт {{ overall.count }} · дарж дэлгэрэнгүй</span>
                     </span>
-                </span>
+                    <span class="flex shrink-0 items-center gap-1 text-xl font-bold sm:text-2xl" :class="progressTextClass(overall.progress)">
+                        <svg
+                            v-if="isPendingProgress(overall.progress)"
+                            class="h-4 w-4 text-orange-500 sm:h-5 sm:w-5"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            aria-hidden="true"
+                        >
+                            <path d="M12 3.2L2.5 19.5A1.2 1.2 0 003.55 21.2h16.9a1.2 1.2 0 001.05-1.7L12 3.2zm0 5.3c.55 0 1 .4 1 .95v4.6c0 .55-.45 1-1 1s-1-.45-1-1v-4.6c0-.55.45-.95 1-.95zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z" />
+                        </svg>
+                        {{ overall.progress }}%
+                    </span>
+                    <span class="hidden h-2 min-w-[5rem] max-w-[10rem] flex-1 overflow-hidden rounded-full bg-slate-200 sm:block">
+                        <span class="block h-full rounded-full" :class="barColor(overall.progress)" :style="{ width: overall.progress + '%' }" />
+                    </span>
+                </button>
 
-                <span class="flex items-center gap-1 text-2xl font-bold" :class="progressTextClass(overall.progress)">
-                    <svg
-                        v-if="isPendingProgress(overall.progress)"
-                        class="h-5 w-5 text-orange-500"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        aria-hidden="true"
+                <div class="flex flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-0.5">
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition sm:px-3"
+                        :class="statusFilter === 'done'
+                            ? 'bg-emerald-600 text-white shadow-sm'
+                            : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-700'"
+                        @click="toggleStatusFilter('done')"
                     >
-                        <path d="M12 3.2L2.5 19.5A1.2 1.2 0 003.55 21.2h16.9a1.2 1.2 0 001.05-1.7L12 3.2zm0 5.3c.55 0 1 .4 1 .95v4.6c0 .55-.45 1-1 1s-1-.45-1-1v-4.6c0-.55.45-.95 1-.95zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z" />
-                    </svg>
-                    {{ overall.progress }}%
-                </span>
-
-                <span class="h-2 min-w-[6rem] flex-1 overflow-hidden rounded-full bg-slate-200">
-                    <span class="block h-full rounded-full" :class="barColor(overall.progress)" :style="{ width: overall.progress + '%' }" />
-                </span>
-
-                <span class="flex gap-3 text-xs text-slate-500">
-                    <span>Нийт <b class="text-slate-700">{{ overall.count }}</b></span>
-                    <span>Дууссан <b class="text-emerald-600">{{ overall.done }}</b></span>
-                    <span class="inline-flex items-center gap-0.5">
+                        Дууссан
+                        <span
+                            class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
+                            :class="statusFilter === 'done' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'"
+                        >
+                            {{ overall.done }}
+                        </span>
+                    </button>
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition sm:px-3"
+                        :class="statusFilter === 'pending'
+                            ? 'bg-orange-500 text-white shadow-sm'
+                            : 'text-slate-600 hover:bg-orange-50 hover:text-orange-700'"
+                        @click="toggleStatusFilter('pending')"
+                    >
                         Эхлээгүй
-                        <svg class="h-3.5 w-3.5 text-orange-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <path d="M12 3.2L2.5 19.5A1.2 1.2 0 003.55 21.2h16.9a1.2 1.2 0 001.05-1.7L12 3.2zm0 5.3c.55 0 1 .4 1 .95v4.6c0 .55-.45 1-1 1s-1-.45-1-1v-4.6c0-.55.45-.95 1-.95zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z" />
-                        </svg>
-                        <b class="text-orange-600">{{ overall.pending }}</b>
-                    </span>
-                    <span class="inline-flex items-center gap-0.5">
-                        Хугацаа хэтэрсэн
-                        <svg class="h-3.5 w-3.5 text-red-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <path d="M12 3.2L2.5 19.5A1.2 1.2 0 003.55 21.2h16.9a1.2 1.2 0 001.05-1.7L12 3.2zm0 5.3c.55 0 1 .4 1 .95v4.6c0 .55-.45 1-1 1s-1-.45-1-1v-4.6c0-.55.45-.95 1-.95zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z" />
-                        </svg>
-                        <b class="text-red-600">{{ overall.overdue }}</b>
-                    </span>
-                </span>
-            </button>
+                        <span
+                            class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
+                            :class="statusFilter === 'pending' ? 'bg-white/20 text-white' : 'bg-orange-50 text-orange-700'"
+                        >
+                            {{ overall.pending }}
+                        </span>
+                    </button>
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition sm:px-3"
+                        :class="statusFilter === 'overdue'
+                            ? 'bg-red-600 text-white shadow-sm'
+                            : 'text-slate-600 hover:bg-red-50 hover:text-red-700'"
+                        @click="toggleStatusFilter('overdue')"
+                    >
+                        <span class="hidden sm:inline">Хугацаа хэтэрсэн</span>
+                        <span class="sm:hidden">Хэтэрсэн</span>
+                        <span
+                            class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
+                            :class="statusFilter === 'overdue' ? 'bg-white/20 text-white' : 'bg-red-50 text-red-700'"
+                        >
+                            {{ overall.overdue }}
+                        </span>
+                    </button>
+                </div>
+            </div>
 
             <!-- Харагдах горим -->
             <div class="flex flex-wrap items-center gap-2">
@@ -1344,57 +1375,6 @@ const prepTableMinWidth = computed(() => {
                         @click="viewMode = 'calendar'"
                     >
                         Цаглалт
-                    </button>
-                </div>
-
-                <div class="inline-flex flex-wrap rounded-xl border border-slate-200 bg-white p-0.5 shadow-soft">
-                    <button
-                        type="button"
-                        class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition"
-                        :class="statusFilter === 'done'
-                            ? 'bg-emerald-600 text-white'
-                            : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-700'"
-                        @click="toggleStatusFilter('done')"
-                    >
-                        Дууссан
-                        <span
-                            class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
-                            :class="statusFilter === 'done' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'"
-                        >
-                            {{ overall.done }}
-                        </span>
-                    </button>
-                    <button
-                        type="button"
-                        class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition"
-                        :class="statusFilter === 'pending'
-                            ? 'bg-orange-500 text-white'
-                            : 'text-slate-600 hover:bg-orange-50 hover:text-orange-700'"
-                        @click="toggleStatusFilter('pending')"
-                    >
-                        Эхлээгүй
-                        <span
-                            class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
-                            :class="statusFilter === 'pending' ? 'bg-white/20 text-white' : 'bg-orange-50 text-orange-700'"
-                        >
-                            {{ overall.pending }}
-                        </span>
-                    </button>
-                    <button
-                        type="button"
-                        class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition"
-                        :class="statusFilter === 'overdue'
-                            ? 'bg-red-600 text-white'
-                            : 'text-slate-600 hover:bg-red-50 hover:text-red-700'"
-                        @click="toggleStatusFilter('overdue')"
-                    >
-                        Хугацаа хэтэрсэн
-                        <span
-                            class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
-                            :class="statusFilter === 'overdue' ? 'bg-white/20 text-white' : 'bg-red-50 text-red-700'"
-                        >
-                            {{ overall.overdue }}
-                        </span>
                     </button>
                 </div>
             </div>
