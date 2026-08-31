@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
@@ -402,7 +402,34 @@ const heltesStats = computed(() => {
         .sort((a, b) => a.label.localeCompare(b.label, 'mn'));
 });
 
-const otherUnitStats = computed(() => unitStats.value.filter((u) => u.category !== 'heltes'));
+/** Дуусаагүй үүрэг — дашбоард дээр хугацаа + хэрэгжилтийн хувиар. */
+const incompleteDashboardTasks = computed(() => props.tasks
+    .filter((task) => Number(task.progress) < 100)
+    .slice()
+    .sort((a, b) => {
+        const pa = Number(a.progress) || 0;
+        const pb = Number(b.progress) || 0;
+        if (pa !== pb) {
+            return pa - pb;
+        }
+
+        return String(a.period || '').localeCompare(String(b.period || ''), 'mn')
+            || String(a.text || '').localeCompare(String(b.text || ''), 'mn');
+    }));
+
+const highlightedTaskId = ref(null);
+
+const focusTaskFromDashboard = (task) => {
+    filter.value = null;
+    showDashboard.value = false;
+    highlightedTaskId.value = task.id;
+    nextTick(() => {
+        document.getElementById(`task-row-${task.id}`)?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+        });
+    });
+};
 
 const shortOrgLabel = (label) => {
     const text = String(label || '');
@@ -1344,8 +1371,9 @@ const prepTableMinWidth = computed(() => {
                     <tbody>
                         <tr
                             v-for="task in visibleTasks"
+                            :id="'task-row-' + task.id"
                             :key="task.id"
-                            :class="isSelected(task.id) ? 'bg-brand-navy-50/70' : ''"
+                            :class="isSelected(task.id) || highlightedTaskId === task.id ? 'bg-brand-navy-50/70' : ''"
                         >
                             <td v-if="canEdit" class="text-center align-middle">
                                 <input
@@ -1481,8 +1509,9 @@ const prepTableMinWidth = computed(() => {
                     <tbody>
                         <tr
                             v-for="task in visibleTasks"
+                            :id="'task-row-' + task.id"
                             :key="task.id"
-                            :class="isSelected(task.id) ? 'bg-brand-navy-50/70' : ''"
+                            :class="isSelected(task.id) || highlightedTaskId === task.id ? 'bg-brand-navy-50/70' : ''"
                         >
                             <td v-if="canEdit" class="text-center align-middle">
                                 <input
@@ -1780,62 +1809,55 @@ const prepTableMinWidth = computed(() => {
                     </div>
                 </section>
 
-                <section v-if="otherUnitStats.length" class="ui-card-pad mb-8 mt-4">
-                    <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                        Бусад нэгж (агентлаг, байгууллага…)
+                <section class="ui-card-pad mb-8 mt-4">
+                    <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Хэрэгжээгүй үүрэг даалгавар
                     </p>
-                    <div class="space-y-3">
-                        <div
-                            v-for="unit in otherUnitStats"
-                            :key="'other-' + unit.key"
-                            class="overflow-hidden rounded-2xl border border-slate-200"
-                        >
-                            <button
-                                type="button"
-                                class="flex w-full flex-wrap items-center gap-3 bg-white px-3 py-2.5 text-left transition hover:bg-slate-50"
-                                @click="applyFilterAndClose('org', unit.key, unit.label)"
-                            >
-                                <span class="min-w-0 flex-1">
-                                    <span class="block truncate text-sm font-semibold text-slate-800" :title="unit.label">{{ unit.label }}</span>
-                                    <span class="text-[11px] text-slate-400">{{ unit.categoryLabel }}</span>
-                                </span>
-                                <span class="h-2.5 w-28 overflow-hidden rounded-full bg-slate-200 sm:w-40">
-                                    <span
-                                        class="block h-full rounded-full"
-                                        :class="barColor(unit.progress)"
-                                        :style="{ width: unit.progress + '%' }"
-                                    />
-                                </span>
-                                <span class="w-12 shrink-0 text-right text-sm font-bold" :class="progressTextClass(unit.progress)">
-                                    <span v-if="isPendingProgress(unit.progress)" class="mr-0.5 inline-block align-middle text-orange-500" title="Эхлээгүй">⚠</span>{{ unit.progress }}%
-                                </span>
-                                <span class="w-28 shrink-0 text-right text-xs text-slate-500">
-                                    {{ unit.peopleCount }} хүн · {{ unit.count }} үүрэг
-                                </span>
-                            </button>
-                            <div v-if="unit.people.length" class="divide-y divide-slate-100 border-t border-slate-100 px-2 py-1">
-                                <button
-                                    v-for="person in unit.people"
-                                    :key="person.key"
-                                    type="button"
-                                    class="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left transition hover:bg-slate-50"
-                                    @click="applyFilterAndClose('person', person.key, person.label)"
+                    <p class="mb-3 text-xs text-slate-500">
+                        Дуусаагүй үүрэг, хэрэгжилтийн хуваарь (хугацаа) болон биелэлтийн хувь.
+                    </p>
+                    <p v-if="! incompleteDashboardTasks.length" class="text-sm text-slate-400">
+                        Бүх үүрэг 100% хэрэгжсэн байна.
+                    </p>
+                    <div v-else class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full min-w-[36rem] border-collapse text-left text-sm">
+                            <thead class="bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                <tr>
+                                    <th class="w-10 px-3 py-2">№</th>
+                                    <th class="px-3 py-2">Үүрэг чиглэл</th>
+                                    <th class="w-36 px-3 py-2">Хугацаа</th>
+                                    <th class="w-44 px-3 py-2">Хариуцах эзэн</th>
+                                    <th class="w-40 px-3 py-2 text-right">Хэрэгжилт</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 bg-white">
+                                <tr
+                                    v-for="task in incompleteDashboardTasks"
+                                    :key="'open-' + task.id"
+                                    class="cursor-pointer align-top transition hover:bg-slate-50"
+                                    @click="focusTaskFromDashboard(task)"
                                 >
-                                    <span class="w-40 shrink-0 truncate text-sm text-slate-700 sm:w-52">{{ person.label }}</span>
-                                    <span class="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-                                        <span
-                                            class="block h-full rounded-full"
-                                            :class="barColor(person.progress)"
-                                            :style="{ width: person.progress + '%' }"
-                                        />
-                                    </span>
-                                    <span class="w-10 shrink-0 text-right text-xs font-semibold" :class="progressTextClass(person.progress)">
-                                        <span v-if="isPendingProgress(person.progress)" class="mr-0.5 inline-block align-middle text-orange-500" title="Эхлээгүй">⚠</span>{{ person.progress }}%
-                                    </span>
-                                    <span class="w-16 shrink-0 text-right text-xs text-slate-400">{{ person.count }} үүрэг</span>
-                                </button>
-                            </div>
-                        </div>
+                                    <td class="px-3 py-2.5 text-slate-400">{{ task.no }}</td>
+                                    <td class="max-w-md whitespace-pre-wrap px-3 py-2.5 text-slate-800">{{ task.text || '—' }}</td>
+                                    <td class="px-3 py-2.5 text-slate-700">{{ task.period || '—' }}</td>
+                                    <td class="px-3 py-2.5 text-slate-700">{{ task.responsible || '—' }}</td>
+                                    <td class="px-3 py-2.5">
+                                        <div class="flex items-center justify-end gap-2">
+                                            <span class="h-2 w-16 overflow-hidden rounded-full bg-slate-200">
+                                                <span
+                                                    class="block h-full rounded-full"
+                                                    :class="barColor(task.progress)"
+                                                    :style="{ width: (Number(task.progress) || 0) + '%' }"
+                                                />
+                                            </span>
+                                            <span class="w-12 text-right text-sm font-bold" :class="progressTextClass(task.progress)">
+                                                <span v-if="isPendingProgress(task.progress)" class="mr-0.5 inline text-orange-500" title="Эхлээгүй">⚠</span>{{ Number(task.progress) || 0 }}%
+                                            </span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </section>
             </div>
