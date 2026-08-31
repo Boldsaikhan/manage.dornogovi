@@ -86,7 +86,8 @@ class DecreeController extends Controller
             'people' => PhoneDirectoryEntry::peopleOptions(),
             'pendingOfficials' => $this->pendingOfficialsForTab($tab),
             'nextNumber' => isset(self::KIND_TABS[$tab]) ? $this->nextDocumentNumber($tab) : null,
-            'canManage' => ModuleAccess::canEdit($request->user(), 'decrees'),
+            'canManage' => ModuleAccess::canManage($request->user(), 'decrees'),
+            'canEdit' => ModuleAccess::canEdit($request->user(), 'decrees'),
             'undoCount' => EditUndo::query()->where('user_id', $request->user()->id)->count(),
         ]);
     }

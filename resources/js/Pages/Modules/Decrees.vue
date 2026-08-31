@@ -13,6 +13,7 @@ const props = defineProps({
     pendingOfficials: { type: Array, default: () => [] },
     nextNumber: { type: String, default: null },
     canManage: { type: Boolean, default: false },
+    canEdit: { type: Boolean, default: false },
     undoCount: { type: Number, default: 0 },
 });
 
@@ -65,7 +66,10 @@ const kindOptions = [
     { value: 'tushaal_b', label: 'Тушаал Б' },
 ];
 
-const canAddRow = computed(() => props.canManage && ! isNiit.value);
+const canAddRow = computed(() => (props.canEdit || props.canManage) && ! isNiit.value);
+
+const canEditRows = computed(() => props.canEdit || props.canManage);
+const canManageRows = computed(() => props.canManage || props.canEdit);
 
 const officialOptions = computed(() => {
     const pending = props.pendingOfficials ?? [];
@@ -88,7 +92,7 @@ const officialOptions = computed(() => {
     return [...pending, ...extras];
 });
 
-const canManage = computed(() => props.canManage);
+const canManage = computed(() => canManageRows.value);
 
 const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
 
@@ -186,22 +190,13 @@ const today = () => {
 };
 
 const addRow = () => {
-    if (isNiit.value) return;
+    if (isNiit.value || ! canAddRow.value) return;
 
-    if (isBlank.value) {
-        useForm({
-            tab: 'blank',
-            person_name: '',
-            issued_on: today(),
-        }).post(route('decrees.store'), { preserveScroll: true });
-        return;
-    }
+    const payload = isBlank.value
+        ? { tab: 'blank', person_name: '', issued_on: today() }
+        : { tab: props.tab, title: '', issued_on: today() };
 
-    useForm({
-        tab: props.tab,
-        title: '',
-        issued_on: today(),
-    }).post(route('decrees.store'), { preserveScroll: true });
+    router.post(route('decrees.store'), payload, { preserveScroll: true });
 };
 
 const saveField = (id, field, value) => {

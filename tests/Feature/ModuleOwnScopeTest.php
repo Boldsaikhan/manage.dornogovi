@@ -260,6 +260,36 @@ class ModuleOwnScopeTest extends TestCase
         $this->assertDatabaseHas('decrees', ['id' => $foreign->id]);
     }
 
+    public function test_manage_user_can_add_decrees_and_index_exposes_edit_flags(): void
+    {
+        $manager = User::factory()->create();
+        UserModulePermission::create([
+            'user_id' => $manager->id,
+            'module_key' => 'decrees',
+            'level' => 'manage',
+        ]);
+
+        $this->actingAs($manager)
+            ->get(route('decrees.index', ['tab' => 'zahiramj_a']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('canManage', true)
+                ->where('canEdit', true));
+
+        $this->actingAs($manager)
+            ->post(route('decrees.store'), [
+                'tab' => 'zahiramj_a',
+                'title' => '',
+                'issued_on' => now()->toDateString(),
+            ])
+            ->assertRedirect(route('decrees.index', ['tab' => 'zahiramj_a']));
+
+        $this->assertDatabaseHas('decrees', [
+            'kind' => 'zahiramj_a',
+            'created_by' => $manager->id,
+        ]);
+    }
+
     public function test_access_page_exposes_dashboard_own_scope_view_only(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
