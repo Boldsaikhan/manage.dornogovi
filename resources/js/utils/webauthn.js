@@ -2,6 +2,8 @@
  * WebAuthn (хуруу / нүүр / Windows Hello) туслах функцууд.
  */
 
+import { markWebAuthnDevice } from '@/utils/pwaClient';
+
 export const isWebAuthnSupported = () => (
     typeof window !== 'undefined'
     && !! window.PublicKeyCredential
@@ -115,6 +117,7 @@ export const registerBiometric = async () => {
 
     const payload = credentialToCreatePayload(credential);
     const { data } = await window.axios.post(route('webauthn.register'), payload);
+    markWebAuthnDevice();
 
     return data;
 };
@@ -129,6 +132,7 @@ export const loginWithBiometric = async () => {
 
     const payload = credentialToAssertPayload(credential);
     const { data } = await window.axios.post(route('webauthn.login'), payload);
+    markWebAuthnDevice();
 
     return data;
 };

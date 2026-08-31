@@ -6,7 +6,7 @@ use Tests\TestCase;
 
 class PwaAssetsTest extends TestCase
 {
-    public function test_icon_assets_exist_for_browser_favicon(): void
+    public function test_icon_assets_exist_for_pwa(): void
     {
         foreach ([
             'icons/icon-192.png',
@@ -18,22 +18,31 @@ class PwaAssetsTest extends TestCase
         }
     }
 
-    public function test_layout_does_not_advertise_pwa_install(): void
+    public function test_layout_advertises_pwa_install_on_mobile(): void
     {
         $blade = file_get_contents(resource_path('views/app.blade.php'));
 
-        $this->assertStringNotContainsString('rel="manifest"', $blade);
-        $this->assertStringNotContainsString('apple-mobile-web-app-capable', $blade);
-        $this->assertStringNotContainsString('mobile-web-app-capable', $blade);
+        $this->assertStringContainsString('rel="manifest"', $blade);
+        $this->assertStringContainsString('apple-mobile-web-app-capable', $blade);
+        $this->assertStringContainsString('mobile-web-app-capable', $blade);
         $this->assertStringContainsString('theme-color', $blade);
-        $this->assertStringContainsString('/icons/icon-192.png', $blade);
+        $this->assertStringContainsString('/icons/apple-touch-icon.png', $blade);
     }
 
-    public function test_app_js_unregisters_service_worker(): void
+    public function test_app_js_registers_service_worker_on_mobile(): void
     {
         $js = file_get_contents(resource_path('js/app.js'));
+        $pwa = file_get_contents(resource_path('js/utils/pwaClient.js'));
 
-        $this->assertStringContainsString('unregister', $js);
-        $this->assertStringNotContainsString("register('/sw.js')", $js);
+        $this->assertStringContainsString('registerServiceWorker', $js);
+        $this->assertStringContainsString("register('/sw.js'", $pwa);
+        $this->assertStringNotContainsString('unregister', $js);
+    }
+
+    public function test_manifest_start_url_is_login(): void
+    {
+        $this->get('/manifest.webmanifest')
+            ->assertOk()
+            ->assertJsonPath('start_url', url('/login'));
     }
 }

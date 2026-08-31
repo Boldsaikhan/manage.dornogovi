@@ -11,7 +11,7 @@ import QrScanButton from '@/Components/QrScanButton.vue';
 import AiPanel from '@/Components/AiPanel.vue';
 import AppLockGate from '@/Components/AppLockGate.vue';
 import Modal from '@/Components/Modal.vue';
-import VaultUnlockForm from '@/Components/VaultUnlockForm.vue';
+import MobileBiometricSetup from '@/Components/MobileBiometricSetup.vue';
 
 defineProps({
     title: { type: String, default: '' },
@@ -473,6 +473,8 @@ const onLinkedSystemClick = () => {
         />
 
         <AppLockGate />
+
+        <MobileBiometricSetup />
 
         <Modal :show="vaultModal" max-width="sm" @close="vaultModal = false">
             <div class="p-6">

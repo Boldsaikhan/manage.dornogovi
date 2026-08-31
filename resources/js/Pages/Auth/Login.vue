@@ -6,7 +6,13 @@ import StateEmblem from '@/Components/StateEmblem.vue';
 import OrnamentMark from '@/Components/OrnamentMark.vue';
 import QrScanButton from '@/Components/QrScanButton.vue';
 import { isMobileDevice } from '@/utils/mobileClient';
+import {
+    hasWebAuthnDeviceHint,
+    isStandalonePwa,
+    markWebAuthnDevice,
+} from '@/utils/pwaClient';
 import { isWebAuthnSupported, loginWithBiometric } from '@/utils/webauthn';
+import MobileAppInstall from '@/Components/MobileAppInstall.vue';
 
 defineProps({
     canResetPassword: {
@@ -27,9 +33,16 @@ const showPassword = ref(false);
 const bioSupported = ref(false);
 const bioBusy = ref(false);
 const bioError = ref('');
+const autoBioTried = ref(false);
+const preferBiometric = ref(false);
 
 /** Утсан дээр, HTTPS-тэй, хөтөч дэмждэг үед л товчийг үзүүлнэ. */
 const canBiometric = computed(() => onPhone.value && bioSupported.value);
+
+const shouldAutoBiometric = computed(() => (
+    canBiometric.value
+    && (isStandalonePwa() || hasWebAuthnDeviceHint())
+));
 
 const loginBiometric = async () => {
     if (bioBusy.value) return;
@@ -39,6 +52,7 @@ const loginBiometric = async () => {
 
     try {
         const data = await loginWithBiometric();
+        markWebAuthnDevice();
         window.location.href = data?.redirect || '/';
     } catch (e) {
         const name = e?.name || '';
@@ -49,11 +63,14 @@ const loginBiometric = async () => {
 
         if (/NotAllowedError|AbortError/i.test(name)) {
             bioError.value = 'Үйлдэл цуцлагдлаа.';
+            preferBiometric.value = false;
         } else if (e?.response?.status === 422) {
             bioError.value = msg
                 || 'Энэ төхөөрөмж бүртгэгдээгүй байна. Эхлээд нууц үгээрээ нэвтэрч, Профайл хэсгээс идэвхжүүлнэ үү.';
+            preferBiometric.value = false;
         } else {
             bioError.value = msg || 'Нэвтэрч чадсангүй. Нууц үгээрээ орно уу.';
+            preferBiometric.value = false;
         }
     } finally {
         bioBusy.value = false;
@@ -183,6 +200,14 @@ const qrCountdown = computed(() => {
 onMounted(() => {
     onPhone.value = isMobileDevice();
     bioSupported.value = isWebAuthnSupported();
+    preferBiometric.value = shouldAutoBiometric.value;
+
+    if (shouldAutoBiometric.value && ! autoBioTried.value) {
+        autoBioTried.value = true;
+        window.setTimeout(() => {
+            loginBiometric();
+        }, 350);
+    }
 });
 
 onBeforeUnmount(stopQrTimers);
@@ -231,6 +256,8 @@ const submit = () => {
                         </div>
                     </div>
 
+                    <MobileAppInstall v-if="onPhone" />
+
                     <div class="mt-6 flex items-center justify-between gap-3">
                         <h2 class="text-sm font-bold tracking-wide text-brand-navy-700">
                             НЭВТРЭХ
@@ -245,7 +272,7 @@ const submit = () => {
                         {{ status }}
                     </div>
 
-                    <form v-if="! isQr" class="mt-4 space-y-4" @submit.prevent="submit">
+                    <form v-if="! isQr && ! (preferBiometric && bioBusy)" class="mt-4 space-y-4" @submit.prevent="submit">
                         <!-- Нэвтрэх нэр: утас эсвэл и-мэйл -->
                         <div>
                             <div
@@ -477,6 +504,14 @@ const submit = () => {
                             </svg>
                         </button>
                     </form>
+
+                    <div
+                        v-if="! isQr && preferBiometric && bioBusy"
+                        class="mt-4 rounded-2xl border border-brand-navy-200 bg-brand-navy-50 px-4 py-8 text-center"
+                    >
+                        <p class="text-sm font-semibold text-brand-navy-800">Хуруу / цараайгаар нэвтэрч байна…</p>
+                        <p class="mt-1 text-xs text-slate-500">Төхөөрөмжийн баталгаажуулалтыг гүйцээж дуусгана уу.</p>
+                    </div>
 
                     <!-- QR кодоор нэвтрэх — зөвхөн компьютер дээр код харуулна -->
                     <div v-else-if="! onPhone" class="mt-4">

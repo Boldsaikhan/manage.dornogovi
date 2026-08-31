@@ -5,6 +5,13 @@ import { createInertiaApp, router } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
+import { isMobileDevice } from './utils/mobileClient';
+import {
+    bindInstallPrompt,
+    isStandalonePwa,
+    markPwaInstalled,
+    registerServiceWorker,
+} from './utils/pwaClient';
 
 const appName = 'manage дотоод систем';
 
@@ -42,17 +49,14 @@ router.on('invalid', (event) => {
     window.location.reload();
 });
 
-// Утасны хөтчөөр л ашиглана — хуучин PWA service worker-ийг салгана.
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.getRegistrations().then((regs) => {
-            regs.forEach((reg) => reg.unregister());
-        }).catch(() => {});
+// Утсан дээр PWA service worker — push, offline, апп суулгалт.
+if (isStandalonePwa()) {
+    markPwaInstalled();
+}
 
-        if (window.caches?.keys) {
-            caches.keys().then((keys) => {
-                keys.forEach((key) => caches.delete(key));
-            }).catch(() => {});
-        }
+if (isMobileDevice() && 'serviceWorker' in navigator) {
+    bindInstallPrompt();
+    window.addEventListener('load', () => {
+        registerServiceWorker().catch(() => {});
     });
 }

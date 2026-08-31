@@ -11,7 +11,7 @@ class PwaManifestController extends Controller
 {
     public function __invoke(): JsonResponse
     {
-        $startUrl = url('/dept-dashboard');
+        $startUrl = url('/login');
 
         return response()->json([
             'id' => $startUrl,
