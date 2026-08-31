@@ -179,12 +179,16 @@ const isCurrent = (routeName) => {
     }
 };
 
-const isLinkedSystemCurrent = (id) => {
-    try {
-        return route().current('systems.show') && String(route().params?.system) === String(id);
-    } catch {
-        return false;
+const linkedSystemOpenUrl = (sys) => {
+    if (sys.requires_login && sys.has_credential && vaultUnlocked.value) {
+        return route('systems.launch', sys.id);
     }
+
+    return sys.entry_url;
+};
+
+const onLinkedSystemClick = () => {
+    sidebarOpen.value = false;
 };
 </script>
 
@@ -244,15 +248,15 @@ const isLinkedSystemCurrent = (id) => {
                         >
                             Холбосон системүүд
                         </div>
-                        <Link
+                        <a
                             v-for="sys in linkedSystems"
                             :key="'sys-'+sys.id"
-                            :href="route('systems.show', sys.id)"
+                            :href="linkedSystemOpenUrl(sys)"
+                            target="_blank"
+                            rel="noopener noreferrer"
                             class="ui-nav-link relative"
-                            :class="[
-                                isLinkedSystemCurrent(sys.id) ? 'ui-nav-link-active' : '',
-                                sidebarCollapsed ? 'lg:justify-center lg:px-0' : '',
-                            ]"
+                            :class="sidebarCollapsed ? 'lg:justify-center lg:px-0' : ''"
+                            @click="onLinkedSystemClick"
                             @mouseenter="showNavTip($event, sys.name)"
                             @mouseleave="hideNavTip"
                             @focus="showNavTip($event, sys.name)"
@@ -262,7 +266,7 @@ const isLinkedSystemCurrent = (id) => {
                                 <path :d="iconPaths.globe" />
                             </svg>
                             <span class="min-w-0 flex-1 truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ sys.name }}</span>
-                        </Link>
+                        </a>
                     </template>
                     <template v-else>
                         <div
