@@ -85,6 +85,23 @@ class ReportCatalogTest extends TestCase
                 ->has('report.rows', 324));
     }
 
+    public function test_reports_show_loads_annual_plan_rows(): void
+    {
+        $user = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($user)
+            ->get(route('reports.show', 'local_policy.annual_plan'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Modules/Reports/Show')
+                ->where('report.key', 'local_policy.annual_plan')
+                ->where('report.number', '2.2')
+                ->where('report.source_file', 'АЖХТ-2026-ЭЦЭС.xlsx')
+                ->where('report.template', 'annual_plan')
+                ->has('report.columns', 12)
+                ->has('report.rows', 196));
+    }
+
     public function test_reports_show_404_for_unknown_key(): void
     {
         $user = User::factory()->create(['is_admin' => true]);

@@ -29,6 +29,10 @@ const sectionNavItems = computed(() => {
 
 const defaultColumnWidths = {
     no: '2.75rem',
+    policy_unit: '8rem',
+    year: '3.5rem',
+    clause: '5rem',
+    goal: '9rem',
     activity: '11rem',
     measure: '11rem',
     period: '4.25rem',
@@ -47,6 +51,9 @@ const defaultColumnWidths = {
 };
 
 const textWrapKeys = new Set([
+    'policy_unit',
+    'clause',
+    'goal',
     'activity',
     'measure',
     'indicator',
