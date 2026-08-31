@@ -48,6 +48,13 @@ const defaultColumnWidths = {
     report_to: '5rem',
     department: '4rem',
     agency: '7rem',
+    decision_no: '3.5rem',
+    clause_no: '3.5rem',
+    decision_title: '12rem',
+    clause_text: '12rem',
+    half_year: '10rem',
+    evaluation: '4rem',
+    note: '8rem',
 };
 
 const textWrapKeys = new Set([
@@ -65,6 +72,10 @@ const textWrapKeys = new Set([
     'clause_text',
     'decision_title',
     'action_plan',
+    'decision_title',
+    'clause_text',
+    'half_year',
+    'note',
 ]);
 
 const remToPx = (value) => {

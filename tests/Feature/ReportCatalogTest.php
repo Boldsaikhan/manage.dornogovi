@@ -102,6 +102,23 @@ class ReportCatalogTest extends TestCase
                 ->has('report.rows', 196));
     }
 
+    public function test_reports_show_loads_council_decision_rows(): void
+    {
+        $user = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($user)
+            ->get(route('reports.show', 'local_policy.council_decision'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Modules/Reports/Show')
+                ->where('report.key', 'local_policy.council_decision')
+                ->where('report.number', '2.3')
+                ->where('report.source_file', 'ИТХТ-ын хэрэгжилт_2026_.xlsx')
+                ->where('report.template', 'itkh_decision')
+                ->has('report.columns', 8)
+                ->has('report.rows', 33));
+    }
+
     public function test_reports_show_404_for_unknown_key(): void
     {
         $user = User::factory()->create(['is_admin' => true]);
