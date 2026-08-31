@@ -89,6 +89,43 @@ export function parseTaskPeriod(period, referenceYear = new Date().getFullYear()
 }
 
 /**
+ * @param {{ progress?: number|string|null, period?: string|null }} task
+ * @param {Date} [referenceDate]
+ */
+export function isTaskOverdue(task, referenceDate = new Date()) {
+    const progress = Number(task?.progress) || 0;
+    if (progress >= 100) {
+        return false;
+    }
+
+    const parsed = parseTaskPeriod(task?.period, referenceDate.getFullYear());
+    if (! parsed?.end || parsed.unparsed) {
+        return false;
+    }
+
+    const today = stripTime(referenceDate);
+    if (! today) {
+        return false;
+    }
+
+    return parsed.end.getTime() < today.getTime();
+}
+
+/**
+ * @param {{ progress?: number|string|null }} task
+ */
+export function isTaskDone(task) {
+    return Number(task?.progress) >= 100;
+}
+
+/**
+ * @param {{ progress?: number|string|null }} task
+ */
+export function isTaskPending(task) {
+    return ! Number(task?.progress);
+}
+
+/**
  * @param {string|Date} startInput ISO date (YYYY-MM-DD) or Date
  * @param {string|Date} [endInput]
  * @returns {string} MM.DD–MM.DD

@@ -8,7 +8,7 @@ import TaskPeriodCell from '@/Components/TaskPeriodCell.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import TaskCalendar from '@/Components/TaskCalendar.vue';
 import { expandPersonNames, GROUP_LABELS } from '@/utils/soumGovernors';
-import { formatTaskPeriodMd } from '@/utils/taskPeriod';
+import { formatTaskPeriodMd, isTaskDone, isTaskOverdue, isTaskPending } from '@/utils/taskPeriod';
 
 const props = defineProps({
     kind: { type: String, required: true },
@@ -51,6 +51,7 @@ const kindTabs = computed(() => (
 const isDirective = computed(() => (props.source?.layout || props.kind) !== 'prep_plan');
 
 const viewMode = ref('table');
+const statusFilter = ref(null); // 'done' | 'pending' | 'overdue'
 
 const downloadOpen = ref(false);
 const downloadRoot = ref(null);
@@ -521,9 +522,10 @@ const dashboardCards = computed(() => categoryStats.value.map((item) => {
 const overall = computed(() => ({
     count: props.tasks.length,
     progress: average(props.tasks),
-    done: props.tasks.filter((t) => Number(t.progress) >= 100).length,
+    done: props.tasks.filter((t) => isTaskDone(t)).length,
     started: props.tasks.filter((t) => Number(t.progress) > 0 && Number(t.progress) < 100).length,
-    pending: props.tasks.filter((t) => ! Number(t.progress)).length,
+    pending: props.tasks.filter((t) => isTaskPending(t)).length,
+    overdue: props.tasks.filter((t) => isTaskOverdue(t)).length,
 }));
 
 /**
@@ -582,16 +584,56 @@ const clearFilter = () => {
     filter.value = null;
 };
 
+const toggleStatusFilter = (key) => {
+    statusFilter.value = statusFilter.value === key ? null : key;
+};
+
+const clearStatusFilter = () => {
+    statusFilter.value = null;
+};
+
+const statusFilterLabel = computed(() => ({
+    done: 'Дууссан',
+    pending: 'Эхлээгүй',
+    overdue: 'Хугацаа хэтэрсэн',
+}[statusFilter.value] ?? ''));
+
+const emptyTasksMessage = computed(() => {
+    if (filter.value && statusFilter.value) {
+        return 'Энэ шүүлтэд тохирох үүрэг чиглэл алга.';
+    }
+    if (statusFilter.value) {
+        return `«${statusFilterLabel.value}» ангилалд үүрэг чиглэл алга.`;
+    }
+    if (filter.value) {
+        return 'Энэ шүүлтэд тохирох үүрэг чиглэл алга.';
+    }
+
+    return 'Одоогоор мөр алга. «Мөр нэмэх» дарж эхлүүлнэ үү.';
+});
+
 // Шүүлттэй үед зөвхөн холбогдох үүрэг чиглэл харагдана.
 const visibleTasks = computed(() => {
-    if (! filter.value) return props.tasks;
+    let list = props.tasks;
 
-    return props.tasks.filter((task) => taskOwners(task).some((owner) => {
-        if (filter.value.type === 'category') return owner.category === filter.value.value;
-        if (filter.value.type === 'person') return owner.value === filter.value.value;
+    if (filter.value) {
+        list = list.filter((task) => taskOwners(task).some((owner) => {
+            if (filter.value.type === 'category') return owner.category === filter.value.value;
+            if (filter.value.type === 'person') return owner.value === filter.value.value;
 
-        return owner.org === filter.value.value;
-    }));
+            return owner.org === filter.value.value;
+        }));
+    }
+
+    if (statusFilter.value === 'done') {
+        list = list.filter((task) => isTaskDone(task));
+    } else if (statusFilter.value === 'pending') {
+        list = list.filter((task) => isTaskPending(task));
+    } else if (statusFilter.value === 'overdue') {
+        list = list.filter((task) => isTaskOverdue(task));
+    }
+
+    return list;
 });
 
 /** Олон мөр сонгоод нэг дор мэдээлэл оруулах */
@@ -716,6 +758,7 @@ watch(
         clearSelection();
         resetBulkForm();
         viewMode.value = 'table';
+        statusFilter.value = null;
     },
 );
 
@@ -1272,6 +1315,13 @@ const prepTableMinWidth = computed(() => {
                         </svg>
                         <b class="text-orange-600">{{ overall.pending }}</b>
                     </span>
+                    <span class="inline-flex items-center gap-0.5">
+                        Хугацаа хэтэрсэн
+                        <svg class="h-3.5 w-3.5 text-red-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M12 3.2L2.5 19.5A1.2 1.2 0 003.55 21.2h16.9a1.2 1.2 0 001.05-1.7L12 3.2zm0 5.3c.55 0 1 .4 1 .95v4.6c0 .55-.45 1-1 1s-1-.45-1-1v-4.6c0-.55.45-.95 1-.95zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z" />
+                        </svg>
+                        <b class="text-red-600">{{ overall.overdue }}</b>
+                    </span>
                 </span>
             </button>
 
@@ -1296,6 +1346,57 @@ const prepTableMinWidth = computed(() => {
                         Цаглалт
                     </button>
                 </div>
+
+                <div class="inline-flex flex-wrap rounded-xl border border-slate-200 bg-white p-0.5 shadow-soft">
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition"
+                        :class="statusFilter === 'done'
+                            ? 'bg-emerald-600 text-white'
+                            : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-700'"
+                        @click="toggleStatusFilter('done')"
+                    >
+                        Дууссан
+                        <span
+                            class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
+                            :class="statusFilter === 'done' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'"
+                        >
+                            {{ overall.done }}
+                        </span>
+                    </button>
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition"
+                        :class="statusFilter === 'pending'
+                            ? 'bg-orange-500 text-white'
+                            : 'text-slate-600 hover:bg-orange-50 hover:text-orange-700'"
+                        @click="toggleStatusFilter('pending')"
+                    >
+                        Эхлээгүй
+                        <span
+                            class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
+                            :class="statusFilter === 'pending' ? 'bg-white/20 text-white' : 'bg-orange-50 text-orange-700'"
+                        >
+                            {{ overall.pending }}
+                        </span>
+                    </button>
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition"
+                        :class="statusFilter === 'overdue'
+                            ? 'bg-red-600 text-white'
+                            : 'text-slate-600 hover:bg-red-50 hover:text-red-700'"
+                        @click="toggleStatusFilter('overdue')"
+                    >
+                        Хугацаа хэтэрсэн
+                        <span
+                            class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
+                            :class="statusFilter === 'overdue' ? 'bg-white/20 text-white' : 'bg-red-50 text-red-700'"
+                        >
+                            {{ overall.overdue }}
+                        </span>
+                    </button>
+                </div>
             </div>
 
             <!-- Цаглалт / төлөвлөгөө -->
@@ -1306,11 +1407,15 @@ const prepTableMinWidth = computed(() => {
             />
 
             <!-- Идэвхтэй шүүлт -->
-            <div v-if="filter" class="flex flex-wrap items-center gap-2 text-sm">
-                <span class="text-slate-500">Шүүлт:</span>
-                <span class="inline-flex items-center gap-2 rounded-full bg-brand-navy-600 px-3 py-1 font-medium text-white">
+            <div v-if="filter || statusFilter" class="flex flex-wrap items-center gap-2 text-sm">
+                <span v-if="filter || statusFilter" class="text-slate-500">Шүүлт:</span>
+                <span v-if="filter" class="inline-flex items-center gap-2 rounded-full bg-brand-navy-600 px-3 py-1 font-medium text-white">
                     {{ filter.label }}
                     <button type="button" class="text-white/80 hover:text-white" @click="clearFilter">✕</button>
+                </span>
+                <span v-if="statusFilter" class="inline-flex items-center gap-2 rounded-full bg-slate-700 px-3 py-1 font-medium text-white">
+                    {{ statusFilterLabel }}
+                    <button type="button" class="text-white/80 hover:text-white" @click="clearStatusFilter">✕</button>
                 </span>
                 <span class="text-slate-500">{{ visibleTasks.length }} үүрэг чиглэл</span>
             </div>
@@ -1551,7 +1656,7 @@ const prepTableMinWidth = computed(() => {
                         </tr>
                         <tr v-if="!visibleTasks.length">
                             <td :colspan="canEdit ? 9 : 7" class="!py-14 text-center text-slate-400">
-                                {{ filter ? 'Энэ шүүлтэд тохирох үүрэг чиглэл алга.' : 'Одоогоор мөр алга. «Мөр нэмэх» дарж эхлүүлнэ үү.' }}
+                                {{ emptyTasksMessage }}
                             </td>
                         </tr>
                     </tbody>
@@ -1705,7 +1810,7 @@ const prepTableMinWidth = computed(() => {
                         </tr>
                         <tr v-if="!visibleTasks.length">
                             <td :colspan="canEdit ? 10 : 8" class="!py-14 text-center text-slate-400">
-                                {{ filter ? 'Энэ шүүлтэд тохирох үүрэг чиглэл алга.' : 'Одоогоор мөр алга. «Мөр нэмэх» дарж эхлүүлнэ үү.' }}
+                                {{ emptyTasksMessage }}
                             </td>
                         </tr>
                     </tbody>
