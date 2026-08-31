@@ -109,6 +109,34 @@ const navSections = computed(() => {
     return [...rest, ...dashboard];
 });
 
+const sidebarBlocks = computed(() => {
+    const blocks = [...navSections.value];
+
+    if (! linkedSystems.value.length) {
+        return blocks;
+    }
+
+    const workIndex = blocks.findIndex((block) => block.group.key === 'work');
+    if (workIndex >= 0) {
+        blocks.splice(workIndex + 1, 0, { type: 'linked-systems' });
+
+        return blocks;
+    }
+
+    const knowledgeIndex = blocks.findIndex((block) => block.group.key === 'knowledge');
+    const insertAt = knowledgeIndex >= 0
+        ? knowledgeIndex
+        : blocks.findIndex((block) => block.group.key === 'dashboard');
+
+    if (insertAt >= 0) {
+        blocks.splice(insertAt, 0, { type: 'linked-systems' });
+    } else {
+        blocks.push({ type: 'linked-systems' });
+    }
+
+    return blocks;
+});
+
 const vaultUnlocked = computed(() => page.props.vault?.unlocked ?? false);
 const vaultModal = ref(false);
 const vaultBusy = ref(false);
@@ -208,72 +236,73 @@ const isLinkedSystemCurrent = (id) => {
                 class="flex-1 space-y-0.5 overflow-y-auto p-3"
                 :class="sidebarCollapsed ? 'lg:px-2' : ''"
             >
-                <template v-if="linkedSystems.length">
-                    <div
-                        class="ui-section-label"
-                        :class="sidebarCollapsed ? 'lg:mx-auto lg:!mt-3 lg:h-px lg:w-6 lg:overflow-hidden lg:bg-slate-200 lg:p-0 lg:text-[0px]' : ''"
-                    >
-                        Холбосон системүүд
-                    </div>
-                    <Link
-                        v-for="sys in linkedSystems"
-                        :key="'sys-'+sys.id"
-                        :href="route('systems.show', sys.id)"
-                        class="ui-nav-link relative"
-                        :class="[
-                            isLinkedSystemCurrent(sys.id) ? 'ui-nav-link-active' : '',
-                            sidebarCollapsed ? 'lg:justify-center lg:px-0' : '',
-                        ]"
-                        @mouseenter="showNavTip($event, sys.name)"
-                        @mouseleave="hideNavTip"
-                        @focus="showNavTip($event, sys.name)"
-                        @blur="hideNavTip"
-                    >
-                        <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                            <path :d="iconPaths.globe" />
-                        </svg>
-                        <span class="min-w-0 flex-1 truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ sys.name }}</span>
-                    </Link>
-                </template>
-
-                <template v-for="section in navSections" :key="section.group.key">
-                    <div
-                        class="ui-section-label"
-                        :class="sidebarCollapsed ? 'lg:mx-auto lg:!mt-3 lg:h-px lg:w-6 lg:overflow-hidden lg:bg-slate-200 lg:p-0 lg:text-[0px]' : ''"
-                    >
-                        {{ section.group.label }}
-                    </div>
-                    <Link
-                        v-for="item in section.group.items"
-                        :key="item.key"
-                        :href="route(item.route)"
-                        class="ui-nav-link relative"
-                        :class="[
-                            isCurrent(item.route) ? 'ui-nav-link-active' : '',
-                            sidebarCollapsed ? 'lg:justify-center lg:px-0' : '',
-                        ]"
-                        @mouseenter="showNavTip($event, item.label + (badgeFor(item.key) ? ` (${badgeFor(item.key)})` : ''))"
-                        @mouseleave="hideNavTip"
-                        @focus="showNavTip($event, item.label + (badgeFor(item.key) ? ` (${badgeFor(item.key)})` : ''))"
-                        @blur="hideNavTip"
-                    >
-                        <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                            <path :d="iconPaths[item.icon] || iconPaths.clipboard" />
-                        </svg>
-                        <span class="min-w-0 flex-1 truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ item.label }}</span>
-                        <span
-                            v-if="badgeFor(item.key)"
-                            class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none tabular-nums"
-                            :class="[
-                                isCurrent(item.route)
-                                    ? 'bg-white/25 text-white'
-                                    : 'bg-brand-orange-500 text-white',
-                                sidebarCollapsed ? 'lg:absolute lg:right-1 lg:top-1 lg:min-w-[1.1rem] lg:px-1 lg:text-center' : '',
-                            ]"
+                <template v-for="block in sidebarBlocks" :key="block.type === 'linked-systems' ? 'linked-systems' : block.group.key">
+                    <template v-if="block.type === 'linked-systems'">
+                        <div
+                            class="ui-section-label"
+                            :class="sidebarCollapsed ? 'lg:mx-auto lg:!mt-3 lg:h-px lg:w-6 lg:overflow-hidden lg:bg-slate-200 lg:p-0 lg:text-[0px]' : ''"
                         >
-                            {{ badgeLabel(badgeFor(item.key)) }}
-                        </span>
-                    </Link>
+                            Холбосон системүүд
+                        </div>
+                        <Link
+                            v-for="sys in linkedSystems"
+                            :key="'sys-'+sys.id"
+                            :href="route('systems.show', sys.id)"
+                            class="ui-nav-link relative"
+                            :class="[
+                                isLinkedSystemCurrent(sys.id) ? 'ui-nav-link-active' : '',
+                                sidebarCollapsed ? 'lg:justify-center lg:px-0' : '',
+                            ]"
+                            @mouseenter="showNavTip($event, sys.name)"
+                            @mouseleave="hideNavTip"
+                            @focus="showNavTip($event, sys.name)"
+                            @blur="hideNavTip"
+                        >
+                            <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                <path :d="iconPaths.globe" />
+                            </svg>
+                            <span class="min-w-0 flex-1 truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ sys.name }}</span>
+                        </Link>
+                    </template>
+                    <template v-else>
+                        <div
+                            class="ui-section-label"
+                            :class="sidebarCollapsed ? 'lg:mx-auto lg:!mt-3 lg:h-px lg:w-6 lg:overflow-hidden lg:bg-slate-200 lg:p-0 lg:text-[0px]' : ''"
+                        >
+                            {{ block.group.label }}
+                        </div>
+                        <Link
+                            v-for="item in block.group.items"
+                            :key="item.key"
+                            :href="route(item.route)"
+                            class="ui-nav-link relative"
+                            :class="[
+                                isCurrent(item.route) ? 'ui-nav-link-active' : '',
+                                sidebarCollapsed ? 'lg:justify-center lg:px-0' : '',
+                            ]"
+                            @mouseenter="showNavTip($event, item.label + (badgeFor(item.key) ? ` (${badgeFor(item.key)})` : ''))"
+                            @mouseleave="hideNavTip"
+                            @focus="showNavTip($event, item.label + (badgeFor(item.key) ? ` (${badgeFor(item.key)})` : ''))"
+                            @blur="hideNavTip"
+                        >
+                            <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                <path :d="iconPaths[item.icon] || iconPaths.clipboard" />
+                            </svg>
+                            <span class="min-w-0 flex-1 truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ item.label }}</span>
+                            <span
+                                v-if="badgeFor(item.key)"
+                                class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none tabular-nums"
+                                :class="[
+                                    isCurrent(item.route)
+                                        ? 'bg-white/25 text-white'
+                                        : 'bg-brand-orange-500 text-white',
+                                    sidebarCollapsed ? 'lg:absolute lg:right-1 lg:top-1 lg:min-w-[1.1rem] lg:px-1 lg:text-center' : '',
+                                ]"
+                            >
+                                {{ badgeLabel(badgeFor(item.key)) }}
+                            </span>
+                        </Link>
+                    </template>
                 </template>
             </nav>
 
