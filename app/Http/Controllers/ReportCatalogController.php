@@ -21,6 +21,8 @@ class ReportCatalogController extends Controller
             'title' => $config['title'] ?? 'Тайлан мэдээлэл',
             'subtitle' => $config['subtitle'] ?? null,
             'navigation' => ReportsCatalog::navigationTree(),
+            'dashboard' => ReportsCatalog::dashboard(),
+            'sources' => ReportsCatalog::sources(),
             'canManage' => ModuleAccess::canManage($request->user(), 'reports'),
         ]);
     }
@@ -38,16 +40,22 @@ class ReportCatalogController extends Controller
 
         return Inertia::render('Modules/Reports/Show', [
             'title' => $config['title'] ?? 'Тайлан мэдээлэл',
+            'period' => $config['period'] ?? null,
             'report' => [
                 'key' => $item['key'],
                 'number' => $item['number'] ?? null,
                 'label' => $item['label'],
                 'template' => $item['template'] ?? 'policy_tracking',
+                'template_label' => $item['template_label'] ?? null,
                 'department' => $item['department'] ?? null,
                 'section_key' => $item['section_key'] ?? null,
                 'section_label' => $item['section_label'] ?? null,
+                'section_number' => $item['section_number'] ?? null,
                 'columns' => $item['columns'] ?? [],
                 'description' => $item['description'] ?? null,
+                'source_file' => $item['source_file'] ?? null,
+                'measures' => $item['measures'] ?? null,
+                'progress' => $item['progress'] ?? null,
             ],
             'navigation' => ReportsCatalog::navigationTree(),
             'canManage' => ModuleAccess::canManage($request->user(), 'reports'),

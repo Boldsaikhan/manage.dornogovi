@@ -30,6 +30,19 @@ class ReportsCatalog
     /**
      * @return array<string, array<string, mixed>>
      */
+    public static function templates(): array
+    {
+        return self::config()['templates'] ?? [];
+    }
+
+    public static function template(string $key): ?array
+    {
+        return self::templates()[$key] ?? null;
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
     public static function flatReports(): array
     {
         $flat = [];
@@ -38,6 +51,7 @@ class ReportsCatalog
             self::walkReports($section['reports'] ?? [], $flat, [
                 'section_key' => $section['key'] ?? '',
                 'section_label' => $section['label'] ?? '',
+                'section_number' => $section['number'] ?? null,
             ]);
         }
 
@@ -46,7 +60,37 @@ class ReportsCatalog
 
     public static function find(string $key): ?array
     {
-        return self::flatReports()[$key] ?? null;
+        $item = self::flatReports()[$key] ?? null;
+
+        return $item ? self::enrichReport($item) : null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function dashboard(): array
+    {
+        $config = self::config();
+        $dash = $config['dashboard'] ?? [];
+
+        return [
+            'period' => $config['period'] ?? null,
+            'as_of' => $config['as_of'] ?? null,
+            'kpis' => $dash['kpis'] ?? [],
+            'sections' => $dash['sections'] ?? [],
+            'departments' => $dash['departments'] ?? [],
+            'official_assignments' => $dash['official_assignments'] ?? [],
+            'report_count' => count(self::flatReports()),
+            'source_count' => count($config['sources'] ?? []),
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public static function sources(): array
+    {
+        return self::config()['sources'] ?? [];
     }
 
     /**
@@ -70,9 +114,25 @@ class ReportsCatalog
     }
 
     /**
+     * @param  array<string, mixed>  $report
+     * @return array<string, mixed>
+     */
+    public static function enrichReport(array $report): array
+    {
+        $templateKey = $report['template'] ?? 'policy_tracking';
+        $template = self::template($templateKey);
+
+        $report['template'] = $templateKey;
+        $report['template_label'] = $template['label'] ?? $templateKey;
+        $report['columns'] = $template['columns'] ?? [];
+
+        return $report;
+    }
+
+    /**
      * @param  array<int, array<string, mixed>>  $reports
      * @param  array<string, array<string, mixed>>  $flat
-     * @param  array<string, string>  $meta
+     * @param  array<string, string|null>  $meta
      */
     private static function walkReports(array $reports, array &$flat, array $meta): void
     {
@@ -100,6 +160,7 @@ class ReportsCatalog
                 'label' => $report['label'] ?? '',
                 'template' => $report['template'] ?? null,
                 'department' => $report['department'] ?? null,
+                'source_file' => $report['source_file'] ?? null,
                 'children' => self::mapNavReports($report['children'] ?? []),
             ];
         }, $reports);
