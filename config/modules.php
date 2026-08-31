@@ -68,6 +68,8 @@ return [
             'route' => 'regulations.index',
             'group' => 'documents',
             'icon' => 'book',
+            // Харах (хамааралтай) = бүх журам үзнэ; оруулах/удирдах хамааралтай = зөвхөн өөрийн оруулсан.
+            'own_scope' => 'public_read_own_write',
         ],
         [
             'key' => 'decrees',

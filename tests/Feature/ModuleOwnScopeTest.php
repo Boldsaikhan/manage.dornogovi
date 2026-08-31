@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Leave;
+use App\Models\Regulation;
+use App\Models\RolePermission;
 use App\Models\User;
 use App\Models\UserModulePermission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -71,10 +73,10 @@ class ModuleOwnScopeTest extends TestCase
             ->where('module_key', 'tasks')
             ->value('level'));
 
-        $this->assertDatabaseMissing('user_module_permissions', [
-            'user_id' => $user->id,
-            'module_key' => 'regulations',
-        ]);
+        $this->assertSame('view_own', UserModulePermission::query()
+            ->where('user_id', $user->id)
+            ->where('module_key', 'regulations')
+            ->value('level'));
     }
 
     public function test_role_template_accepts_own_scope_levels(): void
@@ -83,13 +85,17 @@ class ModuleOwnScopeTest extends TestCase
 
         $this->actingAs($admin)
             ->patch(route('admin.roles.update', 'specialist'), [
-                'permissions' => ['tasks' => 'manage_own', 'leaves' => 'view_own'],
+                'permissions' => ['tasks' => 'manage_own', 'leaves' => 'view_own', 'regulations' => 'view_own'],
             ])
             ->assertRedirect();
 
         $this->assertSame('manage_own', \App\Models\RolePermission::query()
             ->where('role', 'specialist')
             ->where('module_key', 'tasks')
+            ->value('level'));
+        $this->assertSame('view_own', \App\Models\RolePermission::query()
+            ->where('role', 'specialist')
+            ->where('module_key', 'regulations')
             ->value('level'));
     }
 
@@ -105,5 +111,36 @@ class ModuleOwnScopeTest extends TestCase
         $this->actingAs($user)
             ->get(route('tasks.index'))
             ->assertOk();
+    }
+
+    public function test_specialist_with_regulations_view_own_sees_all_documents(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $specialist = User::factory()->create([
+            'is_admin' => false,
+            'is_specialist' => true,
+            'is_department_head' => false,
+        ]);
+
+        RolePermission::replaceFor('specialist', ['regulations' => 'view_own']);
+        UserModulePermission::create([
+            'user_id' => $specialist->id,
+            'module_key' => 'regulations',
+            'level' => 'view_own',
+        ]);
+
+        Regulation::create([
+            'title' => 'Кибер аюулгүй байдлын журам',
+            'category' => 'cyber_security',
+            'created_by' => $admin->id,
+            'published_at' => now(),
+        ]);
+
+        $this->actingAs($specialist)
+            ->get(route('regulations.index', ['scope' => 'cyber_security']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('rows', 1)
+                ->where('rows.0.title', 'Кибер аюулгүй байдлын журам'));
     }
 }

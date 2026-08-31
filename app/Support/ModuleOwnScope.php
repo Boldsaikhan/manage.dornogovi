@@ -33,6 +33,7 @@ class ModuleOwnScope
         return match ($type) {
             'user_id' => $builder->where('user_id', $user->id),
             'created_by' => $builder->where('created_by', $user->id),
+            'public_read_own_write' => self::applyPublicReadOwnWrite($builder, $user, $moduleKey),
             'lead_user_id' => $builder->where('lead_user_id', $user->id),
             'person_name' => self::applyPersonNameScope($builder, $user, 'person_name'),
             'award_person' => self::applyAwardPersonScope($builder, $user),
@@ -56,6 +57,7 @@ class ModuleOwnScope
         return match ($type) {
             'user_id' => (int) $record->user_id === (int) $user->id,
             'created_by' => (int) $record->created_by === (int) $user->id,
+            'public_read_own_write' => self::allowsPublicReadOwnWrite($user, $moduleKey, $record),
             'lead_user_id' => (int) $record->lead_user_id === (int) $user->id,
             'person_name' => PersonName::matchesUser($user, $record->person_name ?? null),
             'award_person' => $record instanceof Award && self::awardMatchesUser($user, $record),
@@ -99,6 +101,27 @@ class ModuleOwnScope
         };
 
         abort_unless($allowed, 403, 'Зөвхөн өөрт хамааралтай бүртгэл үүсгэнэ.');
+    }
+
+    /**
+     * Журам гэх мэт: харах нь бүгдийг, оруулах/удирдах нь зөвхөн өөрийнх.
+     */
+    private static function applyPublicReadOwnWrite(Builder $query, User $user, string $moduleKey): Builder
+    {
+        if (ModuleAccess::level($user, $moduleKey) === 'view_own') {
+            return $query;
+        }
+
+        return $query->where('created_by', $user->id);
+    }
+
+    private static function allowsPublicReadOwnWrite(User $user, string $moduleKey, Model $record): bool
+    {
+        if (ModuleAccess::level($user, $moduleKey) === 'view_own') {
+            return true;
+        }
+
+        return (int) ($record->created_by ?? 0) === (int) $user->id;
     }
 
     private static function applyPersonNameScope(Builder $query, User $user, string $column): Builder

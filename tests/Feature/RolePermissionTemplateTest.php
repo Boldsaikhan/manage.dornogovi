@@ -150,4 +150,46 @@ class RolePermissionTemplateTest extends TestCase
             ->where('level', 'view_own')
             ->count());
     }
+
+    public function test_regulations_own_scope_saves_and_syncs_to_specialists(): void
+    {
+        $admin = $this->admin();
+        $specialist = User::factory()->create([
+            'is_admin' => false,
+            'is_specialist' => true,
+            'is_department_head' => false,
+        ]);
+
+        UserModulePermission::create([
+            'user_id' => $specialist->id,
+            'module_key' => 'regulations',
+            'level' => 'view',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.roles.update', 'specialist'), [
+                'permissions' => ['regulations' => 'view_own', 'tasks' => 'manage_own'],
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertSame('view_own', RolePermission::query()
+            ->where('role', 'specialist')
+            ->where('module_key', 'regulations')
+            ->value('level'));
+        $this->assertSame('view_own', UserModulePermission::query()
+            ->where('user_id', $specialist->id)
+            ->where('module_key', 'regulations')
+            ->value('level'));
+
+        $this->actingAs($admin)
+            ->get(route('admin.users.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('rolePermissions.specialist.regulations', 'view_own')
+                ->where('users', fn ($users) => collect($users)->contains(
+                    fn ($u) => (int) $u['id'] === $specialist->id
+                        && ($u['permissions']['regulations'] ?? null) === 'view_own'
+                )));
+    }
 }

@@ -186,16 +186,20 @@ class ModuleAccess
 
         $count = 0;
         foreach ($query->get() as $user) {
-            UserModulePermission::query()->where('user_id', $user->id)->delete();
+            try {
+                UserModulePermission::query()->where('user_id', $user->id)->delete();
 
-            foreach ($desired as $module => $level) {
-                UserModulePermission::query()->create([
-                    'user_id' => $user->id,
-                    'module_key' => $module,
-                    'level' => $level,
-                ]);
+                foreach ($desired as $module => $level) {
+                    UserModulePermission::query()->create([
+                        'user_id' => $user->id,
+                        'module_key' => $module,
+                        'level' => $level,
+                    ]);
+                }
+                $count++;
+            } catch (\Throwable $e) {
+                report($e);
             }
-            $count++;
         }
 
         return $count;

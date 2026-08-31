@@ -47,9 +47,7 @@ class UserAccessController extends Controller
                 'position' => $u->position,
                 'is_department_head' => (bool) $u->is_department_head,
                 'is_specialist' => (bool) $u->is_specialist,
-                'permissions' => $u->modulePermissions
-                    ->mapWithKeys(fn (UserModulePermission $p) => [$p->module_key => $p->level])
-                    ->all(),
+                'permissions' => $this->effectivePermissions($u),
             ]);
 
         return Inertia::render('Admin/UserAccess', [
@@ -437,6 +435,37 @@ class UserAccessController extends Controller
             ->filter(fn ($level, $key) => is_string($key) && $key !== '' && $key !== '__none__')
             ->filter(fn ($level) => is_string($level) && in_array($level, ModuleAccess::LEVELS, true))
             ->all();
+    }
+
+    /**
+     * Загвар + хэрэглэгчийн мөрийг нэгтгэсэн эрх — жагсаалт/засварт бодит хандалт харагдана.
+     *
+     * @return array<string, string>
+     */
+    private function effectivePermissions(User $user): array
+    {
+        $stored = $user->modulePermissions
+            ->mapWithKeys(fn (UserModulePermission $p) => [$p->module_key => $p->level])
+            ->all();
+
+        if ($user->is_admin) {
+            return $stored;
+        }
+
+        $out = [];
+        foreach (ModuleAccess::definitions() as $item) {
+            $key = $item['key'] ?? null;
+            if (! is_string($key) || $key === 'systems') {
+                continue;
+            }
+
+            $level = ModuleAccess::level($user, $key);
+            if (is_string($level) && $level !== '') {
+                $out[$key] = $level;
+            }
+        }
+
+        return $out;
     }
 
     private function levelLabel(?string $level): string
