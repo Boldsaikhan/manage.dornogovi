@@ -139,11 +139,20 @@
         overflow-y: hidden;
         scrollbar-gutter: stable;
         -webkit-overflow-scrolling: touch;
-        min-height: 14px;
+        min-height: 16px;
+        max-height: 16px;
     }
 
     .ui-table-hscroll-track {
         height: 1px;
+    }
+
+    .ui-page--tasks-table {
+        @apply flex min-h-[calc(100dvh-6.5rem)] flex-col gap-5;
+    }
+
+    .ui-tasks-table-shell {
+        @apply flex min-h-0 flex-1 flex-col gap-2;
     }
 
     .ui-table-hscroll::-webkit-scrollbar {

@@ -636,6 +636,26 @@ const visibleTasks = computed(() => {
     return list;
 });
 
+const TASK_BATCH = 30;
+const renderLimit = ref(TASK_BATCH);
+
+const resetRenderLimit = () => {
+    renderLimit.value = TASK_BATCH;
+};
+
+const loadMoreTasks = () => {
+    if (renderLimit.value >= visibleTasks.value.length) {
+        return;
+    }
+
+    renderLimit.value = Math.min(renderLimit.value + TASK_BATCH, visibleTasks.value.length);
+};
+
+const tableTasks = computed(() => visibleTasks.value.slice(0, renderLimit.value));
+const hasMoreTasks = computed(() => renderLimit.value < visibleTasks.value.length);
+
+watch([visibleTasks, () => props.kind, statusFilter, filter], resetRenderLimit, { deep: true });
+
 /** Олон мөр сонгоод нэг дор мэдээлэл оруулах */
 const selectedIds = ref([]);
 const bulkSaving = ref(false);
@@ -961,7 +981,7 @@ const prepTableMinWidth = computed(() => {
     <Head :title="source.name" />
 
     <AuthenticatedLayout :title="source.name">
-        <div class="ui-page">
+        <div class="ui-page" :class="viewMode === 'table' ? 'ui-page--tasks-table' : ''">
             <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
                 <div class="min-w-0">
                     <h2 class="ui-title">Үүрэг даалгавар</h2>
@@ -1386,6 +1406,7 @@ const prepTableMinWidth = computed(() => {
                 @focus-task="focusTaskRow"
             />
 
+            <div v-if="viewMode === 'table'" class="ui-tasks-table-shell">
             <!-- Идэвхтэй шүүлт -->
             <div v-if="filter || statusFilter" class="flex flex-wrap items-center gap-2 text-sm">
                 <span v-if="filter || statusFilter" class="text-slate-500">Шүүлт:</span>
@@ -1501,10 +1522,15 @@ const prepTableMinWidth = computed(() => {
 
             <!-- Үүрэг чиглэл — доод талын хэвтээ гүйлгэх хэсэг үргэлж харагдана -->
             <TableScrollViewport
-                v-if="isDirective && viewMode === 'table'"
+                v-if="isDirective"
+                fill
                 :measure-key="directiveTableMinWidth"
+                @near-bottom="loadMoreTasks"
             >
-                <div :style="{ width: `${directiveTableMinWidth}px` }">
+                <div
+                    class="inline-block shrink-0 align-top"
+                    :style="{ width: `${directiveTableMinWidth}px`, minWidth: `${directiveTableMinWidth}px` }"
+                >
                 <table
                     class="ui-table table-fixed w-full"
                 >
@@ -1543,7 +1569,7 @@ const prepTableMinWidth = computed(() => {
                     </thead>
                     <tbody>
                         <tr
-                            v-for="task in visibleTasks"
+                            v-for="task in tableTasks"
                             :id="'task-row-' + task.id"
                             :key="task.id"
                             :class="isSelected(task.id) || highlightedTaskId === task.id ? 'bg-brand-navy-50/70' : ''"
@@ -1640,6 +1666,11 @@ const prepTableMinWidth = computed(() => {
                                 {{ emptyTasksMessage }}
                             </td>
                         </tr>
+                        <tr v-else-if="hasMoreTasks">
+                            <td :colspan="canEdit ? 9 : 7" class="!py-3 text-center text-xs text-slate-400">
+                                Дараах {{ visibleTasks.length - renderLimit }} мөр — доош гүйлгэнэ үү
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
                 </div>
@@ -1647,10 +1678,15 @@ const prepTableMinWidth = computed(() => {
 
             <!-- Бэлтгэл ажил хангах төлөвлөгөө -->
             <TableScrollViewport
-                v-else-if="viewMode === 'table'"
+                v-else
+                fill
                 :measure-key="prepTableMinWidth"
+                @near-bottom="loadMoreTasks"
             >
-                <div :style="{ width: `${prepTableMinWidth}px` }">
+                <div
+                    class="inline-block shrink-0 align-top"
+                    :style="{ width: `${prepTableMinWidth}px`, minWidth: `${prepTableMinWidth}px` }"
+                >
                 <table
                     class="ui-table table-fixed w-full"
                 >
@@ -1691,7 +1727,7 @@ const prepTableMinWidth = computed(() => {
                     </thead>
                     <tbody>
                         <tr
-                            v-for="task in visibleTasks"
+                            v-for="task in tableTasks"
                             :id="'task-row-' + task.id"
                             :key="task.id"
                             :class="isSelected(task.id) || highlightedTaskId === task.id ? 'bg-brand-navy-50/70' : ''"
@@ -1796,10 +1832,16 @@ const prepTableMinWidth = computed(() => {
                                 {{ emptyTasksMessage }}
                             </td>
                         </tr>
+                        <tr v-else-if="hasMoreTasks">
+                            <td :colspan="canEdit ? 10 : 8" class="!py-3 text-center text-xs text-slate-400">
+                                Дараах {{ visibleTasks.length - renderLimit }} мөр — доош гүйлгэнэ үү
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
                 </div>
             </TableScrollViewport>
+            </div>
         </div>
 
         <!-- Дэлгэц дүүрэн график дашбоард -->
