@@ -47,7 +47,7 @@ class ModuleMenuVisibilityTest extends TestCase
 
         $this->actingAs($admin)
             ->patch(route('admin.menu-settings.update'), ['enabled' => $enabled])
-            ->assertRedirect();
+            ->assertRedirect(route('admin.systems.index', ['tab' => 'menus']));
 
         $this->assertContains('leaves', ModuleVisibility::disabledKeys());
         $this->assertTrue(ModuleVisibility::isEnabled('tasks'));
@@ -84,7 +84,7 @@ class ModuleMenuVisibilityTest extends TestCase
                 'group_order' => $groupOrder,
                 'item_order' => $itemOrder,
             ])
-            ->assertRedirect();
+            ->assertRedirect(route('admin.systems.index', ['tab' => 'menus']));
 
         $this->actingAs($admin)
             ->get(route('dept.dashboard'))
@@ -93,6 +93,31 @@ class ModuleMenuVisibilityTest extends TestCase
                 ->where('moduleNav.0.key', 'work')
                 ->where('moduleNav.0.items.0.key', 'work_groups')
                 ->where('moduleNav.1.key', 'documents')
+            );
+    }
+
+    public function test_admin_menu_groups_reflect_saved_order(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $enabled = ModuleAccess::definitions()
+            ->mapWithKeys(fn (array $item) => [$item['key'] => true])
+            ->all();
+
+        $itemOrder = ModuleOrder::itemKeys();
+        $tasksIndex = array_search('tasks', $itemOrder, true);
+        $workGroupsIndex = array_search('work_groups', $itemOrder, true);
+        [$itemOrder[$tasksIndex], $itemOrder[$workGroupsIndex]] = [$itemOrder[$workGroupsIndex], $itemOrder[$tasksIndex]];
+
+        ModuleOrder::setOrder(['work', 'documents', 'hr', 'knowledge', 'admin', 'dashboard'], $itemOrder);
+
+        $this->actingAs($admin)
+            ->get(route('admin.systems.index', ['tab' => 'menus']))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('menuGroups.0.key', 'work')
+                ->where('menuGroups.0.items.0.key', 'work_groups')
+                ->where('menuGroups.1.key', 'documents')
             );
     }
 }

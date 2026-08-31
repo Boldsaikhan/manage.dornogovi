@@ -55,6 +55,7 @@ class SystemSettingsController extends Controller
                 ]),
             'ai' => $aiSettings->forAdmin(),
             'menus' => ModuleVisibility::forAdmin(),
+            'menuGroups' => ModuleVisibility::groupsForAdmin(),
             // AI аль цэсэд ямар эрхтэйг тохируулах жагсаалт.
             'aiModules' => $this->aiModules($aiSettings),
         ]);
@@ -111,11 +112,16 @@ class SystemSettingsController extends Controller
 
         ModuleVisibility::setDisabled($disabled);
 
-        if (isset($data['group_order'], $data['item_order'])) {
-            ModuleOrder::setOrder($data['group_order'], $data['item_order']);
+        if (array_key_exists('group_order', $data) && array_key_exists('item_order', $data)) {
+            ModuleOrder::setOrder(
+                is_array($data['group_order']) ? $data['group_order'] : [],
+                is_array($data['item_order']) ? $data['item_order'] : [],
+            );
         }
 
-        return back()->with('success', 'Цэсийн тохиргоо хадгалагдлаа.');
+        return redirect()
+            ->route('admin.systems.index', ['tab' => 'menus'])
+            ->with('success', 'Цэсийн тохиргоо хадгалагдлаа.');
     }
 
     public function updateAi(Request $request, AiSettings $aiSettings): RedirectResponse

@@ -12,6 +12,7 @@ const props = defineProps({
     employees: { type: Array, default: () => [] },
     ai: Object,
     menus: { type: Array, default: () => [] },
+    menuGroups: { type: Array, default: () => [] },
     aiModules: { type: Array, default: () => [] },
 });
 
@@ -180,29 +181,26 @@ const setAllAccess = (level) => {
     });
 };
 
-const menuEnabled = ref(
-    Object.fromEntries((props.menus ?? []).map((m) => [m.key, m.enabled !== false])),
+const cloneMenuGroups = (groups) => (groups ?? []).map((group) => ({
+    ...group,
+    items: [...(group.items ?? [])],
+}));
+
+const enabledFromGroups = (groups) => Object.fromEntries(
+    (groups ?? []).flatMap((group) => (
+        (group.items ?? []).map((item) => [item.key, item.enabled !== false])
+    )),
 );
 
-const buildMenuGroups = (menus) => {
-    const map = {};
-    for (const item of menus ?? []) {
-        if (!map[item.group]) {
-            map[item.group] = { key: item.group, label: item.group_label, items: [] };
-        }
-        map[item.group].items.push({ ...item });
-    }
-
-    return Object.values(map);
-};
-
-const menuGroups = ref(buildMenuGroups(props.menus));
+const menuEnabled = ref(enabledFromGroups(props.menuGroups));
+const menuGroups = ref(cloneMenuGroups(props.menuGroups));
+const menuSaving = ref(false);
 
 watch(
-    () => props.menus,
-    (menus) => {
-        menuGroups.value = buildMenuGroups(menus);
-        menuEnabled.value = Object.fromEntries((menus ?? []).map((m) => [m.key, m.enabled !== false]));
+    () => props.menuGroups,
+    (groups) => {
+        menuGroups.value = cloneMenuGroups(groups);
+        menuEnabled.value = enabledFromGroups(groups);
     },
 );
 
@@ -237,13 +235,25 @@ const moveMenuItem = (groupIndex, itemIndex, direction) => {
     ));
 };
 
-const menuForm = useForm({ enabled: menuEnabled.value });
+const menuForm = useForm({ enabled: {} });
 
 const saveMenus = () => {
-    menuForm.enabled = { ...menuEnabled.value };
-    menuForm.group_order = menuGroups.value.map((group) => group.key);
-    menuForm.item_order = menuGroups.value.flatMap((group) => group.items.map((item) => item.key));
-    menuForm.patch(route('admin.menu-settings.update'), { preserveScroll: true });
+    menuSaving.value = true;
+    menuForm.clearErrors();
+
+    router.patch(route('admin.menu-settings.update'), {
+        enabled: { ...menuEnabled.value },
+        group_order: menuGroups.value.map((group) => group.key),
+        item_order: menuGroups.value.flatMap((group) => group.items.map((item) => item.key)),
+    }, {
+        preserveScroll: true,
+        onError: (errors) => {
+            Object.assign(menuForm.errors, errors);
+        },
+        onFinish: () => {
+            menuSaving.value = false;
+        },
+    });
 };
 
 const resetForm = () => {
@@ -648,8 +658,8 @@ const saveAi = () => {
                     </div>
                 </div>
 
-                <button type="submit" class="ui-btn-primary" :disabled="menuForm.processing">
-                    Цэсийн тохиргоо хадгалах
+                <button type="submit" class="ui-btn-primary" :disabled="menuSaving">
+                    {{ menuSaving ? 'Хадгалж байна…' : 'Цэсийн тохиргоо хадгалах' }}
                 </button>
             </form>
         </section>

@@ -58,26 +58,59 @@ class ModuleVisibility
     }
 
     /**
-     * Админ UI-д харуулах жагсаалт.
+     * Админ UI-д харуулах жагсаалт (хуучин flat хэлбэр).
      *
      * @return list<array{key: string, label: string, group: string, group_label: string, enabled: bool}>
      */
     public static function forAdmin(): array
     {
-        $groups = config('modules.groups', []);
-        $disabled = self::disabledKeys();
-        $groupOrder = array_flip(ModuleOrder::groupKeys());
-
-        return ModuleOrder::sortDefinitions(ModuleAccess::definitions())
-            ->map(fn (array $item) => [
-                'key' => $item['key'],
-                'label' => $item['label'],
-                'group' => $item['group'],
-                'group_label' => $groups[$item['group']] ?? $item['group'],
-                'enabled' => ! in_array($item['key'], $disabled, true),
-            ])
-            ->sortBy(fn (array $item) => $groupOrder[$item['group']] ?? 9999)
+        return collect(self::groupsForAdmin())
+            ->flatMap(fn (array $group) => $group['items'])
             ->values()
             ->all();
+    }
+
+    /**
+     * Админ UI-д харуулах бүлэглэсэн жагсаалт — хадгалсан дарааллыг яг тусгана.
+     *
+     * @return list<array{key: string, label: string, items: list<array{key: string, label: string, group: string, group_label: string, enabled: bool}>}>
+     */
+    public static function groupsForAdmin(): array
+    {
+        $groups = config('modules.groups', []);
+        $disabled = self::disabledKeys();
+        $definitions = ModuleAccess::definitions()->keyBy('key');
+        $result = [];
+
+        foreach (ModuleOrder::groupKeys() as $groupKey) {
+            $items = [];
+
+            foreach (ModuleOrder::itemKeys() as $itemKey) {
+                $definition = $definitions->get($itemKey);
+                if (! $definition || ($definition['group'] ?? null) !== $groupKey) {
+                    continue;
+                }
+
+                $items[] = [
+                    'key' => $itemKey,
+                    'label' => $definition['label'],
+                    'group' => $groupKey,
+                    'group_label' => $groups[$groupKey] ?? $groupKey,
+                    'enabled' => ! in_array($itemKey, $disabled, true),
+                ];
+            }
+
+            if ($items === []) {
+                continue;
+            }
+
+            $result[] = [
+                'key' => $groupKey,
+                'label' => $groups[$groupKey] ?? $groupKey,
+                'items' => $items,
+            ];
+        }
+
+        return $result;
     }
 }
