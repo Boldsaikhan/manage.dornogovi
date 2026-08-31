@@ -127,10 +127,12 @@
 
     /* Хүснэгт — доод талын хэвтээ гүйлгэх хэсэг үргэлж харагдана */
     .ui-table-scroll-body {
+        overflow-x: hidden;
         scrollbar-gutter: stable;
     }
 
     .ui-table-scroll-body::-webkit-scrollbar:horizontal {
+        display: none;
         height: 0;
     }
 
@@ -164,7 +166,7 @@
     }
 
     html:has(.ui-page--tasks-table) body {
-        @apply h-dvh overflow-hidden;
+        @apply h-dvh overflow-x-hidden overflow-y-hidden;
     }
 
     .ui-table-hscroll::-webkit-scrollbar {

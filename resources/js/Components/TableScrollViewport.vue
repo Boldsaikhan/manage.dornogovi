@@ -54,6 +54,30 @@ const syncFromBar = () => {
     syncing = false;
 };
 
+const onBodyWheel = (e) => {
+    const el = bodyRef.value;
+    if (! el || ! showHBar.value) {
+        return;
+    }
+
+    const deltaX = e.deltaX;
+    const deltaY = e.deltaY;
+
+    if (e.shiftKey && deltaY !== 0) {
+        el.scrollLeft += deltaY;
+        syncFromBody();
+        e.preventDefault();
+
+        return;
+    }
+
+    if (Math.abs(deltaX) > Math.abs(deltaY) && deltaX !== 0) {
+        el.scrollLeft += deltaX;
+        syncFromBody();
+        e.preventDefault();
+    }
+};
+
 const onBodyScroll = () => {
     syncFromBody();
 
@@ -119,8 +143,9 @@ watch(() => props.fill, () => nextTick(measure));
     >
         <div
             ref="bodyRef"
-            class="ui-table-scroll-body min-h-0 flex-1 overflow-auto overscroll-contain"
+            class="ui-table-scroll-body min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain"
             @scroll="onBodyScroll"
+            @wheel="onBodyWheel"
         >
             <slot />
         </div>
