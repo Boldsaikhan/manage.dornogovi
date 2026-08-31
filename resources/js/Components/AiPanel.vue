@@ -7,7 +7,6 @@ const props = defineProps({
     open: { type: Boolean, default: false },
     name: { type: String, default: 'Manage AI' },
     href: { type: String, default: '/ai' },
-    sidebarCollapsed: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['close']);
@@ -110,8 +109,7 @@ const hasMessages = computed(() => messages.value.length > 0);
 
     <aside
         v-show="open"
-        class="fixed inset-y-0 left-0 z-40 flex w-full max-w-md flex-col border-r border-slate-200 bg-white shadow-2xl sm:w-[24rem] lg:max-w-[22rem]"
-        :class="sidebarCollapsed ? 'lg:left-[4.25rem]' : 'lg:left-[17.5rem]'"
+        class="fixed inset-y-0 right-0 z-40 flex w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-2xl sm:w-[24rem] lg:max-w-[22rem]"
     >
         <header class="flex items-center gap-2 border-b border-slate-100 px-4 py-3">
             <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-navy-600 text-white">
