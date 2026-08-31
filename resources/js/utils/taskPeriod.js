@@ -89,6 +89,55 @@ export function parseTaskPeriod(period, referenceYear = new Date().getFullYear()
 }
 
 /**
+ * @param {string|Date} startInput ISO date (YYYY-MM-DD) or Date
+ * @param {string|Date} [endInput]
+ * @returns {string} MM.DD–MM.DD
+ */
+export function formatTaskPeriodMd(startInput, endInput = startInput) {
+    const toParts = (value) => {
+        if (value instanceof Date && ! Number.isNaN(value.getTime())) {
+            return { month: value.getMonth() + 1, day: value.getDate() };
+        }
+
+        const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? '').trim());
+        if (iso) {
+            return { month: +iso[2], day: +iso[3] };
+        }
+
+        return null;
+    };
+
+    const start = toParts(startInput);
+    const end = toParts(endInput);
+    if (! start || ! end) {
+        return '';
+    }
+
+    const pad = (n) => String(n).padStart(2, '0');
+
+    return `${pad(start.month)}.${pad(start.day)}-${pad(end.month)}.${pad(end.day)}`;
+}
+
+/**
+ * @param {string|null|undefined} period
+ * @param {number} [referenceYear]
+ * @returns {{ start: string, end: string }}
+ */
+export function periodToInputRange(period, referenceYear = new Date().getFullYear()) {
+    const parsed = parseTaskPeriod(period, referenceYear);
+    if (! parsed?.start) {
+        return { start: '', end: '' };
+    }
+
+    const end = parsed.end ?? parsed.start;
+
+    return {
+        start: dateKey(parsed.start),
+        end: dateKey(end),
+    };
+}
+
+/**
  * @param {Date} date
  * @returns {string}
  */

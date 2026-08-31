@@ -4,8 +4,10 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import SheetCell from '@/Components/SheetCell.vue';
+import TaskPeriodCell from '@/Components/TaskPeriodCell.vue';
 import TaskCalendar from '@/Components/TaskCalendar.vue';
 import { expandPersonNames, GROUP_LABELS } from '@/utils/soumGovernors';
+import { formatTaskPeriodMd } from '@/utils/taskPeriod';
 
 const props = defineProps({
     kind: { type: String, required: true },
@@ -157,6 +159,24 @@ const addForm = useForm({
     sector: '',
 });
 
+const addPeriodStart = ref('');
+const addPeriodEnd = ref('');
+
+watch([addPeriodStart, addPeriodEnd], ([start, end]) => {
+    if (start && end) {
+        addForm.period = formatTaskPeriodMd(start, end);
+    } else if (start) {
+        addForm.period = formatTaskPeriodMd(start, start);
+    } else {
+        addForm.period = '';
+    }
+});
+
+const resetAddPeriodInputs = () => {
+    addPeriodStart.value = '';
+    addPeriodEnd.value = '';
+};
+
 watch(
     () => props.kind,
     (k) => {
@@ -165,6 +185,7 @@ watch(
         addForm.kind = k;
         addForm.reset('text', 'period', 'responsible', 'collaborator', 'sector');
         addForm.clearErrors();
+        resetAddPeriodInputs();
         showAddForm.value = false;
         closeWordPreview();
         if (fileInput.value) fileInput.value.value = '';
@@ -716,6 +737,7 @@ const submitAddForm = () => {
         onSuccess: () => {
             addForm.reset('text', 'period', 'responsible', 'collaborator', 'sector');
             addForm.clearErrors();
+            resetAddPeriodInputs();
         },
     });
 };
@@ -1093,7 +1115,12 @@ const prepTableMinWidth = computed(() => {
                         </label>
                         <label class="block" :class="isDirective ? 'sm:col-span-2' : ''">
                             <span class="mb-1 block text-xs font-semibold text-slate-600">Хугацаа</span>
-                            <input v-model="addForm.period" type="text" class="ui-input w-full" placeholder="Ж: 08.01–09.30" />
+                            <div class="grid gap-2 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+                                <input v-model="addPeriodStart" type="date" class="ui-input w-full" />
+                                <span class="hidden text-center text-slate-400 sm:block">—</span>
+                                <input v-model="addPeriodEnd" type="date" class="ui-input w-full" :min="addPeriodStart || undefined" />
+                            </div>
+                            <p v-if="addForm.period" class="mt-1 text-xs text-slate-500">{{ addForm.period }}</p>
                         </label>
                     </div>
 
@@ -1454,7 +1481,7 @@ const prepTableMinWidth = computed(() => {
                                 />
                             </td>
                             <td class="ui-sheet-td">
-                                <SheetCell
+                                <TaskPeriodCell
                                     v-if="drafts[task.id]"
                                     v-model="drafts[task.id].period"
                                     :editable="canEdit"
@@ -1609,10 +1636,11 @@ const prepTableMinWidth = computed(() => {
                                 />
                             </td>
                             <td class="ui-sheet-td">
-                                <SheetCell
+                                <TaskPeriodCell
                                     v-if="drafts[task.id]"
                                     v-model="drafts[task.id].period"
                                     :editable="canEdit"
+                                    placeholder="08.01–09.30"
                                     @commit="(v) => saveField(task.id, 'period', v)"
                                 />
                             </td>
