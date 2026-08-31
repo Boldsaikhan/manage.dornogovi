@@ -4,6 +4,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ReportNavTree from '@/Components/Reports/ReportNavTree.vue';
 import ReportSectionTabs from '@/Components/Reports/ReportSectionTabs.vue';
+import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import { findReportSection } from '@/utils/reportsNavigation';
 
 const props = defineProps({
@@ -24,6 +25,62 @@ const sectionNavItems = computed(() => {
     const section = findReportSection(props.navigation, activeSectionKey.value);
 
     return section?.children ?? [];
+});
+
+const defaultColumnWidths = {
+    no: '2.75rem',
+    activity: '11rem',
+    measure: '11rem',
+    period: '4.25rem',
+    source: '3.25rem',
+    budget: '4.5rem',
+    indicator: '7rem',
+    unit: '3.25rem',
+    baseline: '3.25rem',
+    target: '3.75rem',
+    progress: '4rem',
+    percent: '3.25rem',
+    frequency: '4.5rem',
+    report_to: '5rem',
+    department: '4rem',
+    agency: '7rem',
+};
+
+const textWrapKeys = new Set([
+    'activity',
+    'measure',
+    'indicator',
+    'report_to',
+    'department',
+    'agency',
+    'document',
+    'goal',
+    'clause_text',
+    'decision_title',
+    'action_plan',
+]);
+
+const remToPx = (value) => {
+    const match = /^([\d.]+)rem$/.exec(value);
+
+    return match ? Number(match[1]) * 16 : 80;
+};
+
+const columnWidth = (col) => col.width || defaultColumnWidths[col.key] || '5rem';
+
+const tableMinWidth = computed(() => props.report.columns.reduce(
+    (sum, col) => sum + remToPx(columnWidth(col)),
+    0,
+));
+
+const isPinnedColumn = (key) => key === 'no';
+
+const isCenteredColumn = (key) => ['no', 'percent', 'count', 'unit', 'baseline', 'target', 'progress'].includes(key);
+
+const cellClass = (key) => ({
+    'text-center': isCenteredColumn(key),
+    'break-words text-xs leading-snug': textWrapKeys.has(key),
+    'whitespace-nowrap text-xs': ! textWrapKeys.has(key),
 });
 </script>
 
@@ -97,43 +154,66 @@ const sectionNavItems = computed(() => {
                         </p>
                     </div>
 
-                    <div class="overflow-x-auto">
-                        <table class="ui-table min-w-full">
-                            <thead>
-                                <tr>
-                                    <th
+                    <TableScrollViewport
+                        v-if="hasColumns"
+                        class="!rounded-none !border-0 !shadow-none"
+                        max-height="min(70vh, calc(100dvh - 13rem))"
+                        :measure-key="tableMinWidth"
+                    >
+                        <div
+                            class="inline-block shrink-0 align-top"
+                            :style="{ width: `${tableMinWidth}px`, minWidth: `${tableMinWidth}px` }"
+                        >
+                            <table class="ui-table table-fixed w-full text-xs">
+                                <colgroup>
+                                    <col
                                         v-for="col in report.columns"
-                                        :key="col.key"
-                                        class="sticky top-0 bg-brand-navy-50 whitespace-nowrap"
-                                        :style="col.width ? { minWidth: col.width } : undefined"
+                                        :key="`col-${col.key}`"
+                                        :style="{ width: columnWidth(col) }"
+                                    />
+                                </colgroup>
+                                <thead>
+                                    <tr>
+                                        <th
+                                            v-for="col in report.columns"
+                                            :key="col.key"
+                                            class="sticky top-0 z-20 bg-brand-navy-50 px-2 py-2 text-[11px] leading-tight normal-case tracking-normal"
+                                            :class="[
+                                                isPinnedColumn(col.key) ? 'sticky left-0 z-30 bg-brand-navy-50 shadow-[2px_0_6px_-2px_rgba(15,23,42,0.12)]' : '',
+                                                isCenteredColumn(col.key) ? 'text-center' : 'text-left',
+                                            ]"
+                                        >
+                                            {{ col.label }}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-if="!hasRows">
+                                        <td :colspan="report.columns.length || 1" class="!py-10 text-center text-sm text-slate-400">
+                                            Мэдээлэл оруулаагүй — хүснэгтийн бүтэц бэлэн
+                                        </td>
+                                    </tr>
+                                    <tr
+                                        v-for="(row, rowIndex) in report.rows"
+                                        :key="rowIndex"
+                                        class="align-top"
                                     >
-                                        {{ col.label }}
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-if="!hasRows">
-                                    <td :colspan="report.columns.length || 1" class="!py-10 text-center text-sm text-slate-400">
-                                        Мэдээлэл оруулаагүй — хүснэгтийн бүтэц бэлэн
-                                    </td>
-                                </tr>
-                                <tr
-                                    v-for="(row, rowIndex) in report.rows"
-                                    :key="rowIndex"
-                                    class="align-top"
-                                >
-                                    <td
-                                        v-for="col in report.columns"
-                                        :key="col.key"
-                                        class="whitespace-pre-wrap text-sm text-slate-700"
-                                        :class="{ 'text-center': col.key === 'no' || col.key === 'percent' }"
-                                    >
-                                        {{ row[col.key] ?? '' }}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                                        <td
+                                            v-for="col in report.columns"
+                                            :key="col.key"
+                                            class="px-2 py-1.5 text-slate-700"
+                                            :class="[
+                                                cellClass(col.key),
+                                                isPinnedColumn(col.key) ? 'sticky left-0 z-10 bg-inherit font-semibold text-slate-500 shadow-[2px_0_6px_-2px_rgba(15,23,42,0.08)]' : '',
+                                            ]"
+                                        >
+                                            {{ row[col.key] ?? '' }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </TableScrollViewport>
 
                     <div v-if="!hasColumns" class="border-t border-slate-100 px-4 py-6 text-center text-xs text-slate-500">
                         Template тохируулаагүй байна.
