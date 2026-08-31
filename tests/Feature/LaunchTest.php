@@ -44,7 +44,7 @@ class LaunchTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('systems.launch', $system))
-            ->assertStatus(423);
+            ->assertRedirect(route('systems.show', $system));
     }
 
     public function test_unlocking_requires_the_correct_account_password(): void
@@ -144,7 +144,8 @@ class LaunchTest extends TestCase
         $this->actingAs($user);
         $this->withSession([Vault::SESSION_KEY => now()->addHour()->timestamp]);
 
-        $this->get(route('systems.launch', $system))->assertNotFound();
+        $this->get(route('systems.launch', $system))
+            ->assertRedirect(route('systems.show', $system));
     }
 
     public function test_a_user_cannot_launch_with_another_users_credential(): void
@@ -158,7 +159,8 @@ class LaunchTest extends TestCase
         $this->actingAs($other);
         $this->withSession([Vault::SESSION_KEY => now()->addHour()->timestamp]);
 
-        $this->get(route('systems.launch', $system))->assertNotFound();
+        $this->get(route('systems.launch', $system))
+            ->assertRedirect(route('systems.show', $system));
     }
 
     public function test_an_expired_unlock_is_treated_as_locked(): void
@@ -170,7 +172,8 @@ class LaunchTest extends TestCase
         $this->actingAs($user);
         $this->withSession([Vault::SESSION_KEY => now()->subMinute()->timestamp]);
 
-        $this->get(route('systems.launch', $system))->assertStatus(423);
+        $this->get(route('systems.launch', $system))
+            ->assertRedirect(route('systems.show', $system));
     }
 
     public function test_locking_the_vault_blocks_further_launches(): void
@@ -184,7 +187,8 @@ class LaunchTest extends TestCase
         $this->get(route('systems.launch', $system))->assertOk();
 
         $this->postJson(route('vault.lock'))->assertOk();
-        $this->get(route('systems.launch', $system))->assertStatus(423);
+        $this->get(route('systems.launch', $system))
+            ->assertRedirect(route('systems.show', $system));
     }
 
     public function test_guests_cannot_launch_or_unlock(): void

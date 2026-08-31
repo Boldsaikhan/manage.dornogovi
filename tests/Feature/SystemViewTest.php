@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\System;
 use App\Models\User;
+use App\Models\UserCredential;
 use App\Services\EmbedChecker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -37,7 +38,30 @@ class SystemViewTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Systems/View')
                 ->where('target', 'https://shilen.gov.mn/login')
-                ->where('system.is_embeddable', true));
+                ->where('system.is_embeddable', true)
+                ->where('system.requires_login', true)
+                ->where('system.has_credential', false));
+    }
+
+    public function test_viewer_marks_saved_credentials(): void
+    {
+        $user = User::factory()->create();
+        $system = $this->system();
+        $system->viewers()->sync([$user->id]);
+
+        UserCredential::create([
+            'user_id' => $user->id,
+            'system_id' => $system->id,
+            'username_encrypted' => 'bold',
+            'password_encrypted' => 'secret',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('systems.show', $system))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('system.has_credential', true)
+                ->where('system.requires_login', true));
     }
 
     public function test_a_blocked_system_still_renders_with_the_reason(): void
