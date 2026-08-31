@@ -51,4 +51,14 @@ class ModuleMenuVisibilityTest extends TestCase
         $this->assertContains('leaves', ModuleVisibility::disabledKeys());
         $this->assertTrue(ModuleVisibility::isEnabled('tasks'));
     }
+
+    public function test_dashboard_group_is_last_in_sidebar_nav(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $keys = collect(ModuleAccess::navFor($admin))->pluck('key')->all();
+
+        $this->assertContains('dashboard', $keys);
+        $this->assertSame('dashboard', end($keys));
+        $this->assertNotSame('dashboard', $keys[0] ?? null);
+    }
 }

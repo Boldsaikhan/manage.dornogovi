@@ -99,9 +99,13 @@ const iconPaths = {
 
 const user = computed(() => page.props.auth.user);
 const moduleNav = computed(() => page.props.moduleNav ?? []);
-const navSections = computed(() =>
-    moduleNav.value.map((group) => ({ type: 'group', group })),
-);
+const navSections = computed(() => {
+    const groups = moduleNav.value.map((group) => ({ type: 'group', group }));
+    const dashboard = groups.filter((section) => section.group.key === 'dashboard');
+    const rest = groups.filter((section) => section.group.key !== 'dashboard');
+
+    return [...rest, ...dashboard];
+});
 
 const vaultUnlocked = computed(() => page.props.vault?.unlocked ?? false);
 const navBadges = computed(() => page.props.navBadges ?? {});
@@ -180,6 +184,34 @@ const isLinkedSystemCurrent = (id) => {
                 class="flex-1 space-y-0.5 overflow-y-auto p-3"
                 :class="sidebarCollapsed ? 'lg:px-2' : ''"
             >
+                <template v-if="linkedSystems.length">
+                    <div
+                        class="ui-section-label"
+                        :class="sidebarCollapsed ? 'lg:mx-auto lg:!mt-3 lg:h-px lg:w-6 lg:overflow-hidden lg:bg-slate-200 lg:p-0 lg:text-[0px]' : ''"
+                    >
+                        Холбосон системүүд
+                    </div>
+                    <Link
+                        v-for="sys in linkedSystems"
+                        :key="'sys-'+sys.id"
+                        :href="route('systems.show', sys.id)"
+                        class="ui-nav-link relative"
+                        :class="[
+                            isLinkedSystemCurrent(sys.id) ? 'ui-nav-link-active' : '',
+                            sidebarCollapsed ? 'lg:justify-center lg:px-0' : '',
+                        ]"
+                        @mouseenter="showNavTip($event, sys.name)"
+                        @mouseleave="hideNavTip"
+                        @focus="showNavTip($event, sys.name)"
+                        @blur="hideNavTip"
+                    >
+                        <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                            <path :d="iconPaths.globe" />
+                        </svg>
+                        <span class="min-w-0 flex-1 truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ sys.name }}</span>
+                    </Link>
+                </template>
+
                 <template v-for="section in navSections" :key="section.group.key">
                     <div
                         class="ui-section-label"
@@ -217,34 +249,6 @@ const isLinkedSystemCurrent = (id) => {
                         >
                             {{ badgeLabel(badgeFor(item.key)) }}
                         </span>
-                    </Link>
-                </template>
-
-                <template v-if="linkedSystems.length">
-                    <div
-                        class="ui-section-label"
-                        :class="sidebarCollapsed ? 'lg:mx-auto lg:!mt-3 lg:h-px lg:w-6 lg:overflow-hidden lg:bg-slate-200 lg:p-0 lg:text-[0px]' : ''"
-                    >
-                        Холбосон системүүд
-                    </div>
-                    <Link
-                        v-for="sys in linkedSystems"
-                        :key="'sys-'+sys.id"
-                        :href="route('systems.show', sys.id)"
-                        class="ui-nav-link relative"
-                        :class="[
-                            isLinkedSystemCurrent(sys.id) ? 'ui-nav-link-active' : '',
-                            sidebarCollapsed ? 'lg:justify-center lg:px-0' : '',
-                        ]"
-                        @mouseenter="showNavTip($event, sys.name)"
-                        @mouseleave="hideNavTip"
-                        @focus="showNavTip($event, sys.name)"
-                        @blur="hideNavTip"
-                    >
-                        <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                            <path :d="iconPaths.globe" />
-                        </svg>
-                        <span class="min-w-0 flex-1 truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ sys.name }}</span>
                     </Link>
                 </template>
             </nav>

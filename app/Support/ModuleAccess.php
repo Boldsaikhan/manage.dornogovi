@@ -254,6 +254,7 @@ class ModuleAccess
         }
 
         $groups = config('modules.groups', []);
+        $order = array_flip(array_keys($groups));
 
         return self::definitions()
             ->filter(fn (array $item) => self::canView($user, $item['key']))
@@ -265,6 +266,7 @@ class ModuleAccess
                     'items' => $items->values()->all(),
                 ];
             })
+            ->sortBy(fn (array $group) => $order[$group['key']] ?? 1000)
             ->values()
             ->all();
     }
