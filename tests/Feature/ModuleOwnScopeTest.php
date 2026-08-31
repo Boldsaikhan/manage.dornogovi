@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Decree;
+use App\Models\Department;
 use App\Models\Leave;
 use App\Models\Regulation;
 use App\Models\RolePermission;
@@ -257,5 +258,97 @@ class ModuleOwnScopeTest extends TestCase
             ->delete(route('decrees.destroy', $foreign))
             ->assertForbidden();
         $this->assertDatabaseHas('decrees', ['id' => $foreign->id]);
+    }
+
+    public function test_access_page_exposes_dashboard_own_scope_view_only(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.users.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('modules')
+                ->where('modules', fn ($modules) => collect($modules)->contains(fn ($m) => ($m['key'] ?? null) === 'dept_dashboard'
+                    && ($m['own_scope'] ?? false) === true
+                    && ($m['own_levels'] ?? null) === ['view_own'])));
+    }
+
+    public function test_role_template_saves_dashboard_view_own(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.roles.update', 'specialist'), [
+                'permissions' => ['dept_dashboard' => 'view_own'],
+            ])
+            ->assertRedirect();
+
+        $this->assertSame('view_own', RolePermission::query()
+            ->where('role', 'specialist')
+            ->where('module_key', 'dept_dashboard')
+            ->value('level'));
+    }
+
+    public function test_dashboard_view_own_shows_only_related_leaves(): void
+    {
+        $department = Department::query()->create([
+            'name' => 'Тест хэлтэс',
+            'code' => 'TST',
+            'is_active' => true,
+        ]);
+
+        $viewer = User::factory()->create([
+            'name' => 'Б. Болдсайхан',
+            'department_id' => $department->id,
+        ]);
+        $other = User::factory()->create([
+            'name' => 'Д. Баттуяа',
+            'department_id' => $department->id,
+        ]);
+
+        UserModulePermission::create([
+            'user_id' => $viewer->id,
+            'module_key' => 'dept_dashboard',
+            'level' => 'view_own',
+        ]);
+        UserModulePermission::create([
+            'user_id' => $viewer->id,
+            'module_key' => 'leaves',
+            'level' => 'manage',
+        ]);
+
+        Leave::create([
+            'user_id' => $viewer->id,
+            'department_id' => $department->id,
+            'person_name' => 'Б. Болдсайхан',
+            'scope' => 'baiguullaga',
+            'org_name' => 'Тест',
+            'type' => 'eeljiin',
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->toDateString(),
+            'days' => 1,
+            'status' => 'pending',
+        ]);
+        Leave::create([
+            'user_id' => $other->id,
+            'department_id' => $department->id,
+            'person_name' => 'Д. Баттуяа',
+            'scope' => 'baiguullaga',
+            'org_name' => 'Тест',
+            'type' => 'eeljiin',
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->toDateString(),
+            'days' => 1,
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($viewer)
+            ->get(route('dept.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('stats.pending_leaves', 1)
+                ->has('recentLeaves', 1)
+                ->where('recentLeaves.0.person_name', 'Б. Болдсайхан'));
     }
 }

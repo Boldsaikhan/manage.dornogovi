@@ -21,6 +21,9 @@ return [
             'route' => 'dept.dashboard',
             'group' => 'dashboard',
             'icon' => 'chart',
+            // Харах (хамааралтай) = зөвхөн өөрт холбоотой чөлөө, томилолт, төлөвлөгөө, ажлын хэсэг.
+            'own_scope' => 'dashboard',
+            'own_levels' => ['view_own'],
         ],
         [
             'key' => 'tasks',

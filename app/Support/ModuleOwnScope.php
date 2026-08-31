@@ -30,16 +30,30 @@ class ModuleOwnScope
             return $builder;
         }
 
-        return match ($type) {
-            'user_id' => $builder->where('user_id', $user->id),
-            'created_by' => $builder->where('created_by', $user->id),
-            'public_read_own_write' => self::applyPublicReadOwnWrite($builder, $user, $moduleKey),
-            'lead_user_id' => $builder->where('lead_user_id', $user->id),
-            'person_name' => self::applyPersonNameScope($builder, $user, 'person_name'),
-            'award_person' => self::applyAwardPersonScope($builder, $user),
-            'task_assignee' => self::applyTaskAssigneeScope($builder, $user),
-            default => $builder,
-        };
+        return self::applyByType($builder, $user, $moduleKey, $type);
+    }
+
+    /**
+     * Модулийн хамааралтай шүүлтийг тухайн модулийн эрхээс үл хамааран хэрэглэнэ
+     * (жнь: самбарын «Харах (хамааралтай)»).
+     *
+     * @param  Builder|Relation  $query
+     */
+    public static function applyOwnRecords(Builder|Relation $query, User $user, string $moduleKey): Builder
+    {
+        $builder = $query instanceof Relation ? $query->getQuery() : $query;
+
+        if ($user->is_admin) {
+            return $builder;
+        }
+
+        $type = ModuleAccess::find($moduleKey)['own_scope'] ?? null;
+
+        if (! $type || $type === 'dashboard') {
+            return $builder;
+        }
+
+        return self::applyByType($builder, $user, $moduleKey, $type);
     }
 
     public static function allows(User $user, string $moduleKey, Model $record): bool
@@ -54,6 +68,25 @@ class ModuleOwnScope
             return false;
         }
 
+        return self::allowsByType($user, $moduleKey, $record, $type);
+    }
+
+    private static function applyByType(Builder $builder, User $user, string $moduleKey, string $type): Builder
+    {
+        return match ($type) {
+            'user_id' => $builder->where('user_id', $user->id),
+            'created_by' => $builder->where('created_by', $user->id),
+            'public_read_own_write' => self::applyPublicReadOwnWrite($builder, $user, $moduleKey),
+            'lead_user_id' => $builder->where('lead_user_id', $user->id),
+            'person_name' => self::applyPersonNameScope($builder, $user, 'person_name'),
+            'award_person' => self::applyAwardPersonScope($builder, $user),
+            'task_assignee' => self::applyTaskAssigneeScope($builder, $user),
+            default => $builder,
+        };
+    }
+
+    private static function allowsByType(User $user, string $moduleKey, Model $record, string $type): bool
+    {
         return match ($type) {
             'user_id' => (int) $record->user_id === (int) $user->id,
             'created_by' => (int) $record->created_by === (int) $user->id,

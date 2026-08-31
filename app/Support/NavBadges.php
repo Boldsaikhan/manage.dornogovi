@@ -236,7 +236,10 @@ class NavBadges
             ->whereIn('status', ['pending', 'approved'])
             ->whereDate('end_date', '>=', now()->toDateString());
 
-        if (! $user->is_admin && $user->department_id) {
+        if (ModuleAccess::scopeOwnOnly($user, 'dept_dashboard')) {
+            ModuleOwnScope::applyOwnRecords($leaves, $user, 'leaves');
+            ModuleOwnScope::applyOwnRecords($assignments, $user, 'assignments');
+        } elseif (! $user->is_admin && $user->department_id) {
             $leaves->where('department_id', $user->department_id);
             $assignments->where('department_id', $user->department_id);
         } elseif (! $user->is_admin) {

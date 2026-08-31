@@ -339,11 +339,20 @@ const levelOptions = (module) => {
     const options = [{ value: '', label: 'Хаалттай' }];
 
     if (module.own_scope) {
-        options.push(
-            { value: 'view_own', label: 'Харах (хамааралтай)' },
-            { value: 'edit_own', label: 'Оруулах (хамааралтай)' },
-            { value: 'manage_own', label: 'Удирдах (хамааралтай)' },
-        );
+        const labels = {
+            view_own: 'Харах (хамааралтай)',
+            edit_own: 'Оруулах (хамааралтай)',
+            manage_own: 'Удирдах (хамааралтай)',
+        };
+        const levels = Array.isArray(module.own_levels) && module.own_levels.length
+            ? module.own_levels
+            : ['view_own', 'edit_own', 'manage_own'];
+
+        levels.forEach((value) => {
+            if (labels[value]) {
+                options.push({ value, label: labels[value] });
+            }
+        });
     }
 
     options.push(

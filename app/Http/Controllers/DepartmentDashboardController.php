@@ -21,23 +21,31 @@ class DepartmentDashboardController extends Controller
 
         $user = $request->user();
         $deptId = $user->department_id;
+        $personalDashboard = ModuleAccess::scopeOwnOnly($user, 'dept_dashboard');
 
         $leaveQuery = Leave::query();
         $assignQuery = TravelAssignment::query();
         $planQuery = Plan::query();
         $groupQuery = WorkGroup::query()->with('tasks');
 
-        if ($deptId && ! $user->is_admin) {
+        if ($deptId && ! $user->is_admin && ! $personalDashboard) {
             $leaveQuery->where('department_id', $deptId);
             $assignQuery->where('department_id', $deptId);
             $planQuery->where('department_id', $deptId);
             $groupQuery->where('department_id', $deptId);
         }
 
-        ModuleOwnScope::apply($leaveQuery, $user, 'leaves');
-        ModuleOwnScope::apply($assignQuery, $user, 'assignments');
-        ModuleOwnScope::apply($planQuery, $user, 'plans');
-        ModuleOwnScope::apply($groupQuery, $user, 'work_groups');
+        if ($personalDashboard) {
+            ModuleOwnScope::applyOwnRecords($leaveQuery, $user, 'leaves');
+            ModuleOwnScope::applyOwnRecords($assignQuery, $user, 'assignments');
+            ModuleOwnScope::applyOwnRecords($planQuery, $user, 'plans');
+            ModuleOwnScope::applyOwnRecords($groupQuery, $user, 'work_groups');
+        } else {
+            ModuleOwnScope::apply($leaveQuery, $user, 'leaves');
+            ModuleOwnScope::apply($assignQuery, $user, 'assignments');
+            ModuleOwnScope::apply($planQuery, $user, 'plans');
+            ModuleOwnScope::apply($groupQuery, $user, 'work_groups');
+        }
 
         // Самбар: зөвхөн тухайн албан хаагчид хамаатай (хариуцагч/хамтран) үүрэг.
         $taskQuery = Task::query()->with('source:id,key,name');

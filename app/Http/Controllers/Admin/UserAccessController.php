@@ -29,6 +29,7 @@ class UserAccessController extends Controller
                 'key' => $m['key'],
                 'label' => $m['label'],
                 'own_scope' => ModuleAccess::supportsOwnScope($m['key']),
+                'own_levels' => $m['own_levels'] ?? null,
             ])
             ->values();
 
