@@ -168,8 +168,8 @@ const assignments = computed(() => props.dashboard.official_assignments ?? []);
             </section>
 
             <section class="rounded-2xl border border-slate-200 p-4">
-                <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Хэлтэсээр (2.6)</p>
-                <p class="mb-3 text-xs text-slate-500">Үүрэг чиглэл — хэрэгжилтийн дундаж</p>
+                <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Хэлтэсээр</p>
+                <p class="mb-3 text-xs text-slate-500">АЖХТ — хэрэгжилтийн дундаж</p>
                 <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     <div
                         v-for="dept in departments"

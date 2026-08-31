@@ -133,22 +133,6 @@ $investmentRegisterCols = [
     $col('note', 'Тайлбар'),
 ];
 
-$deptChildren = static function (string $prefix, string $parentKey, array $departments): array {
-    $rows = [];
-    foreach ($departments as $code => $label) {
-        $rows[] = [
-            'key' => "{$parentKey}.{$code}",
-            'number' => "{$prefix}.{$code}",
-            'label' => $label,
-            'department' => $code,
-            'template' => 'policy_tracking',
-            'source_file' => null,
-        ];
-    }
-
-    return $rows;
-};
-
 $policy = static fn (
     string $key,
     string $number,
@@ -240,7 +224,7 @@ return [
         ],
         'sections' => [
             ['key' => 'state_policy', 'label' => 'Төрийн бодлого', 'number' => '1', 'total' => 44, 'progress' => null, 'note' => 'Тогтоол 22, тэмдэглэл 17, захирамж 1, албан даалгавар 4'],
-            ['key' => 'local_policy', 'label' => 'Орон нутгийн бодлого', 'number' => '2', 'total' => null, 'progress' => 46.1, 'note' => 'АЖХТ 46,1%; захирамж 177; үүрэг чиглэл 405'],
+            ['key' => 'local_policy', 'label' => 'Орон нутгийн бодлого', 'number' => '2', 'total' => null, 'progress' => 46.1, 'note' => 'АЖХТ 46,1%'],
             ['key' => 'contracts', 'label' => 'Гэрээ', 'number' => '3', 'total' => null, 'progress' => 56, 'note' => 'Сайдуудтай хамтран ажиллах гэрээ'],
             ['key' => 'target_programs', 'label' => 'Зорилтот хөтөлбөр', 'number' => '4', 'total' => 5, 'progress' => 53.5, 'note' => '4.1–4.2 ~53%; бусад ирүүлээгүй'],
             ['key' => 'memorandum', 'label' => 'Санамж бичиг', 'number' => '5', 'total' => 18, 'progress' => null, 'note' => '12 улс, ААНБ'],
@@ -307,21 +291,6 @@ return [
                     'ИТХТ-ын хэрэгжилт_2026_.xlsx',
                     'itkh_decision',
                 ),
-                [
-                    'key' => 'local_policy.governor_directive',
-                    'number' => '2.4',
-                    'label' => 'Аймгийн Засаг даргын захирамж',
-                    'template' => 'policy_tracking',
-                    'description' => '177 захирамж — хэлтэсээр',
-                    'children' => $deptChildren('2.4', 'local_policy.governor_directive', [
-                        'tzux' => 'ТЗУХ',
-                        'hezx' => 'ХЭЗХ',
-                        'bonxo' => 'БОНХО',
-                        'sxzx' => 'СХЗХ',
-                        'stsx' => 'СТСХ',
-                        'nbx' => 'НБХ',
-                    ]),
-                ],
                 $policy(
                     'local_policy.law_implementation',
                     '2.5',
@@ -331,21 +300,6 @@ return [
                     '1. Хууль тогтоомж 2026 оны эхний хагас жил.xlsx',
                     'law_implementation',
                 ),
-                [
-                    'key' => 'local_policy.leadership_tasks',
-                    'number' => '2.6',
-                    'label' => 'Удирдлагаас өгсөн үүрэг чиглэл',
-                    'template' => 'policy_tracking',
-                    'description' => '405 үүрэг — хэлтэсээр',
-                    'children' => $deptChildren('2.6', 'local_policy.leadership_tasks', [
-                        'tzux' => 'ТЗУХ',
-                        'hezx' => 'ХЭЗХ',
-                        'bonxo' => 'БОНХО',
-                        'sxzx' => 'СХЗХ',
-                        'stsx' => 'СТСХ',
-                        'nbx' => 'НБХ',
-                    ]),
-                ],
                 [
                     'key' => 'local_policy.governor_assignments',
                     'number' => '2.7',
