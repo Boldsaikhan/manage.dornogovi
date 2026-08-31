@@ -381,7 +381,7 @@ const onLinkedSystemClick = () => {
         </Teleport>
 
         <div
-            class="transition-[padding] duration-200 ease-out"
+            class="flex min-h-dvh flex-col transition-[padding] duration-200 ease-out"
             :class="[
                 sidebarCollapsed ? 'lg:pl-[4.25rem]' : 'lg:pl-[17.5rem]',
                 aiOpen ? 'xl:pr-[24rem]' : '',
@@ -432,7 +432,7 @@ const onLinkedSystemClick = () => {
             </header>
 
             <main
-                class="p-4 sm:p-6 lg:p-8"
+                class="flex min-h-0 flex-1 flex-col p-4 sm:p-6 lg:p-8"
                 :class="page.props.aiAssistant?.available ? 'pb-24' : ''"
             >
                 <slot />

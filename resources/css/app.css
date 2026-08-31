@@ -148,11 +148,23 @@
     }
 
     .ui-page--tasks-table {
-        @apply flex min-h-[calc(100dvh-6.5rem)] flex-col gap-5;
+        @apply flex min-h-0 flex-1 flex-col gap-5 overflow-hidden !space-y-0;
+    }
+
+    .ui-page--tasks-table > :not(.ui-tasks-table-shell) {
+        @apply shrink-0;
     }
 
     .ui-tasks-table-shell {
-        @apply flex min-h-0 flex-1 flex-col gap-2;
+        @apply flex min-h-0 flex-1 basis-0 flex-col gap-2 overflow-hidden;
+    }
+
+    html:has(.ui-page--tasks-table) {
+        @apply h-dvh overflow-hidden;
+    }
+
+    html:has(.ui-page--tasks-table) body {
+        @apply h-dvh overflow-hidden;
     }
 
     .ui-table-hscroll::-webkit-scrollbar {

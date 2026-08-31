@@ -114,7 +114,7 @@ watch(() => props.fill, () => nextTick(measure));
 <template>
     <div
         class="ui-card ui-table-scroll flex w-full min-h-0 flex-col overflow-hidden"
-        :class="fill ? 'flex-1' : ''"
+        :class="fill ? 'min-h-0 flex-1 basis-0' : ''"
         :style="fill ? undefined : { height: maxHeight, maxHeight }"
     >
         <div
