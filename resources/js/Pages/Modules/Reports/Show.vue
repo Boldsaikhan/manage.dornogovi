@@ -16,6 +16,8 @@ const props = defineProps({
 
 const hasColumns = computed(() => (props.report.columns?.length ?? 0) > 0);
 
+const hasRows = computed(() => (props.report.rows?.length ?? 0) > 0);
+
 const activeSectionKey = computed(() => props.report.section_key || null);
 
 const sectionNavItems = computed(() => {
@@ -110,9 +112,23 @@ const sectionNavItems = computed(() => {
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
+                                <tr v-if="!hasRows">
                                     <td :colspan="report.columns.length || 1" class="!py-10 text-center text-sm text-slate-400">
                                         Мэдээлэл оруулаагүй — хүснэгтийн бүтэц бэлэн
+                                    </td>
+                                </tr>
+                                <tr
+                                    v-for="(row, rowIndex) in report.rows"
+                                    :key="rowIndex"
+                                    class="align-top"
+                                >
+                                    <td
+                                        v-for="col in report.columns"
+                                        :key="col.key"
+                                        class="whitespace-pre-wrap text-sm text-slate-700"
+                                        :class="{ 'text-center': col.key === 'no' || col.key === 'percent' }"
+                                    >
+                                        {{ row[col.key] ?? '' }}
                                     </td>
                                 </tr>
                             </tbody>

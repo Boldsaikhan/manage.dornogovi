@@ -68,6 +68,23 @@ class ReportCatalogTest extends TestCase
                 ->has('report.columns', 8));
     }
 
+    public function test_reports_show_loads_governor_program_rows(): void
+    {
+        $user = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($user)
+            ->get(route('reports.show', 'local_policy.governor_program'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Modules/Reports/Show')
+                ->where('report.key', 'local_policy.governor_program')
+                ->where('report.number', '2.1')
+                ->where('report.source_file', 'АЗДҮАХ-2024-2028-2026-оны-хагас-жил-ТАЙЛАН-хуваарилалт.xlsx')
+                ->where('report.template', 'governor_program')
+                ->has('report.columns', 16)
+                ->has('report.rows', 324));
+    }
+
     public function test_reports_show_404_for_unknown_key(): void
     {
         $user = User::factory()->create(['is_admin' => true]);
