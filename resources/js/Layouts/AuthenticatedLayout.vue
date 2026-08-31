@@ -442,7 +442,8 @@ const onLinkedSystemClick = () => {
         <button
             v-if="page.props.aiAssistant?.available && !aiOpen"
             type="button"
-            class="ai-fab relative fixed bottom-5 right-5 z-30 flex h-12 w-12 items-center justify-center overflow-visible rounded-full bg-brand-navy-700 text-white shadow-lg shadow-brand-navy-700/30 transition hover:-translate-y-0.5 hover:bg-brand-navy-800"
+            class="ai-fab fixed bottom-5 left-5 z-30 flex h-12 w-12 items-center justify-center overflow-visible rounded-full bg-brand-navy-700 text-white shadow-lg shadow-brand-navy-700/30 transition hover:-translate-y-0.5 hover:bg-brand-navy-800 lg:left-[calc(17.5rem+1.25rem)]"
+            :class="sidebarCollapsed ? 'lg:!left-[calc(4.25rem+1.25rem)]' : ''"
             :title="page.props.aiAssistant?.name || 'Manage AI'"
             :aria-label="page.props.aiAssistant?.name || 'Manage AI'"
             @click="toggleAiPanel(true)"
@@ -467,6 +468,7 @@ const onLinkedSystemClick = () => {
         <AiPanel
             v-if="page.props.aiAssistant?.available"
             :open="aiOpen"
+            :sidebar-collapsed="sidebarCollapsed"
             :name="page.props.aiAssistant?.name || 'Manage AI'"
             :href="page.props.aiAssistant?.href || '/ai'"
             @close="toggleAiPanel(false)"
