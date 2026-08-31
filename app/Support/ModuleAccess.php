@@ -247,6 +247,32 @@ class ModuleAccess
     }
 
     /**
+     * Үүрэг даалгавар — «Оруулах (хамааралтай)»: зөвхөн хэрэгжилт, биелэлт.
+     */
+    public static function tasksProgressOnly(?User $user): bool
+    {
+        if (! $user || $user->is_admin) {
+            return false;
+        }
+
+        return self::level($user, 'tasks') === 'edit_own';
+    }
+
+    /**
+     * @return array{canEdit: bool, canEditProgress: bool, canManage: bool}
+     */
+    public static function taskPagePermissions(?User $user): array
+    {
+        $progressOnly = self::tasksProgressOnly($user);
+
+        return [
+            'canEdit' => self::canEdit($user, 'tasks') && ! $progressOnly,
+            'canEditProgress' => self::canEdit($user, 'tasks'),
+            'canManage' => self::canManage($user, 'tasks'),
+        ];
+    }
+
+    /**
      * Хажуугийн цэсэд харагдах модулиуд.
      *
      * @return array<int, array<string, mixed>>

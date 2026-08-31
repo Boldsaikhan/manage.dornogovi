@@ -15,6 +15,7 @@ const props = defineProps({
     documents: { type: Array, default: () => [] },
     people: { type: Array, default: () => [] },
     canEdit: { type: Boolean, default: false },
+    canEditProgress: { type: Boolean, default: false },
     canManage: { type: Boolean, default: false },
     undoCount: { type: Number, default: 0 },
 });
@@ -911,7 +912,7 @@ const prepTableMinWidth = computed(() => {
                         @change="onFileChange"
                     />
                     <button
-                        v-if="canEdit"
+                        v-if="canEdit || canEditProgress"
                         type="button"
                         class="ui-btn-ghost w-full sm:w-auto"
                         :disabled="undoCount < 1 || undoing"
@@ -1489,7 +1490,7 @@ const prepTableMinWidth = computed(() => {
                                     v-model="drafts[task.id].note"
                                     multiline
                                     placeholder="Хэрэгжилт…"
-                                    :editable="canEdit"
+                                    :editable="canEditProgress"
                                     @commit="(v) => saveField(task.id, 'note', v)"
                                 />
                             </td>
@@ -1499,7 +1500,7 @@ const prepTableMinWidth = computed(() => {
                                     v-model="drafts[task.id].progress"
                                     type="number"
                                     align="center"
-                                    :editable="canEdit"
+                                    :editable="canEditProgress"
                                     @commit="() => saveProgress(task.id)"
                                 >
                                     <span :class="progressTextClass(drafts[task.id].progress)">
@@ -1643,7 +1644,7 @@ const prepTableMinWidth = computed(() => {
                                     v-model="drafts[task.id].note"
                                     multiline
                                     placeholder="Хэрэгжилт…"
-                                    :editable="canEdit"
+                                    :editable="canEditProgress"
                                     @commit="(v) => saveField(task.id, 'note', v)"
                                 />
                             </td>
@@ -1653,7 +1654,7 @@ const prepTableMinWidth = computed(() => {
                                     v-model="drafts[task.id].progress"
                                     type="number"
                                     align="center"
-                                    :editable="canEdit"
+                                    :editable="canEditProgress"
                                     @commit="() => saveProgress(task.id)"
                                 >
                                     <span :class="progressTextClass(drafts[task.id].progress)">

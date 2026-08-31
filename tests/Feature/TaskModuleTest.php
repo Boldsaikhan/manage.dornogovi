@@ -6,6 +6,7 @@ use App\Models\Task;
 use App\Models\TaskDocument;
 use App\Models\TaskSource;
 use App\Models\User;
+use App\Models\UserModulePermission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -205,6 +206,59 @@ class TaskModuleTest extends TestCase
             ->assertForbidden();
 
         $this->assertDatabaseHas('task_sources', ['key' => 'directive']);
+    }
+
+    public function test_edit_own_user_can_update_only_progress_fields_on_assigned_task(): void
+    {
+        $source = TaskSource::where('key', TaskSource::KEY_DIRECTIVE)->first();
+        $user = User::factory()->create(['name' => 'Б.Дөлгөөн']);
+        UserModulePermission::create([
+            'user_id' => $user->id,
+            'module_key' => 'tasks',
+            'level' => 'edit_own',
+        ]);
+
+        $task = Task::create([
+            'task_source_id' => $source->id,
+            'text' => 'Хамааралтай үүрэг',
+            'responsible' => 'Б.Дөлгөөн',
+            'collaborator' => 'Ц.Сансармаа',
+            'sort_order' => 1,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('tasks.index', ['kind' => 'directive']))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('canEdit', false)
+                ->where('canEditProgress', true)
+                ->where('canManage', false)
+            );
+
+        $this->actingAs($user)
+            ->patch(route('tasks.update', $task), [
+                'note' => 'Хэрэгжилт орууллаа',
+                'progress' => 45,
+            ])
+            ->assertRedirect();
+
+        $this->assertSame('Хэрэгжилт орууллаа', $task->fresh()->note);
+        $this->assertSame(45, (int) $task->fresh()->progress);
+
+        $this->actingAs($user)
+            ->patch(route('tasks.update', $task), ['text' => 'Засварласан гарчиг'])
+            ->assertForbidden();
+
+        $this->actingAs($user)
+            ->post(route('tasks.store'), [
+                'kind' => 'directive',
+                'text' => 'Шинэ мөр',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($user)
+            ->delete(route('tasks.destroy', $task))
+            ->assertForbidden();
     }
 
     private function makeDirectiveDocx(): string

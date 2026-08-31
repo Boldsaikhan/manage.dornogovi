@@ -52,8 +52,7 @@ class TaskController extends Controller
                     'tasks' => [],
                     'documents' => [],
                     'people' => $this->phoneDirectoryPeople(),
-                    'canEdit' => ModuleAccess::canEdit($user, 'tasks'),
-                    'canManage' => ModuleAccess::canManage($user, 'tasks'),
+                    ...ModuleAccess::taskPagePermissions($user),
                     'undoCount' => EditUndo::query()->where('user_id', $user->id)->count(),
                 ]);
             }
@@ -110,8 +109,7 @@ class TaskController extends Controller
             'tasks' => $tasks,
             'documents' => $documents,
             'people' => $this->phoneDirectoryPeople(),
-            'canEdit' => ModuleAccess::canEdit($user, 'tasks'),
-            'canManage' => ModuleAccess::canManage($user, 'tasks'),
+            ...ModuleAccess::taskPagePermissions($user),
             'undoCount' => EditUndo::query()->where('user_id', $user->id)->count(),
         ]);
     }
@@ -289,6 +287,7 @@ class TaskController extends Controller
     public function store(Request $request): RedirectResponse
     {
         abort_unless(ModuleAccess::canEdit($request->user(), 'tasks'), 403);
+        abort_if(ModuleAccess::tasksProgressOnly($request->user()), 403);
 
         $data = $request->validate([
             'kind' => ['required', $this->kindRule()],
@@ -348,6 +347,12 @@ class TaskController extends Controller
             }
         }
 
+        $data = $this->filterTaskUpdateFields($request->user(), $data);
+
+        if ($data === []) {
+            abort(403);
+        }
+
         $this->saveTaskWithUndo($request, $task, $data);
 
         if (array_key_exists('responsible', $data) || array_key_exists('collaborator', $data)) {
@@ -396,6 +401,12 @@ class TaskController extends Controller
             }
         }
 
+        $fields = $this->filterTaskUpdateFields($request->user(), $fields);
+
+        if ($fields === []) {
+            abort(403);
+        }
+
         $count = 0;
         Task::query()
             ->whereIn('id', $data['ids'])
@@ -415,6 +426,7 @@ class TaskController extends Controller
     public function destroy(Request $request, Task $task): RedirectResponse
     {
         abort_unless(ModuleAccess::canEdit($request->user(), 'tasks'), 403);
+        abort_if(ModuleAccess::tasksProgressOnly($request->user()), 403);
         abort_unless(ModuleOwnScope::allows($request->user(), 'tasks', $task), 403);
 
         EditUndo::recordDelete(
@@ -758,6 +770,19 @@ class TaskController extends Controller
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function filterTaskUpdateFields(?\App\Models\User $user, array $data): array
+    {
+        if (! ModuleAccess::tasksProgressOnly($user)) {
+            return $data;
+        }
+
+        return array_intersect_key($data, array_flip(['note', 'progress']));
     }
 
     private function kindRule(): \Illuminate\Validation\Rules\Exists
