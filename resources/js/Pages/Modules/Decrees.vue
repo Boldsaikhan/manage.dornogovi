@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import SheetCell from '@/Components/SheetCell.vue';
+import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import Modal from '@/Components/Modal.vue';
 
 const props = defineProps({
@@ -94,7 +95,7 @@ const officialOptions = computed(() => {
 
 const canManage = computed(() => canManageRows.value);
 
-const cellClass = 'border border-slate-800 p-0 align-middle overflow-hidden';
+const cellClass = 'decree-sheet__cell';
 
 // Сүүлийн үйлдлийг буцаана (сервер дээр хадгалагддаг тул дахин ачаалсан ч ажиллана).
 const undoing = ref(false);
@@ -144,7 +145,7 @@ const groupEditable = (rowId, group) => {
 // Идэвхгүй нүдийг саарлаар ялгана.
 const qtyCellClass = (rowId, group) => [
     cellClass,
-    groupEditable(rowId, group) ? '' : 'bg-slate-100',
+    groupEditable(rowId, group) ? '' : 'decree-sheet__cell--muted',
 ];
 
 const imageInput = ref(null);
@@ -452,60 +453,60 @@ const docColumnCount = computed(() => {
             </nav>
 
             <!-- Бланкны дугаар -->
-            <div v-if="isBlank" class="decree-sheet overflow-x-auto border border-slate-800 bg-white">
-                <table class="w-full min-w-[1100px] border-collapse text-center text-[11px] leading-tight text-slate-900">
+            <TableScrollViewport v-if="isBlank" max-height="min(72vh, calc(100dvh - 11rem))">
+                <div class="decree-sheet">
+                    <table class="decree-sheet__table min-w-[1180px]">
                     <colgroup>
-                        <col style="width: 2.25rem" />
-                        <col style="width: 9.5rem" />
-                        <col style="width: 6.5rem" />
-                        <col v-for="n in 8" :key="`q-${n}`" style="width: 3.25rem" />
-                        <col v-for="n in 4" :key="`n-${n}`" style="width: 4.5rem" />
+                        <col style="width: 2.75rem" />
+                        <col style="width: 10.5rem" />
                         <col style="width: 7rem" />
+                        <col v-for="n in 8" :key="`q-${n}`" style="width: 3.5rem" />
+                        <col v-for="n in 4" :key="`n-${n}`" style="width: 5rem" />
+                        <col style="width: 7.5rem" />
                         <col v-if="canManage" style="width: 3.5rem" />
                     </colgroup>
                     <thead>
-                        <tr class="bg-slate-50">
-                            <th rowspan="2" class="border border-slate-800 px-1 py-1.5 font-semibold">Д/д</th>
-                            <th rowspan="2" class="border border-slate-800 px-1 py-1.5 font-semibold">
+                        <tr>
+                            <th rowspan="2">Д/д</th>
+                            <th rowspan="2">
                                 Хэвлэмэл хуудас авсан<br>ажилтны нэр
                             </th>
-                            <th rowspan="2" class="border border-slate-800 px-1 py-1.5 font-semibold">Огноо</th>
-                            <th colspan="8" class="border border-slate-800 px-1 py-1.5 font-semibold">
+                            <th rowspan="2">Огноо</th>
+                            <th colspan="8" class="decree-sheet__head-group--issued">
                                 Олгосон хэвлэмэл хуудас
                             </th>
-                            <th colspan="2" class="border border-slate-800 px-1 py-1.5 font-semibold">
+                            <th colspan="2" class="decree-sheet__head-group--numbers">
                                 Хэвлэмэл хуудасны дугаар
                             </th>
-                            <th colspan="2" class="border border-slate-800 px-1 py-1.5 font-semibold">
+                            <th colspan="2" class="decree-sheet__head-group--void">
                                 Үрэгдүүлсэн хуудасны дугаар
                             </th>
-                            <th rowspan="2" class="border border-slate-800 px-1 py-1.5 font-semibold">
+                            <th rowspan="2">
                                 Хүлээн авсан<br>гарын үсэг
                             </th>
-                            <th v-if="canManage" rowspan="2" class="border border-slate-800 px-1 py-1.5 font-semibold w-16" />
+                            <th v-if="canManage" rowspan="2" class="w-16" />
                         </tr>
-                        <tr class="bg-slate-50">
-                            <th class="border border-slate-800 px-1 py-1 font-medium">Захирамж</th>
-                            <th class="border border-slate-800 px-1 py-1 font-medium">Монгол<br>бичиг</th>
-                            <th class="border border-slate-800 px-1 py-1 font-medium">Тушаал</th>
-                            <th class="border border-slate-800 px-1 py-1 font-medium">Монгол<br>бичиг</th>
-                            <th class="border border-slate-800 px-1 py-1 font-medium">Албан<br>даалгавар</th>
-                            <th class="border border-slate-800 px-1 py-1 font-medium">Монгол<br>бичиг</th>
-                            <th class="border border-slate-800 px-1 py-1 font-medium">Зөвлөлийн<br>хурал</th>
-                            <th class="border border-slate-800 px-1 py-1 font-medium">Монгол<br>бичиг</th>
-                            <th class="border border-slate-800 px-1 py-1 font-medium">Захирамж</th>
-                            <th class="border border-slate-800 px-1 py-1 font-medium">Тушаал</th>
-                            <th class="border border-slate-800 px-1 py-1 font-medium">Захирамж</th>
-                            <th class="border border-slate-800 px-1 py-1 font-medium">Тушаал</th>
+                        <tr>
+                            <th>Захирамж</th>
+                            <th>Монгол<br>бичиг</th>
+                            <th>Тушаал</th>
+                            <th>Монгол<br>бичиг</th>
+                            <th>Албан<br>даалгавар</th>
+                            <th>Монгол<br>бичиг</th>
+                            <th>Зөвлөлийн<br>хурал</th>
+                            <th>Монгол<br>бичиг</th>
+                            <th>Захирамж</th>
+                            <th>Тушаал</th>
+                            <th>Захирамж</th>
+                            <th>Тушаал</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr
                             v-for="row in rows"
                             :key="row.id"
-                            class="hover:bg-sky-50 focus-within:bg-sky-50"
                         >
-                            <td class="border border-slate-800 px-1 py-1">{{ row.no }}</td>
+                            <td class="decree-sheet__cell--no">{{ row.no }}</td>
                             <td :class="cellClass">
                                 <SheetCell
                                     v-if="drafts[row.id]"
@@ -667,7 +668,7 @@ const docColumnCount = computed(() => {
                                     @commit="(v) => saveField(row.id, 'body', v)"
                                 />
                             </td>
-                            <td v-if="canManage" class="border border-slate-800 px-1 py-1">
+                            <td v-if="canManage" class="px-1 py-1 text-center">
                                 <button
                                     type="button"
                                     class="ui-icon-btn mx-auto"
@@ -682,20 +683,22 @@ const docColumnCount = computed(() => {
                             </td>
                         </tr>
                         <tr v-if="!rows.length">
-                            <td :colspan="blankColCount" class="border border-slate-800 px-2 py-10 text-slate-400">
+                            <td :colspan="blankColCount" class="decree-sheet__empty">
                                 Бүртгэл алга. «Шинэ мөр» дарж нүдэн дээр бөглөнө үү.
                             </td>
                         </tr>
                     </tbody>
                 </table>
-            </div>
+                </div>
+            </TableScrollViewport>
 
             <!-- Захирамж / Тушаалын дугаар -->
-            <div v-else-if="isDoc" class="decree-sheet overflow-x-auto border border-slate-800 bg-white">
-                <div class="border-b border-slate-800 px-3 py-2 text-center text-sm font-semibold tracking-wide">
+            <TableScrollViewport v-else-if="isDoc" max-height="min(72vh, calc(100dvh - 11rem))">
+                <div class="decree-sheet">
+                <div class="decree-sheet__banner">
                     Аймгийн Засаг даргын {{ docLabel }}ийн бүртгэл
                 </div>
-                <table class="w-full min-w-[1000px] border-collapse text-center text-[12px] leading-tight text-slate-900">
+                <table class="decree-sheet__table min-w-[1040px]">
                     <colgroup>
                         <col style="width: 2.5rem" />
                         <col style="width: 5rem" />
@@ -709,47 +712,46 @@ const docColumnCount = computed(() => {
                         <col style="width: 6.5rem" />
                     </colgroup>
                     <thead>
-                        <tr class="bg-slate-50">
-                            <th rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold w-10">№</th>
-                            <th rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold w-20">Дугаар</th>
-                            <th rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold w-24">Огноо</th>
-                            <th rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold">{{ titleLabel }}</th>
-                            <th rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold w-20">
+                        <tr>
+                            <th rowspan="2" class="w-10">№</th>
+                            <th rowspan="2" class="w-20">Дугаар</th>
+                            <th rowspan="2" class="w-24">Огноо</th>
+                            <th rowspan="2">{{ titleLabel }}</th>
+                            <th rowspan="2" class="w-20">
                                 Хуудасны<br>тоо
                             </th>
-                            <th colspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold">
+                            <th colspan="2" class="decree-sheet__head-group--issued">
                                 Хавсралтын мэдээлэл
                             </th>
-                            <th rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold w-36">
+                            <th rowspan="2" class="w-36">
                                 Боловсруулсан<br>албан тушаалтан
                             </th>
-                            <th v-if="isNiit" rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold w-24">Төрөл</th>
-                            <th rowspan="2" class="border border-slate-800 px-1.5 py-2 font-semibold w-24">Зураг</th>
+                            <th v-if="isNiit" rowspan="2" class="w-24">Төрөл</th>
+                            <th rowspan="2" class="w-24">Зураг</th>
                         </tr>
-                        <tr class="bg-slate-50">
-                            <th class="border border-slate-800 px-1.5 py-1.5 font-medium">Баримт бичгийн нэр</th>
-                            <th class="border border-slate-800 px-1.5 py-1.5 font-medium w-20">Хуудасны тоо</th>
+                        <tr>
+                            <th>Баримт бичгийн нэр</th>
+                            <th class="w-20">Хуудасны тоо</th>
                         </tr>
-                        <tr class="bg-slate-100 text-[10px] text-slate-500">
-                            <th class="border border-slate-800 py-0.5">1</th>
-                            <th class="border border-slate-800 py-0.5">2</th>
-                            <th class="border border-slate-800 py-0.5">3</th>
-                            <th class="border border-slate-800 py-0.5">4</th>
-                            <th class="border border-slate-800 py-0.5">5</th>
-                            <th class="border border-slate-800 py-0.5">6</th>
-                            <th class="border border-slate-800 py-0.5">7</th>
-                            <th class="border border-slate-800 py-0.5">8</th>
-                            <th v-if="isNiit" class="border border-slate-800 py-0.5">9</th>
-                            <th class="border border-slate-800 py-0.5">{{ isNiit ? 10 : 9 }}</th>
+                        <tr>
+                            <th>1</th>
+                            <th>2</th>
+                            <th>3</th>
+                            <th>4</th>
+                            <th>5</th>
+                            <th>6</th>
+                            <th>7</th>
+                            <th>8</th>
+                            <th v-if="isNiit">9</th>
+                            <th>{{ isNiit ? 10 : 9 }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr
                             v-for="row in rows"
                             :key="row.id"
-                            class="hover:bg-sky-50 focus-within:bg-sky-50"
                         >
-                            <td class="border border-slate-800 px-1.5 py-1.5">{{ row.no }}</td>
+                            <td class="decree-sheet__cell--no">{{ row.no }}</td>
                             <td :class="cellClass">
                                 <SheetCell
                                     v-if="drafts[row.id]"
@@ -826,7 +828,7 @@ const docColumnCount = computed(() => {
                                     @commit="(v) => saveField(row.id, 'person_name', v)"
                                 />
                             </td>
-                            <td v-if="isNiit" class="border border-slate-800 px-1 py-1">
+                            <td v-if="isNiit" class="px-2 py-1.5 text-xs text-slate-600">
                                 <select
                                     v-if="canManage && drafts[row.id]"
                                     v-model="drafts[row.id].kind"
@@ -839,7 +841,7 @@ const docColumnCount = computed(() => {
                                 </select>
                                 <span v-else class="text-[11px]">{{ row.kind_label }}</span>
                             </td>
-                            <td class="border border-slate-800 px-1 py-1">
+                            <td class="px-1 py-1">
                                 <div class="flex items-center justify-center gap-0.5">
                                     <button
                                         v-if="canManage"
@@ -898,13 +900,14 @@ const docColumnCount = computed(() => {
                             </td>
                         </tr>
                         <tr v-if="!rows.length">
-                            <td :colspan="docColumnCount" class="border border-slate-800 px-2 py-10 text-slate-400">
+                            <td :colspan="docColumnCount" class="decree-sheet__empty">
                                 {{ isNiit ? 'Бүртгэл алга.' : `${numberLabel}ын бүртгэл алга. «Шинэ мөр» дарж бөглөнө үү.` }}
                             </td>
                         </tr>
                     </tbody>
                 </table>
-            </div>
+                </div>
+            </TableScrollViewport>
         </div>
 
         <input

@@ -243,7 +243,94 @@
         appearance: textfield;
     }
 
-    /* Компакт бүртгэлийн хүснэгт — нүд дарахад багана/мөр тэлэхгүй */
+    /* Захирамж, тушаал — албан ёсны хүснэгт, зөөлөн харагдах байдал */
+    .decree-sheet {
+        @apply min-w-full bg-white;
+    }
+
+    .decree-sheet__banner {
+        @apply border-b border-slate-200 bg-brand-navy-50/80 px-4 py-2.5 text-center text-sm font-semibold tracking-wide text-brand-navy-900;
+    }
+
+    .decree-sheet__table {
+        @apply w-full border-collapse text-center text-[12px] leading-snug text-slate-800;
+        table-layout: fixed;
+    }
+
+    .decree-sheet th,
+    .decree-sheet td {
+        @apply border-b border-r border-slate-200;
+    }
+
+    .decree-sheet th:last-child,
+    .decree-sheet td:last-child {
+        @apply border-r-0;
+    }
+
+    .decree-sheet thead th {
+        @apply bg-brand-navy-50 px-2 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-600;
+        vertical-align: middle;
+    }
+
+    .decree-sheet thead tr:first-child th {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        box-shadow: 0 1px 0 rgb(226 232 240);
+    }
+
+    .decree-sheet thead tr:nth-child(2) th {
+        position: sticky;
+        top: 2.65rem;
+        z-index: 19;
+        @apply bg-brand-navy-50/95 py-1.5 text-[10px] font-medium normal-case tracking-normal text-slate-500;
+        box-shadow: 0 1px 0 rgb(226 232 240);
+    }
+
+    .decree-sheet thead tr:nth-child(3) th {
+        @apply bg-slate-100/90 py-0.5 text-[10px] font-normal normal-case text-slate-400;
+    }
+
+    .decree-sheet__head-group--issued {
+        @apply bg-sky-50 text-sky-900;
+    }
+
+    .decree-sheet__head-group--numbers {
+        @apply bg-emerald-50 text-emerald-900;
+    }
+
+    .decree-sheet__head-group--void {
+        @apply bg-amber-50 text-amber-900;
+    }
+
+    .decree-sheet tbody tr:nth-child(even) td:not(.decree-sheet__cell--muted) {
+        @apply bg-slate-50/50;
+    }
+
+    .decree-sheet tbody tr:hover td:not(.decree-sheet__cell--muted) {
+        @apply bg-sky-50/70;
+    }
+
+    .decree-sheet tbody tr:focus-within td:not(.decree-sheet__cell--muted) {
+        @apply bg-sky-50/80;
+    }
+
+    .decree-sheet__cell {
+        @apply p-0 align-middle overflow-hidden;
+    }
+
+    .decree-sheet__cell--no {
+        @apply px-1.5 py-1.5 text-center text-xs font-semibold tabular-nums text-slate-500;
+    }
+
+    .decree-sheet__cell--muted {
+        @apply bg-slate-100/80;
+    }
+
+    .decree-sheet__empty {
+        @apply px-4 py-12 text-sm text-slate-400;
+    }
+
     .decree-sheet table {
         table-layout: fixed;
     }
@@ -254,21 +341,25 @@
     }
 
     .decree-sheet .ui-sheet-cell {
-        min-height: 1.55rem;
+        min-height: 1.75rem;
     }
 
     .decree-sheet .ui-sheet-display {
-        @apply px-1 py-0.5 text-[11px] leading-tight;
-        min-height: 1.55rem;
+        @apply px-1.5 py-1 text-[12px] leading-snug;
+        min-height: 1.75rem;
     }
 
     .decree-sheet .ui-sheet-editor {
-        @apply px-1 py-0.5 text-[11px] leading-tight;
-        min-height: 1.55rem;
+        @apply px-1.5 py-1 text-[12px] leading-snug;
+        min-height: 1.75rem;
     }
 
     .decree-sheet .ui-sheet-cell.is-editing {
-        @apply ring-1 ring-inset ring-brand-navy-500/40;
+        @apply z-[1] bg-white ring-2 ring-inset ring-brand-navy-500/35;
+    }
+
+    .decree-sheet .ui-sheet-cell.is-editable:hover:not(.is-editing) {
+        @apply bg-sky-50/80;
     }
 
     .ui-icon-btn {
