@@ -120,7 +120,11 @@ class SystemViewerAccessTest extends TestCase
             ->patch(route('admin.systems.viewers', $system), [
                 'viewer_ids' => [$a->id, $b->id],
             ])
-            ->assertRedirect();
+            ->assertRedirect(route('admin.systems.index', [
+                'tab' => 'systems',
+                'system' => $system->id,
+            ]))
+            ->assertSessionHas('success');
 
         $this->assertEqualsCanonicalizing([$a->id, $b->id], $system->fresh()->viewers->pluck('id')->all());
     }

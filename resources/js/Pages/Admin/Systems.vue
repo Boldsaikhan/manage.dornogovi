@@ -235,6 +235,60 @@ const viewerNames = (system) => {
 const connectSearch = ref('');
 const viewerDrafts = ref({});
 const viewersSavingId = ref(null);
+const selectedSystemId = ref(null);
+
+const readSelectedSystemId = () => {
+    try {
+        const raw = new URL(window.location.href).searchParams.get('system');
+        const id = Number(raw);
+
+        return Number.isFinite(id) && id > 0 ? id : null;
+    } catch {
+        return null;
+    }
+};
+
+selectedSystemId.value = readSelectedSystemId();
+
+watch(() => page.url, () => {
+    const id = readSelectedSystemId();
+    if (id !== selectedSystemId.value) {
+        selectedSystemId.value = id;
+    }
+});
+
+const setSelectedSystemId = (id) => {
+    selectedSystemId.value = id;
+    try {
+        const url = new URL(window.location.href);
+        if (id) {
+            url.searchParams.set('system', String(id));
+        } else {
+            url.searchParams.delete('system');
+        }
+        url.searchParams.set('tab', 'systems');
+        window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}`);
+        sessionStorage.setItem('admin_settings_tab', 'systems');
+    } catch {
+        // ignore
+    }
+};
+
+const toggleSystem = (system) => {
+    setSelectedSystemId(selectedSystemId.value === system.id ? null : system.id);
+};
+
+const moveListedSystem = (system, direction) => {
+    const index = orderedSystems.value.findIndex((row) => row.id === system.id);
+    if (index === -1) {
+        return;
+    }
+    moveSystem(index, direction);
+};
+
+const refreshSystemStaff = () => {
+    router.reload({ only: ['employees', 'systems'], preserveScroll: true });
+};
 
 watch(
     () => props.systems,
@@ -499,53 +553,6 @@ const saveAi = () => {
                     Цэсийн тохиргоо хадгалах
                 </button>
             </form>
-
-            <div class="mt-8 border-t border-slate-200 pt-6">
-                <h2 class="text-base font-semibold text-brand-navy-900">Холбох систем хайх</h2>
-                <p class="mt-1 max-w-2xl text-sm text-brand-navy-400">
-                    Бүртгэлтэй гадны системээс хайж, аль албан хаагчийн цэсэнд харуулахаа сонгоно.
-                    Сонгоогүй бол тухайн систем ажилтны цэсэнд гарахгүй.
-                </p>
-
-                <input
-                    v-model="connectSearch"
-                    type="search"
-                    placeholder="Системийн нэр эсвэл хаягаар хайх…"
-                    class="ui-input mt-4 max-w-lg"
-                />
-
-                <p v-if="! connectableSystems.length" class="mt-4 text-sm text-slate-400">
-                    {{ connectSearch.trim() ? 'Илэрц олдсонгүй.' : 'Бүртгэлтэй гадны систем алга.' }}
-                </p>
-
-                <div class="mt-4 space-y-4">
-                    <div
-                        v-for="system in connectableSystems"
-                        :key="system.id"
-                        class="rounded-xl border border-slate-200 bg-slate-50/60 p-4"
-                    >
-                        <div class="mb-3 flex flex-wrap items-start justify-between gap-2">
-                            <div class="min-w-0">
-                                <h3 class="font-semibold text-brand-navy-800">{{ system.name }}</h3>
-                                <p class="truncate text-xs text-slate-400">{{ system.login_url || system.url }}</p>
-                            </div>
-                            <button
-                                type="button"
-                                class="ui-btn-primary shrink-0 py-1.5 text-xs"
-                                :disabled="viewersSavingId === system.id"
-                                @click="saveViewers(system)"
-                            >
-                                {{ viewersSavingId === system.id ? 'Хадгалж байна…' : 'Цэсэнд харуулахыг хадгалах' }}
-                            </button>
-                        </div>
-                        <EmployeePicker
-                            :employees="employees"
-                            :model-value="viewerDrafts[system.id] ?? []"
-                            @update:model-value="viewerDrafts[system.id] = $event"
-                        />
-                    </div>
-                </div>
-            </div>
         </section>
 
         <section
@@ -719,143 +726,157 @@ const saveAi = () => {
             <PushSubscribe class="max-w-xl" />
         </section>
 
-        <div v-show="activeTab === 'systems'" role="tabpanel">
-        <section class="mb-6 rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <h2 class="text-base font-semibold text-brand-navy-900">Гадны системүүд</h2>
-                    <p class="mt-1 max-w-3xl text-sm text-brand-navy-400">
-                        Бүртгэлтэй системээс албан хаагч хайж сонговол зөвхөн тэдний хажуугийн цэсэнд
-                        («Холбосон системүүд») харагдана. Сонгоогүй бол цэсэнд гарахгүй.
-                    </p>
+        <div v-show="activeTab === 'systems'" role="tabpanel" class="space-y-4">
+            <section class="rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-semibold text-brand-navy-900">Гадны системүүд</h2>
+                        <p class="mt-1 max-w-3xl text-sm text-brand-navy-400">
+                            Бүртгэлтэй систем дээр дарж албан хаагчдад цэсэнд харуулах тохиргоог нээнэ.
+                            Сонгоогүй бол тухайн систем ажилтны «Холбосон системүүд» цэсэнд гарахгүй.
+                        </p>
+                    </div>
+                    <button type="button" class="ui-btn-primary shrink-0" @click="openCreate">
+                        + Систем бүртгэх
+                    </button>
                 </div>
-                <button type="button" class="ui-btn-primary shrink-0" @click="openCreate">
-                    + Систем бүртгэх
-                </button>
-            </div>
-        </section>
 
-        <div class="mb-8 overflow-hidden rounded-xl border border-brand-navy-100 bg-white shadow-sm">
-            <table class="w-full text-sm">
-                <thead class="bg-brand-navy-50 text-left text-brand-navy-700">
-                    <tr>
-                        <th class="w-16 px-3 py-2 text-center font-medium" title="Цэсийн дараалал">№</th>
-                        <th class="px-5 py-2 font-medium">Систем</th>
-                        <th class="px-5 py-2 font-medium">Нэвтрэх арга</th>
-                        <th class="px-5 py-2 font-medium">Дотор нээгдэх</th>
-                        <th class="px-5 py-2 font-medium">Харах албан хаагч</th>
-                        <th class="w-52 px-5 py-2" />
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-if="!orderedSystems.length">
-                        <td colspan="6" class="px-5 py-10 text-center text-sm text-slate-400">
-                            Систем бүртгэгдээгүй байна. «Систем бүртгэх» дарж нэмнэ үү.
-                        </td>
-                    </tr>
-                    <tr
-                        v-for="(system, i) in orderedSystems"
+                <input
+                    v-model="connectSearch"
+                    type="search"
+                    placeholder="Сонгох системийн нэрээр хайх…"
+                    class="ui-input mt-4 max-w-lg"
+                />
+
+                <p v-if="! connectableSystems.length" class="mt-6 text-sm text-slate-400">
+                    {{ connectSearch.trim() ? 'Илэрц олдсонгүй.' : 'Систем бүртгэгдээгүй байна. «Систем бүртгэх» дарж нэмнэ үү.' }}
+                </p>
+
+                <div class="mt-4 space-y-2">
+                    <div
+                        v-for="system in connectableSystems"
                         :key="system.id"
-                        :class="i % 2 === 1 ? 'bg-brand-navy-50' : 'bg-white'"
+                        class="overflow-hidden rounded-xl border bg-white transition"
+                        :class="selectedSystemId === system.id
+                            ? 'border-brand-navy-400 shadow-sm ring-1 ring-brand-navy-200'
+                            : 'border-slate-200 hover:border-brand-navy-300'"
                     >
-                        <td class="px-2 py-2 text-center align-middle">
-                            <div class="inline-flex flex-col items-center gap-0.5">
+                        <div class="flex items-stretch">
+                            <div class="flex flex-col items-center justify-center gap-0.5 border-r border-slate-100 px-2 py-2">
                                 <button
                                     type="button"
-                                    class="rounded p-0.5 text-brand-navy-500 hover:bg-brand-navy-100 hover:text-brand-navy-800 disabled:cursor-not-allowed disabled:opacity-30"
-                                    :disabled="i === 0 || reorderSaving"
+                                    class="rounded p-0.5 text-brand-navy-500 hover:bg-brand-navy-100 disabled:opacity-30"
+                                    :disabled="orderedSystems[0]?.id === system.id || reorderSaving"
                                     title="Дээш"
-                                    aria-label="Дээш"
-                                    @click="moveSystem(i, -1)"
+                                    @click.stop="moveListedSystem(system, -1)"
                                 >
                                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
                                     </svg>
                                 </button>
-                                <span class="text-xs font-semibold tabular-nums text-brand-navy-600">{{ i + 1 }}</span>
+                                <span class="text-[11px] font-semibold tabular-nums text-brand-navy-600">
+                                    {{ orderedSystems.findIndex((row) => row.id === system.id) + 1 }}
+                                </span>
                                 <button
                                     type="button"
-                                    class="rounded p-0.5 text-brand-navy-500 hover:bg-brand-navy-100 hover:text-brand-navy-800 disabled:cursor-not-allowed disabled:opacity-30"
-                                    :disabled="i === orderedSystems.length - 1 || reorderSaving"
+                                    class="rounded p-0.5 text-brand-navy-500 hover:bg-brand-navy-100 disabled:opacity-30"
+                                    :disabled="orderedSystems.at(-1)?.id === system.id || reorderSaving"
                                     title="Доош"
-                                    aria-label="Доош"
-                                    @click="moveSystem(i, 1)"
+                                    @click.stop="moveListedSystem(system, 1)"
                                 >
                                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                                     </svg>
                                 </button>
                             </div>
-                        </td>
-                        <td class="px-5 py-3">
-                            <div class="font-medium text-brand-navy-800">{{ system.name }}</div>
-                            <div class="text-xs text-brand-navy-300">{{ system.login_url ?? system.url }}</div>
-                        </td>
-                        <td class="px-5 py-3">
-                            <span
-                                v-if="system.can_auto_submit"
-                                class="rounded-full bg-brand-orange-100 px-2 py-0.5 text-xs text-brand-orange-700"
-                            >
-                                Шууд илгээх
-                            </span>
-                            <span
-                                v-else-if="system.login_method === 'form_post'"
-                                class="rounded-full bg-yellow-50 px-2 py-0.5 text-xs text-yellow-700"
-                            >
-                                Тохиргоо дутуу
-                            </span>
-                            <span v-else class="rounded-full bg-brand-navy-100 px-2 py-0.5 text-xs text-brand-navy-600">
-                                Хуулж өгөх
-                            </span>
-                        </td>
-                        <td class="px-5 py-3">
-                            <span
-                                class="rounded-full px-2 py-0.5 text-xs"
-                                :class="system.is_embeddable
-                                    ? 'bg-green-50 text-green-700'
-                                    : 'bg-brand-navy-100 text-brand-navy-600'"
-                            >
-                                {{ system.is_embeddable === null ? 'Шалгаагүй' : (system.is_embeddable ? 'Тийм' : 'Үгүй') }}
-                            </span>
-                        </td>
-                        <td class="px-5 py-3">
                             <button
                                 type="button"
-                                class="text-left"
-                                :title="viewerNames(system)"
-                                @click="openViewers(system)"
+                                class="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-left"
+                                @click="toggleSystem(system)"
                             >
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-semibold text-brand-navy-800">{{ system.name }}</div>
+                                    <div class="truncate text-xs text-slate-400">{{ system.login_url || system.url }}</div>
+                                </div>
                                 <span
-                                    class="rounded-full px-2 py-0.5 text-xs"
+                                    v-if="system.can_auto_submit"
+                                    class="hidden shrink-0 rounded-full bg-brand-orange-100 px-2 py-0.5 text-[11px] text-brand-orange-700 sm:inline"
+                                >
+                                    Шууд илгээх
+                                </span>
+                                <span
+                                    class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium"
                                     :class="(system.viewer_ids?.length ?? 0) > 0
                                         ? 'bg-brand-orange-100 text-brand-orange-700'
-                                        : 'bg-brand-navy-100 text-brand-navy-600'"
+                                        : 'bg-slate-100 text-slate-500'"
                                 >
-                                    {{ (system.viewer_ids?.length ?? 0) > 0 ? `${system.viewer_ids.length} албан хаагч` : 'Сонгоогүй' }}
+                                    {{ (system.viewer_ids?.length ?? 0) > 0
+                                        ? `${system.viewer_ids.length} албан хаагч`
+                                        : 'Сонгоогүй' }}
                                 </span>
-                                <div
-                                    v-if="(system.viewer_ids?.length ?? 0) > 0"
-                                    class="mt-1 max-w-xs truncate text-xs text-brand-navy-300"
+                                <svg
+                                    class="h-4 w-4 shrink-0 text-slate-400 transition"
+                                    :class="selectedSystemId === system.id ? 'rotate-180' : ''"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    viewBox="0 0 24 24"
                                 >
-                                    {{ viewerNames(system) }}
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div
+                            v-if="selectedSystemId === system.id"
+                            class="space-y-4 border-t border-slate-100 bg-slate-50/70 p-4"
+                        >
+                            <div class="flex flex-wrap items-start justify-between gap-2">
+                                <div>
+                                    <h3 class="text-sm font-semibold text-brand-navy-800">Цэсэнд харуулах албан хаагчид</h3>
+                                    <p class="mt-0.5 text-xs text-slate-500">
+                                        Хайж чагталсан албан хаагчдын хажуугийн цэсэнд энэ систем гарна.
+                                    </p>
                                 </div>
-                            </button>
-                        </td>
-                        <td class="px-5 py-3 text-right whitespace-nowrap">
-                            <button type="button" class="text-brand-navy-600 hover:underline" @click="openEdit(system)">
-                                Тохируулах
-                            </button>
-                            <button type="button" class="ml-3 text-brand-navy-400 hover:underline" @click="checkEmbed(system)">
-                                Дахин шалгах
-                            </button>
-                            <button type="button" class="ml-3 text-rose-600 hover:underline" @click="removeSystem(system)">
-                                Устгах
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50"
+                                        @click="refreshSystemStaff"
+                                    >
+                                        Шинэчлэх
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="ui-btn-primary py-1.5 text-xs"
+                                        :disabled="viewersSavingId === system.id"
+                                        @click="saveViewers(system)"
+                                    >
+                                        {{ viewersSavingId === system.id ? 'Хадгалж байна…' : 'Тохиргоог хадгалах' }}
+                                    </button>
+                                </div>
+                            </div>
+                            <EmployeePicker
+                                :employees="employees"
+                                :model-value="viewerDrafts[system.id] ?? []"
+                                max-height-class="max-h-72"
+                                @update:model-value="viewerDrafts[system.id] = $event"
+                            />
+                            <div class="flex flex-wrap gap-3 border-t border-slate-200 pt-3 text-xs">
+                                <button type="button" class="text-brand-navy-700 hover:underline" @click="openEdit(system)">
+                                    Системийн тохиргоо
+                                </button>
+                                <button type="button" class="text-brand-navy-500 hover:underline" @click="checkEmbed(system)">
+                                    Дотор нээгдэхийг шалгах
+                                </button>
+                                <button type="button" class="text-rose-600 hover:underline" @click="removeSystem(system)">
+                                    Устгах
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
         <div v-if="otherSystems.length" class="mb-8 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <div class="border-b border-slate-100 bg-slate-50 px-5 py-3">

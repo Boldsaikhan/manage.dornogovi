@@ -168,7 +168,9 @@ class SystemSettingsController extends Controller
 
         $system->viewers()->sync($viewerIds);
 
-        return back()->with('success', "\"{$system->name}\" систем бүртгэгдлээ.");
+        return redirect()
+            ->route('admin.systems.index', ['tab' => 'systems', 'system' => $system->id])
+            ->with('success', "\"{$system->name}\" систем бүртгэгдлээ.");
     }
 
     public function update(Request $request, System $system): RedirectResponse
@@ -185,7 +187,9 @@ class SystemSettingsController extends Controller
             ? 'цэсэнд харагдахгүй'
             : count($viewerIds).' албан хаагчийн цэсэнд харагдана';
 
-        return back()->with('success', "\"{$system->name}\" тохиргоо хадгалагдлаа — {$who}.");
+        return redirect()
+            ->route('admin.systems.index', ['tab' => 'systems', 'system' => $system->id])
+            ->with('success', "\"{$system->name}\" тохиргоо хадгалагдлаа — {$who}.");
     }
 
     public function updateViewers(Request $request, System $system): RedirectResponse
@@ -202,7 +206,9 @@ class SystemSettingsController extends Controller
             ? 'цэсэнд харагдахгүй'
             : count($ids).' албан хаагчийн цэсэнд харагдана';
 
-        return back()->with('success', "\"{$system->name}\" — {$who}.");
+        return redirect()
+            ->route('admin.systems.index', ['tab' => 'systems', 'system' => $system->id])
+            ->with('success', "\"{$system->name}\" — {$who}.");
     }
 
     public function destroy(System $system): RedirectResponse
