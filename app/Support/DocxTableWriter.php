@@ -28,6 +28,9 @@ class DocxTableWriter
         array $centerColumns = [],
         bool $landscape = false,
         ?DocumentFormat $format = null,
+        ?string $fontName = null,
+        ?float $fontSizePt = null,
+        ?float $lineSpacing = null,
     ): void {
         // Бичиг хэргийн стандартаас хуудасны тохиргоог авна.
         $format ??= DocumentFormat::defaultFormat();
@@ -46,7 +49,8 @@ class DocxTableWriter
             .'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
             .'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
             .'</Relationships>');
-        $zip->addFromString('word/styles.xml', $this->styles($format));
+        $zip->addFromString('word/styles.xml',
+            $this->styles($format, $fontName, $fontSizePt, $lineSpacing));
         $zip->addFromString('word/document.xml',
             $this->document($title, $headings, $widths, $rows, $centerColumns, $landscape, $format));
         $zip->close();
@@ -133,7 +137,7 @@ class DocxTableWriter
             $cells .= $this->cell($label, $widths[$i] ?? 1500, bold: true, align: 'center', shade: 'DCE6F1');
         }
 
-        return '<w:tr><w:trPr><w:tblHeader/></w:trPr>'.$cells.'</w:tr>';
+        return '<w:tr><w:trPr><w:tblHeader/><w:cantSplit/></w:trPr>'.$cells.'</w:tr>';
     }
 
     /**
@@ -152,7 +156,7 @@ class DocxTableWriter
             .'<w:r><w:rPr><w:b/><w:i/></w:rPr><w:t xml:space="preserve">'.$this->escape($text).'</w:t></w:r>'
             .'</w:p></w:tc>';
 
-        return "<w:tr>{$cell}</w:tr>";
+        return '<w:tr><w:trPr><w:cantSplit/></w:trPr>'."{$cell}</w:tr>";
     }
 
     /**
@@ -172,7 +176,7 @@ class DocxTableWriter
             );
         }
 
-        return "<w:tr>{$cells}</w:tr>";
+        return '<w:tr><w:trPr><w:cantSplit/></w:trPr>'."{$cells}</w:tr>";
     }
 
     private function cell(
@@ -219,11 +223,22 @@ class DocxTableWriter
     /**
      * Фонт, үсгийн хэмжээ, мөр хоорондын зайг баримтын үндсэн загвар болгоно.
      */
-    private function styles(?DocumentFormat $format): string
-    {
-        $font = $this->escape($format?->font_name ?: 'Arial');
-        $size = $format?->fontHalfPoints() ?: 24;
-        $spacing = $format?->lineSpacingTwip() ?: 240;
+    private function styles(
+        ?DocumentFormat $format,
+        ?string $fontName = null,
+        ?float $fontSizePt = null,
+        ?float $lineSpacing = null,
+    ): string {
+        $font = $this->escape($fontName ?: ($format?->font_name ?: 'Arial'));
+
+        $size = $fontSizePt !== null
+            ? (int) round($fontSizePt * 2)
+            : ($format?->fontHalfPoints() ?: 24);
+
+        // 240 twip = нэг мөр.
+        $spacing = $lineSpacing !== null
+            ? (int) round(max(1.0, $lineSpacing) * 240)
+            : ($format?->lineSpacingTwip() ?: 240);
 
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             .'<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'

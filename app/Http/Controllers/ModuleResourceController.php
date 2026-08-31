@@ -174,6 +174,9 @@ class ModuleResourceController extends Controller
         return back()->with('success', 'Устгалаа.');
     }
 
+    /**
+     * Оруулсан файлыг браузерт шууд харуулна (PDF) эсвэл татна.
+     */
     public function download(Request $request, string $module, int $id): StreamedResponse
     {
         $config = $this->configOrFail($module);
@@ -181,16 +184,22 @@ class ModuleResourceController extends Controller
 
         $row = $config['model']::query()->whereKey($id)->firstOrFail();
         abort_unless(ModuleOwnScope::allows($request->user(), $module, $row), 403);
-        abort_unless(
-            filled($row->file_path ?? null) && Storage::disk('local')->exists($row->file_path),
-            404
-        );
 
-        $name = filled($row->file_name ?? null)
-            ? $row->file_name
-            : basename($row->file_path);
+        $disk = $this->fileDisk($row->file_path ?? null);
+        abort_unless($disk, 404);
 
-        return Storage::disk('local')->download($row->file_path, $name);
+        $name = (string) ($row->file_name ?: basename((string) $row->file_path));
+        $mime = Storage::disk($disk)->mimeType($row->file_path) ?: 'application/octet-stream';
+        if ($this->isPdfName($name)) {
+            $mime = 'application/pdf';
+        }
+
+        $ascii = preg_replace('/[^\x20-\x7E]/', '_', $name) ?: 'file';
+
+        return Storage::disk($disk)->response($row->file_path, $name, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => "inline; filename=\"{$ascii}\"; filename*=UTF-8''".rawurlencode($name),
+        ]);
     }
 
     private function moduleFromRequest(Request $request): string
@@ -359,8 +368,9 @@ class ModuleResourceController extends Controller
     private function deleteStoredFile(Model $row): void
     {
         $path = $row->file_path ?? null;
-        if (filled($path) && Storage::disk('local')->exists($path)) {
-            Storage::disk('local')->delete($path);
+        $disk = $this->fileDisk($path);
+        if ($disk) {
+            Storage::disk($disk)->delete($path);
         }
     }
 
@@ -428,21 +438,14 @@ class ModuleResourceController extends Controller
         foreach ($config['columns'] as $col) {
             $key = $col['key'];
             $out[$key] = match (true) {
-                $key === 'file_label' => $row->file_name ?: (filled($row->file_path ?? null) ? basename($row->file_path) : '—'),
+                $key === 'file_label', $key === 'file' => $row->file_name ?: (filled($row->file_path ?? null) ? basename($row->file_path) : '—'),
                 $key === ($config['scope_column'] ?? 'scope') && ! empty($config['scopes'])
                     => $config['scopes'][$row->{$key}] ?? ($row->{$key} ?? '—'),
                 default => $this->serializeValue($row, $key),
             };
         }
 
-        if (in_array('file_path', $row->getFillable(), true)) {
-            $out['has_file'] = filled($row->file_path ?? null);
-            $out['file_url'] = filled($row->file_path ?? null)
-                ? route('modules.file', ['module' => $module, 'id' => $row->getKey()])
-                : null;
-        }
-
-        return $out;
+        return $this->appendFileMeta($out, $row, $module);
     }
 
     private function serializeValue(Model $row, string $key): string
@@ -457,5 +460,44 @@ class ModuleResourceController extends Controller
             ) ?? '—',
             default => (string) ($row->{$key} ?? '—'),
         };
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function appendFileMeta(array $out, Model $row, string $module): array
+    {
+        if (! in_array('file_path', $row->getFillable(), true)) {
+            return $out;
+        }
+
+        $path = $row->file_path ?? null;
+        $name = (string) ($row->file_name ?: ($path ? basename((string) $path) : ''));
+        $out['file_name'] = $name !== '' ? $name : null;
+        $out['has_file'] = filled($path);
+        $out['file_url'] = filled($path) ? route('modules.file', ['module' => $module, 'id' => $row->getKey()]) : null;
+        $out['file_is_pdf'] = $this->isPdfName($name);
+
+        return $out;
+    }
+
+    private function fileDisk(?string $path): ?string
+    {
+        if (! filled($path)) {
+            return null;
+        }
+
+        foreach (['local', 'public'] as $disk) {
+            if (Storage::disk($disk)->exists($path)) {
+                return $disk;
+            }
+        }
+
+        return null;
+    }
+
+    private function isPdfName(?string $name): bool
+    {
+        return str_ends_with(strtolower((string) $name), '.pdf');
     }
 }

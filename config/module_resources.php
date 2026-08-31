@@ -84,7 +84,7 @@ return [
     'regulations' => [
         'model' => App\Models\Regulation::class,
         'title' => 'Дотоод журам',
-        'description' => 'Журмыг Word эсвэл PDF-ээр оруулж, табаар харна.',
+        'description' => 'Журмыг Word эсвэл PDF-ээр оруулж, табаар харна. PDF шууд хуудсан дээр нээгдэнэ.',
         'scope_column' => 'category',
         'scope_label' => 'Ангилал',
         'hide_all_scope' => true,
@@ -96,7 +96,7 @@ return [
         ],
         'columns' => [
             ['key' => 'title', 'label' => 'Гарчиг'],
-            ['key' => 'file_label', 'label' => 'Файл'],
+            ['key' => 'file_label', 'label' => 'Файл', 'type' => 'file'],
             ['key' => 'published_at', 'label' => 'Нийтэлсэн'],
         ],
         'fields' => [

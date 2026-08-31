@@ -7,7 +7,14 @@ namespace App\Support;
  */
 class PhoneDirectoryDocxWriter
 {
-    private const COLUMN_WIDTHS = [700, 3200, 3400, 1700, 1700]; // twip
+    private const COLUMN_WIDTHS = [560, 2700, 4300, 1420, 1420]; // twip
+
+    /** Жагсаалтын типограф — бичиг хэргийн ерөнхий стандартаас хамаарахгүй. */
+    private const FONT_NAME = 'Arial';
+
+    private const FONT_SIZE_PT = 11.0;
+
+    private const LINE_SPACING = 1.15;
 
     private const HEADINGS = ['№', 'Овог нэр', 'Албан тушаал', 'Ажлын өрөөний утас', 'Гар утас'];
 
@@ -42,6 +49,9 @@ class PhoneDirectoryDocxWriter
             self::COLUMN_WIDTHS,
             $rows,
             centerColumns: [0, 3, 4],
+            fontName: self::FONT_NAME,
+            fontSizePt: self::FONT_SIZE_PT,
+            lineSpacing: self::LINE_SPACING,
         );
     }
 
