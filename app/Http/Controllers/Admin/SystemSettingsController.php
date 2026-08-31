@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\Ai\AiSettings;
 use App\Services\EmbedChecker;
 use App\Support\ModuleAccess;
+use App\Support\ModuleOrder;
 use App\Support\ModuleVisibility;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -94,6 +95,10 @@ class SystemSettingsController extends Controller
         $data = $request->validate([
             'enabled' => ['required', 'array'],
             'enabled.*' => ['boolean'],
+            'group_order' => ['nullable', 'array'],
+            'group_order.*' => ['string'],
+            'item_order' => ['nullable', 'array'],
+            'item_order.*' => ['string'],
         ]);
 
         $disabled = [];
@@ -106,7 +111,11 @@ class SystemSettingsController extends Controller
 
         ModuleVisibility::setDisabled($disabled);
 
-        return back()->with('success', 'Цэсийн нээлттэй/хаалттай тохиргоо хадгалагдлаа.');
+        if (isset($data['group_order'], $data['item_order'])) {
+            ModuleOrder::setOrder($data['group_order'], $data['item_order']);
+        }
+
+        return back()->with('success', 'Цэсийн тохиргоо хадгалагдлаа.');
     }
 
     public function updateAi(Request $request, AiSettings $aiSettings): RedirectResponse

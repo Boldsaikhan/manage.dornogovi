@@ -184,21 +184,65 @@ const menuEnabled = ref(
     Object.fromEntries((props.menus ?? []).map((m) => [m.key, m.enabled !== false])),
 );
 
-const menusByGroup = computed(() => {
+const buildMenuGroups = (menus) => {
     const map = {};
-    for (const item of props.menus ?? []) {
+    for (const item of menus ?? []) {
         if (!map[item.group]) {
-            map[item.group] = { label: item.group_label, items: [] };
+            map[item.group] = { key: item.group, label: item.group_label, items: [] };
         }
-        map[item.group].items.push(item);
+        map[item.group].items.push({ ...item });
     }
+
     return Object.values(map);
-});
+};
+
+const menuGroups = ref(buildMenuGroups(props.menus));
+
+watch(
+    () => props.menus,
+    (menus) => {
+        menuGroups.value = buildMenuGroups(menus);
+        menuEnabled.value = Object.fromEntries((menus ?? []).map((m) => [m.key, m.enabled !== false]));
+    },
+);
+
+const moveMenuGroup = (groupIndex, direction) => {
+    const next = groupIndex + direction;
+    if (next < 0 || next >= menuGroups.value.length) {
+        return;
+    }
+
+    const list = [...menuGroups.value];
+    const [row] = list.splice(groupIndex, 1);
+    list.splice(next, 0, row);
+    menuGroups.value = list;
+};
+
+const moveMenuItem = (groupIndex, itemIndex, direction) => {
+    const group = menuGroups.value[groupIndex];
+    if (!group) {
+        return;
+    }
+
+    const next = itemIndex + direction;
+    if (next < 0 || next >= group.items.length) {
+        return;
+    }
+
+    const items = [...group.items];
+    const [row] = items.splice(itemIndex, 1);
+    items.splice(next, 0, row);
+    menuGroups.value = menuGroups.value.map((entry, index) => (
+        index === groupIndex ? { ...entry, items } : entry
+    ));
+};
 
 const menuForm = useForm({ enabled: menuEnabled.value });
 
 const saveMenus = () => {
     menuForm.enabled = { ...menuEnabled.value };
+    menuForm.group_order = menuGroups.value.map((group) => group.key);
+    menuForm.item_order = menuGroups.value.flatMap((group) => group.items.map((item) => item.key));
     menuForm.patch(route('admin.menu-settings.update'), { preserveScroll: true });
 };
 
@@ -512,26 +556,81 @@ const saveAi = () => {
                 <h2 class="text-base font-semibold text-brand-navy-900">Цэс нээх / хаах</h2>
                 <p class="mt-1 max-w-2xl text-sm text-brand-navy-400">
                     Хаасан цэс бүх хэрэглэгчид харагдахгүй, шууд хаягаар ч нээгдэхгүй.
-                    Дахин нээхийн тулд эндээс асаана.
+                    ▲▼ товчоор бүлэг болон цэсийн байрлалыг солино. Дараа нь хадгална.
                 </p>
             </div>
 
             <form class="space-y-5" @submit.prevent="saveMenus">
                 <div
-                    v-for="group in menusByGroup"
-                    :key="group.label"
+                    v-for="(group, groupIndex) in menuGroups"
+                    :key="group.key"
                     class="rounded-xl border border-slate-100 bg-slate-50/80 p-4"
                 >
-                    <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        {{ group.label }}
-                    </h3>
-                    <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <div class="flex flex-col items-center gap-0.5">
+                                <button
+                                    type="button"
+                                    class="rounded p-0.5 text-brand-navy-500 hover:bg-brand-navy-100 disabled:opacity-30"
+                                    :disabled="groupIndex === 0"
+                                    title="Бүлэг дээш"
+                                    @click="moveMenuGroup(groupIndex, -1)"
+                                >
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+                                    </svg>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="rounded p-0.5 text-brand-navy-500 hover:bg-brand-navy-100 disabled:opacity-30"
+                                    :disabled="groupIndex === menuGroups.length - 1"
+                                    title="Бүлэг доош"
+                                    @click="moveMenuGroup(groupIndex, 1)"
+                                >
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                {{ group.label }}
+                            </h3>
+                        </div>
+                        <span class="text-[11px] font-medium text-slate-400">{{ group.items.length }} цэс</span>
+                    </div>
+
+                    <div class="space-y-2">
                         <label
-                            v-for="item in group.items"
+                            v-for="(item, itemIndex) in group.items"
                             :key="item.key"
-                            class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"
+                            class="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm sm:px-3 sm:py-2.5"
                         >
-                            <span class="font-medium text-slate-800">{{ item.label }}</span>
+                            <div class="flex flex-col items-center gap-0.5">
+                                <button
+                                    type="button"
+                                    class="rounded p-0.5 text-brand-navy-500 hover:bg-brand-navy-100 disabled:opacity-30"
+                                    :disabled="itemIndex === 0"
+                                    title="Дээш"
+                                    @click.prevent="moveMenuItem(groupIndex, itemIndex, -1)"
+                                >
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+                                    </svg>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="rounded p-0.5 text-brand-navy-500 hover:bg-brand-navy-100 disabled:opacity-30"
+                                    :disabled="itemIndex === group.items.length - 1"
+                                    title="Доош"
+                                    @click.prevent="moveMenuItem(groupIndex, itemIndex, 1)"
+                                >
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <span class="min-w-0 flex-1 font-medium text-slate-800">{{ item.label }}</span>
                             <span class="flex items-center gap-2">
                                 <span
                                     class="text-[11px] font-semibold"

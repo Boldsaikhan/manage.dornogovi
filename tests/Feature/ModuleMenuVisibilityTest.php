@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Support\ModuleAccess;
+use App\Support\ModuleOrder;
 use App\Support\ModuleVisibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
@@ -60,5 +61,38 @@ class ModuleMenuVisibilityTest extends TestCase
         $this->assertContains('dashboard', $keys);
         $this->assertSame('dashboard', end($keys));
         $this->assertNotSame('dashboard', $keys[0] ?? null);
+    }
+
+    public function test_admin_can_reorder_menu_modules(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $enabled = ModuleAccess::definitions()
+            ->mapWithKeys(fn (array $item) => [$item['key'] => true])
+            ->all();
+
+        $itemOrder = ModuleOrder::itemKeys();
+        $tasksIndex = array_search('tasks', $itemOrder, true);
+        $workGroupsIndex = array_search('work_groups', $itemOrder, true);
+        [$itemOrder[$tasksIndex], $itemOrder[$workGroupsIndex]] = [$itemOrder[$workGroupsIndex], $itemOrder[$tasksIndex]];
+
+        $groupOrder = ['work', 'documents', 'hr', 'knowledge', 'admin', 'dashboard'];
+
+        $this->actingAs($admin)
+            ->patch(route('admin.menu-settings.update'), [
+                'enabled' => $enabled,
+                'group_order' => $groupOrder,
+                'item_order' => $itemOrder,
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->get(route('dept.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('moduleNav.0.key', 'work')
+                ->where('moduleNav.0.items.0.key', 'work_groups')
+                ->where('moduleNav.1.key', 'documents')
+            );
     }
 }

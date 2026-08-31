@@ -258,9 +258,9 @@ class ModuleAccess
         }
 
         $groups = config('modules.groups', []);
-        $order = array_flip(array_keys($groups));
+        $groupOrder = array_flip(ModuleOrder::groupKeys());
 
-        return self::definitions()
+        return ModuleOrder::sortDefinitions(self::definitions())
             ->filter(fn (array $item) => self::canView($user, $item['key']))
             ->groupBy('group')
             ->map(function (Collection $items, string $groupKey) use ($groups) {
@@ -270,7 +270,7 @@ class ModuleAccess
                     'items' => $items->values()->all(),
                 ];
             })
-            ->sortBy(fn (array $group) => $order[$group['key']] ?? 1000)
+            ->sortBy(fn (array $group) => $groupOrder[$group['key']] ?? 1000)
             ->values()
             ->all();
     }

@@ -66,8 +66,9 @@ class ModuleVisibility
     {
         $groups = config('modules.groups', []);
         $disabled = self::disabledKeys();
+        $groupOrder = array_flip(ModuleOrder::groupKeys());
 
-        return ModuleAccess::definitions()
+        return ModuleOrder::sortDefinitions(ModuleAccess::definitions())
             ->map(fn (array $item) => [
                 'key' => $item['key'],
                 'label' => $item['label'],
@@ -75,6 +76,7 @@ class ModuleVisibility
                 'group_label' => $groups[$item['group']] ?? $item['group'],
                 'enabled' => ! in_array($item['key'], $disabled, true),
             ])
+            ->sortBy(fn (array $item) => $groupOrder[$item['group']] ?? 9999)
             ->values()
             ->all();
     }
