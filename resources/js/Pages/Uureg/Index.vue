@@ -1532,7 +1532,8 @@ const prepTableMinWidth = computed(() => {
                     :style="{ width: `${directiveTableMinWidth}px`, minWidth: `${directiveTableMinWidth}px` }"
                 >
                 <table
-                    class="ui-table table-fixed w-full"
+                    class="ui-table ui-table--pin-actions table-fixed w-full"
+                    :style="{ '--pin-actions-width': canEdit ? '48px' : '0px' }"
                 >
                     <colgroup>
                         <col v-if="canEdit" style="width: 40px" />
@@ -1563,8 +1564,8 @@ const prepTableMinWidth = computed(() => {
                             <th class="sticky top-0 z-20 bg-brand-navy-50">Хариуцах эзэн</th>
                             <th class="sticky top-0 z-20 bg-brand-navy-50">Хяналт тавих албан тушаалтан</th>
                             <th class="sticky top-0 z-20 bg-brand-navy-50">Хэрэгжилт</th>
-                            <th class="sticky top-0 z-20 bg-brand-navy-50 text-center">Биелэлтийн хувь</th>
-                            <th v-if="canEdit" class="sticky top-0 z-20 bg-brand-navy-50 text-center" />
+                            <th class="sticky top-0 z-20 bg-brand-navy-50 text-center ui-sticky-progress">Биелэлтийн хувь</th>
+                            <th v-if="canEdit" class="sticky top-0 z-20 bg-brand-navy-50 text-center ui-sticky-actions" />
                         </tr>
                     </thead>
                     <tbody>
@@ -1633,7 +1634,7 @@ const prepTableMinWidth = computed(() => {
                                     @commit="(v) => saveField(task.id, 'note', v)"
                                 />
                             </td>
-                            <td class="ui-sheet-td text-center">
+                            <td class="ui-sheet-td ui-sticky-progress text-center">
                                 <SheetCell
                                     v-if="drafts[task.id]"
                                     v-model="drafts[task.id].progress"
@@ -1647,7 +1648,7 @@ const prepTableMinWidth = computed(() => {
                                     </span>
                                 </SheetCell>
                             </td>
-                            <td v-if="canEdit" class="text-center align-middle">
+                            <td v-if="canEdit" class="ui-sticky-actions text-center align-middle">
                                 <button
                                     type="button"
                                     class="ui-icon-btn"
@@ -1688,7 +1689,8 @@ const prepTableMinWidth = computed(() => {
                     :style="{ width: `${prepTableMinWidth}px`, minWidth: `${prepTableMinWidth}px` }"
                 >
                 <table
-                    class="ui-table table-fixed w-full"
+                    class="ui-table ui-table--pin-actions table-fixed w-full"
+                    :style="{ '--pin-actions-width': canEdit ? '48px' : '0px' }"
                 >
                     <colgroup>
                         <col v-if="canEdit" style="width: 40px" />
@@ -1721,8 +1723,8 @@ const prepTableMinWidth = computed(() => {
                             <th class="sticky top-0 z-20 bg-brand-navy-50">Хариуцах эзэн</th>
                             <th class="sticky top-0 z-20 bg-brand-navy-50">Хамтран хэрэгжүүлэх</th>
                             <th class="sticky top-0 z-20 bg-brand-navy-50">Хэрэгжилт</th>
-                            <th class="sticky top-0 z-20 bg-brand-navy-50 text-center">Биелэлтийн хувь</th>
-                            <th v-if="canEdit" class="sticky top-0 z-20 bg-brand-navy-50 text-center" />
+                            <th class="sticky top-0 z-20 bg-brand-navy-50 text-center ui-sticky-progress">Биелэлтийн хувь</th>
+                            <th v-if="canEdit" class="sticky top-0 z-20 bg-brand-navy-50 text-center ui-sticky-actions" />
                         </tr>
                     </thead>
                     <tbody>
@@ -1799,7 +1801,7 @@ const prepTableMinWidth = computed(() => {
                                     @commit="(v) => saveField(task.id, 'note', v)"
                                 />
                             </td>
-                            <td class="ui-sheet-td text-center">
+                            <td class="ui-sheet-td ui-sticky-progress text-center">
                                 <SheetCell
                                     v-if="drafts[task.id]"
                                     v-model="drafts[task.id].progress"
@@ -1813,7 +1815,7 @@ const prepTableMinWidth = computed(() => {
                                     </span>
                                 </SheetCell>
                             </td>
-                            <td v-if="canEdit" class="text-center align-middle">
+                            <td v-if="canEdit" class="ui-sticky-actions text-center align-middle">
                                 <button
                                     type="button"
                                     class="ui-icon-btn"

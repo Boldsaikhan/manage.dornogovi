@@ -116,6 +116,67 @@
         @apply bg-sky-50;
     }
 
+    /* Баруун талын багана — хэвтээ scroll-д хөдлөхгүй */
+    .ui-table--pin-actions {
+        --pin-actions-width: 0px;
+    }
+
+    .ui-table--pin-actions .ui-sticky-progress,
+    .ui-table--pin-actions .ui-sticky-actions {
+        position: sticky;
+        z-index: 10;
+        background-clip: padding-box;
+    }
+
+    .ui-table--pin-actions .ui-sticky-progress {
+        right: var(--pin-actions-width);
+        box-shadow: -6px 0 8px -6px rgba(15, 23, 42, 0.1);
+    }
+
+    .ui-table--pin-actions .ui-sticky-actions {
+        right: 0;
+    }
+
+    .ui-table--pin-actions thead .ui-sticky-progress,
+    .ui-table--pin-actions thead .ui-sticky-actions {
+        @apply bg-brand-navy-50;
+        z-index: 25;
+    }
+
+    .ui-table--pin-actions thead .ui-sticky-actions {
+        z-index: 26;
+    }
+
+    .ui-table--pin-actions tbody td.ui-sticky-progress,
+    .ui-table--pin-actions tbody td.ui-sticky-actions {
+        @apply bg-white;
+    }
+
+    .ui-table--pin-actions tbody tr:nth-child(even) td.ui-sticky-progress,
+    .ui-table--pin-actions tbody tr:nth-child(even) td.ui-sticky-actions {
+        @apply bg-slate-50/60;
+    }
+
+    .ui-table--pin-actions tbody tr:hover td.ui-sticky-progress,
+    .ui-table--pin-actions tbody tr:hover td.ui-sticky-actions {
+        @apply bg-brand-navy-50/40;
+    }
+
+    .ui-table--pin-actions tbody tr.bg-brand-navy-50\/70 td.ui-sticky-progress,
+    .ui-table--pin-actions tbody tr.bg-brand-navy-50\/70 td.ui-sticky-actions {
+        @apply bg-brand-navy-50/70;
+    }
+
+    .ui-table--pin-actions tbody tr:focus-within td.ui-sticky-progress,
+    .ui-table--pin-actions tbody tr:focus-within td.ui-sticky-actions {
+        @apply bg-sky-50;
+    }
+
+    .ui-table--pin-actions tbody tr:focus-within:hover td.ui-sticky-progress,
+    .ui-table--pin-actions tbody tr:focus-within:hover td.ui-sticky-actions {
+        @apply bg-sky-50;
+    }
+
     /* Сонголтын товчнууд нэг мөрөнд — багтахгүй бол хажуу тийш гүйнэ */
     .ui-pill-row {
         scrollbar-width: none;
