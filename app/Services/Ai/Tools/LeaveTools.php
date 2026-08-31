@@ -4,6 +4,7 @@ namespace App\Services\Ai\Tools;
 
 use App\Models\Leave;
 use App\Models\User;
+use App\Support\ModuleOwnScope;
 use Carbon\Carbon;
 
 class LeaveTools
@@ -28,6 +29,7 @@ class LeaveTools
         $year = isset($args['year']) ? (int) $args['year'] : (int) now()->year;
 
         $query = Leave::query()->with(['user:id,name', 'department:id,name'])->orderByDesc('id');
+        ModuleOwnScope::apply($query, $user, 'leaves');
         if ($status) {
             $query->where('status', $status);
         }

@@ -3,6 +3,8 @@
 namespace App\Services\Ai;
 
 use App\Models\AppSetting;
+use App\Models\User;
+use App\Support\ModuleAccess;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Cache;
 
@@ -172,6 +174,74 @@ class AiSettings
     public function canWrite(string $module): bool
     {
         return $this->accessFor($module) === self::ACCESS_WRITE;
+    }
+
+    /**
+     * Manage AI тохиргоо ∩ хэрэглэгчийн хандах эрх — унших.
+     */
+    public function userMayRead(?User $user, string $module): bool
+    {
+        if (! $user || ! $this->canRead($module)) {
+            return false;
+        }
+
+        if ($module === self::GENERAL_MODULE) {
+            return true;
+        }
+
+        return ModuleAccess::canView($user, $module);
+    }
+
+    /**
+     * Manage AI тохиргоо ∩ хэрэглэгчийн хандах эрх — бүртгэл үүсгэх/засах.
+     */
+    public function userMayWrite(?User $user, string $module): bool
+    {
+        if (! $user || ! $this->canWrite($module)) {
+            return false;
+        }
+
+        if ($module === self::GENERAL_MODULE) {
+            return false;
+        }
+
+        return ModuleAccess::canEdit($user, $module);
+    }
+
+    /**
+     * Систем промпт / UI-д: хэрэглэгчид нээлттэй цэсүүд.
+     *
+     * @return list<array{key: string, label: string, write: bool}>
+     */
+    public function readableModulesFor(User $user): array
+    {
+        $rows = [];
+
+        if ($this->userMayRead($user, self::GENERAL_MODULE)) {
+            $rows[] = [
+                'key' => self::GENERAL_MODULE,
+                'label' => 'Ерөнхий (самбар, ажилтны хайлт)',
+                'write' => false,
+            ];
+        }
+
+        foreach (ModuleAccess::definitions() as $item) {
+            $key = $item['key'] ?? null;
+            if (! is_string($key) || $key === 'ai' || $key === 'systems') {
+                continue;
+            }
+            if (! $this->userMayRead($user, $key)) {
+                continue;
+            }
+
+            $rows[] = [
+                'key' => $key,
+                'label' => (string) ($item['label'] ?? $key),
+                'write' => $this->userMayWrite($user, $key),
+            ];
+        }
+
+        return $rows;
     }
 
     public function forAdmin(): array

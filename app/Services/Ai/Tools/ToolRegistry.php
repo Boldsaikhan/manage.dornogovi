@@ -78,31 +78,26 @@ class ToolRegistry
         }
 
         $module = $this->permissions[$name] ?? null;
-        if ($module && ! ModuleAccess::canView($user, $module)) {
-            return [
-                'ok' => false,
-                'denied' => true,
-                'error' => 'Энэ мэдээллийг харах эрх танд байхгүй байна.',
-            ];
-        }
-
-        // Админаас тохируулсан Manage AI-ийн цэсийн хандалт.
         $settingsKey = $module ?: AiSettings::GENERAL_MODULE;
         $level = $this->levels[$name] ?? AiSettings::ACCESS_READ;
 
-        if (! $this->settings->canRead($settingsKey)) {
+        if (! $this->settings->userMayRead($user, $settingsKey)) {
             return [
                 'ok' => false,
                 'denied' => true,
-                'error' => 'Энэ цэс рүү хандахыг Manage AI-д зөвшөөрөөгүй байна.',
+                'error' => $module && ! ModuleAccess::canView($user, $module)
+                    ? 'Энэ мэдээллийг харах эрх танд байхгүй байна.'
+                    : 'Энэ цэс рүү хандахыг Manage AI-д зөвшөөрөөгүй байна.',
             ];
         }
 
-        if ($level === AiSettings::ACCESS_WRITE && ! $this->settings->canWrite($settingsKey)) {
+        if ($level === AiSettings::ACCESS_WRITE && ! $this->settings->userMayWrite($user, $settingsKey)) {
             return [
                 'ok' => false,
                 'denied' => true,
-                'error' => 'Энэ цэст бүртгэл үүсгэх эрхийг Manage AI-д өгөөгүй байна.',
+                'error' => ! ModuleAccess::canEdit($user, $settingsKey)
+                    ? 'Энэ цэст бүртгэл үүсгэх хандах эрх танд байхгүй байна.'
+                    : 'Энэ цэст бүртгэл үүсгэх эрхийг Manage AI-д өгөөгүй байна.',
             ];
         }
 

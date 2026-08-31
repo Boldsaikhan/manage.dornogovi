@@ -10,18 +10,23 @@ use App\Models\PhoneDirectoryEntry;
 use App\Models\Plan;
 use App\Models\Task;
 use App\Models\User;
-use App\Support\ModuleAccess;
+use App\Services\Ai\AiSettings;
+use App\Support\ModuleOwnScope;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 
 class SystemTools
 {
+    public function __construct(private AiSettings $settings) {}
+
     public function dashboardBriefing(User $user, array $args = []): array
     {
         $items = [];
 
-        if (ModuleAccess::canView($user, 'tasks')) {
-            $open = Task::query()->where('progress', '<', 100)->count();
+        if ($this->settings->userMayRead($user, 'tasks')) {
+            $openQuery = Task::query()->where('progress', '<', 100);
+            ModuleOwnScope::apply($openQuery, $user, 'tasks');
+            $open = $openQuery->count();
             $items[] = [
                 'tone' => $open > 0 ? 'warn' : 'ok',
                 'label' => "Дуусаагүй үүрэг даалгавар: {$open}",
@@ -31,8 +36,10 @@ class SystemTools
             ];
         }
 
-        if (ModuleAccess::canView($user, 'leaves')) {
-            $pending = Leave::query()->where('status', 'pending')->count();
+        if ($this->settings->userMayRead($user, 'leaves')) {
+            $pendingQuery = Leave::query()->where('status', 'pending');
+            ModuleOwnScope::apply($pendingQuery, $user, 'leaves');
+            $pending = $pendingQuery->count();
             $items[] = [
                 'tone' => $pending > 0 ? 'warn' : 'ok',
                 'label' => "Хүлээгдэж буй чөлөө: {$pending}",
@@ -42,8 +49,8 @@ class SystemTools
             ];
         }
 
-        if (ModuleAccess::canView($user, 'decrees')) {
-            $recent = Decree::query()
+        if ($this->settings->userMayRead($user, 'decrees')) {
+            $recentQuery = Decree::query()
                 ->where(function (Builder $q) {
                     $q->where('issued_on', '>=', Carbon::now()->subDays(30)->toDateString())
                         ->orWhere(function (Builder $inner) {
@@ -51,9 +58,13 @@ class SystemTools
                                 ->where('created_at', '>=', Carbon::now()->subDays(30));
                         });
                 })
-                ->where('kind', '!=', 'blank')
-                ->count();
-            $total = Decree::query()->where('kind', '!=', 'blank')->count();
+                ->where('kind', '!=', 'blank');
+            ModuleOwnScope::apply($recentQuery, $user, 'decrees');
+            $recent = $recentQuery->count();
+
+            $totalQuery = Decree::query()->where('kind', '!=', 'blank');
+            ModuleOwnScope::apply($totalQuery, $user, 'decrees');
+            $total = $totalQuery->count();
             $items[] = [
                 'tone' => 'info',
                 'label' => "Захирамж/тушаал: нийт {$total}, сүүлийн 30 хоногт {$recent}",
@@ -63,7 +74,7 @@ class SystemTools
             ];
         }
 
-        if (ModuleAccess::canView($user, 'phone_directory')) {
+        if ($this->settings->userMayRead($user, 'phone_directory')) {
             $phones = PhoneDirectoryEntry::query()->count();
             $items[] = [
                 'tone' => 'info',
@@ -74,10 +85,10 @@ class SystemTools
             ];
         }
 
-        if (ModuleAccess::canView($user, 'meetings')) {
-            $today = Meeting::query()
-                ->whereDate('held_at', Carbon::today())
-                ->count();
+        if ($this->settings->userMayRead($user, 'meetings')) {
+            $todayQuery = Meeting::query()->whereDate('held_at', Carbon::today());
+            ModuleOwnScope::apply($todayQuery, $user, 'meetings');
+            $today = $todayQuery->count();
             $items[] = [
                 'tone' => 'info',
                 'label' => "Өнөөдрийн хурал: {$today}",
@@ -87,8 +98,10 @@ class SystemTools
             ];
         }
 
-        if (ModuleAccess::canView($user, 'plans')) {
-            $active = Plan::query()->where('status', 'active')->count();
+        if ($this->settings->userMayRead($user, 'plans')) {
+            $activeQuery = Plan::query()->where('status', 'active');
+            ModuleOwnScope::apply($activeQuery, $user, 'plans');
+            $active = $activeQuery->count();
             $items[] = [
                 'tone' => 'info',
                 'label' => "Идэвхтэй төлөвлөгөө: {$active}",
@@ -109,38 +122,69 @@ class SystemTools
     public function statistics(User $user, array $args = []): array
     {
         $stats = [];
-        $map = [
-            'tasks' => fn () => ['label' => 'Үүрэг', 'total' => Task::count(), 'open' => Task::where('progress', '<', 100)->count()],
-            'leaves' => fn () => ['label' => 'Чөлөө', 'pending' => Leave::where('status', 'pending')->count(), 'total' => Leave::count()],
-            'decrees' => fn () => [
+
+        if ($this->settings->userMayRead($user, 'tasks')) {
+            $stats['tasks'] = [
+                'label' => 'Үүрэг',
+                'total' => $this->scopedCount($user, 'tasks', Task::query()),
+                'open' => $this->scopedCount($user, 'tasks', Task::query()->where('progress', '<', 100)),
+            ];
+        }
+
+        if ($this->settings->userMayRead($user, 'leaves')) {
+            $stats['leaves'] = [
+                'label' => 'Чөлөө',
+                'pending' => $this->scopedCount($user, 'leaves', Leave::query()->where('status', 'pending')),
+                'total' => $this->scopedCount($user, 'leaves', Leave::query()),
+            ];
+        }
+
+        if ($this->settings->userMayRead($user, 'decrees')) {
+            $last30 = Decree::query()
+                ->where('kind', '!=', 'blank')
+                ->where(function (Builder $q) {
+                    $q->where('issued_on', '>=', now()->subDays(30)->toDateString())
+                        ->orWhere(function (Builder $inner) {
+                            $inner->whereNull('issued_on')
+                                ->where('created_at', '>=', now()->subDays(30));
+                        });
+                });
+            $stats['decrees'] = [
                 'label' => 'Захирамж/тушаал',
-                'total' => Decree::query()->where('kind', '!=', 'blank')->count(),
-                'last30' => Decree::query()
-                    ->where('kind', '!=', 'blank')
-                    ->where(function (Builder $q) {
-                        $q->where('issued_on', '>=', now()->subDays(30)->toDateString())
-                            ->orWhere(function (Builder $inner) {
-                                $inner->whereNull('issued_on')
-                                    ->where('created_at', '>=', now()->subDays(30));
-                            });
-                    })
-                    ->count(),
-            ],
-            'phone_directory' => fn () => [
+                'total' => $this->scopedCount($user, 'decrees', Decree::query()->where('kind', '!=', 'blank')),
+                'last30' => $this->scopedCount($user, 'decrees', $last30),
+            ];
+        }
+
+        if ($this->settings->userMayRead($user, 'phone_directory')) {
+            $stats['phone_directory'] = [
                 'label' => 'Утасны жагсаалт',
                 'total' => PhoneDirectoryEntry::query()->count(),
-            ],
-            'plans' => fn () => ['label' => 'Төлөвлөгөө', 'active' => Plan::where('status', 'active')->count()],
-            'meetings' => fn () => ['label' => 'Хурал', 'total' => Meeting::count()],
-        ];
+            ];
+        }
 
-        foreach ($map as $module => $fn) {
-            if (ModuleAccess::canView($user, $module)) {
-                $stats[$module] = $fn();
-            }
+        if ($this->settings->userMayRead($user, 'plans')) {
+            $stats['plans'] = [
+                'label' => 'Төлөвлөгөө',
+                'active' => $this->scopedCount($user, 'plans', Plan::query()->where('status', 'active')),
+            ];
+        }
+
+        if ($this->settings->userMayRead($user, 'meetings')) {
+            $stats['meetings'] = [
+                'label' => 'Хурал',
+                'total' => $this->scopedCount($user, 'meetings', Meeting::query()),
+            ];
         }
 
         return ['stats' => $stats];
+    }
+
+    private function scopedCount(User $user, string $module, Builder $query): int
+    {
+        ModuleOwnScope::apply($query, $user, $module);
+
+        return $query->count();
     }
 
     public function searchEmployees(User $user, array $args = []): array

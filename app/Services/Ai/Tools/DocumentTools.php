@@ -11,6 +11,7 @@ use App\Models\Regulation;
 use App\Models\Report;
 use App\Models\TravelAssignment;
 use App\Models\User;
+use App\Support\ModuleOwnScope;
 use Carbon\Carbon;
 
 class DocumentTools
@@ -28,6 +29,7 @@ class DocumentTools
             ->orderByDesc('issued_on')
             ->orderByDesc('id')
             ->limit(20);
+        ModuleOwnScope::apply($query, $user, 'decrees');
 
         if ($category !== '' && $category !== 'blank') {
             $query->where('category', $category);
@@ -96,6 +98,7 @@ class DocumentTools
     {
         $q = trim((string) ($args['q'] ?? ''));
         $query = Regulation::query()->orderByDesc('id')->limit(15);
+        ModuleOwnScope::apply($query, $user, 'regulations');
         if ($q !== '') {
             $query->where(function ($w) use ($q) {
                 $w->where('title', 'like', "%{$q}%")->orWhere('body', 'like', "%{$q}%");
@@ -118,6 +121,7 @@ class DocumentTools
     {
         $q = trim((string) ($args['q'] ?? ''));
         $query = Archive::query()->orderByDesc('id')->limit(15);
+        ModuleOwnScope::apply($query, $user, 'archives');
         if ($q !== '') {
             $query->where(function ($w) use ($q) {
                 $w->where('title', 'like', "%{$q}%")->orWhere('description', 'like', "%{$q}%");
@@ -141,6 +145,7 @@ class DocumentTools
     {
         $q = trim((string) ($args['q'] ?? ''));
         $query = Contract::query()->orderByDesc('issued_on')->limit(15);
+        ModuleOwnScope::apply($query, $user, 'contracts');
         if ($q !== '') {
             $query->where(function ($w) use ($q) {
                 $w->where('title', 'like', "%{$q}%")
@@ -166,6 +171,7 @@ class DocumentTools
     public function searchPlans(User $user, array $args = []): array
     {
         $query = Plan::query()->orderByDesc('id')->limit(15);
+        ModuleOwnScope::apply($query, $user, 'plans');
         if (! empty($args['active'])) {
             $query->where('status', 'active');
         }
@@ -187,6 +193,7 @@ class DocumentTools
     public function searchMeetings(User $user, array $args = []): array
     {
         $query = Meeting::query()->orderByDesc('held_at')->limit(15);
+        ModuleOwnScope::apply($query, $user, 'meetings');
         if (! empty($args['today'])) {
             $query->whereDate('held_at', Carbon::today());
         }
@@ -208,6 +215,7 @@ class DocumentTools
     {
         $q = trim((string) ($args['q'] ?? ''));
         $query = Report::query()->orderByDesc('id')->limit(15);
+        ModuleOwnScope::apply($query, $user, 'reports');
         if ($q !== '') {
             $query->where('title', 'like', "%{$q}%");
         }
@@ -227,6 +235,7 @@ class DocumentTools
     public function myTrips(User $user, array $args = []): array
     {
         $query = TravelAssignment::query()->where('user_id', $user->id)->orderByDesc('start_date')->limit(20);
+        ModuleOwnScope::apply($query, $user, 'assignments');
         if (! empty($args['this_month'])) {
             $query->whereMonth('start_date', now()->month)->whereYear('start_date', now()->year);
         }

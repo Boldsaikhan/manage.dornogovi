@@ -5,6 +5,7 @@ namespace App\Services\Ai\Tools;
 use App\Models\Task;
 use App\Models\TaskSource;
 use App\Models\User;
+use App\Support\ModuleOwnScope;
 
 class TaskTools
 {
@@ -14,6 +15,7 @@ class TaskTools
         $kind = $args['kind'] ?? null;
 
         $query = Task::query()->with('source:id,key,name')->orderBy('sort_order')->orderBy('id')->limit(20);
+        ModuleOwnScope::apply($query, $user, 'tasks');
         if ($kind) {
             $query->whereHas('source', fn ($s) => $s->where('key', $kind));
         }
@@ -40,7 +42,9 @@ class TaskTools
             ->where(function ($w) use ($name) {
                 $w->where('responsible', 'like', "%{$name}%")
                     ->orWhere('collaborator', 'like', "%{$name}%");
-            })
+            });
+        ModuleOwnScope::apply($items, $user, 'tasks');
+        $items = $items
             ->orderBy('id')
             ->limit(20)
             ->get()
@@ -53,17 +57,22 @@ class TaskTools
     public function overdue(User $user, array $args = []): array
     {
         // Хугацаа текстээр хадгалагддаг тул progress < 100-ыг "нээлттэй" гэж үзнэ.
-        $open = Task::query()
+        $openQuery = Task::query()
             ->with('source:id,key,name')
-            ->where('progress', '<', 100)
+            ->where('progress', '<', 100);
+        ModuleOwnScope::apply($openQuery, $user, 'tasks');
+        $open = $openQuery
             ->orderBy('id')
             ->limit(20)
             ->get()
             ->map(fn (Task $t) => $this->map($t))
             ->all();
 
+        $openCountQuery = Task::query()->where('progress', '<', 100);
+        ModuleOwnScope::apply($openCountQuery, $user, 'tasks');
+
         return [
-            'open_count' => Task::query()->where('progress', '<', 100)->count(),
+            'open_count' => $openCountQuery->count(),
             'items' => $open,
             'note' => 'Хугацаа хэтэрсэнийг автоматаар тооцох огноо байхгүй тул дуусаагүй үүргүүдийг харууллаа.',
             'source' => 'tasks',
@@ -72,12 +81,17 @@ class TaskTools
 
     public function report(User $user, array $args = []): array
     {
-        $total = Task::query()->count();
-        $done = Task::query()->where('progress', '>=', 100)->count();
-        $open = Task::query()->where('progress', '<', 100)->count();
-        $avg = (int) round((float) Task::query()->avg('progress'));
+        $base = Task::query();
+        ModuleOwnScope::apply($base, $user, 'tasks');
 
-        $bySource = TaskSource::query()->withCount('tasks')->orderBy('sort_order')->get()->map(fn (TaskSource $s) => [
+        $total = (clone $base)->count();
+        $done = (clone $base)->where('progress', '>=', 100)->count();
+        $open = (clone $base)->where('progress', '<', 100)->count();
+        $avg = (int) round((float) ((clone $base)->avg('progress') ?? 0));
+
+        $bySource = TaskSource::query()->withCount(['tasks' => function ($q) use ($user) {
+            ModuleOwnScope::apply($q, $user, 'tasks');
+        }])->orderBy('sort_order')->get()->map(fn (TaskSource $s) => [
             'name' => $s->name,
             'key' => $s->key,
             'count' => $s->tasks_count,
