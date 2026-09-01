@@ -95,14 +95,14 @@ class WebAuthnService
             ->map(fn (string $id) => self::b64urlDecode($id))
             ->all();
 
-        // Google Passkey UI-г багасгах: residentKey discouraged = зөвхөн утсны хуруу/нүүр.
+        // preferred: утсны хуруу/нүүр, нэвтрэхэд олдохоор (discouraged бол login-д allowCredentials хэрэгтэй).
         $args = $webauthn->getCreateArgs(
             self::userHandle($user),
             $user->email ?: ($user->phone ?: 'user-'.$user->id),
             $user->name ?: 'Хэрэглэгч',
             60,
-            'discouraged', // discoverable passkey биш — локал биометрик
-            'required',    // хуруу/нүүр заавал
+            'preferred',
+            'required',
             false,         // platform only
             $exclude
         );
@@ -163,9 +163,15 @@ class WebAuthnService
      */
     public static function loginOptions(Request $request): array
     {
+        $user = User::findByLogin((string) $request->input('login', ''));
+
+        if ($user && $user->webauthnCredentials()->exists()) {
+            return self::assertionOptionsForUser($request, $user);
+        }
+
         $webauthn = self::make($request);
 
-        // Хоосон allowCredentials — төхөөрөмж дээрх passkey-г автоматаар олно.
+        // Хоосон allowCredentials — төхөөрөмж дээрх discoverable passkey.
         $args = $webauthn->getGetArgs(
             [],
             120,

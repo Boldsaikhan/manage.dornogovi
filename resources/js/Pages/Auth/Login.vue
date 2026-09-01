@@ -44,14 +44,22 @@ const shouldAutoBiometric = computed(() => (
     && (isStandalonePwa() || hasWebAuthnDeviceHint())
 ));
 
-const loginBiometric = async () => {
+const loginBiometric = async ({ auto = false } = {}) => {
     if (bioBusy.value) return;
+
+    if (! auto && ! form.login) {
+        bioError.value = isPhone.value
+            ? 'Утасны дугаараа оруулаад хуруу / царайгаар нэвтэрнэ үү.'
+            : 'И-мэйл хаягаа оруулаад хуруу / царайгаар нэвтэрнэ үү.';
+
+        return;
+    }
 
     bioBusy.value = true;
     bioError.value = '';
 
     try {
-        const data = await loginWithBiometric();
+        const data = await loginWithBiometric(form.login);
         markWebAuthnDevice();
         window.location.href = data?.redirect || '/';
     } catch (e) {
@@ -62,7 +70,9 @@ const loginBiometric = async () => {
             || '';
 
         if (/NotAllowedError|AbortError/i.test(name)) {
-            bioError.value = 'Үйлдэл цуцлагдлаа.';
+            bioError.value = auto
+                ? ''
+                : 'Үйлдэл цуцлагдлаа. Утасны дугаараа оруулаад дахин оролдоно уу.';
             preferBiometric.value = false;
         } else if (e?.response?.status === 422) {
             bioError.value = msg
@@ -205,7 +215,7 @@ onMounted(() => {
     if (shouldAutoBiometric.value && ! autoBioTried.value) {
         autoBioTried.value = true;
         window.setTimeout(() => {
-            loginBiometric();
+            loginBiometric({ auto: true });
         }, 350);
     }
 });
@@ -588,6 +598,12 @@ const submit = () => {
                         </svg>
                         {{ bioBusy ? 'Хүлээж байна…' : 'Хуруу / царайгаар нэвтрэх' }}
                     </button>
+                    <p
+                        v-if="canBiometric && ! isQr && ! bioError"
+                        class="mt-1.5 text-center text-xs text-slate-400"
+                    >
+                        Утасны дугаараа оруулаад дарна уу
+                    </p>
 
                     <p
                         v-if="bioError && ! isQr"

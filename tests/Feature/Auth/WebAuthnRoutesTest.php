@@ -18,6 +18,22 @@ class WebAuthnRoutesTest extends TestCase
             ->assertJsonStructure(['publicKey' => ['challenge', 'rpId', 'timeout']]);
     }
 
+    public function test_login_options_include_credentials_when_phone_matches(): void
+    {
+        $user = User::factory()->create(['phone' => '89112233']);
+        WebAuthnCredential::query()->create([
+            'user_id' => $user->id,
+            'credential_id' => 'test-cred-phone',
+            'public_key' => '-----BEGIN PUBLIC KEY-----\ntest\n-----END PUBLIC KEY-----',
+            'sign_count' => 0,
+            'device_name' => 'Утас',
+        ]);
+
+        $this->postJson(route('webauthn.login.options'), ['login' => '8911 2233'])
+            ->assertOk()
+            ->assertJsonCount(1, 'publicKey.allowCredentials');
+    }
+
     public function test_authenticated_user_can_request_register_options(): void
     {
         $user = User::factory()->create();

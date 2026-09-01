@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
@@ -75,6 +76,27 @@ class User extends Authenticatable
     public function notifications(): HasMany
     {
         return $this->hasMany(UserNotification::class);
+    }
+
+    public static function findByLogin(?string $login): ?self
+    {
+        $login = trim((string) $login);
+
+        if ($login === '') {
+            return null;
+        }
+
+        if (str_contains($login, '@')) {
+            return static::query()->where('email', Str::lower($login))->first();
+        }
+
+        $phone = static::normalizePhone($login);
+
+        if ($phone === null) {
+            return null;
+        }
+
+        return static::query()->where('phone', $phone)->first();
     }
 
     public static function normalizePhone(?string $phone): ?string

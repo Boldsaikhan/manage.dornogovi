@@ -122,12 +122,26 @@ export const registerBiometric = async () => {
     return data;
 };
 
-export const loginWithBiometric = async () => {
-    const { data: options } = await window.axios.post(route('webauthn.login.options'));
+export const loginWithBiometric = async (login = '') => {
+    const { data: options } = await window.axios.post(route('webauthn.login.options'), {
+        login: login || undefined,
+    });
     const publicKey = preparePublicKeyGet(options.publicKey);
-    const credential = await navigator.credentials.get({ publicKey });
+
+    let credential;
+    try {
+        credential = await navigator.credentials.get({ publicKey });
+    } catch (e) {
+        const err = new Error(e?.message || 'Нэвтрэлт амжилтгүй.');
+        err.name = e?.name || 'Error';
+        err.cause = e;
+        throw err;
+    }
+
     if (! credential) {
-        throw new Error('Нэвтрэлт цуцлагдлаа.');
+        const err = new Error('Нэвтрэлт цуцлагдлаа.');
+        err.name = 'NotAllowedError';
+        throw err;
     }
 
     const payload = credentialToAssertPayload(credential);
