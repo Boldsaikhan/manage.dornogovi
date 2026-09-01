@@ -204,15 +204,20 @@
         overflow-y: hidden;
         scrollbar-gutter: stable;
         -webkit-overflow-scrolling: touch;
-        min-height: 16px;
-        max-height: 16px;
+        height: 1.25rem;
+        min-height: 1.25rem;
+        max-height: 1.25rem;
+        scrollbar-width: auto;
+        scrollbar-color: #64748b #e2e8f0;
     }
 
     .ui-table-hscroll-track {
         height: 1px;
+        min-height: 1px;
     }
 
-    .ui-page--tasks-table {
+    .ui-page--tasks-table,
+    .ui-page--reports-table {
         @apply flex min-h-0 flex-1 flex-col gap-5 overflow-hidden !space-y-0;
     }
 
@@ -220,32 +225,50 @@
         @apply shrink-0;
     }
 
+    .ui-page--reports-table > :not(.ui-reports-table-shell) {
+        @apply shrink-0;
+    }
+
     .ui-tasks-table-shell {
         @apply flex min-h-0 flex-1 basis-0 flex-col gap-2 overflow-hidden;
     }
 
-    html:has(.ui-page--tasks-table) {
+    .ui-reports-table-shell {
+        @apply grid min-h-0 flex-1 basis-0 overflow-hidden;
+    }
+
+    html:has(.ui-page--tasks-table),
+    html:has(.ui-page--reports-table) {
         @apply h-dvh overflow-hidden;
     }
 
-    html:has(.ui-page--tasks-table) body {
+    html:has(.ui-page--tasks-table) body,
+    html:has(.ui-page--reports-table) body {
         @apply h-dvh overflow-x-hidden overflow-y-hidden;
     }
 
+    .flex.min-h-dvh:has(.ui-page--tasks-table),
+    .flex.min-h-dvh:has(.ui-page--reports-table) {
+        @apply h-dvh overflow-hidden;
+    }
+
     .ui-table-hscroll::-webkit-scrollbar {
-        height: 12px;
+        height: 14px;
+        display: block;
     }
 
     .ui-table-hscroll::-webkit-scrollbar-track {
-        @apply bg-slate-100;
+        @apply bg-slate-200;
     }
 
     .ui-table-hscroll::-webkit-scrollbar-thumb {
-        @apply rounded-full bg-slate-400/80;
+        @apply rounded-full bg-slate-500;
+        border: 2px solid #e2e8f0;
+        min-width: 2.5rem;
     }
 
     .ui-table-hscroll::-webkit-scrollbar-thumb:hover {
-        @apply bg-slate-500;
+        @apply bg-slate-600;
     }
 
     /* Урт бичвэрийг 2 мөрөнд багтаана — бүтэн утга title-аар */

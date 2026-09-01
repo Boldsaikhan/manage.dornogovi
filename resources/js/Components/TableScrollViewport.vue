@@ -14,7 +14,7 @@ const emit = defineEmits(['near-bottom']);
 const bodyRef = ref(null);
 const hBarRef = ref(null);
 const trackWidth = ref(0);
-const showHBar = ref(false);
+const showHBar = ref(true);
 let syncing = false;
 let resizeObserver = null;
 
@@ -29,9 +29,19 @@ const measure = () => {
         ? Math.max(inner.scrollWidth, inner.offsetWidth, inner.clientWidth)
         : 0;
 
+    const table = inner instanceof HTMLElement
+        ? inner.querySelector('table')
+        : null;
+    const tableWidth = table instanceof HTMLElement
+        ? Math.max(table.scrollWidth, table.offsetWidth)
+        : 0;
+
     const expected = Number(props.measureKey) || 0;
-    trackWidth.value = Math.max(el.scrollWidth, innerWidth, expected);
-    showHBar.value = trackWidth.value > el.clientWidth + 1;
+    const contentWidth = Math.max(el.scrollWidth, innerWidth, tableWidth, expected);
+    const viewWidth = el.clientWidth || 0;
+
+    trackWidth.value = Math.max(contentWidth, viewWidth);
+    showHBar.value = true;
 };
 
 const syncFromBody = () => {
@@ -56,7 +66,7 @@ const syncFromBar = () => {
 
 const onBodyWheel = (e) => {
     const el = bodyRef.value;
-    if (! el || ! showHBar.value) {
+    if (! el || trackWidth.value <= el.clientWidth + 1) {
         return;
     }
 
@@ -152,8 +162,8 @@ watch(() => props.fill, () => nextTick(measure));
         <div
             v-show="showHBar"
             ref="hBarRef"
-            class="ui-table-hscroll shrink-0 border-t border-slate-200 bg-white shadow-[0_-2px_8px_rgba(15,23,42,0.06)]"
-            aria-hidden="true"
+            class="ui-table-hscroll shrink-0 border-t border-slate-200 bg-slate-100"
+            aria-label="Хэвтээ гүйлгэх"
             @scroll="syncFromBar"
         >
             <div class="ui-table-hscroll-track" :style="{ width: `${trackWidth}px` }" />

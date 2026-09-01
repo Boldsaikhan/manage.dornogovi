@@ -106,8 +106,8 @@ const cellClass = (key) => ({
     <Head :title="report.label" />
 
     <AuthenticatedLayout :title="title">
-        <div class="ui-page">
-            <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div class="ui-page ui-page--reports-table">
+            <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="min-w-0">
                     <Link :href="route('reports.index', { section: activeSectionKey })" class="text-sm text-brand-navy-600 hover:underline">
                         ← Тайлан мэдээлэл
@@ -143,7 +143,7 @@ const cellClass = (key) => ({
                 </div>
             </div>
 
-            <div class="mb-4">
+            <div>
                 <ReportSectionTabs
                     :sections="navigation"
                     :active-section-key="activeSectionKey"
@@ -151,8 +151,8 @@ const cellClass = (key) => ({
                 />
             </div>
 
-            <div class="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
-                <aside class="ui-card max-h-[calc(100dvh-12rem)] overflow-y-auto p-3 lg:sticky lg:top-24 lg:self-start">
+            <div class="ui-reports-table-shell grid min-h-0 grid-rows-[minmax(0,11rem)_minmax(0,1fr)] gap-4 lg:grid-cols-[18rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
+                <aside class="ui-card min-h-0 overflow-y-auto p-3">
                     <p class="mb-2 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
                         Дэд тайлан
                     </p>
@@ -161,10 +161,10 @@ const cellClass = (key) => ({
                     </nav>
                 </aside>
 
-                <section class="ui-card overflow-hidden">
+                <section class="ui-card flex min-h-0 flex-col overflow-hidden">
                     <div
                         v-if="report.description || report.source_file"
-                        class="border-b border-slate-100 px-4 py-3 text-sm text-slate-600"
+                        class="shrink-0 border-b border-slate-100 px-4 py-3 text-sm text-slate-600"
                     >
                         <p v-if="report.description">{{ report.description }}</p>
                         <p v-if="report.source_file" class="mt-1 text-xs text-slate-500">
@@ -174,15 +174,15 @@ const cellClass = (key) => ({
 
                     <TableScrollViewport
                         v-if="hasColumns"
+                        fill
                         class="!rounded-none !border-0 !shadow-none"
-                        max-height="min(70vh, calc(100dvh - 13rem))"
                         :measure-key="tableMinWidth"
                     >
                         <div
-                            class="inline-block shrink-0 align-top"
+                            class="block max-w-none shrink-0"
                             :style="{ width: `${tableMinWidth}px`, minWidth: `${tableMinWidth}px` }"
                         >
-                            <table class="ui-table table-fixed w-full text-xs">
+                            <table class="ui-table table-fixed text-xs" :style="{ width: `${tableMinWidth}px`, minWidth: `${tableMinWidth}px` }">
                                 <colgroup>
                                     <col
                                         v-for="col in report.columns"
