@@ -133,6 +133,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/modules/plans', [ModuleResourceController::class, 'index'])->name('plans.index');
     Route::get('/modules/meetings', [ModuleResourceController::class, 'index'])->name('meetings.index');
     Route::get('/modules/reports', [ReportCatalogController::class, 'index'])->name('reports.index');
+    Route::get('/modules/reports/{report}/export', [ReportCatalogController::class, 'export'])->name('reports.export');
     Route::get('/modules/reports/{report}', [ReportCatalogController::class, 'show'])->name('reports.show');
     Route::get('/modules/onboarding', [ModuleResourceController::class, 'index'])->name('onboarding.index');
 

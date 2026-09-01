@@ -127,4 +127,38 @@ class ReportCatalogTest extends TestCase
             ->get(route('reports.show', 'missing.report'))
             ->assertNotFound();
     }
+
+    public function test_report_word_export_downloads_docx(): void
+    {
+        $user = User::factory()->create(['is_admin' => true]);
+
+        $response = $this->actingAs($user)
+            ->get(route('reports.export', 'local_policy.governor_program'));
+
+        $response->assertOk();
+        $this->assertSame('PK', substr($response->getContent(), 0, 2));
+        $this->assertStringContainsString(
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            (string) $response->headers->get('content-type'),
+        );
+        $this->assertStringContainsString(
+            'filename*=UTF-8\'\'',
+            (string) $response->headers->get('content-disposition'),
+        );
+    }
+
+    public function test_report_word_export_404_for_unknown_key(): void
+    {
+        $user = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($user)
+            ->get(route('reports.export', 'missing.report'))
+            ->assertNotFound();
+    }
+
+    public function test_report_word_export_requires_auth(): void
+    {
+        $this->get(route('reports.export', 'local_policy.governor_program'))
+            ->assertRedirect(route('login'));
+    }
 }

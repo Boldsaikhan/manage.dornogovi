@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ReportNavTree from '@/Components/Reports/ReportNavTree.vue';
@@ -100,6 +100,23 @@ const cellClass = (key) => ({
     'break-words text-xs leading-snug': textWrapKeys.has(key),
     'whitespace-nowrap text-xs': ! textWrapKeys.has(key),
 });
+
+const tableExpanded = ref(false);
+
+const wordExportUrl = computed(() => route('reports.export', props.report.key));
+
+const closeExpanded = () => {
+    tableExpanded.value = false;
+};
+
+const onKeydown = (event) => {
+    if (event.key === 'Escape' && tableExpanded.value) {
+        closeExpanded();
+    }
+};
+
+onMounted(() => window.addEventListener('keydown', onKeydown));
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 </script>
 
 <template>
@@ -140,6 +157,40 @@ const cellClass = (key) => ({
                     <span class="rounded-full bg-brand-navy-50 px-3 py-1 text-xs font-medium text-brand-navy-700">
                         {{ report.template_label || report.template }}
                     </span>
+                    <a
+                        v-if="hasColumns"
+                        :href="wordExportUrl"
+                        class="ui-btn-ghost"
+                        title="Хүснэгтийг Word файлаар татах"
+                    >
+                        <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M5 19h14" />
+                        </svg>
+                        Word татах
+                    </a>
+                    <button
+                        v-if="hasColumns"
+                        type="button"
+                        class="ui-btn-ghost"
+                        :title="tableExpanded ? 'Хэвийн хэмжээнд буцах' : 'Хүснэгтийг дэлгэц дүүрэн харах'"
+                        @click="tableExpanded = ! tableExpanded"
+                    >
+                        <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path
+                                v-if="tableExpanded"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M9 9L5 5m0 0h4M5 5v4m10 0l4-4m0 0h-4m4 0v4M9 15l-4 4m0 0h4m-4 0v-4m10 0l4 4m0 0h-4m4 0v-4"
+                            />
+                            <path
+                                v-else
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M8 3H4v4M16 3h4v4M4 16v4h4M20 16v4h-4"
+                            />
+                        </svg>
+                        {{ tableExpanded ? 'Хаах' : 'Дэлгэц дүүрэн' }}
+                    </button>
                 </div>
             </div>
 
@@ -161,15 +212,38 @@ const cellClass = (key) => ({
                     </nav>
                 </aside>
 
-                <section class="ui-card flex min-h-0 flex-col overflow-hidden">
+                <section
+                    class="flex min-h-0 flex-col overflow-hidden"
+                    :class="tableExpanded ? 'ui-reports-table-overlay' : 'ui-card'"
+                >
                     <div
-                        v-if="report.description || report.source_file"
-                        class="shrink-0 border-b border-slate-100 px-4 py-3 text-sm text-slate-600"
+                        class="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3"
                     >
-                        <p v-if="report.description">{{ report.description }}</p>
-                        <p v-if="report.source_file" class="mt-1 text-xs text-slate-500">
-                            Эх файл: <strong class="font-medium text-slate-700">{{ report.source_file }}</strong>
-                        </p>
+                        <div class="min-w-0 text-sm text-slate-600">
+                            <p v-if="report.description">{{ report.description }}</p>
+                            <p v-if="report.source_file" class="mt-1 text-xs text-slate-500">
+                                Эх файл: <strong class="font-medium text-slate-700">{{ report.source_file }}</strong>
+                            </p>
+                            <p v-if="tableExpanded" class="mt-1 text-xs font-semibold text-brand-navy-700">
+                                {{ report.number ? report.number + ' · ' : '' }}{{ report.label }}
+                            </p>
+                        </div>
+                        <div class="flex shrink-0 flex-wrap items-center gap-2">
+                            <a
+                                v-if="hasColumns"
+                                :href="wordExportUrl"
+                                class="ui-btn-ghost !py-1.5 text-xs"
+                            >
+                                Word татах
+                            </a>
+                            <button
+                                type="button"
+                                class="ui-btn-ghost !py-1.5 text-xs"
+                                @click="tableExpanded = ! tableExpanded"
+                            >
+                                {{ tableExpanded ? 'Хэвийн харах' : 'Дэлгэц дүүрэн' }}
+                            </button>
+                        </div>
                     </div>
 
                     <TableScrollViewport
