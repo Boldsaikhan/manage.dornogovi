@@ -50,6 +50,20 @@ git fetch --quiet origin "${BRANCH}"
 LOCAL="$(git rev-parse HEAD)"
 REMOTE="$(git rev-parse "origin/${BRANCH}")"
 
+# DNS кэш: git шинэчлэл байхгүй үед ч 2 мин тутам цэвэрлэж дахин асууна.
+DNS_REFRESH="${SRC_DIR}/deploy/dns-refresh.sh"
+if [ -f "${DNS_REFRESH}" ]; then
+    bash "${DNS_REFRESH}" >> /var/log/manage-dns-refresh.log 2>&1 || true
+    # лог хэтэрвэл сүүлийн 400 мөрийг үлдээнэ
+    if [ -f /var/log/manage-dns-refresh.log ]; then
+        lines="$(wc -l < /var/log/manage-dns-refresh.log | tr -d ' ')"
+        if [ "${lines:-0}" -gt 800 ]; then
+            tail -n 400 /var/log/manage-dns-refresh.log > /var/log/manage-dns-refresh.log.tmp \
+                && mv /var/log/manage-dns-refresh.log.tmp /var/log/manage-dns-refresh.log
+        fi
+    fi
+fi
+
 if [ "${LOCAL}" = "${REMOTE}" ]; then
     exit 0   # шинэ өөрчлөлт алга
 fi
