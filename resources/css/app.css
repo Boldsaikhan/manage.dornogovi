@@ -150,21 +150,23 @@
     .ui-table--pin-actions tbody td.ui-sticky-progress,
     .ui-table--pin-actions tbody td.ui-sticky-actions {
         @apply bg-white;
+        z-index: 12;
+        isolation: isolate;
     }
 
     .ui-table--pin-actions tbody tr:nth-child(even) td.ui-sticky-progress,
     .ui-table--pin-actions tbody tr:nth-child(even) td.ui-sticky-actions {
-        @apply bg-slate-50/60;
+        @apply bg-slate-50;
     }
 
     .ui-table--pin-actions tbody tr:hover td.ui-sticky-progress,
     .ui-table--pin-actions tbody tr:hover td.ui-sticky-actions {
-        @apply bg-brand-navy-50/40;
+        @apply bg-brand-navy-50;
     }
 
     .ui-table--pin-actions tbody tr.bg-brand-navy-50\/70 td.ui-sticky-progress,
     .ui-table--pin-actions tbody tr.bg-brand-navy-50\/70 td.ui-sticky-actions {
-        background-color: inherit;
+        @apply bg-brand-navy-50;
     }
 
     .ui-table--pin-actions tbody tr:focus-within td.ui-sticky-progress,
@@ -271,11 +273,13 @@
 
     /* Google Sheets маягийн нүд — дарахад бүтэн нүд засах горим */
     .ui-table td.ui-sheet-td {
-        @apply p-0 align-top;
+        @apply p-0 align-top overflow-hidden;
+        min-width: 0;
+        max-width: 0;
     }
 
     .ui-sheet-cell {
-        @apply relative min-h-[2.35rem] w-full;
+        @apply relative min-h-[2.35rem] w-full min-w-0 overflow-hidden;
     }
 
     .ui-sheet-cell.is-editable {
