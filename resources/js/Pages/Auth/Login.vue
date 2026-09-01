@@ -513,8 +513,8 @@ const submit = () => {
                         <p class="mt-1 text-xs text-slate-500">Төхөөрөмжийн баталгаажуулалтыг гүйцээж дуусгана уу.</p>
                     </div>
 
-                    <!-- QR кодоор нэвтрэх — зөвхөн компьютер дээр код харуулна -->
-                    <div v-else-if="! onPhone" class="mt-4">
+                    <!-- QR кодоор нэвтрэх — зөвхөн товч дарахад, компьютер дээр -->
+                    <div v-if="isQr && ! onPhone" class="mt-4">
                         <div class="relative mx-auto flex h-[248px] w-[248px] items-center justify-center rounded-2xl border-2 border-slate-200 bg-white p-3">
                             <img
                                 v-if="qrImage && qrState === 'waiting'"
