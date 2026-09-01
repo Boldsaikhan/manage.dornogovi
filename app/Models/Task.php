@@ -10,6 +10,7 @@ class Task extends Model
     protected $fillable = [
         'task_source_id',
         'text',
+        'measure',
         'period',
         'responsible',
         'collaborator',

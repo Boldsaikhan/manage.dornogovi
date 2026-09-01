@@ -14,6 +14,7 @@ const props = defineProps({
     kind: { type: String, required: true },
     kinds: { type: Array, default: () => [] },
     source: { type: Object, required: true },
+    columnChoices: { type: Array, default: () => [] },
     tasks: { type: Array, default: () => [] },
     documents: { type: Array, default: () => [] },
     people: { type: Array, default: () => [] },
@@ -49,6 +50,34 @@ const kindTabs = computed(() => (
 ));
 
 const isDirective = computed(() => (props.source?.layout || props.kind) !== 'prep_plan');
+
+const defaultColumnChoices = [
+    { key: 'sector', label: 'Ажлын чиглэл', field: 'sector', type: 'text', width: 140 },
+    { key: 'measure', label: 'Арга хэмжээ', field: 'measure', type: 'multiline', width: 280 },
+    { key: 'text', label: 'Үүрэг чиглэл', field: 'text', type: 'multiline', width: 320 },
+    { key: 'period', label: 'Хугацаа', field: 'period', type: 'period', width: 120 },
+    { key: 'responsible', label: 'Хариуцах эзэн', field: 'responsible', type: 'people', width: 180 },
+    { key: 'collaborator', label: 'Хяналт тавих', field: 'collaborator', type: 'people', width: 200 },
+    { key: 'note', label: 'Хэрэгжилт', field: 'note', type: 'multiline', width: 160 },
+];
+
+const columnChoices = computed(() => (
+    props.columnChoices?.length ? props.columnChoices : defaultColumnChoices
+));
+
+const tableColumns = computed(() => (
+    props.source?.columns?.length ? props.source.columns : (
+        isDirective.value
+            ? defaultColumnChoices.filter((col) => col.key !== 'sector' && col.key !== 'measure')
+            : defaultColumnChoices.filter((col) => col.key !== 'measure').map((col) => (
+                col.key === 'text' ? { ...col, label: 'Арга хэмжээ' } : col
+            ))
+    )
+));
+
+const hasColumn = (key) => tableColumns.value.some((col) => col.key === key);
+
+const columnLabel = (key, fallback) => tableColumns.value.find((col) => col.key === key)?.label || fallback;
 
 const viewMode = ref('table');
 const statusFilter = ref(null); // 'done' | 'pending' | 'overdue'
@@ -88,9 +117,24 @@ const isPrepPreview = computed(() => (wordPreview.value?.layout || wordPreview.v
 const showNewKind = ref(false);
 const newKindForm = useForm({
     name: '',
-    copy_from: 'directive',
+    columns: ['sector', 'measure', 'text', 'period', 'responsible', 'collaborator', 'note'],
 });
 const deletingKind = ref(false);
+
+const toggleNewKindColumn = (key) => {
+    const selected = [...newKindForm.columns];
+    const index = selected.indexOf(key);
+    if (index >= 0) {
+        selected.splice(index, 1);
+    } else {
+        selected.push(key);
+    }
+    newKindForm.columns = columnChoices.value
+        .map((col) => col.key)
+        .filter((item) => selected.includes(item));
+};
+
+const isNewKindColumnOn = (key) => newKindForm.columns.includes(key);
 
 const submitNewKind = () => {
     newKindForm.post(route('tasks.sources.store'), {
@@ -155,6 +199,7 @@ const uploadForm = useForm({
 const addForm = useForm({
     kind: props.kind,
     text: '',
+    measure: '',
     period: '',
     responsible: '',
     collaborator: '',
@@ -185,7 +230,7 @@ watch(
         uploadForm.kind = k;
         uploadForm.file = null;
         addForm.kind = k;
-        addForm.reset('text', 'period', 'responsible', 'collaborator', 'sector');
+        addForm.reset('text', 'measure', 'period', 'responsible', 'collaborator', 'sector');
         addForm.clearErrors();
         resetAddPeriodInputs();
         showAddForm.value = false;
@@ -200,6 +245,7 @@ watch(
         list.forEach((t) => {
             drafts[t.id] = {
                 text: t.text ?? '',
+                measure: t.measure ?? '',
                 period: t.period ?? '',
                 responsible: t.responsible ?? '',
                 collaborator: t.collaborator ?? '',
@@ -799,7 +845,7 @@ const submitAddForm = () => {
     addForm.post(route('tasks.store'), {
         preserveScroll: true,
         onSuccess: () => {
-            addForm.reset('text', 'period', 'responsible', 'collaborator', 'sector');
+            addForm.reset('text', 'measure', 'period', 'responsible', 'collaborator', 'sector');
             addForm.clearErrors();
             resetAddPeriodInputs();
         },
@@ -933,48 +979,37 @@ const twoLineWidth = (text, { min = 220, max = 780, pxPerChar = 7.2 } = {}) => {
     return Math.min(max, Math.max(min, Math.ceil(len / 2) * pxPerChar));
 };
 
-const directiveTextColWidth = computed(() => {
+const fieldColWidth = (field, { min, max, pxPerChar = 7.2 } = {}) => {
     const widths = props.tasks.map((t) => {
         const draft = drafts[t.id];
-        return twoLineWidth(draft?.text ?? t.text, { min: 280, max: 900 });
+        return twoLineWidth(draft?.[field] ?? t[field], { min, max, pxPerChar });
     });
-    return widths.length ? Math.max(...widths) : 320;
+    return widths.length ? Math.max(...widths) : min;
+};
+
+const columnWidthPx = (col) => {
+    if (col.key === 'text') {
+        return fieldColWidth('text', { min: col.width || 280, max: 900 });
+    }
+    if (col.key === 'measure') {
+        return fieldColWidth('measure', { min: col.width || 260, max: 720 });
+    }
+    if (col.key === 'note') {
+        return fieldColWidth('note', { min: col.width || 140, max: 360, pxPerChar: 7 });
+    }
+    return col.width || 120;
+};
+
+const tableMinWidth = computed(() => {
+    const cols = tableColumns.value.reduce((sum, col) => sum + columnWidthPx(col), 0);
+    return 48 + 96 + cols + (props.canEdit ? 48 + 40 : 0);
 });
 
-const directiveNoteColWidth = computed(() => {
-    const widths = props.tasks.map((t) => {
-        const draft = drafts[t.id];
-        return twoLineWidth(draft?.note ?? t.note, { min: 140, max: 360, pxPerChar: 7 });
-    });
-    return widths.length ? Math.max(...widths) : 160;
-});
+const tableColspan = computed(() => (
+    tableColumns.value.length + 2 + (props.canEdit ? 2 : 0)
+));
 
-const directiveTableMinWidth = computed(() => {
-    // checkbox + № + хугацаа + хариуцах + хяналт + хувь + устгах + текст + хэрэгжилт
-    const fixed = 48 + 120 + 180 + 200 + 96 + (props.canEdit ? 48 + 40 : 0);
-    return fixed + directiveTextColWidth.value + directiveNoteColWidth.value;
-});
-
-const prepTextColWidth = computed(() => {
-    const widths = props.tasks.map((t) => {
-        const draft = drafts[t.id];
-        return twoLineWidth(draft?.text ?? t.text, { min: 260, max: 720 });
-    });
-    return widths.length ? Math.max(...widths) : 280;
-});
-
-const prepNoteColWidth = computed(() => {
-    const widths = props.tasks.map((t) => {
-        const draft = drafts[t.id];
-        return twoLineWidth(draft?.note ?? t.note, { min: 140, max: 320, pxPerChar: 7 });
-    });
-    return widths.length ? Math.max(...widths) : 160;
-});
-
-const prepTableMinWidth = computed(() => {
-    const fixed = 48 + 140 + 110 + 140 + 150 + 96 + (props.canEdit ? 48 + 40 : 0);
-    return fixed + prepTextColWidth.value + prepNoteColWidth.value;
-});
+const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : props.canEdit);
 </script>
 
 <template>
@@ -1071,7 +1106,7 @@ const prepTableMinWidth = computed(() => {
                         class="ui-btn-accent w-full sm:w-auto"
                         @click="openAddForm"
                     >
-                        {{ isDirective ? 'Үүрэг чиглэл нэмэх' : 'Мөр нэмэх' }}
+                        {{ hasColumn('text') && ! hasColumn('sector') ? 'Үүрэг чиглэл нэмэх' : 'Мөр нэмэх' }}
                     </button>
                 </div>
             </div>
@@ -1111,7 +1146,7 @@ const prepTableMinWidth = computed(() => {
                     <div>
                         <h3 class="text-sm font-semibold text-slate-800">Шинэ хэсэг нэмэх</h3>
                         <p class="mt-0.5 text-xs text-slate-500">
-                            «Үүрэг чиглэл» эсвэл «Бэлтгэл ажил хангах төлөвлөгөө»-тэй ижил хүснэгттэй шинэ таб үүсгэнэ.
+                            Хүснэгтийн толгойд оруулах талбаруудыг сонгоно. Сонгосон дарааллаар багана гарна.
                         </p>
                     </div>
                     <button
@@ -1122,7 +1157,7 @@ const prepTableMinWidth = computed(() => {
                         Хаах
                     </button>
                 </div>
-                <form class="grid gap-3 sm:grid-cols-[1fr_1fr_auto]" @submit.prevent="submitNewKind">
+                <form class="space-y-4" @submit.prevent="submitNewKind">
                     <input
                         v-model="newKindForm.name"
                         type="text"
@@ -1130,21 +1165,41 @@ const prepTableMinWidth = computed(() => {
                         placeholder="Хэсгийн нэр"
                         required
                     />
-                    <select v-model="newKindForm.copy_from" class="ui-input">
-                        <option
-                            v-for="item in kindTabs"
-                            :key="'copy-' + item.key"
-                            :value="item.key"
-                        >
-                            «{{ item.label }}» загвар
-                        </option>
-                    </select>
-                    <button type="submit" class="ui-btn-accent whitespace-nowrap" :disabled="newKindForm.processing">
-                        {{ newKindForm.processing ? 'Нэмэж байна…' : 'Нэмэх' }}
-                    </button>
+                    <fieldset>
+                        <legend class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Хүснэгтийн толгой
+                        </legend>
+                        <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                            <label
+                                v-for="col in columnChoices"
+                                :key="'new-col-' + col.key"
+                                class="flex cursor-pointer items-start gap-2 rounded-xl border px-3 py-2.5 text-sm transition"
+                                :class="isNewKindColumnOn(col.key)
+                                    ? 'border-brand-navy-300 bg-brand-navy-50 text-brand-navy-800'
+                                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'"
+                            >
+                                <input
+                                    type="checkbox"
+                                    class="mt-0.5 rounded border-slate-300 text-brand-navy-600"
+                                    :checked="isNewKindColumnOn(col.key)"
+                                    @change="toggleNewKindColumn(col.key)"
+                                />
+                                <span class="font-medium leading-snug">{{ col.label }}</span>
+                            </label>
+                        </div>
+                    </fieldset>
+                    <div class="flex flex-wrap items-center justify-end gap-2">
+                        <p v-if="newKindForm.columns.length" class="mr-auto text-xs text-slate-500">
+                            {{ newKindForm.columns.length }} талбар ·
+                            {{ columnChoices.filter((col) => isNewKindColumnOn(col.key)).map((col) => col.label).join(' · ') }}
+                        </p>
+                        <button type="submit" class="ui-btn-accent whitespace-nowrap" :disabled="newKindForm.processing || ! newKindForm.columns.length">
+                            {{ newKindForm.processing ? 'Нэмэж байна…' : 'Нэмэх' }}
+                        </button>
+                    </div>
                 </form>
                 <p v-if="newKindForm.errors.name" class="mt-2 text-xs text-red-600">{{ newKindForm.errors.name }}</p>
-                <p v-if="newKindForm.errors.copy_from" class="mt-2 text-xs text-red-600">{{ newKindForm.errors.copy_from }}</p>
+                <p v-if="newKindForm.errors.columns" class="mt-2 text-xs text-red-600">{{ newKindForm.errors.columns }}</p>
             </section>
 
             <!-- Шинэ мөр нэмэх форм -->
@@ -1156,7 +1211,7 @@ const prepTableMinWidth = computed(() => {
                 <div class="mb-3 flex items-start justify-between gap-3">
                     <div>
                         <h3 class="text-sm font-semibold text-slate-800">
-                            {{ isDirective ? 'Үүрэг чиглэл нэмэх' : 'Төлөвлөгөөний мөр нэмэх' }}
+                            {{ hasColumn('text') && ! hasColumn('sector') ? 'Үүрэг чиглэл нэмэх' : 'Төлөвлөгөөний мөр нэмэх' }}
                         </h3>
                         <p class="mt-0.5 text-xs text-slate-500">
                             Талбаруудыг бөглөж хадгална. Хоосон үлдээсэн талбар дараа засварлана.
@@ -1173,12 +1228,12 @@ const prepTableMinWidth = computed(() => {
 
                 <form class="space-y-3" @submit.prevent="submitAddForm">
                     <div class="grid gap-3 sm:grid-cols-2">
-                        <label v-if="! isDirective" class="block">
-                            <span class="mb-1 block text-xs font-semibold text-slate-600">Ажлын чиглэл</span>
+                        <label v-if="hasColumn('sector')" class="block">
+                            <span class="mb-1 block text-xs font-semibold text-slate-600">{{ columnLabel('sector', 'Ажлын чиглэл') }}</span>
                             <input v-model="addForm.sector" type="text" class="ui-input w-full" placeholder="Ж: Зудын эсрэг" />
                         </label>
-                        <label class="block" :class="isDirective ? 'sm:col-span-2' : ''">
-                            <span class="mb-1 block text-xs font-semibold text-slate-600">Хугацаа</span>
+                        <label v-if="hasColumn('period')" class="block" :class="hasColumn('sector') ? '' : 'sm:col-span-2'">
+                            <span class="mb-1 block text-xs font-semibold text-slate-600">{{ columnLabel('period', 'Хугацаа') }}</span>
                             <div class="grid gap-2 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
                                 <input v-model="addPeriodStart" type="date" class="ui-input w-full" />
                                 <span class="hidden text-center text-slate-400 sm:block">—</span>
@@ -1188,23 +1243,32 @@ const prepTableMinWidth = computed(() => {
                         </label>
                     </div>
 
-                    <label class="block">
-                        <span class="mb-1 block text-xs font-semibold text-slate-600">
-                            {{ isDirective ? 'Үүрэг чиглэл' : 'Арга хэмжээ' }}
-                        </span>
+                    <label v-if="hasColumn('text')" class="block">
+                        <span class="mb-1 block text-xs font-semibold text-slate-600">{{ columnLabel('text', 'Үүрэг чиглэл') }}</span>
                         <textarea
                             v-model="addForm.text"
                             rows="3"
                             class="ui-input w-full resize-y"
-                            :placeholder="isDirective ? 'Үүрэг чиглэлийн агуулга…' : 'Арга хэмжээний тайлбар…'"
-                            required
+                            placeholder="Үүрэг чиглэлийн агуулга…"
+                            :required="! hasColumn('measure')"
                         />
                         <p v-if="addForm.errors.text" class="mt-1 text-xs text-red-600">{{ addForm.errors.text }}</p>
                     </label>
 
+                    <label v-if="hasColumn('measure')" class="block">
+                        <span class="mb-1 block text-xs font-semibold text-slate-600">{{ columnLabel('measure', 'Арга хэмжээ') }}</span>
+                        <textarea
+                            v-model="addForm.measure"
+                            rows="3"
+                            class="ui-input w-full resize-y"
+                            placeholder="Арга хэмжээний тайлбар…"
+                            :required="! hasColumn('text')"
+                        />
+                    </label>
+
                     <div class="grid gap-3 sm:grid-cols-2">
-                        <div>
-                            <span class="mb-1 block text-xs font-semibold text-slate-600">Хариуцах эзэн</span>
+                        <div v-if="hasColumn('responsible')">
+                            <span class="mb-1 block text-xs font-semibold text-slate-600">{{ columnLabel('responsible', 'Хариуцах эзэн') }}</span>
                             <div class="rounded-xl border border-slate-200 bg-slate-50/80 px-2 py-1.5">
                                 <SheetCell
                                     v-model="addForm.responsible"
@@ -1215,10 +1279,8 @@ const prepTableMinWidth = computed(() => {
                                 />
                             </div>
                         </div>
-                        <div>
-                            <span class="mb-1 block text-xs font-semibold text-slate-600">
-                                {{ isDirective ? 'Хяналт тавих албан тушаалтан' : 'Хамтран хэрэгжүүлэх' }}
-                            </span>
+                        <div v-if="hasColumn('collaborator')">
+                            <span class="mb-1 block text-xs font-semibold text-slate-600">{{ columnLabel('collaborator', 'Хяналт тавих') }}</span>
                             <div class="rounded-xl border border-slate-200 bg-slate-50/80 px-2 py-1.5">
                                 <SheetCell
                                     v-model="addForm.collaborator"
@@ -1435,7 +1497,7 @@ const prepTableMinWidth = computed(() => {
                     </button>
                 </div>
                 <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                    <label class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-2">
+                    <label v-if="hasColumn('period')" class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-2">
                         <span class="flex items-center gap-2 text-xs font-semibold text-slate-600">
                             <input v-model="bulkApply.period" type="checkbox" class="rounded border-slate-300 text-brand-navy-600" />
                             Хугацаа
@@ -1448,7 +1510,7 @@ const prepTableMinWidth = computed(() => {
                             @input="markBulkField('period', bulk.period)"
                         />
                     </label>
-                    <label class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-2">
+                    <label v-if="hasColumn('responsible')" class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-2">
                         <span class="flex items-center gap-2 text-xs font-medium text-slate-600">
                             <input v-model="bulkApply.responsible" type="checkbox" class="rounded border-slate-300 text-brand-navy-600" />
                             Хариуцах эзэн
@@ -1462,10 +1524,10 @@ const prepTableMinWidth = computed(() => {
                             @commit="(v) => markBulkField('responsible', v)"
                         />
                     </label>
-                    <label class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-2">
+                    <label v-if="hasColumn('collaborator')" class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-2">
                         <span class="flex items-center gap-2 text-xs font-medium text-slate-600">
                             <input v-model="bulkApply.collaborator" type="checkbox" class="rounded border-slate-300 text-brand-navy-600" />
-                            {{ isDirective ? 'Хяналт тавих' : 'Хамтран хэрэгжүүлэх' }}
+                            {{ columnLabel('collaborator', isDirective ? 'Хяналт тавих' : 'Хамтран хэрэгжүүлэх') }}
                         </span>
                         <SheetCell
                             v-model="bulk.collaborator"
@@ -1476,7 +1538,7 @@ const prepTableMinWidth = computed(() => {
                             @commit="(v) => markBulkField('collaborator', v)"
                         />
                     </label>
-                    <label class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-2">
+                    <label v-if="hasColumn('note')" class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-2">
                         <span class="flex items-center gap-2 text-xs font-medium text-slate-600">
                             <input v-model="bulkApply.note" type="checkbox" class="rounded border-slate-300 text-brand-navy-600" />
                             Хэрэгжилт
@@ -1520,16 +1582,15 @@ const prepTableMinWidth = computed(() => {
                 </div>
             </div>
 
-            <!-- Үүрэг чиглэл — доод талын хэвтээ гүйлгэх хэсэг үргэлж харагдана -->
+            <!-- Хүснэгт — сонгосон толгойгоор, доод талын хэвтээ гүйлгэх хэсэг үргэлж харагдана -->
             <TableScrollViewport
-                v-if="isDirective"
                 fill
-                :measure-key="directiveTableMinWidth"
+                :measure-key="tableMinWidth"
                 @near-bottom="loadMoreTasks"
             >
                 <div
-                    class="inline-block shrink-0 align-top"
-                    :style="{ width: `${directiveTableMinWidth}px`, minWidth: `${directiveTableMinWidth}px` }"
+                    class="block max-w-none shrink-0"
+                    :style="{ width: `${tableMinWidth}px`, minWidth: `${tableMinWidth}px` }"
                 >
                 <table
                     class="ui-table ui-table--pin-actions table-fixed w-full"
@@ -1538,11 +1599,11 @@ const prepTableMinWidth = computed(() => {
                     <colgroup>
                         <col v-if="canEdit" style="width: 40px" />
                         <col style="width: 48px" />
-                        <col :style="{ width: `${directiveTextColWidth}px` }" />
-                        <col style="width: 120px" />
-                        <col style="width: 180px" />
-                        <col style="width: 200px" />
-                        <col :style="{ width: `${directiveNoteColWidth}px` }" />
+                        <col
+                            v-for="col in tableColumns"
+                            :key="'w-' + col.key"
+                            :style="{ width: `${columnWidthPx(col)}px` }"
+                        />
                         <col style="width: 96px" />
                         <col v-if="canEdit" style="width: 48px" />
                     </colgroup>
@@ -1559,11 +1620,13 @@ const prepTableMinWidth = computed(() => {
                                 />
                             </th>
                             <th class="sticky top-0 z-20 bg-brand-navy-50 text-center">№</th>
-                            <th class="sticky top-0 z-20 bg-brand-navy-50">Үүрэг чиглэл</th>
-                            <th class="sticky top-0 z-20 bg-brand-navy-50">Хугацаа</th>
-                            <th class="sticky top-0 z-20 bg-brand-navy-50">Хариуцах эзэн</th>
-                            <th class="sticky top-0 z-20 bg-brand-navy-50">Хяналт тавих албан тушаалтан</th>
-                            <th class="sticky top-0 z-20 bg-brand-navy-50">Хэрэгжилт</th>
+                            <th
+                                v-for="col in tableColumns"
+                                :key="'h-' + col.key"
+                                class="sticky top-0 z-20 bg-brand-navy-50"
+                            >
+                                {{ col.label }}
+                            </th>
                             <th class="sticky top-0 z-20 bg-brand-navy-50 text-center ui-sticky-progress">Биелэлтийн хувь</th>
                             <th v-if="canEdit" class="sticky top-0 z-20 bg-brand-navy-50 text-center ui-sticky-actions" />
                         </tr>
@@ -1584,54 +1647,34 @@ const prepTableMinWidth = computed(() => {
                                 />
                             </td>
                             <td class="text-center font-semibold text-slate-500">{{ task.no }}</td>
-                            <td class="ui-sheet-td">
-                                <SheetCell
-                                    v-if="drafts[task.id]"
-                                    v-model="drafts[task.id].text"
-                                    multiline
-                                    :editable="canEdit"
-                                    @commit="(v) => saveField(task.id, 'text', v)"
-                                />
-                            </td>
-                            <td class="ui-sheet-td">
+                            <td
+                                v-for="col in tableColumns"
+                                :key="task.id + '-' + col.key"
+                                class="ui-sheet-td"
+                            >
                                 <TaskPeriodCell
-                                    v-if="drafts[task.id]"
-                                    v-model="drafts[task.id].period"
-                                    :editable="canEdit"
+                                    v-if="col.type === 'period' && drafts[task.id]"
+                                    v-model="drafts[task.id][col.field]"
+                                    :editable="cellEditable(col)"
                                     placeholder="08.01–09.30"
-                                    @commit="(v) => saveField(task.id, 'period', v)"
+                                    @commit="(v) => saveField(task.id, col.field, v)"
                                 />
-                            </td>
-                            <td class="ui-sheet-td">
                                 <SheetCell
-                                    v-if="drafts[task.id]"
-                                    v-model="drafts[task.id].responsible"
-                                    :editable="canEdit"
+                                    v-else-if="col.type === 'people' && drafts[task.id]"
+                                    v-model="drafts[task.id][col.field]"
+                                    :editable="cellEditable(col)"
                                     :options="people"
                                     multiple
                                     placeholder="Утасны жагсаалтаас сонгох…"
-                                    @commit="(v) => saveField(task.id, 'responsible', v)"
+                                    @commit="(v) => saveField(task.id, col.field, v)"
                                 />
-                            </td>
-                            <td class="ui-sheet-td">
                                 <SheetCell
-                                    v-if="drafts[task.id]"
-                                    v-model="drafts[task.id].collaborator"
-                                    :editable="canEdit"
-                                    :options="people"
-                                    multiple
-                                    placeholder="Утасны жагсаалтаас сонгох…"
-                                    @commit="(v) => saveField(task.id, 'collaborator', v)"
-                                />
-                            </td>
-                            <td class="ui-sheet-td">
-                                <SheetCell
-                                    v-if="drafts[task.id]"
-                                    v-model="drafts[task.id].note"
-                                    multiline
-                                    placeholder="Хэрэгжилт…"
-                                    :editable="canEditProgress"
-                                    @commit="(v) => saveField(task.id, 'note', v)"
+                                    v-else-if="drafts[task.id]"
+                                    v-model="drafts[task.id][col.field]"
+                                    :multiline="col.type === 'multiline'"
+                                    :editable="cellEditable(col)"
+                                    :placeholder="col.key === 'note' ? 'Хэрэгжилт…' : ''"
+                                    @commit="(v) => saveField(task.id, col.field, v)"
                                 />
                             </td>
                             <td class="ui-sheet-td ui-sticky-progress text-center">
@@ -1663,179 +1706,12 @@ const prepTableMinWidth = computed(() => {
                             </td>
                         </tr>
                         <tr v-if="!visibleTasks.length">
-                            <td :colspan="canEdit ? 9 : 7" class="!py-14 text-center text-slate-400">
+                            <td :colspan="tableColspan" class="!py-14 text-center text-slate-400">
                                 {{ emptyTasksMessage }}
                             </td>
                         </tr>
                         <tr v-else-if="hasMoreTasks">
-                            <td :colspan="canEdit ? 9 : 7" class="!py-3 text-center text-xs text-slate-400">
-                                Дараах {{ visibleTasks.length - renderLimit }} мөр — доош гүйлгэнэ үү
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-                </div>
-            </TableScrollViewport>
-
-            <!-- Бэлтгэл ажил хангах төлөвлөгөө -->
-            <TableScrollViewport
-                v-else
-                fill
-                :measure-key="prepTableMinWidth"
-                @near-bottom="loadMoreTasks"
-            >
-                <div
-                    class="inline-block shrink-0 align-top"
-                    :style="{ width: `${prepTableMinWidth}px`, minWidth: `${prepTableMinWidth}px` }"
-                >
-                <table
-                    class="ui-table ui-table--pin-actions table-fixed w-full"
-                    :style="{ '--pin-actions-width': canEdit ? '48px' : '0px' }"
-                >
-                    <colgroup>
-                        <col v-if="canEdit" style="width: 40px" />
-                        <col style="width: 48px" />
-                        <col style="width: 140px" />
-                        <col :style="{ width: `${prepTextColWidth}px` }" />
-                        <col style="width: 110px" />
-                        <col style="width: 140px" />
-                        <col style="width: 150px" />
-                        <col :style="{ width: `${prepNoteColWidth}px` }" />
-                        <col style="width: 96px" />
-                        <col v-if="canEdit" style="width: 48px" />
-                    </colgroup>
-                    <thead>
-                        <tr>
-                            <th v-if="canEdit" class="sticky top-0 z-20 bg-brand-navy-50 text-center">
-                                <input
-                                    type="checkbox"
-                                    class="rounded border-slate-300 text-brand-navy-600"
-                                    :checked="allVisibleSelected"
-                                    :ref="(el) => { if (el) el.indeterminate = someVisibleSelected && !allVisibleSelected; }"
-                                    title="Бүгдийг сонгох"
-                                    @change="toggleSelectAll"
-                                />
-                            </th>
-                            <th class="sticky top-0 z-20 bg-brand-navy-50 text-center">№</th>
-                            <th class="sticky top-0 z-20 bg-brand-navy-50">Ажлын чиглэл</th>
-                            <th class="sticky top-0 z-20 bg-brand-navy-50">Арга хэмжээ</th>
-                            <th class="sticky top-0 z-20 bg-brand-navy-50">Хугацаа</th>
-                            <th class="sticky top-0 z-20 bg-brand-navy-50">Хариуцах эзэн</th>
-                            <th class="sticky top-0 z-20 bg-brand-navy-50">Хамтран хэрэгжүүлэх</th>
-                            <th class="sticky top-0 z-20 bg-brand-navy-50">Хэрэгжилт</th>
-                            <th class="sticky top-0 z-20 bg-brand-navy-50 text-center ui-sticky-progress">Биелэлтийн хувь</th>
-                            <th v-if="canEdit" class="sticky top-0 z-20 bg-brand-navy-50 text-center ui-sticky-actions" />
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for="task in tableTasks"
-                            :id="'task-row-' + task.id"
-                            :key="task.id"
-                            :class="isSelected(task.id) || highlightedTaskId === task.id ? 'bg-brand-navy-50/70' : ''"
-                        >
-                            <td v-if="canEdit" class="text-center align-middle">
-                                <input
-                                    type="checkbox"
-                                    class="rounded border-slate-300 text-brand-navy-600"
-                                    :checked="isSelected(task.id)"
-                                    @change="toggleSelect(task.id)"
-                                />
-                            </td>
-                            <td class="text-center font-semibold text-slate-500">{{ task.no }}</td>
-                            <td class="ui-sheet-td">
-                                <SheetCell
-                                    v-if="drafts[task.id]"
-                                    v-model="drafts[task.id].sector"
-                                    :editable="canEdit"
-                                    @commit="(v) => saveField(task.id, 'sector', v)"
-                                />
-                            </td>
-                            <td class="ui-sheet-td">
-                                <SheetCell
-                                    v-if="drafts[task.id]"
-                                    v-model="drafts[task.id].text"
-                                    multiline
-                                    :editable="canEdit"
-                                    @commit="(v) => saveField(task.id, 'text', v)"
-                                />
-                            </td>
-                            <td class="ui-sheet-td">
-                                <TaskPeriodCell
-                                    v-if="drafts[task.id]"
-                                    v-model="drafts[task.id].period"
-                                    :editable="canEdit"
-                                    placeholder="08.01–09.30"
-                                    @commit="(v) => saveField(task.id, 'period', v)"
-                                />
-                            </td>
-                            <td class="ui-sheet-td">
-                                <SheetCell
-                                    v-if="drafts[task.id]"
-                                    v-model="drafts[task.id].responsible"
-                                    :editable="canEdit"
-                                    :options="people"
-                                    multiple
-                                    placeholder="Утасны жагсаалтаас сонгох…"
-                                    @commit="(v) => saveField(task.id, 'responsible', v)"
-                                />
-                            </td>
-                            <td class="ui-sheet-td">
-                                <SheetCell
-                                    v-if="drafts[task.id]"
-                                    v-model="drafts[task.id].collaborator"
-                                    :editable="canEdit"
-                                    :options="people"
-                                    multiple
-                                    placeholder="Утасны жагсаалтаас сонгох…"
-                                    @commit="(v) => saveField(task.id, 'collaborator', v)"
-                                />
-                            </td>
-                            <td class="ui-sheet-td">
-                                <SheetCell
-                                    v-if="drafts[task.id]"
-                                    v-model="drafts[task.id].note"
-                                    multiline
-                                    placeholder="Хэрэгжилт…"
-                                    :editable="canEditProgress"
-                                    @commit="(v) => saveField(task.id, 'note', v)"
-                                />
-                            </td>
-                            <td class="ui-sheet-td ui-sticky-progress text-center">
-                                <SheetCell
-                                    v-if="drafts[task.id]"
-                                    v-model="drafts[task.id].progress"
-                                    type="number"
-                                    align="center"
-                                    :editable="canEditProgress"
-                                    @commit="() => saveProgress(task.id)"
-                                >
-                                    <span :class="progressTextClass(drafts[task.id].progress)">
-                                        {{ drafts[task.id].progress ?? 0 }}%
-                                    </span>
-                                </SheetCell>
-                            </td>
-                            <td v-if="canEdit" class="ui-sticky-actions text-center align-middle">
-                                <button
-                                    type="button"
-                                    class="ui-icon-btn"
-                                    title="Устгах"
-                                    aria-label="Устгах"
-                                    @click="removeRow(task.id)"
-                                >
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6" />
-                                    </svg>
-                                </button>
-                            </td>
-                        </tr>
-                        <tr v-if="!visibleTasks.length">
-                            <td :colspan="canEdit ? 10 : 8" class="!py-14 text-center text-slate-400">
-                                {{ emptyTasksMessage }}
-                            </td>
-                        </tr>
-                        <tr v-else-if="hasMoreTasks">
-                            <td :colspan="canEdit ? 10 : 8" class="!py-3 text-center text-xs text-slate-400">
+                            <td :colspan="tableColspan" class="!py-3 text-center text-xs text-slate-400">
                                 Дараах {{ visibleTasks.length - renderLimit }} мөр — доош гүйлгэнэ үү
                             </td>
                         </tr>

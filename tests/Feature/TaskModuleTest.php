@@ -169,6 +169,10 @@ class TaskModuleTest extends TestCase
         $this->assertNotNull($source);
         $this->assertSame('directive', $source->layout);
         $this->assertFalse($source->isSystem());
+        $this->assertSame(
+            ['text', 'period', 'responsible', 'collaborator', 'note'],
+            $source->columns
+        );
 
         $this->actingAs($admin)
             ->post(route('tasks.store'), [
@@ -195,6 +199,38 @@ class TaskModuleTest extends TestCase
 
         $this->assertDatabaseMissing('task_sources', ['id' => $source->id]);
         $this->assertDatabaseCount('tasks', 0);
+    }
+
+    public function test_admin_can_create_section_with_selected_table_columns(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->post(route('tasks.sources.store'), [
+                'name' => 'Сонгосон толгой',
+                'columns' => ['sector', 'measure', 'period', 'responsible', 'note'],
+            ])
+            ->assertRedirect();
+
+        $source = TaskSource::query()->where('name', 'Сонгосон толгой')->first();
+        $this->assertNotNull($source);
+        $this->assertSame(TaskSource::KEY_PREP_PLAN, $source->layout);
+        $this->assertSame(
+            ['sector', 'measure', 'period', 'responsible', 'note'],
+            $source->columns
+        );
+
+        $this->actingAs($admin)
+            ->get(route('tasks.index', ['kind' => $source->key]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Uureg/Index')
+                ->where('kind', $source->key)
+                ->has('source.columns', 5)
+                ->where('source.columns.0.key', 'sector')
+                ->where('source.columns.1.key', 'measure')
+                ->where('source.columns.1.label', 'Арга хэмжээ')
+            );
     }
 
     public function test_cannot_delete_system_section(): void

@@ -48,7 +48,9 @@ class TaskController extends Controller
                         'name' => 'Үүрэг даалгавар',
                         'layout' => TaskSource::KEY_DIRECTIVE,
                         'is_system' => true,
+                        'columns' => (new TaskSource(['key' => TaskSource::KEY_DIRECTIVE, 'layout' => TaskSource::KEY_DIRECTIVE]))->resolvedColumns(),
                     ],
+                    'columnChoices' => TaskSource::columnCatalog(),
                     'tasks' => [],
                     'documents' => [],
                     'people' => $this->phoneDirectoryPeople(),
@@ -69,13 +71,14 @@ class TaskController extends Controller
         $this->applyTaskListScope($tasksQuery, $user);
         $tasks = $tasksQuery
             ->get([
-                'id', 'task_source_id', 'text', 'period', 'responsible',
+                'id', 'task_source_id', 'text', 'measure', 'period', 'responsible',
                 'collaborator', 'sector', 'note', 'progress', 'sort_order',
             ])
             ->map(fn (Task $task, int $i) => [
                 'id' => $task->id,
                 'no' => $i + 1,
                 'text' => $task->text,
+                'measure' => $task->measure,
                 'period' => $task->period,
                 'responsible' => PersonName::shortList($task->responsible),
                 'collaborator' => PersonName::shortList($task->collaborator),
@@ -105,7 +108,9 @@ class TaskController extends Controller
                 'name' => $source->name,
                 'layout' => $source->layout ?: $source->key,
                 'is_system' => $source->isSystem(),
+                'columns' => $source->resolvedColumns(),
             ],
+            'columnChoices' => TaskSource::columnCatalog(),
             'tasks' => $tasks,
             'documents' => $documents,
             'people' => $this->phoneDirectoryPeople(),
@@ -135,7 +140,7 @@ class TaskController extends Controller
         $this->applyTaskListScope($tasksQuery, $request->user());
         $tasks = $tasksQuery
             ->get([
-                'id', 'text', 'period', 'responsible', 'collaborator', 'sector', 'note', 'progress', 'sort_order',
+                'id', 'text', 'measure', 'period', 'responsible', 'collaborator', 'sector', 'note', 'progress', 'sort_order',
             ])
             ->values();
 
@@ -204,61 +209,37 @@ class TaskController extends Controller
                 : 'Үүрэг чиглэл'
         );
 
-        if ($source->isPrepLayout()) {
-            $headings = [
-                '№', 'Ажлын чиглэл', 'Арга хэмжээ', 'Хугацаа',
-                'Хариуцах эзэн', 'Хамтран хэрэгжүүлэх', 'Хэрэгжилт', 'Биелэлтийн хувь',
-            ];
-            $widths = [600, 1800, 3600, 1200, 1600, 1600, 2200, 1000];
-            $center = [0, 7];
-            $sheetRows = [];
-            $docxRows = [];
-
-            foreach ($tasks as $i => $task) {
-                $cells = [
-                    (string) ($i + 1),
-                    (string) ($task->sector ?? ''),
-                    (string) ($task->text ?? ''),
-                    (string) ($task->period ?? ''),
-                    PersonName::shortList($task->responsible),
-                    PersonName::shortList($task->collaborator),
-                    (string) ($task->note ?? ''),
-                    (string) ((int) $task->progress).'%',
-                ];
-                $sheetRows[] = $cells;
-                $docxRows[] = ['type' => 'data', 'cells' => $cells];
-            }
-
-            return [
-                'title' => $title,
-                'headings' => $headings,
-                'widths' => $widths,
-                'center' => $center,
-                'landscape' => true,
-                'docx_rows' => $docxRows,
-                'sheet_rows' => $sheetRows,
-            ];
-        }
-
-        $headings = [
-            '№', 'Үүрэг чиглэл', 'Хугацаа', 'Хариуцах эзэн',
-            'Хяналт тавих албан тушаалтан', 'Хэрэгжилт', 'Биелэлтийн хувь',
+        $columns = $source->resolvedColumns();
+        $headings = array_merge(['№'], array_column($columns, 'label'), ['Биелэлтийн хувь']);
+        $widthFor = [
+            'sector' => 1800,
+            'measure' => 3200,
+            'text' => 3600,
+            'period' => 1200,
+            'responsible' => 1600,
+            'collaborator' => 1800,
+            'note' => 2200,
         ];
-        $widths = [600, 4200, 1200, 1600, 1800, 2400, 1000];
-        $center = [0, 6];
+        $widths = array_merge(
+            [600],
+            array_map(fn (array $col) => $widthFor[$col['key']] ?? 1600, $columns),
+            [1000],
+        );
+        $center = [0, count($headings) - 1];
         $sheetRows = [];
         $docxRows = [];
 
         foreach ($tasks as $i => $task) {
-            $cells = [
-                (string) ($i + 1),
-                (string) ($task->text ?? ''),
-                (string) ($task->period ?? ''),
-                PersonName::shortList($task->responsible),
-                PersonName::shortList($task->collaborator),
-                (string) ($task->note ?? ''),
-                (string) ((int) $task->progress).'%',
-            ];
+            $cells = [(string) ($i + 1)];
+            foreach ($columns as $column) {
+                $field = $column['field'];
+                $value = $task->{$field} ?? '';
+                if (in_array($field, ['responsible', 'collaborator'], true)) {
+                    $value = PersonName::shortList($value);
+                }
+                $cells[] = (string) $value;
+            }
+            $cells[] = (string) ((int) $task->progress).'%';
             $sheetRows[] = $cells;
             $docxRows[] = ['type' => 'data', 'cells' => $cells];
         }
@@ -292,6 +273,7 @@ class TaskController extends Controller
         $data = $request->validate([
             'kind' => ['required', $this->kindRule()],
             'text' => ['nullable', 'string', 'max:5000'],
+            'measure' => ['nullable', 'string', 'max:5000'],
             'period' => ['nullable', 'string', 'max:255'],
             'responsible' => ['nullable', 'string', 'max:255'],
             'collaborator' => ['nullable', 'string', 'max:255'],
@@ -300,9 +282,15 @@ class TaskController extends Controller
 
         $source = TaskSource::query()->where('key', $data['kind'])->firstOrFail();
         $next = ((int) $source->tasks()->max('sort_order')) + 1;
+        $text = trim((string) ($data['text'] ?? ''));
+        $measure = trim((string) ($data['measure'] ?? ''));
+        if ($text === '' && $measure !== '') {
+            $text = $measure;
+        }
 
         $source->tasks()->create([
-            'text' => $data['text'] ?? '',
+            'text' => $text,
+            'measure' => $measure !== '' ? $measure : null,
             'period' => $data['period'] ?? null,
             'responsible' => PersonName::shortList($data['responsible'] ?? null) ?: null,
             'collaborator' => PersonName::shortList($data['collaborator'] ?? null) ?: null,
@@ -311,7 +299,7 @@ class TaskController extends Controller
             'progress' => 0,
         ]);
 
-        $snippet = mb_substr(trim((string) ($data['text'] ?? '')), 0, 80);
+        $snippet = mb_substr($text !== '' ? $text : $measure, 0, 80);
         app(\App\Services\Push\EmployeePushNotifier::class)->notifyNamed(
             [$data['responsible'] ?? null, $data['collaborator'] ?? null],
             [
@@ -332,6 +320,7 @@ class TaskController extends Controller
 
         $data = $request->validate([
             'text' => ['sometimes', 'nullable', 'string', 'max:5000'],
+            'measure' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'period' => ['sometimes', 'nullable', 'string', 'max:255'],
             'responsible' => ['sometimes', 'nullable', 'string', 'max:255'],
             'collaborator' => ['sometimes', 'nullable', 'string', 'max:255'],
@@ -677,11 +666,25 @@ class TaskController extends Controller
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'copy_from' => ['required', $this->kindRule()],
+            'copy_from' => ['nullable', $this->kindRule()],
+            'columns' => ['nullable', 'array', 'min:1'],
+            'columns.*' => ['string', Rule::in(TaskSource::columnKeys())],
         ]);
 
-        $template = TaskSource::query()->where('key', $data['copy_from'])->firstOrFail();
         $name = trim($data['name']);
+        $columns = TaskSource::normalizeColumnKeys($data['columns'] ?? null);
+
+        if ($columns === [] && filled($data['copy_from'] ?? null)) {
+            $template = TaskSource::query()->where('key', $data['copy_from'])->firstOrFail();
+            $columns = $template->columnKeyList();
+            $layout = $template->layout ?: $template->key;
+        } elseif ($columns === []) {
+            return back()
+                ->withErrors(['columns' => 'Хүснэгтийн толгойгоос дор хаяж нэг талбар сонгоно уу.'])
+                ->withInput();
+        } else {
+            $layout = TaskSource::layoutForColumns($columns);
+        }
 
         if (TaskSource::query()->where('name', $name)->exists()) {
             return back()->with('warning', 'Ийм нэртэй хэсэг аль хэдийн байна.');
@@ -690,7 +693,8 @@ class TaskController extends Controller
         $source = TaskSource::create([
             'key' => TaskSource::keyFor($name),
             'name' => $name,
-            'layout' => $template->layout ?: $template->key,
+            'layout' => $layout,
+            'columns' => $columns,
             'sort_order' => (int) TaskSource::query()->max('sort_order') + 1,
         ]);
 
