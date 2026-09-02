@@ -179,28 +179,7 @@ class WebAuthnService
             throw new RuntimeException('Энэ утсанд хуруу/царай бүртгэгдээгүй. Эхлээд нууц үгээр нэвтэрч, «Идэвхжүүлэх» дарна уу.');
         }
 
-        $request->session()->put('webauthn.expected_user_id', $user->id);
-
-        $webauthn = self::make($request);
-
-        // Хоосон allowCredentials — төхөөрөмж дээрх passkey-г браузер өөрөө олно.
-        $args = $webauthn->getGetArgs(
-            [],
-            120,
-            false,
-            false,
-            false,
-            false, // hybrid
-            true,  // internal = finger / face
-            'preferred'
-        );
-
-        $challenge = $webauthn->getChallenge();
-        $request->session()->put('webauthn.challenge', self::b64urlEncode(
-            $challenge instanceof ByteBuffer ? $challenge->getBinaryString() : (string) $challenge
-        ));
-
-        return json_decode(json_encode($args), true);
+        return self::assertionOptionsForUser($request, $user);
     }
 
     /**
@@ -210,18 +189,25 @@ class WebAuthnService
      */
     public static function assertionOptionsForUser(Request $request, User $user): array
     {
-        if (! $user->webauthnCredentials()->exists()) {
+        $webauthn = self::make($request);
+
+        $ids = $user->webauthnCredentials()
+            ->get(['credential_id'])
+            ->map(fn (WebAuthnCredential $c) => self::b64urlDecode($c->credential_id))
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($ids === []) {
             throw new RuntimeException('Биометрик бүртгэл олдсонгүй.');
         }
 
         $request->session()->put('webauthn.expected_user_id', $user->id);
 
-        $webauthn = self::make($request);
-
-        // Төхөөрөмж дээрх passkey-г браузер өөрөө олно (discoverable).
+        // Энэ утсан дээрх credential ID-аар олно (discoverable биш хуучин passkey-д ч ажиллана).
         $args = $webauthn->getGetArgs(
-            [],
-            60,
+            $ids,
+            120,
             false,
             false,
             false,

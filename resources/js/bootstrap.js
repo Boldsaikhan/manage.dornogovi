@@ -6,10 +6,21 @@ window.axios.defaults.withCredentials = true;
 window.axios.defaults.xsrfCookieName = 'XSRF-TOKEN';
 window.axios.defaults.xsrfHeaderName = 'X-XSRF-TOKEN';
 
-const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-if (csrfToken) {
-    window.axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
-}
+// X-CSRF-TOKEN meta-г SPA дээр хуучин үлдэж 419 өгдөг тул зөвхөн XSRF cookie ашиглана.
+window.axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 419) {
+            const last = Number(sessionStorage.getItem('csrf_reload_at') || 0);
+            if (Date.now() - last >= 8000) {
+                sessionStorage.setItem('csrf_reload_at', String(Date.now()));
+                window.location.reload();
+            }
+        }
+
+        return Promise.reject(error);
+    },
+);
 
 // APP_URL http/https зөрсөн үед iPhone дээр POST өөр origin руу явж cookie илгээгдэхгүй.
 if (typeof window.Ziggy === 'object' && window.Ziggy) {

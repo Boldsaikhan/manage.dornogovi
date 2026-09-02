@@ -254,7 +254,7 @@ class AppLockTest extends TestCase
         $this->assertTrue((bool) session(AppLock::SESSION_KEY));
     }
 
-    public function test_verify_options_use_discoverable_passkey(): void
+    public function test_verify_options_include_credentials_for_user(): void
     {
         $user = User::factory()->create();
         $user->webauthnCredentials()->create([
@@ -268,7 +268,7 @@ class AppLockTest extends TestCase
             ->withHeader('User-Agent', self::MOBILE_UA)
             ->postJson(route('webauthn.verify.options'))
             ->assertOk()
-            ->assertJsonPath('publicKey.allowCredentials', null);
+            ->assertJsonCount(1, 'publicKey.allowCredentials');
     }
 
     public function test_unlock_does_not_require_biometric(): void

@@ -18,7 +18,7 @@ class WebAuthnRoutesTest extends TestCase
             ->assertJsonPath('message', 'Утасны дугаараа оруулна уу.');
     }
 
-    public function test_login_options_use_discoverable_when_phone_matches(): void
+    public function test_login_options_include_credentials_when_phone_matches(): void
     {
         $user = User::factory()->create(['phone' => '89112233']);
         WebAuthnCredential::query()->create([
@@ -31,7 +31,7 @@ class WebAuthnRoutesTest extends TestCase
 
         $this->postJson(route('webauthn.login.options'), ['login' => '8911 2233'])
             ->assertOk()
-            ->assertJsonPath('publicKey.allowCredentials', null);
+            ->assertJsonCount(1, 'publicKey.allowCredentials');
     }
 
     public function test_login_options_rejects_user_without_webauthn(): void
