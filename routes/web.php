@@ -64,6 +64,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
 
     Route::post('/app-lock', [AppLockController::class, 'lock'])->name('app.lock');
+    Route::post('/app-lock/dismiss-reload', [AppLockController::class, 'dismissReload'])->name('app.lock.dismiss-reload');
     Route::post('/app-unlock', [AppLockController::class, 'unlock'])->name('app.unlock');
     Route::post('/app-unlock-password', [AppLockController::class, 'unlockWithPassword'])->name('app.unlock.password');
 

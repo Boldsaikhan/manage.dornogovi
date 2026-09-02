@@ -12,6 +12,17 @@ import { assertBiometric, isWebAuthnSupported, registerBiometric } from '@/utils
 const LOCK_KEY = 'md_app_locked';
 const LAST_ACTIVE_KEY = 'md_last_active';
 const HIDE_GRACE_MS = 4000;
+const AWAY_LOCK_MS = 1000;
+
+const isPageReload = () => {
+    if (typeof performance === 'undefined') {
+        return false;
+    }
+
+    const nav = performance.getEntriesByType('navigation')[0];
+
+    return nav?.type === 'reload';
+};
 
 const page = usePage();
 
@@ -25,8 +36,10 @@ const bioBusy = ref(false);
 const setupBusy = ref(false);
 const setupSuccess = ref(false);
 const localWebAuthn = ref(false);
+const skipBackgroundLock = ref(isPageReload());
 
 let suppressHideUntil = 0;
+let hiddenAt = 0;
 
 const lock = computed(() => page.props.appLock ?? {
     locked: false,
@@ -53,7 +66,17 @@ const shouldGuard = () => (
     && isMobileDevice()
 );
 
-const showLock = computed(() => shouldGuard() && (clientLocked.value || !! lock.value.locked));
+const showLock = computed(() => {
+    if (! shouldGuard()) {
+        return false;
+    }
+
+    if (skipBackgroundLock.value && lock.value.reason === 'background') {
+        return false;
+    }
+
+    return clientLocked.value || !! lock.value.locked;
+});
 
 const lockDescription = computed(() => {
     if (offline.value) {
@@ -99,15 +122,6 @@ const idleExpired = () => minutesIdle() >= idleMs.value;
 
 const setClientLock = (on) => {
     clientLocked.value = on;
-    try {
-        if (on) {
-            localStorage.setItem(storageKey(), '1');
-        } else {
-            localStorage.removeItem(storageKey());
-        }
-    } catch {
-        // ignore
-    }
 };
 
 const requestIdleLock = async () => {
@@ -162,6 +176,14 @@ const onActivity = () => {
     recordActivity();
 };
 
+const lockAfterReturn = async () => {
+    if (! shouldGuard() || showLock.value || isHideSuppressed()) {
+        return;
+    }
+
+    await requestBackgroundLock();
+};
+
 const onVisibilityChange = () => {
     offline.value = ! navigator.onLine;
 
@@ -170,7 +192,7 @@ const onVisibilityChange = () => {
             return;
         }
 
-        requestBackgroundLock();
+        hiddenAt = Date.now();
 
         return;
     }
@@ -180,6 +202,17 @@ const onVisibilityChange = () => {
     }
 
     if (clientLocked.value || lock.value.locked) {
+        hiddenAt = 0;
+
+        return;
+    }
+
+    const awayMs = hiddenAt ? Date.now() - hiddenAt : 0;
+    hiddenAt = 0;
+
+    if (awayMs >= AWAY_LOCK_MS) {
+        lockAfterReturn();
+
         return;
     }
 
@@ -193,10 +226,16 @@ const onVisibilityChange = () => {
     evaluateLock();
 };
 
-const onPageShow = () => {
+const onPageShow = (event) => {
     offline.value = ! navigator.onLine;
 
     if (busy.value || isHideSuppressed()) {
+        return;
+    }
+
+    if (event?.persisted) {
+        lockAfterReturn();
+
         return;
     }
 
@@ -222,16 +261,28 @@ const onOffline = () => {
     offline.value = true;
 };
 
-onMounted(() => {
+onMounted(async () => {
     bioSupported.value = isWebAuthnSupported();
     localWebAuthn.value = hasWebAuthnDeviceHint();
 
     if (shouldGuard()) {
-        const persisted = localStorage.getItem(storageKey()) === '1';
+        try {
+            localStorage.removeItem(storageKey());
+        } catch {
+            // ignore
+        }
 
-        if (persisted) {
+        if (isPageReload()) {
+            setClientLock(false);
+            try {
+                await window.axios.post(route('app.lock.dismiss-reload'));
+            } catch {
+                // ignore
+            }
+            skipBackgroundLock.value = false;
+            recordActivity();
+        } else if (lock.value.locked && lock.value.reason !== 'background') {
             setClientLock(true);
-            window.axios.post(route('app.lock'), { background: true }).catch(() => {});
         } else if (idleExpired()) {
             evaluateLock();
         } else {

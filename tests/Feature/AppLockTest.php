@@ -254,6 +254,26 @@ class AppLockTest extends TestCase
         $this->assertTrue((bool) session(AppLock::SESSION_KEY));
     }
 
+    public function test_dismiss_reload_clears_background_lock(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->withHeader('User-Agent', self::MOBILE_UA)
+            ->postJson(route('app.lock'), ['background' => true])
+            ->assertOk();
+
+        $this->assertTrue((bool) session(AppLock::BACKGROUND_LOCK_KEY));
+
+        $this->actingAs($user)
+            ->withHeader('User-Agent', self::MOBILE_UA)
+            ->postJson(route('app.lock.dismiss-reload'))
+            ->assertOk()
+            ->assertJson(['locked' => false]);
+
+        $this->assertFalse((bool) session(AppLock::SESSION_KEY));
+    }
+
     public function test_verify_options_include_credentials_for_user(): void
     {
         $user = User::factory()->create();

@@ -39,6 +39,23 @@ class AppLockController extends Controller
         ]);
     }
 
+    /** Refresh хийхэд background түгжээг тайлна (нууц үг шаардахгүй). */
+    public function dismissReload(Request $request): JsonResponse
+    {
+        if (! MobileClient::isMobileRequest($request)) {
+            return response()->json(['locked' => false, 'mode' => null]);
+        }
+
+        if (AppLock::isLocked($request) && AppLock::isBackgroundLock($request)) {
+            AppLock::unlock($request);
+        }
+
+        return response()->json([
+            'locked' => AppLock::isLocked($request),
+            'mode' => AppLock::mode($request),
+        ]);
+    }
+
     /**
      * Түгжээ тайлах — хуруу/царай ЭСВЭЛ нууц үг.
      *
