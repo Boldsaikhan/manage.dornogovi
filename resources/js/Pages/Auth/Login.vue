@@ -6,8 +6,7 @@ import StateEmblem from '@/Components/StateEmblem.vue';
 import OrnamentMark from '@/Components/OrnamentMark.vue';
 import { isMobileDevice } from '@/utils/mobileClient';
 import {
-    hasWebAuthnDeviceHint,
-    isStandalonePwa,
+    clearWebAuthnDeviceHint,
     markWebAuthnDevice,
 } from '@/utils/pwaClient';
 import { isWebAuthnSupported, loginWithBiometric } from '@/utils/webauthn';
@@ -31,21 +30,14 @@ const showPassword = ref(false);
 const bioSupported = ref(false);
 const bioBusy = ref(false);
 const bioError = ref('');
-const autoBioTried = ref(false);
-const preferBiometric = ref(false);
 
 /** Утсан дээр, HTTPS-тэй, хөтөч дэмждэг үед л товчийг үзүүлнэ. */
 const canBiometric = computed(() => onPhone.value && bioSupported.value);
 
-const shouldAutoBiometric = computed(() => (
-    canBiometric.value
-    && (isStandalonePwa() || hasWebAuthnDeviceHint())
-));
-
-const loginBiometric = async ({ auto = false } = {}) => {
+const loginBiometric = async () => {
     if (bioBusy.value) return;
 
-    if (! auto && ! form.login) {
+    if (! form.login) {
         bioError.value = isPhone.value
             ? 'Утасны дугаараа оруулаад хуруу / царайгаар нэвтэрнэ үү.'
             : 'И-мэйл хаягаа оруулаад хуруу / царайгаар нэвтэрнэ үү.';
@@ -68,17 +60,14 @@ const loginBiometric = async ({ auto = false } = {}) => {
             || '';
 
         if (/NotAllowedError|AbortError/i.test(name)) {
-            bioError.value = auto
-                ? ''
-                : 'Үйлдэл цуцлагдлаа. Утасны дугаараа оруулаад дахин оролдоно уу.';
-            preferBiometric.value = false;
+            clearWebAuthnDeviceHint();
+            bioError.value = 'Энэ утсанд хуруу/царай бүртгэгдээгүй эсвэл үйлдэл цуцлагдсан. Нууц үгээр нэвтэрч, «Идэвхжүүлэх» дарна уу.';
         } else if (e?.response?.status === 422) {
+            clearWebAuthnDeviceHint();
             bioError.value = msg
-                || 'Энэ төхөөрөмж бүртгэгдээгүй байна. Эхлээд нууц үгээрээ нэвтэрч, Профайл хэсгээс идэвхжүүлнэ үү.';
-            preferBiometric.value = false;
+                || 'Энэ утсанд хуруу/царай бүртгэгдээгүй. Эхлээд нууц үгээр нэвтэрч, «Идэвхжүүлэх» дарна уу.';
         } else {
             bioError.value = msg || 'Нэвтэрч чадсангүй. Нууц үгээрээ орно уу.';
-            preferBiometric.value = false;
         }
     } finally {
         bioBusy.value = false;
@@ -208,14 +197,6 @@ const qrCountdown = computed(() => {
 onMounted(() => {
     onPhone.value = isMobileDevice();
     bioSupported.value = isWebAuthnSupported();
-    preferBiometric.value = shouldAutoBiometric.value;
-
-    if (shouldAutoBiometric.value && ! autoBioTried.value) {
-        autoBioTried.value = true;
-        window.setTimeout(() => {
-            loginBiometric({ auto: true });
-        }, 350);
-    }
 });
 
 onBeforeUnmount(stopQrTimers);
@@ -277,7 +258,7 @@ const submit = () => {
                         {{ status }}
                     </div>
 
-                    <form v-if="! isQr && ! (preferBiometric && bioBusy)" class="mt-4 space-y-4" @submit.prevent="submit">
+                    <form v-if="! isQr" class="mt-4 space-y-4" @submit.prevent="submit">
                         <!-- Нэвтрэх нэр: утас эсвэл и-мэйл -->
                         <div>
                             <div
@@ -510,14 +491,6 @@ const submit = () => {
                         </button>
                     </form>
 
-                    <div
-                        v-if="! isQr && preferBiometric && bioBusy"
-                        class="mt-4 rounded-2xl border border-brand-navy-200 bg-brand-navy-50 px-4 py-8 text-center"
-                    >
-                        <p class="text-sm font-semibold text-brand-navy-800">Хуруу / цараайгаар нэвтэрч байна…</p>
-                        <p class="mt-1 text-xs text-slate-500">Төхөөрөмжийн баталгаажуулалтыг гүйцээж дуусгана уу.</p>
-                    </div>
-
                     <!-- QR кодоор нэвтрэх — зөвхөн товч дарахад, компьютер дээр -->
                     <div v-if="isQr && ! onPhone" class="mt-4">
                         <div class="relative mx-auto flex h-[248px] w-[248px] items-center justify-center rounded-2xl border-2 border-slate-200 bg-white p-3">
@@ -597,7 +570,7 @@ const submit = () => {
                         v-if="canBiometric && ! isQr && ! bioError"
                         class="mt-1.5 text-center text-xs text-slate-400"
                     >
-                        Утасны дугаараа оруулаад дарна уу
+                        Эхлээд утасны дугаараа оруулаад дарна уу
                     </p>
 
                     <p

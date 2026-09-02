@@ -95,13 +95,13 @@ class WebAuthnService
             ->map(fn (string $id) => self::b64urlDecode($id))
             ->all();
 
-        // preferred: утсны хуруу/нүүр, нэвтрэхэд олдохоор (discouraged бол login-д allowCredentials хэрэгтэй).
+        // required: утсан дээрх passkey нэвтрэхэд олдохоор (discoverable).
         $args = $webauthn->getCreateArgs(
             self::userHandle($user),
             $user->email ?: ($user->phone ?: 'user-'.$user->id),
             $user->name ?: 'Хэрэглэгч',
             60,
-            'preferred',
+            'required',
             'required',
             false,         // platform only
             $exclude
@@ -163,24 +163,36 @@ class WebAuthnService
      */
     public static function loginOptions(Request $request): array
     {
-        $user = User::findByLogin((string) $request->input('login', ''));
+        $login = trim((string) $request->input('login', ''));
 
-        if ($user && $user->webauthnCredentials()->exists()) {
-            return self::assertionOptionsForUser($request, $user);
+        if ($login === '') {
+            throw new RuntimeException('Утасны дугаараа оруулна уу.');
         }
+
+        $user = User::findByLogin($login);
+
+        if (! $user) {
+            throw new RuntimeException('Хэрэглэгч олдсонгүй. Дугаараа шалгаад дахин оролдоно уу.');
+        }
+
+        if (! $user->webauthnCredentials()->exists()) {
+            throw new RuntimeException('Энэ утсанд хуруу/царай бүртгэгдээгүй. Эхлээд нууц үгээр нэвтэрч, «Идэвхжүүлэх» дарна уу.');
+        }
+
+        $request->session()->put('webauthn.expected_user_id', $user->id);
 
         $webauthn = self::make($request);
 
-        // Хоосон allowCredentials — төхөөрөмж дээрх discoverable passkey.
+        // Хоосон allowCredentials — төхөөрөмж дээрх passkey-г браузер өөрөө олно.
         $args = $webauthn->getGetArgs(
             [],
             120,
             false,
             false,
             false,
-            true,  // hybrid (зарим төхөөрөмж)
+            false, // hybrid
             true,  // internal = finger / face
-            true
+            'preferred'
         );
 
         $challenge = $webauthn->getChallenge();
@@ -257,6 +269,7 @@ class WebAuthnService
     {
         $webauthn = self::make($request);
         $challengeB64 = $request->session()->pull('webauthn.challenge');
+        $expectedUserId = $request->session()->pull('webauthn.expected_user_id');
 
         if (! $challengeB64) {
             throw new RuntimeException('Нэвтрэх сесс дууссан. Дахин оролдоно уу.');
@@ -270,7 +283,11 @@ class WebAuthnService
             ->first();
 
         if (! $credential) {
-            throw new RuntimeException('Энэ төхөөрөмж бүртгэгдээгүй байна. Эхлээд нэвтэрч биометрик идэвхжүүлнэ үү.');
+            throw new RuntimeException('Энэ утсанд хуруу/царай бүртгэгдээгүй. Эхлээд нууц үгээр нэвтэрч, «Идэвхжүүлэх» дарна уу.');
+        }
+
+        if ($expectedUserId && (int) $credential->user_id !== (int) $expectedUserId) {
+            throw new RuntimeException('Оруулсан дугаарын биометрик бүртгэл таарахгүй байна.');
         }
 
         $clientDataJSON = self::b64urlDecode($payload['clientDataJSON'] ?? '');

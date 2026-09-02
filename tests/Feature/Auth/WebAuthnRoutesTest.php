@@ -11,14 +11,14 @@ class WebAuthnRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guest_can_request_login_options(): void
+    public function test_guest_login_options_require_phone(): void
     {
         $this->postJson(route('webauthn.login.options'))
-            ->assertOk()
-            ->assertJsonStructure(['publicKey' => ['challenge', 'rpId', 'timeout']]);
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Утасны дугаараа оруулна уу.');
     }
 
-    public function test_login_options_include_credentials_when_phone_matches(): void
+    public function test_login_options_use_discoverable_when_phone_matches(): void
     {
         $user = User::factory()->create(['phone' => '89112233']);
         WebAuthnCredential::query()->create([
@@ -31,7 +31,16 @@ class WebAuthnRoutesTest extends TestCase
 
         $this->postJson(route('webauthn.login.options'), ['login' => '8911 2233'])
             ->assertOk()
-            ->assertJsonCount(1, 'publicKey.allowCredentials');
+            ->assertJsonPath('publicKey.allowCredentials', null);
+    }
+
+    public function test_login_options_rejects_user_without_webauthn(): void
+    {
+        $user = User::factory()->create(['phone' => '89112233']);
+
+        $this->postJson(route('webauthn.login.options'), ['login' => $user->phone])
+            ->assertStatus(422)
+            ->assertJsonFragment(['message' => 'Энэ утсанд хуруу/царай бүртгэгдээгүй. Эхлээд нууц үгээр нэвтэрч, «Идэвхжүүлэх» дарна уу.']);
     }
 
     public function test_authenticated_user_can_request_register_options(): void
