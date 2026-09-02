@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import { isMobileDevice } from '@/utils/mobileClient';
-import { dismissBioSetup, isBioSetupDismissed, isStandalonePwa, markWebAuthnDevice } from '@/utils/pwaClient';
+import { dismissBioSetup, hasWebAuthnDeviceHint, isBioSetupDismissed, isStandalonePwa, markWebAuthnDevice } from '@/utils/pwaClient';
 import { isWebAuthnSupported, registerBiometric } from '@/utils/webauthn';
 
 const page = usePage();
@@ -21,9 +21,9 @@ const shouldShow = computed(() => {
         return false;
     }
 
-    const hasWebAuthn = !! page.props.appLock?.hasWebAuthn;
+    const hasLocalWebAuthn = hasWebAuthnDeviceHint();
 
-    return ! hasWebAuthn && isWebAuthnSupported();
+    return ! hasLocalWebAuthn && isWebAuthnSupported();
 });
 
 const enable = async () => {
@@ -63,7 +63,8 @@ const skip = () => {
     >
         <p class="text-sm font-semibold text-brand-navy-900">Хуруу / цараайгаар нэвтрэх</p>
         <p class="mt-1 text-xs leading-relaxed text-slate-600">
-            {{ isStandalonePwa() ? 'Дараагийн удаа нууц үг асуухгүй.' : 'Апп суулгасан бол илүү хурдан нэвтэрнэ.' }}
+            Энэ утсан дээр хуруу/царайгаар нэвтрэхийг идэвхжүүлнэ үү.
+            {{ isStandalonePwa() ? 'Дараагийн удаа нууц үг асуухгүй.' : '' }}
         </p>
         <p v-if="error" class="mt-2 text-xs text-red-600">{{ error }}</p>
         <div class="mt-3 flex gap-2">

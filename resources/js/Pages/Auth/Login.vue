@@ -7,6 +7,7 @@ import OrnamentMark from '@/Components/OrnamentMark.vue';
 import { isMobileDevice } from '@/utils/mobileClient';
 import {
     clearWebAuthnDeviceHint,
+    hasWebAuthnDeviceHint,
     markWebAuthnDevice,
 } from '@/utils/pwaClient';
 import { isWebAuthnSupported, loginWithBiometric } from '@/utils/webauthn';
@@ -30,9 +31,10 @@ const showPassword = ref(false);
 const bioSupported = ref(false);
 const bioBusy = ref(false);
 const bioError = ref('');
+const localWebAuthn = ref(false);
 
-/** Утсан дээр, HTTPS-тэй, хөтөч дэмждэг үед л товчийг үзүүлнэ. */
-const canBiometric = computed(() => onPhone.value && bioSupported.value);
+/** Зөвхөн энэ утсан дээр идэвхжүүлсэн үед л товчийг үзүүлнэ. */
+const canBiometric = computed(() => onPhone.value && bioSupported.value && localWebAuthn.value);
 
 const loginBiometric = async () => {
     if (bioBusy.value) return;
@@ -197,6 +199,7 @@ const qrCountdown = computed(() => {
 onMounted(() => {
     onPhone.value = isMobileDevice();
     bioSupported.value = isWebAuthnSupported();
+    localWebAuthn.value = hasWebAuthnDeviceHint();
 });
 
 onBeforeUnmount(stopQrTimers);

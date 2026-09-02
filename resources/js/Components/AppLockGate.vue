@@ -2,6 +2,10 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import { isMobileDevice } from '@/utils/mobileClient';
+import {
+    clearWebAuthnDeviceHint,
+    hasWebAuthnDeviceHint,
+} from '@/utils/pwaClient';
 import { assertBiometric, isWebAuthnSupported } from '@/utils/webauthn';
 
 const LOCK_KEY = 'md_app_locked';
@@ -17,6 +21,7 @@ const offline = ref(typeof navigator !== 'undefined' ? ! navigator.onLine : fals
 const clientLocked = ref(false);
 const bioSupported = ref(false);
 const bioBusy = ref(false);
+const localWebAuthn = ref(false);
 
 let suppressHideUntil = 0;
 
@@ -30,8 +35,8 @@ const lock = computed(() => page.props.appLock ?? {
 
 const idleMs = computed(() => Math.max(1, Number(lock.value.idleMinutes || 30)) * 60 * 1000);
 
-/** Төхөөрөмж дээр биометрик бүртгүүлсэн бөгөөд хөтөч дэмждэг үед л санал болгоно. */
-const canBiometric = computed(() => bioSupported.value && !! lock.value.hasWebAuthn);
+/** Зөвхөн энэ утсан дээр идэвхжүүлсэн үед л биометрик санал болгоно. */
+const canBiometric = computed(() => bioSupported.value && localWebAuthn.value);
 
 const userId = computed(() => page.props.auth?.user?.id ?? null);
 
@@ -214,6 +219,7 @@ const onOffline = () => {
 
 onMounted(() => {
     bioSupported.value = isWebAuthnSupported();
+    localWebAuthn.value = hasWebAuthnDeviceHint();
 
     if (shouldGuard()) {
         const persisted = localStorage.getItem(storageKey()) === '1';
@@ -341,7 +347,9 @@ const unlockBiometric = async () => {
         const name = e?.name || '';
 
         if (/NotAllowedError|AbortError/i.test(name)) {
-            error.value = 'Энэ утсанд хуруу/царай бүртгэгдээгүй эсвэл үйлдэл цуцлагдсан. Нууц үгээр нээнэ үү.';
+            clearWebAuthnDeviceHint();
+            localWebAuthn.value = false;
+            error.value = 'Энэ утсанд хуруу/царай бүртгэгдээгүй. Нууц үгээр нээгээд «Идэвхжүүлэх» дарна уу.';
         } else if (! navigator.onLine) {
             error.value = 'Сүлжээгүй байна. Холбогдсоны дараа дахин оролдоно уу.';
         } else {

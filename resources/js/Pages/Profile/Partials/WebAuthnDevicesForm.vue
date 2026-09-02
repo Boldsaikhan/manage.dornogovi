@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue';
+import { markWebAuthnDevice } from '@/utils/pwaClient';
 import { isWebAuthnSupported, registerBiometric } from '@/utils/webauthn';
 
 const props = defineProps({
@@ -34,6 +35,7 @@ const addDevice = async () => {
             ];
         }
         message.value = 'Хуруу / нүүрээр нэвтрэх идэвхжлээ. Дараагийн удаа нэвтрэх хуудаснаас ашиглана.';
+        markWebAuthnDevice();
     } catch (e) {
         const msg = e?.response?.data?.message
             || e?.message
