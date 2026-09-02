@@ -1,5 +1,56 @@
 ---
 
+# БОГИНО — хуулж илгээх (2026-09)
+
+**Хаана илгээх:** mcloud.gov.mn → «Холбоо барих» · `admin@ndc.gov.mn` · `it@dornogovi.gov.mn` (хуулбар)
+
+**Сэдэв (хуулна):**
+
+```
+ЯАРАЛТАЙ: manage.dornogovi.gov.mn — Монголын ISP DNS дээр NXDOMAIN
+```
+
+**Агуулга (хуулна):**
+
+```
+Сайн байна уу.
+
+Дорноговь аймгийн ЗДТГ — it@dornogovi.gov.mn
+Серверийн нийтийн IP: 202.37.109.67 (nginx, HTTPS ажиллаж байна)
+
+АСУУДАЛ
+manage.dornogovi.gov.mn нэрийг Монголын интернэт үйлчилгээний DNS (Univision,
+Skytel гэх мэт) «байхгүй» (NXDOMAIN) гэж хариулж байна. Гар утас, Chrome
+«DNS_PROBE_FINISHED_NXDOMAIN» алдаа гарна.
+
+Google (8.8.8.8) болон Cloudflare (1.1.1.1) дээр зөв шийдэгдэж байна:
+  manage.dornogovi.gov.mn → 202.37.109.67
+
+Харин дотоодын DNS:
+  nslookup manage.dornogovi.gov.mn 59.153.112.2  → NXDOMAIN (Univision)
+
+ХҮСЭЛТ
+1) manage.dornogovi.gov.mn-ийг dornogovi.gov.mn бүсийн ДОТОР энгийн A бичлэг
+   болгоно уу (эсвэл тусдаа бүсийг бүх NS дээр зөв синк хийнэ үү):
+
+   manage.dornogovi.gov.mn.      IN  A      202.37.109.67   TTL 3600
+   www.manage.dornogovi.gov.mn.  IN  CNAME  manage.dornogovi.gov.mn.
+
+2) ns.gov.mn, ns1.gov.mn, ns3.gov.mn, ns4.gov.mn ДӨРВҮҮЛЭНД ижил хариу
+   өгөхийг баталгаажуулна уу (ns4 дээр NXDOMAIN үлдэх ёсгүй).
+
+3) SOA primary «a.misconfigured.dns.server.invalid» бол засварлана уу.
+
+ШАЛГАХ (засварын дараа):
+  dig +short A manage.dornogovi.gov.mn @ns.gov.mn
+  dig +short A manage.dornogovi.gov.mn @ns4.gov.mn
+  → хоёуланд 202.37.109.67
+
+Яаралтай шийдвэрлэж өгнө үү. Баярлалаа.
+```
+
+---
+
 # mcloud.gov.mn дэмжлэгийн формд тавих (2026-08-30) — ХАМГИЙН СҮҮЛИЙН
 
 > Энэ хувилбарыг илгээнэ үү. Доорх 08-28-ны захиа архив.
