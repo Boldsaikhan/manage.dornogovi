@@ -167,7 +167,7 @@ class AppLockTest extends TestCase
 
         $this->actingAs($user)
             ->withHeader('User-Agent', self::MOBILE_UA)
-            ->postJson(route('app.lock'))
+            ->postJson(route('app.lock'), ['background' => true])
             ->assertOk()
             ->assertJson(['locked' => true]);
 
@@ -193,7 +193,7 @@ class AppLockTest extends TestCase
 
         $this->actingAs($user)
             ->withHeader('User-Agent', self::MOBILE_UA)
-            ->postJson(route('app.lock'))
+            ->postJson(route('app.lock'), ['background' => true])
             ->assertOk();
 
         $this->postJson(route('app.unlock'), [
@@ -212,7 +212,7 @@ class AppLockTest extends TestCase
 
         $this->actingAs($user)
             ->withHeader('User-Agent', self::MOBILE_UA)
-            ->postJson(route('app.lock'))
+            ->postJson(route('app.lock'), ['background' => true])
             ->assertOk();
 
         // assertion явуулсан ч энэ маршрут нууц үг шаардана.
@@ -223,6 +223,52 @@ class AppLockTest extends TestCase
         $this->postJson(route('app.unlock.password'), ['password' => 'secret-pass'])
             ->assertOk()
             ->assertJson(['locked' => false]);
+    }
+
+    public function test_mobile_background_lock_persists_on_navigation(): void
+    {
+        $user = User::factory()->create([
+            'password' => bcrypt('secret-pass'),
+        ]);
+        $user->webauthnCredentials()->create([
+            'credential_id' => 'cred-background',
+            'public_key' => 'pk',
+            'sign_count' => 0,
+            'device_name' => 'Phone',
+        ]);
+
+        $this->actingAs($user)
+            ->withHeader('User-Agent', self::MOBILE_UA)
+            ->postJson(route('app.lock'), ['background' => true])
+            ->assertOk()
+            ->assertJson(['locked' => true]);
+
+        $this->assertTrue(session(AppLock::SESSION_KEY));
+        $this->assertTrue((bool) session(AppLock::BACKGROUND_LOCK_KEY));
+
+        $this->actingAs($user)
+            ->withHeader('User-Agent', self::MOBILE_UA)
+            ->get(route('dept.dashboard'))
+            ->assertOk();
+
+        $this->assertTrue((bool) session(AppLock::SESSION_KEY));
+    }
+
+    public function test_verify_options_use_discoverable_passkey(): void
+    {
+        $user = User::factory()->create();
+        $user->webauthnCredentials()->create([
+            'credential_id' => 'cred-verify-discoverable',
+            'public_key' => 'pk',
+            'sign_count' => 0,
+            'device_name' => 'Phone',
+        ]);
+
+        $this->actingAs($user)
+            ->withHeader('User-Agent', self::MOBILE_UA)
+            ->postJson(route('webauthn.verify.options'))
+            ->assertOk()
+            ->assertJsonPath('publicKey.allowCredentials', null);
     }
 
     public function test_unlock_does_not_require_biometric(): void
@@ -239,7 +285,7 @@ class AppLockTest extends TestCase
 
         $this->actingAs($user)
             ->withHeader('User-Agent', self::MOBILE_UA)
-            ->postJson(route('app.lock'))
+            ->postJson(route('app.lock'), ['background' => true])
             ->assertOk();
 
         $this->postJson(route('app.unlock'), ['password' => 'secret-pass'])

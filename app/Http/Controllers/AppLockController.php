@@ -26,7 +26,12 @@ class AppLockController extends Controller
             ]);
         }
 
-        AppLock::lock($request, AppLock::MODE_FULL, $request->boolean('idle'));
+        AppLock::lock(
+            $request,
+            AppLock::MODE_FULL,
+            $request->boolean('idle'),
+            $request->boolean('background')
+        );
 
         return response()->json([
             'locked' => true,

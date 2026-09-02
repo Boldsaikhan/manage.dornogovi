@@ -210,28 +210,23 @@ class WebAuthnService
      */
     public static function assertionOptionsForUser(Request $request, User $user): array
     {
-        $webauthn = self::make($request);
-
-        $ids = $user->webauthnCredentials()
-            ->get(['credential_id'])
-            ->map(fn (WebAuthnCredential $c) => self::b64urlDecode($c->credential_id))
-            ->filter()
-            ->values()
-            ->all();
-
-        if ($ids === []) {
+        if (! $user->webauthnCredentials()->exists()) {
             throw new RuntimeException('Биометрик бүртгэл олдсонгүй.');
         }
 
-        // Зөвхөн төхөөрөмжийн дотоод биометрик (Google Passkey/hybrid биш).
+        $request->session()->put('webauthn.expected_user_id', $user->id);
+
+        $webauthn = self::make($request);
+
+        // Төхөөрөмж дээрх passkey-г браузер өөрөө олно (discoverable).
         $args = $webauthn->getGetArgs(
-            $ids,
+            [],
             60,
-            false, // usb
-            false, // nfc
-            false, // ble
-            false, // hybrid (Google phone-link)
-            true,  // internal
+            false,
+            false,
+            false,
+            false,
+            true,
             'preferred'
         );
 

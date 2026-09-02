@@ -58,6 +58,7 @@ class HandleInertiaRequests extends Middleware
                         'mode' => null,
                         'hasWebAuthn' => false,
                         'idleMinutes' => (int) config('session.lifetime', 30),
+                        'reason' => null,
                     ];
                 }
 
@@ -66,6 +67,7 @@ class HandleInertiaRequests extends Middleware
                     'mode' => AppLock::mode($request),
                     'hasWebAuthn' => $user->webauthnCredentials()->exists(),
                     'idleMinutes' => (int) config('session.lifetime', 30),
+                    'reason' => AppLock::lockReason($request),
                 ];
             },
             'nav' => fn () => $this->navigation($request),

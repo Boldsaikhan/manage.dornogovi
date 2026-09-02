@@ -155,9 +155,21 @@ export const loginWithBiometric = async (login = '') => {
 export const assertBiometric = async () => {
     const { data: options } = await window.axios.post(route('webauthn.verify.options'));
     const publicKey = preparePublicKeyGet(options.publicKey);
-    const credential = await navigator.credentials.get({ publicKey });
+
+    let credential;
+    try {
+        credential = await navigator.credentials.get({ publicKey });
+    } catch (e) {
+        const err = new Error(e?.message || 'Баталгаажуулалт амжилтгүй.');
+        err.name = e?.name || 'Error';
+        err.cause = e;
+        throw err;
+    }
+
     if (! credential) {
-        throw new Error('Баталгаажуулалт цуцлагдлаа.');
+        const err = new Error('Баталгаажуулалт цуцлагдлаа.');
+        err.name = 'NotAllowedError';
+        throw err;
     }
 
     return credentialToAssertPayload(credential);

@@ -25,6 +25,7 @@ const lock = computed(() => page.props.appLock ?? {
     mode: null,
     hasWebAuthn: false,
     idleMinutes: 30,
+    reason: null,
 });
 
 const idleMs = computed(() => Math.max(1, Number(lock.value.idleMinutes || 30)) * 60 * 1000);
@@ -43,6 +44,22 @@ const shouldGuard = () => (
 );
 
 const showLock = computed(() => shouldGuard() && (clientLocked.value || !! lock.value.locked));
+
+const lockDescription = computed(() => {
+    if (offline.value) {
+        return 'Сүлжээгүй үед апп түгжигдсэн байна. Интернэт холбогдсоны дараа нээнэ үү.';
+    }
+
+    if (lock.value.reason === 'background') {
+        return canBiometric.value
+            ? 'Аппыг үргэлжлүүлэхийн тулд хуруу / царайгаар баталгаажуулна уу.'
+            : 'Аппыг үргэлжлүүлэхийн тулд нууц үгээрээ баталгаажуулна уу.';
+    }
+
+    return canBiometric.value
+        ? `${lock.value.idleMinutes || 30} минут идэвхгүй болсон тул хуруу / цараайгаар дахин нээнэ үү.`
+        : `${lock.value.idleMinutes || 30} минут идэвхгүй болсон тул нууц үгээр дахин нээнэ үү.`;
+});
 
 const suppressHideLock = (ms = HIDE_GRACE_MS) => {
     suppressHideUntil = Date.now() + ms;
@@ -97,6 +114,20 @@ const requestIdleLock = async () => {
     }
 };
 
+const requestBackgroundLock = async () => {
+    if (! shouldGuard() || showLock.value) {
+        return;
+    }
+
+    setClientLock(true);
+
+    try {
+        await window.axios.post(route('app.lock'), { background: true });
+    } catch {
+        // Сервер түгжээгүй байсан ч клиент түгжээг харуулна
+    }
+};
+
 const evaluateLock = async () => {
     if (! shouldGuard()) {
         setClientLock(false);
@@ -125,12 +156,20 @@ const onVisibilityChange = () => {
     offline.value = ! navigator.onLine;
 
     if (document.hidden) {
-        recordActivity();
+        if (busy.value || bioBusy.value || isHideSuppressed()) {
+            return;
+        }
+
+        requestBackgroundLock();
 
         return;
     }
 
     if (busy.value || isHideSuppressed()) {
+        return;
+    }
+
+    if (clientLocked.value || lock.value.locked) {
         return;
     }
 
@@ -148,6 +187,10 @@ const onPageShow = () => {
     offline.value = ! navigator.onLine;
 
     if (busy.value || isHideSuppressed()) {
+        return;
+    }
+
+    if (clientLocked.value || lock.value.locked) {
         return;
     }
 
@@ -173,7 +216,12 @@ onMounted(() => {
     bioSupported.value = isWebAuthnSupported();
 
     if (shouldGuard()) {
-        if (idleExpired()) {
+        const persisted = localStorage.getItem(storageKey()) === '1';
+
+        if (persisted) {
+            setClientLock(true);
+            window.axios.post(route('app.lock'), { background: true }).catch(() => {});
+        } else if (idleExpired()) {
             evaluateLock();
         } else {
             setClientLock(false);
@@ -293,7 +341,7 @@ const unlockBiometric = async () => {
         const name = e?.name || '';
 
         if (/NotAllowedError|AbortError/i.test(name)) {
-            error.value = 'Үйлдэл цуцлагдлаа. Нууц үгээрээ нээж болно.';
+            error.value = 'Энэ утсанд хуруу/царай бүртгэгдээгүй эсвэл үйлдэл цуцлагдсан. Нууц үгээр нээнэ үү.';
         } else if (! navigator.onLine) {
             error.value = 'Сүлжээгүй байна. Холбогдсоны дараа дахин оролдоно уу.';
         } else {
@@ -329,11 +377,7 @@ const unlockBiometric = async () => {
                 Дахин нэвтрэх
             </h2>
             <p class="mt-1 text-center text-sm text-slate-500">
-                {{ offline
-                    ? 'Сүлжээгүй үед апп түгжигдсэн байна. Интернэт холбогдсоны дараа нээнэ үү.'
-                    : canBiometric
-                        ? `${lock.idleMinutes || 30} минут идэвхгүй болсон тул хуруу / царайгаар дахин нээнэ үү.`
-                        : `${lock.idleMinutes || 30} минут идэвхгүй болсон тул нууц үгээр дахин нээнэ үү.` }}
+                {{ lockDescription }}
             </p>
 
             <div
