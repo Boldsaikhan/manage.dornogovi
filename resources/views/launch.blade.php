@@ -152,7 +152,7 @@
 
             const payload = {
                 type: 'store',
-                host: new URL(target).hostname,
+                host: new URL(target).host,
                 mode: @json($authType),
                 remember: @json($rememberDevice),
                 username: document.getElementById('u').value,

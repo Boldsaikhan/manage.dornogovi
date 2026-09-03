@@ -91,6 +91,34 @@
         );
     };
 
+
+    /**
+     * Давталтын хамгаалалт.
+     *
+     * «Төхөөрөмжид санасан» мэдээлэл нь хадгалагдсаар байдаг тул нэвтрэлт
+     * амжилтгүй болоод нэвтрэх хуудас руу буцахад дахин бөглөөд дахин илгээж,
+     * төгсгөлгүй давтдаг байв. Тиймээс нэг session-д НЭГ л удаа автоматаар
+     * илгээнэ. Платформоос шинээр дарж ирсэн бол дахин зөвшөөрнө.
+     */
+    const ATTEMPT_KEY = 'md_autofill_attempt';
+    const ATTEMPT_TTL_MS = 10 * 60 * 1000;
+
+    const alreadySubmitted = () => {
+        try {
+            return Date.now() - Number(sessionStorage.getItem(ATTEMPT_KEY) || 0) < ATTEMPT_TTL_MS;
+        } catch {
+            return false;
+        }
+    };
+
+    const markSubmitted = () => {
+        try {
+            sessionStorage.setItem(ATTEMPT_KEY, String(Date.now()));
+        } catch {
+            // ignore
+        }
+    };
+
     const attempt = () => {
         if (done || !credential) return false;
 
@@ -105,15 +133,23 @@
         setValue(usernameField, credential.username);
         setValue(passwordField, credential.password);
 
-        // Framework-т төлөвөө шинэчлэх зав өгнө.
-        setTimeout(() => submit(passwordField), 250);
+        // Платформоос шинээр дарсан бол заавал илгээнэ; санасан мэдээллээр бол
+        // session-д нэг л удаа — эс бөгөөс амжилтгүй нэвтрэлт давтагдана.
+        const maySubmit = credential.source === 'pending' || ! alreadySubmitted();
+
+        if (maySubmit) {
+            markSubmitted();
+
+            // Framework-т төлөвөө шинэчлэх зав өгнө.
+            setTimeout(() => submit(passwordField), 250);
+        }
 
         credential = null;
 
         return true;
     };
 
-    chrome.runtime.sendMessage({ type: 'take', host: location.hostname, mode: 'password' }, (entry) => {
+    chrome.runtime.sendMessage({ type: 'take', host: location.host, mode: 'password' }, (entry) => {
         if (chrome.runtime.lastError || !entry) return;
 
         credential = entry;
