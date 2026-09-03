@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
-import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import VaultUnlockForm from '@/Components/VaultUnlockForm.vue';
@@ -377,47 +377,6 @@ const removeCredential = () => {
                 </div>
             </div>
 
-            <!-- Дотор нээгдэхийг сервер нь хориглосон -->
-            <div v-else class="rounded-xl border border-brand-navy-100 bg-white p-6 shadow-sm">
-                <div class="flex items-start gap-3">
-                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-yellow-50 text-yellow-700">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                            <path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" />
-                        </svg>
-                    </span>
-                    <div class="min-w-0">
-                        <h3 class="font-semibold text-brand-navy-800">
-                            Энэ системийг дотор нь нээх боломжгүй
-                        </h3>
-                        <p class="mt-1 text-sm text-brand-navy-400">
-                            {{ system.name }}-ийн сервер өөр сайт дотор ачаалагдахыг хориглосон байна.
-                            {{ system.requires_login
-                                ? 'Дээрх нэвтрэх товчоор шинэ табд орно.'
-                                : 'Шинэ табд нээж болно.' }}
-                        </p>
-                        <p v-if="system.embed_blocked_by" class="mt-2 font-mono text-xs text-brand-navy-300">
-                            {{ system.embed_blocked_by }}
-                        </p>
-
-                        <div class="mt-4 flex flex-wrap gap-2">
-                            <a
-                                :href="openUrl"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="rounded-md bg-brand-orange-500 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-orange-600"
-                            >
-                                Шинэ табд нээх
-                            </a>
-                            <Link
-                                :href="route('dept.dashboard')"
-                                class="rounded-md border border-brand-navy-200 px-4 py-1.5 text-sm font-medium text-brand-navy-700 hover:bg-brand-navy-50"
-                            >
-                                Самбар руу буцах
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
         <!-- Хадгалсан нууц үгийг харах -->
         <Modal :show="revealOpen" max-width="md" @close="closeReveal">
