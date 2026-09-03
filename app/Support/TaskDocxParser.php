@@ -50,6 +50,177 @@ class TaskDocxParser
     }
 
     /**
+     * Word файлын эхний утга бүхий хүснэгтийг ТҮҮХИЙГЭЭР нь буцаана.
+     *
+     * Багана тааруулах цонхонд хэрэглэнэ — аль Word багана нь хүснэгтийн аль
+     * толгойд орохыг хэрэглэгч өөрөө сонгоно.
+     *
+     * @return array{headers: list<string>, rows: list<list<string>>}
+     */
+    public function rawTable(string $path): array
+    {
+        foreach ($this->reader->tables($path) as $table) {
+            $headers = [];
+            $rows = [];
+
+            foreach ($table as $cells) {
+                $cells = array_map(fn ($c) => trim((string) $c), array_values($cells));
+
+                if (! array_filter($cells, fn (string $c) => $c !== '')) {
+                    continue;
+                }
+
+                if (! $headers && $this->isHeaderRow($cells)) {
+                    $headers = $cells;
+
+                    continue;
+                }
+
+                $rows[] = $cells;
+            }
+
+            if ($rows) {
+                return ['headers' => $headers, 'rows' => $rows];
+            }
+        }
+
+        return ['headers' => [], 'rows' => []];
+    }
+
+    /**
+     * Word-ийн толгойн нэрээр багануудыг таамаглана.
+     *
+     * @param  list<string>  $headers
+     * @param  list<string>  $columnKeys  хүснэгтийн толгойн түлхүүрүүд
+     * @return array<string, int|null>  түлхүүр => Word баганын индекс
+     */
+    public static function guessMapping(array $headers, array $columnKeys): array
+    {
+        $normalize = static fn (string $v) => preg_replace('/[^\p{L}\p{N}]+/u', '', mb_strtolower(trim($v))) ?: '';
+
+        // Толгойн нэршлийн хувилбарууд.
+        $synonyms = [
+            TaskSource::COLUMN_SECTOR => ['ажлынчиглэл', 'чиглэл', 'салбар'],
+            TaskSource::COLUMN_MEASURE => ['аргахэмжээ', 'хэрэгжүүлэхаргахэмжээ'],
+            TaskSource::COLUMN_TEXT => ['үүрэгчиглэл', 'үүрэгдаалгавар', 'агуулга', 'заалт'],
+            TaskSource::COLUMN_PERIOD => ['хугацаа', 'хэрэгжүүлэххугацаа'],
+            TaskSource::COLUMN_RESPONSIBLE => ['хариуцахэзэн', 'хариуцагч', 'хариуцах'],
+            TaskSource::COLUMN_COLLABORATOR => ['хяналттавих', 'хяналттавихалбантушаалтан', 'хамтранхэрэгжүүлэх', 'хяналт'],
+            TaskSource::COLUMN_NOTE => ['хэрэгжилт', 'биелэлт', 'тайлбар'],
+        ];
+
+        $catalog = [];
+        foreach (self::catalogLabels() as $key => $label) {
+            $catalog[$key] = $normalize($label);
+        }
+
+        $normalized = array_map($normalize, $headers);
+        $used = [];
+        $mapping = [];
+
+        foreach ($columnKeys as $key) {
+            $candidates = array_merge(
+                isset($catalog[$key]) ? [$catalog[$key]] : [],
+                $synonyms[$key] ?? [],
+            );
+
+            $found = null;
+
+            foreach ($normalized as $index => $header) {
+                if ($header === '' || in_array($index, $used, true)) {
+                    continue;
+                }
+
+                foreach ($candidates as $candidate) {
+                    if ($candidate !== '' && ($header === $candidate || str_contains($header, $candidate))) {
+                        $found = $index;
+
+                        break 2;
+                    }
+                }
+            }
+
+            if ($found !== null) {
+                $used[] = $found;
+            }
+
+            $mapping[$key] = $found;
+        }
+
+        // Толгой олдоогүй бол дараалуулан онооно (№ баганыг алгасна).
+        if (! array_filter($mapping, fn ($v) => $v !== null)) {
+            $offset = self::looksLikeNumberColumn($headers, 0) ? 1 : 0;
+
+            foreach (array_values($columnKeys) as $i => $key) {
+                $mapping[$key] = $i + $offset;
+            }
+        }
+
+        return $mapping;
+    }
+
+    /**
+     * Тааруулалтын дагуу түүхий мөрүүдийг хүснэгтийн мөр болгоно.
+     *
+     * @param  list<list<string>>  $rows
+     * @param  array<string, int|null>  $mapping
+     * @return array<int, array<string, string|null>>
+     */
+    public function rowsFromMapping(array $rows, array $mapping): array
+    {
+        $out = [];
+
+        foreach ($rows as $cells) {
+            $values = [];
+
+            foreach ($mapping as $key => $index) {
+                $values[$key] = $index === null ? null : ($cells[$index] ?? null);
+            }
+
+            $row = $this->row($values);
+
+            // Нийлүүлсэн ганц нүдтэй мөр — бүлгийн гарчиг. «text»-д хадгална.
+            if ($row['text'] === '') {
+                $filled = array_values(array_filter($cells, fn (string $c) => $c !== ''));
+
+                if (count($filled) === 1) {
+                    $row['text'] = $filled[0];
+                }
+            }
+
+            // Тааруулсан талбаруудын аль нэг нь дүүрсэн бол мөрийг авна.
+            // (Толгойд «Үүрэг чиглэл» байхгүй хүснэгт ч байж болно.)
+            $hasValue = collect($row)->contains(fn ($value) => trim((string) $value) !== '');
+
+            if ($hasValue) {
+                $out[] = $row;
+            }
+        }
+
+        return $out;
+    }
+
+    /** @return array<string, string> */
+    private static function catalogLabels(): array
+    {
+        $labels = [];
+
+        foreach (TaskSource::columnCatalog() as $column) {
+            $labels[$column['key']] = $column['label'];
+        }
+
+        return $labels;
+    }
+
+    /** @param  list<string>  $headers */
+    private static function looksLikeNumberColumn(array $headers, int $index): bool
+    {
+        $value = mb_strtolower(trim($headers[$index] ?? ''));
+
+        return in_array($value, ['№', 'no', '#', 'д/д', 'дд'], true);
+    }
+
+    /**
      * @param  array<int, string>  $cells
      */
     private function isHeaderRow(array $cells): bool
@@ -141,10 +312,12 @@ class TaskDocxParser
 
         return [
             'text' => (string) $clean($values['text'] ?? '', 5000),
+            'measure' => $clean($values['measure'] ?? null, 5000),
             'period' => $clean($values['period'] ?? null, 255),
             'responsible' => $clean($values['responsible'] ?? null, 255),
             'collaborator' => $clean($values['collaborator'] ?? null, 255),
             'sector' => $clean($values['sector'] ?? null, 255),
+            'note' => $clean($values['note'] ?? null, 5000),
         ];
     }
 }

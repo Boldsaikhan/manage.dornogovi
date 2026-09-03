@@ -137,17 +137,31 @@ class TaskModuleTest extends TestCase
                 'file' => $file,
             ])
             ->assertOk()
-            ->assertJsonPath('count', 1)
-            ->assertJsonPath('rows.0.text', 'Шинэ үүрэг чиглэл')
-            ->assertJsonPath('rows.0.responsible', 'А.Болд');
+            ->assertJsonPath('count', 1);
+
+        // Цонх нь хүснэгтийн толгойд Word-ийн аль багана орохыг санал болгоно.
+        $preview = $this->actingAs($admin)
+            ->postJson(route('tasks.documents.preview'), [
+                'document_id' => TaskDocument::first()->id,
+            ])
+            ->assertOk()
+            ->json();
+
+        $mapping = $preview['mapping'];
+        $rawRow = $preview['raw_rows'][0];
+
+        $this->assertSame('Шинэ үүрэг чиглэл', $rawRow[$mapping['text']]);
+        $this->assertSame('А.Болд', $rawRow[$mapping['responsible']]);
 
         $this->assertDatabaseCount('tasks', 0);
-        $this->assertDatabaseCount('task_documents', 1);
 
         $doc = TaskDocument::first();
 
         $this->actingAs($admin)
-            ->post(route('tasks.documents.import', $doc), ['replace' => false])
+            ->post(route('tasks.documents.import', $doc), [
+                'replace' => false,
+                'mapping' => $mapping,
+            ])
             ->assertRedirect();
 
         $this->assertDatabaseCount('tasks', 1);
