@@ -168,6 +168,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/systems/{system}/viewers', [SystemSettingsController::class, 'updateViewers'])->name('systems.viewers');
         Route::delete('/systems/{system}', [SystemSettingsController::class, 'destroy'])->name('systems.destroy');
         Route::post('/systems/{system}/check-embed', [SystemSettingsController::class, 'checkEmbed'])->name('systems.check-embed');
+        Route::post('/systems/{system}/detect-login', [SystemSettingsController::class, 'detectLoginForm'])->name('systems.detect-login');
         Route::patch('/ai-settings', [SystemSettingsController::class, 'updateAi'])->name('ai-settings.update');
         Route::patch('/menu-settings', [SystemSettingsController::class, 'updateMenus'])->name('menu-settings.update');
 

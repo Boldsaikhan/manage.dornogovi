@@ -7,6 +7,7 @@ use App\Models\System;
 use App\Models\User;
 use App\Services\Ai\AiSettings;
 use App\Services\EmbedChecker;
+use App\Support\LoginFormDetector;
 use App\Support\ModuleAccess;
 use App\Support\ModuleOrder;
 use App\Support\ModuleVisibility;
@@ -291,6 +292,43 @@ class SystemSettingsController extends Controller
             'viewer_ids' => ['nullable', 'array'],
             'viewer_ids.*' => ['integer', 'exists:users,id'],
         ]);
+    }
+
+    /**
+     * Системийн нэвтрэх хуудсыг уншиж, form_post тохиргоог таамаглана.
+     */
+    public function detectLoginForm(System $system, LoginFormDetector $detector): RedirectResponse
+    {
+        $result = $detector->detect($system->entryUrl());
+
+        if (! ($result['ok'] ?? false)) {
+            return back()->with('warning', $result['reason'] ?? 'Маягтыг таньж чадсангүй.');
+        }
+
+        $system->forceFill([
+            'login_method' => System::LOGIN_FORM_POST,
+            'login_form_action' => $result['action'],
+            'login_username_field' => $result['username_field'],
+            'login_password_field' => $result['password_field'],
+            'login_extra_fields' => $result['extra_fields'] ?: null,
+        ])->save();
+
+        $dynamic = $result['dynamic_fields'] ?? [];
+
+        if ($dynamic) {
+            return back()->with('warning', sprintf(
+                'Маягтыг таньлаа, гэхдээ «%s» талбар нь хүсэлт бүрт шинэчлэгддэг байж '
+                .'магадгүй. Ийм систем дээр шууд нэвтрэлт ажиллахгүй байж болно.',
+                implode(', ', $dynamic),
+            ));
+        }
+
+        return back()->with('success', sprintf(
+            '«%s» — нэвтрэх маягтыг таньлаа (%s / %s). Одоо гар утсан дээр ч шууд нэвтэрнэ.',
+            $system->name,
+            $result['username_field'],
+            $result['password_field'],
+        ));
     }
 
     public function checkEmbed(System $system, EmbedChecker $checker): RedirectResponse
