@@ -22,12 +22,27 @@ class CredentialController extends Controller
             'system_id' => ['required', 'exists:systems,id'],
             'auth_type' => ['nullable', Rule::in([System::AUTH_PASSWORD, System::AUTH_DAN])],
             'username' => ['required', 'string', 'max:255'],
-            'password' => ['required', 'string', 'max:500'],
+            // Хадгалсан байхад хоосон орхивол хуучин нууц үг хэвээр үлдэнэ.
+            'password' => ['nullable', 'string', 'max:500'],
             'note' => ['nullable', 'string', 'max:1000'],
             'remember_device' => ['nullable', 'boolean'],
         ]);
 
         $authType = $data['auth_type'] ?? System::AUTH_PASSWORD;
+
+        $existing = UserCredential::where('user_id', $request->user()->id)
+            ->where('system_id', $data['system_id'])
+            ->first();
+
+        if (($data['password'] ?? '') === '') {
+            if (! $existing) {
+                throw ValidationException::withMessages([
+                    'password' => 'Нууц үгээ оруулна уу.',
+                ]);
+            }
+
+            $data['password'] = $existing->password_encrypted;
+        }
 
         if ($authType === System::AUTH_DAN) {
             $system = System::findOrFail($data['system_id']);
