@@ -19,6 +19,18 @@ class Vault
         $request->session()->put(self::SESSION_KEY, now()->addMinutes(self::MINUTES)->timestamp);
     }
 
+    /**
+     * Идэвхтэй session дээр нээнэ (хүсэлтгүй газраас, ж: нэвтрэлтийн event).
+     */
+    public static function unlockCurrentSession(): void
+    {
+        try {
+            session()->put(self::SESSION_KEY, now()->addMinutes(self::MINUTES)->timestamp);
+        } catch (\Throwable) {
+            // Session байхгүй орчинд (console) алгасна.
+        }
+    }
+
     public static function lock(Request $request): void
     {
         $request->session()->forget(self::SESSION_KEY);
