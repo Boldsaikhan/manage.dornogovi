@@ -27,6 +27,8 @@ const props = defineProps({
     options: { type: Array, default: null },
     /** Олон нэр сонгох (хадгалахдаа «/»-аар залгана) */
     multiple: { type: Boolean, default: false },
+    /** Урт текстийг 2 мөрөөр таслах эсэх. Тайлан мэтэд бүтнээр нь харуулна. */
+    clamp: { type: Boolean, default: true },
 });
 
 const emit = defineEmits(['update:modelValue', 'commit']);
@@ -557,8 +559,11 @@ onBeforeUnmount(() => {
         </button>
         <div
             v-if="! editing"
-            class="ui-sheet-display ui-clamp-2"
-            :class="{ 'text-center': align === 'center', 'text-slate-400': ! modelValue && !! placeholder }"
+            class="ui-sheet-display"
+            :class="[
+                clamp ? 'ui-clamp-2' : 'whitespace-pre-wrap break-words',
+                { 'text-center': align === 'center', 'text-slate-400': ! modelValue && !! placeholder },
+            ]"
             :title="modelValue ? (formatPersonNamesDisplay(modelValue, options) || String(modelValue)) : ''"
         >
             <slot>{{ displayText() }}</slot>
