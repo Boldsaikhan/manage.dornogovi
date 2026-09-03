@@ -39,7 +39,9 @@ class SystemViewController extends Controller
                 'saved_username' => \App\Support\Vault::isUnlocked($request)
                     ? $credential?->username_encrypted
                     : null,
-                'auth_type' => $credential?->auth_type ?? System::AUTH_PASSWORD,
+                // ДАН-аар нэвтэрдэг систем — анхнаасаа ДАН горим сонгогдоно.
+                'auth_type' => $credential?->auth_type
+                    ?? ($system->supports_dan ? System::AUTH_DAN : System::AUTH_PASSWORD),
                 'remember_device' => (bool) ($credential?->remember_device),
             ],
             'target' => $system->entryUrl(),
