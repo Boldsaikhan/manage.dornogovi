@@ -118,6 +118,20 @@ const remToPx = (value) => {
 
 const columnWidth = (col) => col.width || defaultColumnWidths[col.key] || '5rem';
 
+/**
+ * Хүснэгт дэлгэцээс нарийн байвал илүү зайг энэ багана шингээнэ.
+ * Бусад багана өргөнөө хадгална тул зүүн талд наалдсан «д/д» зөв байрлана.
+ */
+const flexColumnKey = computed(() => {
+    const keys = (props.report.columns ?? []).map((col) => col.key);
+
+    for (const candidate of ['activity', 'measure', 'goal', 'clause_text', 'note']) {
+        if (keys.includes(candidate)) return candidate;
+    }
+
+    return keys.at(-1) ?? null;
+});
+
 const tableMinWidth = computed(() => props.report.columns.reduce(
     (sum, col) => sum + remToPx(columnWidth(col)),
     0,
@@ -284,16 +298,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                         class="!rounded-none !border-0 !shadow-none"
                         :measure-key="tableMinWidth"
                     >
+                        <!-- Багана цөөн үед дэлгэцээ дүүргэж, олон үед хэвтээ гүйнэ. -->
                         <div
-                            class="block max-w-none shrink-0"
-                            :style="{ width: `${tableMinWidth}px`, minWidth: `${tableMinWidth}px` }"
+                            class="block w-full max-w-none shrink-0"
+                            :style="{ minWidth: `${tableMinWidth}px` }"
                         >
-                            <table class="ui-table table-fixed text-xs" :style="{ width: `${tableMinWidth}px`, minWidth: `${tableMinWidth}px` }">
+                            <table class="ui-table table-fixed w-full text-xs" :style="{ minWidth: `${tableMinWidth}px` }">
                                 <colgroup>
                                     <col
                                         v-for="col in report.columns"
                                         :key="`col-${col.key}`"
-                                        :style="{ width: columnWidth(col) }"
+                                        :style="col.key === flexColumnKey ? undefined : { width: columnWidth(col) }"
                                     />
                                 </colgroup>
                                 <thead>
@@ -349,6 +364,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                                 v-else-if="canEdit"
                                                 :model-value="row[col.key] ?? ''"
                                                 multiline
+                                                :clamp="false"
                                                 :editable="true"
                                                 @commit="(v) => saveCell(row, col.key, v)"
                                             />
