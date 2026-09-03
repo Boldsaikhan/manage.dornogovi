@@ -12,6 +12,32 @@
 document.documentElement.dataset.mdExtension = '1';
 document.documentElement.dataset.mdExtensionId = chrome.runtime.id;
 
+/**
+ * Платформ дээр бүртгэсэн системийн хаягуудыг өргөтгөлд мэдэгдэнэ.
+ *
+ * Хуудас нь `data-md-system-hosts` шинжид таслалаар тусгаарлан бичдэг.
+ */
+const syncSystemHosts = () => {
+    const raw = document.documentElement.dataset.mdSystemHosts;
+
+    if (! raw) return;
+
+    const hosts = raw.split(',').map((host) => host.trim()).filter(Boolean);
+
+    if (! hosts.length) return;
+
+    chrome.runtime.sendMessage({ type: 'syncHosts', hosts }, () => void chrome.runtime.lastError);
+};
+
+// Inertia нь хуудас солигдоход шинжийг шинэчилдэг тул ажиглана.
+new MutationObserver(syncSystemHosts).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-md-system-hosts'],
+});
+
+document.addEventListener('DOMContentLoaded', syncSystemHosts);
+syncSystemHosts();
+
 window.addEventListener('message', (event) => {
     // Зөвхөн энэ хуудас өөрөө илгээсэн мессежийг хүлээн авна.
     if (event.source !== window || event.origin !== window.location.origin) {

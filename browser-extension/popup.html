@@ -123,16 +123,14 @@
 
         <h2>Дэмжигдэх системүүд</h2>
         <div class="row" style="display:block">
-            <ul>
-                <li><span class="site">erp.e-mongolia.mn</span><span class="badge muted">Төрийн ERP</span></li>
-                <li><span class="site">shilen.gov.mn</span><span class="badge muted">Шилэн данс</span></li>
-                <li><span class="site">mail.gov.mn</span><span class="badge muted">Төрийн шуудан</span></li>
-                <li><span class="site">www.gov.mn</span><span class="badge muted">Портал</span></li>
-                <li><span class="site">unelgee.gov.mn</span><span class="badge muted">Үнэлгээ</span></li>
-                <li><span class="site">sudalgaa.dornogovi.gov.mn</span><span class="badge muted">Судалгаа</span></li>
-                <li><span class="site">auth.e-mongolia.mn</span><span class="badge muted">Е-Монголия нэвтрэлт</span></li>
-                <li><span class="site">dan.gov.mn</span><span class="badge muted">ДАН</span></li>
-            </ul>
+            <ul id="systemHosts"></ul>
+            <div class="empty" id="systemHostsEmpty">
+                Платформ дээрээ нэг удаа орвол бүртгэсэн системүүд энд гарна.
+            </div>
+            <button id="connectHosts" style="margin-top:8px;width:100%">Системүүдийг холбох</button>
+            <div class="empty" id="connectHint" style="margin-top:6px">
+                Шинэ систем бүртгэсний дараа энд дарж зөвшөөрөл өгнө.
+            </div>
         </div>
     </section>
 
