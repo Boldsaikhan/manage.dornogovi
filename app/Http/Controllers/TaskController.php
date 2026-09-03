@@ -687,7 +687,7 @@ class TaskController extends Controller
         }
 
         if (TaskSource::query()->where('name', $name)->exists()) {
-            return back()->with('warning', 'Ийм нэртэй хэсэг аль хэдийн байна.');
+            return back()->with('warning', 'Ийм нэртэй үүрэг даалгавар аль хэдийн байна.');
         }
 
         $source = TaskSource::create([
@@ -700,7 +700,7 @@ class TaskController extends Controller
 
         return redirect()
             ->route('tasks.index', ['kind' => $source->key])
-            ->with('success', sprintf('«%s» хэсэг нэмэгдлээ.', $source->name));
+            ->with('success', sprintf('«%s» үүрэг даалгавар нэмэгдлээ.', $source->name));
     }
 
     public function destroySource(Request $request, string $source): RedirectResponse
@@ -711,14 +711,20 @@ class TaskController extends Controller
         );
 
         $model = TaskSource::query()->where('key', $source)->firstOrFail();
-        abort_if($model->isSystem(), 403, 'Суурь хэсгийг устгах боломжгүй.');
+
+        // Бүгдийг устгавал хуудас хоосорно — дор хаяж нэгийг үлдээнэ.
+        if (TaskSource::query()->count() <= 1) {
+            return back()->withErrors([
+                'source' => 'Сүүлчийн үүрэг даалгаврыг устгах боломжгүй. Эхлээд шинийг нэмнэ үү.',
+            ]);
+        }
 
         $name = $model->name;
         $model->delete();
 
         return redirect()
             ->route('tasks.index')
-            ->with('success', sprintf('«%s» хэсэг устгагдлаа.', $name));
+            ->with('success', sprintf('«%s» үүрэг даалгавар устгагдлаа.', $name));
     }
 
     private function resolveSource(string $kind): TaskSource

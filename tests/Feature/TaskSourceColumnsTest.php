@@ -89,6 +89,41 @@ class TaskSourceColumnsTest extends TestCase
         );
     }
 
+    public function test_system_section_can_be_deleted(): void
+    {
+        $prep = TaskSource::query()->where('key', TaskSource::KEY_PREP_PLAN)->firstOrFail();
+
+        $this->assertTrue($prep->isSystem());
+        $this->assertGreaterThan(1, TaskSource::query()->count());
+
+        $this->actingAs($this->admin())
+            ->delete(route('tasks.sources.destroy', $prep->key))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('task_sources', ['id' => $prep->id]);
+    }
+
+    public function test_last_section_cannot_be_deleted(): void
+    {
+        $admin = $this->admin();
+
+        // Нэгээс бусдыг нь устгана.
+        $keep = TaskSource::query()->orderBy('id')->firstOrFail();
+
+        TaskSource::query()->whereKeyNot($keep->id)->get()->each(
+            fn (TaskSource $source) => $this->actingAs($admin)
+                ->delete(route('tasks.sources.destroy', $source->key)),
+        );
+
+        $this->assertSame(1, TaskSource::query()->count());
+
+        $this->actingAs($admin)
+            ->delete(route('tasks.sources.destroy', $keep->key))
+            ->assertSessionHasErrors('source');
+
+        $this->assertDatabaseHas('task_sources', ['id' => $keep->id]);
+    }
+
     public function test_at_least_one_column_is_required(): void
     {
         $this->actingAs($this->admin())

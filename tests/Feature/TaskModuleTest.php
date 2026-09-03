@@ -233,15 +233,21 @@ class TaskModuleTest extends TestCase
             );
     }
 
-    public function test_cannot_delete_system_section(): void
+    /**
+     * Суурь хэсгийг ч устгах боломжтой болсон — гагцхүү сүүлчийнх нь үлдэнэ.
+     * @see TaskSourceColumnsTest
+     */
+    public function test_system_section_can_be_deleted_while_others_remain(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
 
+        $this->assertGreaterThan(1, TaskSource::query()->count());
+
         $this->actingAs($admin)
             ->delete(route('tasks.sources.destroy', 'directive'))
-            ->assertForbidden();
+            ->assertRedirect();
 
-        $this->assertDatabaseHas('task_sources', ['key' => 'directive']);
+        $this->assertDatabaseMissing('task_sources', ['key' => 'directive']);
     }
 
     public function test_edit_own_user_can_update_only_progress_fields_on_assigned_task(): void

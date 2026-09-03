@@ -258,19 +258,19 @@ const kindError = ref('');
 const removeKind = () => {
     kindError.value = '';
 
-    if (props.source?.is_system) {
-        kindError.value = 'Суурь хэсгийг устгах боломжгүй.';
+    if (kindTabs.value.length <= 1) {
+        kindError.value = 'Сүүлчийн үүрэг даалгаврыг устгах боломжгүй. Эхлээд шинийг нэмнэ үү.';
 
         return;
     }
 
     if (! props.kind) {
-        kindError.value = 'Хэсэг тодорхойгүй байна. Хуудсыг дахин ачаална уу.';
+        kindError.value = 'Үүрэг даалгавар тодорхойгүй байна. Хуудсыг дахин ачаална уу.';
 
         return;
     }
 
-    if (! confirm('«' + (props.source?.name || '') + '» хэсэг болон түүний бүх мөрийг устгах уу?')) {
+    if (! confirm('«' + (props.source?.name || '') + '» үүрэг даалгавар болон түүний бүх мөрийг устгах уу?')) {
         return;
     }
 
@@ -290,7 +290,7 @@ const removeKind = () => {
         preserveScroll: true,
         onError: (errors) => {
             kindError.value = Object.values(errors ?? {})[0]
-                || 'Хэсгийг устгаж чадсангүй.';
+                || 'Үүрэг даалгаврыг устгаж чадсангүй.';
         },
         onFinish: () => {
             deletingKind.value = false;
@@ -1199,13 +1199,13 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                         Эх файл
                     </a>
                     <button
-                        v-if="canManage && ! source.is_system"
+                        v-if="canManage && kindTabs.length > 1"
                         type="button"
                         class="ui-btn-ghost w-full text-red-600 sm:w-auto"
                         :disabled="deletingKind"
                         @click="removeKind"
                     >
-                        Хэсэг устгах
+                        Үүрэг даалгавар устгах
                     </button>
                     <button
                         v-if="canEdit"
@@ -1241,7 +1241,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                     class="shrink-0 whitespace-nowrap rounded-xl border border-dashed border-brand-navy-300 px-3.5 py-2.5 text-sm font-semibold text-brand-navy-600 transition hover:bg-brand-navy-50 sm:px-4"
                     @click="showNewKind = ! showNewKind"
                 >
-                    + Хэсэг нэмэх
+                    + Үүрэг даалгавар нэмэх
                 </button>
             </div>
 
@@ -1251,7 +1251,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
             >
                 <div class="mb-3 flex items-start justify-between gap-3">
                     <div>
-                        <h3 class="text-sm font-semibold text-slate-800">Шинэ хэсэг нэмэх</h3>
+                        <h3 class="text-sm font-semibold text-slate-800">Шинэ үүрэг даалгавар нэмэх</h3>
                         <p class="mt-0.5 text-xs text-slate-500">
                             Хүснэгтийн толгойд оруулах талбаруудыг сонгоно. Сонгосон дарааллаар багана гарна.
                         </p>
@@ -1269,7 +1269,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                         v-model="newKindForm.name"
                         type="text"
                         class="ui-input"
-                        placeholder="Хэсгийн нэр"
+                        placeholder="Үүрэг даалгаврын нэр"
                         required
                     />
                     <fieldset>
