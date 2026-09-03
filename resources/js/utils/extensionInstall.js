@@ -4,41 +4,60 @@
  * Бусад: ZIP (дотор нь manage-dornogovi-extension хавтас) татна.
  */
 export async function downloadExtensionLoose() {
+    const folder = 'manage-dornogovi-extension';
+
+    // 1) Хавтас сонгох цонхыг ХАМГИЙН ТҮРҮҮНД нээнэ.
+    //
+    //    showDirectoryPicker нь «хэрэглэгчийн шинэхэн товшилт» шаарддаг. Өмнө нь
+    //    сервер рүү хүсэлт илгээгээд дараа нь дууддаг байсан тул товшилтын эрх
+    //    дуусаж, цонх нээгдэхгүй үргэлж ZIP руу унадаг байв.
+    let root = null;
+
+    if (typeof window.showDirectoryPicker === 'function') {
+        try {
+            root = await window.showDirectoryPicker({
+                mode: 'readwrite',
+                id: 'manage-dornogovi-extension',
+                startIn: 'downloads',
+            });
+        } catch (e) {
+            if (e?.name === 'AbortError') {
+                throw e;
+            }
+
+            root = null;
+        }
+    }
+
     const { data } = await window.axios.get(route('extension.download'));
-    const folder = data?.folder || 'manage-dornogovi-extension';
     const files = data?.files || {};
 
     if (! Object.keys(files).length) {
         throw new Error('Өргөтгөлийн файл олдсонгүй.');
     }
 
-    // 1) Жинхэнэ хавтас — File System Access API (Chrome / Edge)
-    if (typeof window.showDirectoryPicker === 'function') {
+    // 2) Сонгосон байрлалд бүх файлыг нэг хавтас болгож бичнэ.
+    if (root) {
         try {
-            const root = await window.showDirectoryPicker({
-                mode: 'readwrite',
-                id: 'manage-dornogovi-extension',
-                startIn: 'downloads',
-            });
-            const dir = await root.getDirectoryHandle(folder, { create: true });
+            const dir = await root.getDirectoryHandle(data?.folder || folder, { create: true });
 
             for (const [rel, meta] of Object.entries(files)) {
                 await writeNestedFile(dir, rel, toBlob(meta));
             }
 
-            return { method: 'folder', folder, count: Object.keys(files).length };
+            return { method: 'folder', folder: data?.folder || folder, count: Object.keys(files).length };
         } catch (e) {
             if (e?.name === 'AbortError') {
                 throw e;
             }
-            // API алдаатай бол ZIP руу шилжинэ
+            // Бичиж чадсангүй — ZIP руу шилжинэ.
         }
     }
 
-    // 2) Найдвартай fallback — нэг ZIP (дотор бүхэл хавтас)
+    // 3) Найдвартай fallback — нэг ZIP (дотор бүхэл хавтас)
     await downloadZipFallback();
 
-    return { method: 'zip', folder, count: Object.keys(files).length };
+    return { method: 'zip', folder: data?.folder || folder, count: Object.keys(files).length };
 }
 
 async function downloadZipFallback() {

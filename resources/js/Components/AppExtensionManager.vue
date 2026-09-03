@@ -140,7 +140,7 @@ const downloadExtension = async () => {
         const result = await downloadExtensionLoose();
         message.value = result.method === 'folder'
             ? `«${result.folder}» хавтас үүслээ (${result.count} файл). Доторх install.bat эсвэл СУУЛГАХ.txt-ийн дагуу Load unpacked хийнэ.`
-            : `«${result.folder}.zip» татагдлаа. Задаад гарсан хавтсыг Load unpacked-аар суулгана (install.bat ажиллуулж болно).`;
+            : `«${result.folder}.zip» татагдлаа. Хавтас сонгох цонх нээгдээгүй тул ZIP-ээр өглөө — задаад Load unpacked хийнэ (install.bat ажиллуулж болно).`;
         showHelp.value = true;
     } catch (e) {
         if (e?.name === 'AbortError') {
@@ -221,6 +221,7 @@ const downloadExtension = async () => {
                 class="!py-1.5 text-xs"
                 :class="extensionReady ? 'ui-btn-ghost' : 'ui-btn-primary'"
                 :disabled="downloading"
+                title="Хавтас сонгох цонх гарна — сонгосон газарт бүх файл нэг хавтас болж бичигдэнэ"
                 @click="downloadExtension"
             >
                 {{ downloading ? 'Татаж байна…' : (extensionReady ? 'Дахин татах' : 'Өргөтгөл татах') }}
