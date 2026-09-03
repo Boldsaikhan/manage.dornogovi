@@ -2,14 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Department;
+use App\Models\ReportRowEdit;
 use App\Support\DocxTableWriter;
 use App\Support\ModuleAccess;
+use App\Support\ReportRows;
 use App\Support\ReportsCatalog;
 use App\Support\ReportsData;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class ReportCatalogController extends Controller
@@ -46,7 +51,7 @@ class ReportCatalogController extends Controller
         }
 
         $config = ReportsCatalog::config();
-        $rows = ReportsData::rows($report);
+        $rows = ReportRows::visibleTo(ReportRows::merged($report), $request->user());
         $dataMeta = ReportsData::meta($report);
 
         $reportPayload = [
@@ -73,6 +78,14 @@ class ReportCatalogController extends Controller
             'report' => $reportPayload,
             'navigation' => ReportsCatalog::navigationTree(),
             'canManage' => ModuleAccess::canManage($request->user(), 'reports'),
+            'canEdit' => ModuleAccess::canEdit($request->user(), 'reports'),
+            // «Хэлтэс» баганад сонгох жагсаалт.
+            'departments' => Department::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name']),
+            'departmentColumn' => ReportRowEdit::DEPARTMENT_COLUMN,
         ]);
     }
 
@@ -88,7 +101,7 @@ class ReportCatalogController extends Controller
         $columns = $item['columns'] ?? [];
         abort_if($columns === [], 404, 'Хүснэгтийн бүтэц тохируулаагүй байна.');
 
-        $rows = ReportsData::rows($report);
+        $rows = ReportRows::visibleTo(ReportRows::merged($report), $request->user());
         $title = trim((string) ($item['description'] ?? '')) ?: trim(
             trim((string) ($item['number'] ?? '')).' '.(string) ($item['label'] ?? 'Тайлан')
         );
@@ -133,6 +146,49 @@ class ReportCatalogController extends Controller
      *     docx_rows: list<array{type: string, cells: list<string>}>
      * }
      */
+    /**
+     * Мөрийн нэг нүдийг засна.
+     */
+    public function updateRow(Request $request, string $report, int $index): RedirectResponse
+    {
+        $this->authorizeReports($request);
+
+        abort_unless(ModuleAccess::canEdit($request->user(), 'reports'), 403);
+
+        $item = ReportsCatalog::find($report);
+
+        if (! $item) {
+            throw new NotFoundHttpException();
+        }
+
+        $columns = collect($item['columns'] ?? [])->pluck('key')->all();
+
+        $data = $request->validate([
+            'column' => ['required', 'string', Rule::in($columns)],
+            'value' => ['nullable', 'string', 'max:5000'],
+            'department_id' => ['nullable', 'integer', 'exists:departments,id'],
+        ]);
+
+        abort_if($index < 0 || $index >= count(ReportsData::rows($report)), 404);
+
+        $isDepartment = $data['column'] === ReportRowEdit::DEPARTMENT_COLUMN;
+
+        ReportRowEdit::updateOrCreate(
+            [
+                'report_key' => $report,
+                'row_index' => $index,
+                'column_key' => $data['column'],
+            ],
+            [
+                'value' => $isDepartment ? null : ($data['value'] ?? null),
+                'department_id' => $isDepartment ? ($data['department_id'] ?? null) : null,
+                'updated_by' => $request->user()->id,
+            ],
+        );
+
+        return back(303);
+    }
+
     private function exportTable(string $title, array $columns, array $rows): array
     {
         $headings = array_map(
