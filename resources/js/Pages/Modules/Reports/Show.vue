@@ -1,10 +1,11 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ReportNavTree from '@/Components/Reports/ReportNavTree.vue';
 import ReportSectionTabs from '@/Components/Reports/ReportSectionTabs.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
+import SheetCell from '@/Components/SheetCell.vue';
 import { findReportSection } from '@/utils/reportsNavigation';
 
 const props = defineProps({
@@ -13,7 +14,38 @@ const props = defineProps({
     report: { type: Object, required: true },
     navigation: { type: Array, default: () => [] },
     canManage: { type: Boolean, default: false },
+    canEdit: { type: Boolean, default: false },
+    departments: { type: Array, default: () => [] },
+    departmentColumn: { type: String, default: 'department' },
 });
+
+/* ---------- Мөрийн засвар ---------- */
+
+const savingCell = ref(null);
+
+const cellKey = (row, col) => `${row._index}:${col}`;
+
+const isDepartmentColumn = (key) => key === props.departmentColumn;
+
+/** Нэг нүдийг хадгална. Хэлтэс бол сонгосон хэлтсийн id явна. */
+const saveCell = (row, column, value) => {
+    if (! props.canEdit || row?._index == null) return;
+
+    const key = cellKey(row, column);
+    savingCell.value = key;
+
+    const payload = isDepartmentColumn(column)
+        ? { column, department_id: value === '' || value == null ? null : Number(value) }
+        : { column, value: value ?? '' };
+
+    router.patch(route('reports.rows.update', [props.report.key, row._index]), payload, {
+        preserveScroll: true,
+        preserveState: true,
+        onFinish: () => {
+            if (savingCell.value === key) savingCell.value = null;
+        },
+    });
+};
 
 const hasColumns = computed(() => (props.report.columns?.length ?? 0) > 0);
 
@@ -299,7 +331,29 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                                 isPinnedColumn(col.key) ? 'sticky left-0 z-10 bg-inherit font-semibold text-slate-500 shadow-[2px_0_6px_-2px_rgba(15,23,42,0.08)]' : '',
                                             ]"
                                         >
-                                            {{ row[col.key] ?? '' }}
+                                            <!-- Хэлтэс — жинхэнэ хэлтсээс сонгоно (харагдах хүрээг тогтооно) -->
+                                            <select
+                                                v-if="canEdit && isDepartmentColumn(col.key)"
+                                                class="w-full rounded-md border-slate-200 bg-white py-0.5 text-[11px] text-slate-700"
+                                                :value="row.department_id ?? ''"
+                                                :disabled="savingCell === cellKey(row, col.key)"
+                                                @change="saveCell(row, col.key, $event.target.value)"
+                                            >
+                                                <option value="">— сонгоогүй —</option>
+                                                <option v-for="dept in departments" :key="dept.id" :value="dept.id">
+                                                    {{ dept.name }}
+                                                </option>
+                                            </select>
+
+                                            <SheetCell
+                                                v-else-if="canEdit"
+                                                :model-value="row[col.key] ?? ''"
+                                                multiline
+                                                :editable="true"
+                                                @commit="(v) => saveCell(row, col.key, v)"
+                                            />
+
+                                            <template v-else>{{ row[col.key] ?? '' }}</template>
                                         </td>
                                     </tr>
                                 </tbody>
