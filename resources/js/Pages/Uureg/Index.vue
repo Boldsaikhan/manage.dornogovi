@@ -80,6 +80,15 @@ const hasColumn = (key) => tableColumns.value.some((col) => col.key === key);
 const columnLabel = (key, fallback) => tableColumns.value.find((col) => col.key === key)?.label || fallback;
 
 const viewMode = ref('table');
+
+/** Хүснэгтийг дэлгэц дүүрэн харах (Esc дарж хаана). */
+const tableExpanded = ref(false);
+
+const onTableKeydown = (event) => {
+    if (event.key === 'Escape' && tableExpanded.value) {
+        tableExpanded.value = false;
+    }
+};
 const statusFilter = ref(null); // 'done' | 'pending' | 'overdue'
 
 const downloadOpen = ref(false);
@@ -102,9 +111,13 @@ const closeDownload = (event) => {
     }
 };
 
-onMounted(() => document.addEventListener('click', closeDownload));
+onMounted(() => {
+    document.addEventListener('click', closeDownload);
+    window.addEventListener('keydown', onTableKeydown);
+});
 onBeforeUnmount(() => {
     document.removeEventListener('click', closeDownload);
+    window.removeEventListener('keydown', onTableKeydown);
     // Чирэлт дундуур хуудас солигдвол сонсогчид үлдэхээс сэргийлнэ.
     onColumnPointerUp();
 });
@@ -1608,11 +1621,35 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                         type="button"
                         class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
                         :class="viewMode === 'calendar' ? 'bg-brand-navy-600 text-white' : 'text-slate-600 hover:bg-slate-50'"
-                        @click="viewMode = 'calendar'"
+                        @click="viewMode = 'calendar'; tableExpanded = false"
                     >
                         Цаглалт
                     </button>
                 </div>
+
+                <button
+                    v-if="viewMode === 'table'"
+                    type="button"
+                    class="ui-btn-ghost"
+                    :title="tableExpanded ? 'Хэвийн хэмжээнд буцах (Esc)' : 'Хүснэгтийг дэлгэц дүүрэн харах'"
+                    @click="tableExpanded = ! tableExpanded"
+                >
+                    <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path
+                            v-if="tableExpanded"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M9 9L5 5m0 0h4M5 5v4m10 0l4-4m0 0h-4m4 0v4M9 15l-4 4m0 0h4m-4 0v-4m10 0l4 4m0 0h-4m4 0v-4"
+                        />
+                        <path
+                            v-else
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M4 9V5a1 1 0 011-1h4M20 9V5a1 1 0 00-1-1h-4M4 15v4a1 1 0 001 1h4M20 15v4a1 1 0 01-1 1h-4"
+                        />
+                    </svg>
+                    {{ tableExpanded ? 'Хаах' : 'Дэлгэц дүүрэн' }}
+                </button>
             </div>
 
             <!-- Цаглалт / төлөвлөгөө -->
@@ -1736,7 +1773,24 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                 </div>
             </div>
 
-            <!-- Хүснэгт — сонгосон толгойгоор, доод талын хэвтээ гүйлгэх хэсэг үргэлж харагдана -->
+            <!-- Хүснэгт — сонгосон толгойгоор, доод талын хэвтээ гүйлгэх хэсэг үргэлж харагдана.
+                 Дэлгэц дүүрэн горимд бүрхүүл болж, үгүй бол `contents`-ээр байрлалд нөлөөлөхгүй. -->
+            <div :class="tableExpanded ? 'ui-table-overlay' : 'contents'">
+                <div
+                    v-if="tableExpanded"
+                    class="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-3"
+                >
+                    <div class="min-w-0">
+                        <p class="truncate text-sm font-semibold text-brand-navy-900">{{ source.name }}</p>
+                        <p class="text-xs text-slate-500">
+                            Нийт {{ visibleTasks.length }} мөр · Esc дарж хаана
+                        </p>
+                    </div>
+                    <button type="button" class="ui-btn-ghost" @click="tableExpanded = false">
+                        Хаах
+                    </button>
+                </div>
+
             <TableScrollViewport
                 fill
                 :measure-key="tableMinWidth"
@@ -1874,6 +1928,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                 </table>
                 </div>
             </TableScrollViewport>
+            </div>
             </div>
         </div>
 

@@ -237,7 +237,9 @@
         @apply grid min-h-0 flex-1 basis-0 overflow-hidden;
     }
 
-    .ui-reports-table-overlay {
+    /* Хүснэгтийг дэлгэц дүүрэн харах бүрхүүл (тайлан, үүрэг даалгавар). */
+    .ui-reports-table-overlay,
+    .ui-table-overlay {
         @apply fixed inset-0 z-50 flex min-h-0 flex-col bg-white p-3 sm:p-4;
     }
 
