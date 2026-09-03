@@ -2,6 +2,13 @@
  * Өргөтгөлийн товч дээр дарахад гарах тохиргооны цонх.
  */
 
+// Толгойд өргөтгөлийн хувилбар — шинэчлэлт суусан эсэхийг шалгахад хэрэгтэй.
+const versionBadge = document.getElementById('version');
+
+if (versionBadge) {
+    versionBadge.textContent = `v${chrome.runtime.getManifest().version}`;
+}
+
 const enabledInput = document.getElementById('enabled');
 const pendingList = document.getElementById('pending');
 const pendingEmpty = document.getElementById('pendingEmpty');
