@@ -1107,6 +1107,21 @@ const columnWidthPx = (col) => {
     return col.width || 120;
 };
 
+/**
+ * Хүснэгт дэлгэцээс нарийн байвал илүү зайг энэ багана шингээнэ.
+ *
+ * Ингэснээр бусад багана өөрийн өргөнөө хадгалж, баруун талд наалдсан
+ * «Биелэлтийн хувь», үйлдлийн багана зөв байрлана.
+ */
+const flexColumnKey = computed(() => {
+    const keys = tableColumns.value.map((col) => col.key);
+
+    if (keys.includes('text')) return 'text';
+    if (keys.includes('measure')) return 'measure';
+
+    return keys.at(-1) ?? null;
+});
+
 const tableMinWidth = computed(() => {
     const cols = tableColumns.value.reduce((sum, col) => sum + columnWidthPx(col), 0);
     return 48 + 96 + cols + (props.canEdit ? 48 + 40 : 0);
@@ -1727,9 +1742,10 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                 :measure-key="tableMinWidth"
                 @near-bottom="loadMoreTasks"
             >
+                <!-- Багана цөөн үед дэлгэцээ дүүргэж, олон үед хэвтээ гүйнэ. -->
                 <div
-                    class="block max-w-none shrink-0"
-                    :style="{ width: `${tableMinWidth}px`, minWidth: `${tableMinWidth}px` }"
+                    class="block w-full max-w-none shrink-0"
+                    :style="{ minWidth: `${tableMinWidth}px` }"
                 >
                 <table
                     class="ui-table ui-table--pin-actions table-fixed w-full"
@@ -1741,7 +1757,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                         <col
                             v-for="col in tableColumns"
                             :key="'w-' + col.key"
-                            :style="{ width: `${columnWidthPx(col)}px` }"
+                            :style="col.key === flexColumnKey ? undefined : { width: `${columnWidthPx(col)}px` }"
                         />
                         <col style="width: 96px" />
                         <col v-if="canEdit" style="width: 48px" />
