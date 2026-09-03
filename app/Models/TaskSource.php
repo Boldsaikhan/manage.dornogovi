@@ -91,11 +91,19 @@ class TaskSource extends Model
      */
     public static function normalizeColumnKeys(?array $keys): array
     {
+        if (! is_array($keys)) {
+            return [];
+        }
+
         $allowed = self::columnKeys();
         $picked = [];
 
-        foreach ($allowed as $key) {
-            if (is_array($keys) && in_array($key, $keys, true)) {
+        // Хэрэглэгчийн сонгосон дарааллыг хэвээр нь үлдээнэ — багана яг
+        // тэр дарааллаараа гарна.
+        foreach ($keys as $key) {
+            if (is_string($key)
+                && in_array($key, $allowed, true)
+                && ! in_array($key, $picked, true)) {
                 $picked[] = $key;
             }
         }

@@ -124,17 +124,47 @@ const deletingKind = ref(false);
 const toggleNewKindColumn = (key) => {
     const selected = [...newKindForm.columns];
     const index = selected.indexOf(key);
+
     if (index >= 0) {
         selected.splice(index, 1);
     } else {
+        // Сонгосон дарааллыг хадгална — шинээр сонгсон нь хамгийн ард.
         selected.push(key);
     }
-    newKindForm.columns = columnChoices.value
-        .map((col) => col.key)
-        .filter((item) => selected.includes(item));
+
+    newKindForm.columns = selected;
 };
 
 const isNewKindColumnOn = (key) => newKindForm.columns.includes(key);
+
+/** Сонгосон багана эхэндээ өөрийн дарааллаар, сонгоогүй нь ардаа орно. */
+const orderedColumnChoices = computed(() => {
+    const byKey = new Map(columnChoices.value.map((col) => [col.key, col]));
+
+    const chosen = newKindForm.columns
+        .map((key) => byKey.get(key))
+        .filter(Boolean);
+
+    const rest = columnChoices.value.filter((col) => ! newKindForm.columns.includes(col.key));
+
+    return [...chosen, ...rest];
+});
+
+/** Сонгосон баганыг зүүн/баруун тийш зөөнө. */
+const moveNewKindColumn = (key, step) => {
+    const cols = [...newKindForm.columns];
+    const from = cols.indexOf(key);
+    const to = from + step;
+
+    if (from < 0 || to < 0 || to >= cols.length) {
+        return;
+    }
+
+    [cols[from], cols[to]] = [cols[to], cols[from]];
+    newKindForm.columns = cols;
+};
+
+const newKindColumnIndex = (key) => newKindForm.columns.indexOf(key);
 
 const submitNewKind = () => {
     newKindForm.post(route('tasks.sources.store'), {
@@ -1169,23 +1199,47 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                         <legend class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                             Хүснэгтийн толгой
                         </legend>
-                        <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                            <label
-                                v-for="col in columnChoices"
+                        <!-- Нэг мөрөнд — багтахгүй бол хажуу тийш гүйнэ. Зүүнээс барууншаа баганын дараалал. -->
+                        <div class="-mx-1 flex items-stretch gap-2 overflow-x-auto px-1 pb-1">
+                            <div
+                                v-for="col in orderedColumnChoices"
                                 :key="'new-col-' + col.key"
-                                class="flex cursor-pointer items-start gap-2 rounded-xl border px-3 py-2.5 text-sm transition"
+                                class="flex shrink-0 items-center gap-1.5 rounded-xl border px-2.5 py-2 text-sm transition"
                                 :class="isNewKindColumnOn(col.key)
                                     ? 'border-brand-navy-300 bg-brand-navy-50 text-brand-navy-800'
-                                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'"
+                                    : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'"
                             >
-                                <input
-                                    type="checkbox"
-                                    class="mt-0.5 rounded border-slate-300 text-brand-navy-600"
-                                    :checked="isNewKindColumnOn(col.key)"
-                                    @change="toggleNewKindColumn(col.key)"
-                                />
-                                <span class="font-medium leading-snug">{{ col.label }}</span>
-                            </label>
+                                <label class="flex cursor-pointer items-center gap-1.5 whitespace-nowrap">
+                                    <input
+                                        type="checkbox"
+                                        class="rounded border-slate-300 text-brand-navy-600"
+                                        :checked="isNewKindColumnOn(col.key)"
+                                        @change="toggleNewKindColumn(col.key)"
+                                    />
+                                    <span
+                                        v-if="isNewKindColumnOn(col.key)"
+                                        class="rounded-md bg-brand-navy-600 px-1.5 text-[11px] font-bold text-white"
+                                    >{{ newKindColumnIndex(col.key) + 1 }}</span>
+                                    <span class="font-medium">{{ col.label }}</span>
+                                </label>
+
+                                <span v-if="isNewKindColumnOn(col.key)" class="inline-flex">
+                                    <button
+                                        type="button"
+                                        class="rounded-l-md border border-brand-navy-200 bg-white px-1 text-xs text-brand-navy-700 hover:bg-brand-navy-100 disabled:opacity-30"
+                                        :disabled="newKindColumnIndex(col.key) === 0"
+                                        title="Зүүн тийш зөөх"
+                                        @click="moveNewKindColumn(col.key, -1)"
+                                    >‹</button>
+                                    <button
+                                        type="button"
+                                        class="-ml-px rounded-r-md border border-brand-navy-200 bg-white px-1 text-xs text-brand-navy-700 hover:bg-brand-navy-100 disabled:opacity-30"
+                                        :disabled="newKindColumnIndex(col.key) === newKindForm.columns.length - 1"
+                                        title="Баруун тийш зөөх"
+                                        @click="moveNewKindColumn(col.key, 1)"
+                                    >›</button>
+                                </span>
+                            </div>
                         </div>
                     </fieldset>
                     <div class="flex flex-wrap items-center justify-end gap-2">

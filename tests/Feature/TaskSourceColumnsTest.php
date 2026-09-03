@@ -66,6 +66,29 @@ class TaskSourceColumnsTest extends TestCase
             );
     }
 
+    public function test_chosen_column_order_is_kept(): void
+    {
+        // Каталогийн дараалал: sector, measure, text, period, responsible, collaborator, note
+        // Хэрэглэгч өөр дарааллаар сонгосон бол яг тэр дарааллаар нь хадгална.
+        $columns = ['note', 'responsible', 'measure'];
+
+        $this->actingAs($this->admin())
+            ->post(route('tasks.sources.store'), [
+                'name' => 'Дараалал тест',
+                'columns' => $columns,
+            ])
+            ->assertRedirect();
+
+        $source = TaskSource::query()->where('name', 'Дараалал тест')->firstOrFail();
+
+        $this->assertSame($columns, $source->columnKeyList());
+
+        $this->assertSame(
+            ['Хэрэгжилт', 'Хариуцах эзэн', 'Арга хэмжээ'],
+            collect($source->resolvedColumns())->pluck('label')->all(),
+        );
+    }
+
     public function test_at_least_one_column_is_required(): void
     {
         $this->actingAs($this->admin())
