@@ -106,6 +106,20 @@ const take = async (host, mode) => {
             fresh = candidate;
             break;
         }
+
+        // ДАН: систем бүр өөрийн хаягтай ч нэвтрэлт нь dan.gov.mn дээр болдог.
+        // Тиймээс ДАН-ы мэдээллийг хостоос үл хамааран авна — энэ скрипт зөвхөн
+        // ДАН-ы хуудсанд ажилладаг тул өөр сайтад алдагдахгүй.
+        if (! fresh && wanted === 'dan') {
+            for (const [candidateKey, candidate] of Object.entries(session)) {
+                if (! candidateKey.startsWith('pending:')) continue;
+                if (! candidate || candidate.expiresAt < now || ! matchesMode(candidate)) continue;
+
+                chosenKey = candidateKey;
+                fresh = candidate;
+                break;
+            }
+        }
     }
 
     // Хугацаа нь дууссан үлдэгдлийг цэвэрлэнэ.
@@ -134,7 +148,7 @@ const take = async (host, mode) => {
             for (const [candidateKey, candidate] of Object.entries(local)) {
                 if (! candidateKey.startsWith('device:')) continue;
                 if (! matchesMode(candidate)) continue;
-                if (baseDomain(candidateKey.slice('device:'.length)) !== base) continue;
+                if (wanted !== 'dan' && baseDomain(candidateKey.slice('device:'.length)) !== base) continue;
 
                 remembered = candidate;
                 break;
