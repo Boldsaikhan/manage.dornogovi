@@ -49,6 +49,33 @@ router.on('invalid', (event) => {
     window.location.reload();
 });
 
+/**
+ * Шинэ deploy гармагц апп өөрөө шинэчлэгдэнэ.
+ *
+ * Апп удаан нээлттэй хэвээр байвал ачаалагдсан хуучин JS ажилласаар байдаг тул
+ * сервер рүү буцаж ирэх бүрд нэг хөнгөн Inertia хүсэлт илгээнэ. Asset хувилбар
+ * зөрсөн байвал Inertia өөрөө бүтэн reload хийж шинэ хувилбарыг татна.
+ */
+let lastVersionCheck = Date.now();
+
+const checkForNewVersion = () => {
+    if (document.hidden) {
+        return;
+    }
+
+    // Дэлгэц асаах бүрт биш — минутад нэгээс олонгүй.
+    if (Date.now() - lastVersionCheck < 60_000) {
+        return;
+    }
+
+    lastVersionCheck = Date.now();
+
+    router.reload({ only: ['vault'] });
+};
+
+document.addEventListener('visibilitychange', checkForNewVersion);
+window.addEventListener('focus', checkForNewVersion);
+
 // Утсан дээр PWA service worker — push, offline, апп суулгалт.
 if (isStandalonePwa()) {
     markPwaInstalled();

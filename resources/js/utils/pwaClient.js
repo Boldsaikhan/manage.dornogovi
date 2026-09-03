@@ -121,13 +121,39 @@ export const promptInstall = async () => {
     return { outcome };
 };
 
+let swReloadBound = false;
+let swReloaded = false;
+
 export const registerServiceWorker = async () => {
     if (! ('serviceWorker' in navigator)) {
         return null;
     }
 
     try {
-        return await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+
+        // Шинэ service worker удирдлага авбал нэг удаа сэргээнэ.
+        if (! swReloadBound) {
+            swReloadBound = true;
+
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (swReloaded) {
+                    return;
+                }
+
+                swReloaded = true;
+                window.location.reload();
+            });
+        }
+
+        // Апп руу буцаж ирэх бүрд шинэчлэлт байгаа эсэхийг шалгана.
+        document.addEventListener('visibilitychange', () => {
+            if (! document.hidden) {
+                registration.update().catch(() => {});
+            }
+        });
+
+        return registration;
     } catch {
         return null;
     }
