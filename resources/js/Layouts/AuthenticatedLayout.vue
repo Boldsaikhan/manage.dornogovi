@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { Link, router, usePage, Head } from '@inertiajs/vue3';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
@@ -26,6 +26,7 @@ const aiOpen = ref(false);
 const navTip = ref({ show: false, text: '', x: 0, y: 0 });
 
 onMounted(() => {
+    publishSystemHosts();
     try {
         sidebarCollapsed.value = localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === '1';
         aiOpen.value = localStorage.getItem(AI_PANEL_KEY) === '1';
@@ -123,6 +124,32 @@ const vaultModal = ref(false);
 const vaultBusy = ref(false);
 const navBadges = computed(() => page.props.navBadges ?? {});
 const linkedSystems = computed(() => (page.props.nav ?? []).filter((s) => ! s.is_internal));
+
+/**
+ * Бүртгэсэн системийн хаягуудыг өргөтгөлд мэдэгдэнэ.
+ *
+ * Өргөтгөл нь manifest-д хаяг бүрийг гараар бичихийн оронд эндээс уншиж,
+ * зөвшөөрөгдсөн хаягуудад автомат бөглөлтийг өөрөө бүртгэдэг.
+ */
+const systemHosts = computed(() => {
+    const hosts = (page.props.nav ?? [])
+        .map((sys) => {
+            try {
+                return new URL(sys.entry_url).hostname;
+            } catch {
+                return null;
+            }
+        })
+        .filter(Boolean);
+
+    return [...new Set(hosts)].join(',');
+});
+
+const publishSystemHosts = () => {
+    document.documentElement.dataset.mdSystemHosts = systemHosts.value;
+};
+
+watch(systemHosts, publishSystemHosts);
 
 const onVaultClick = async () => {
     if (! vaultUnlocked.value) {

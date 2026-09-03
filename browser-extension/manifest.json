@@ -3,10 +3,11 @@
     "name": "Manage Dornogovi",
     "short_name": "Manage Dornogovi",
     "description": "Дорноговь аймгийн нэгдсэн системд хадгалсан нэвтрэх мэдээллээр төрийн системүүдэд автоматаар нэвтэрнэ.",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8bnCcAds3tQwstn3iZhcoGndBCk3VX5Q4imN6A8marV2kU6exUAJNgra2ym4Usv+OxXTbopaWiQGXGOsazICxQC/lIsnyMg483BQBGMfLMQNLW3YH3/3fCvGcoXSneBfTkL3t7RniiUHPJn7veZVQiWn3RUueVqcnKBJXD2iFwzQKeMomygfQroxvtABf324r0G/JefjgncRMoXEt1O63gHmcZ5RuiuS9IIKhDSgAwNDivpz9jcbtWjZPDFozsnpbLEgSI9kOidaeVTJ8kjcJHq76oMUXG5YjOQnRmbb9FXc6HuHXtdrVKhmmbMhhE2NVgdzt6tJY3lwcYGA7LjG8QIDAQAB",
     "permissions": [
-        "storage"
+        "storage",
+        "scripting"
     ],
     "host_permissions": [
         "https://manage.dornogovi.gov.mn/*",
@@ -92,5 +93,9 @@
             "run_at": "document_idle",
             "all_frames": false
         }
+    ],
+    "optional_host_permissions": [
+        "https://*/*",
+        "http://*/*"
     ]
 }

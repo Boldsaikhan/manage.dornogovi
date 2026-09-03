@@ -163,6 +163,105 @@ const take = async (host, mode) => {
     return { mode: result.mode ?? 'password', username: result.username, password: result.password };
 };
 
+
+/* ---------------- Платформ дээр бүртгэсэн системүүд ----------------
+ *
+ * Manifest-д хаяг бүрийг гараар бичих шаардлагагүй: платформ өөрийн жагсаалтыг
+ * илгээж, өргөтгөл зөвшөөрөгдсөн хаягуудад autofill скриптийг өөрөө бүртгэнэ.
+ */
+
+const HOSTS_KEY = 'systemHosts';
+const DYNAMIC_SCRIPT_ID = 'md-autofill-dynamic';
+
+const originOf = (host) => `https://${host}/*`;
+
+const savedHosts = async () => {
+    const { [HOSTS_KEY]: hosts } = await chrome.storage.local.get(HOSTS_KEY);
+
+    return Array.isArray(hosts) ? hosts : [];
+};
+
+/** Зөвшөөрөгдсөн хаягуудад л скрипт бүртгэнэ (бусдад нь бүртгэл амжилтгүй болно). */
+const grantedHosts = async (hosts) => {
+    const checks = await Promise.all(hosts.map(async (host) => {
+        try {
+            return await chrome.permissions.contains({ origins: [originOf(host)] }) ? host : null;
+        } catch {
+            return null;
+        }
+    }));
+
+    return checks.filter(Boolean);
+};
+
+const ensureContentScripts = async () => {
+    const hosts = await savedHosts();
+    const granted = await grantedHosts(hosts);
+    const matches = granted.map(originOf);
+
+    try {
+        const registered = await chrome.scripting.getRegisteredContentScripts({ ids: [DYNAMIC_SCRIPT_ID] });
+
+        if (! matches.length) {
+            if (registered.length) {
+                await chrome.scripting.unregisterContentScripts({ ids: [DYNAMIC_SCRIPT_ID] });
+            }
+
+            return { registered: 0 };
+        }
+
+        const definition = {
+            id: DYNAMIC_SCRIPT_ID,
+            js: ['autofill.js'],
+            matches,
+            runAt: 'document_idle',
+            allFrames: false,
+            persistAcrossSessions: true,
+        };
+
+        if (registered.length) {
+            await chrome.scripting.updateContentScripts([definition]);
+        } else {
+            await chrome.scripting.registerContentScripts([definition]);
+        }
+
+        return { registered: matches.length };
+    } catch (e) {
+        return { registered: 0, error: String(e) };
+    }
+};
+
+/** Платформоос ирсэн жагсаалтыг хадгална. */
+const syncHosts = async (hosts) => {
+    const clean = [...new Set(
+        (Array.isArray(hosts) ? hosts : [])
+            .map((host) => String(host || '').trim().toLowerCase())
+            .filter((host) => /^[a-z0-9.-]+\.[a-z]{2,}$/.test(host)),
+    )];
+
+    await chrome.storage.local.set({ [HOSTS_KEY]: clean });
+
+    const result = await ensureContentScripts();
+
+    return { ok: true, hosts: clean, ...result };
+};
+
+/** Popup-д: хаяг бүр зөвшөөрөгдсөн эсэх. */
+const hostStatus = async () => {
+    const hosts = await savedHosts();
+    const granted = await grantedHosts(hosts);
+
+    return {
+        hosts: hosts.map((host) => ({ host, granted: granted.includes(host) })),
+        origins: hosts.map(originOf),
+    };
+};
+
+chrome.runtime.onStartup?.addListener(() => ensureContentScripts());
+chrome.runtime.onInstalled?.addListener(() => ensureContentScripts());
+chrome.permissions.onAdded?.addListener(() => ensureContentScripts());
+chrome.permissions.onRemoved?.addListener(() => ensureContentScripts());
+
 const handle = (message, sender, sendResponse, trusted) => {
     if (message?.type === 'store') {
         if (! trusted) {
@@ -172,6 +271,31 @@ const handle = (message, sender, sendResponse, trusted) => {
         }
 
         store(message).then(sendResponse);
+
+        return true;
+    }
+
+    // Платформ өөрийн бүртгэсэн системийн хаягуудыг илгээнэ.
+    if (message?.type === 'syncHosts') {
+        if (! trusted) {
+            sendResponse({ ok: false, reason: 'untrusted' });
+
+            return true;
+        }
+
+        syncHosts(message.hosts).then(sendResponse);
+
+        return true;
+    }
+
+    if (message?.type === 'hostStatus') {
+        hostStatus().then(sendResponse);
+
+        return true;
+    }
+
+    if (message?.type === 'refreshScripts') {
+        ensureContentScripts().then(sendResponse);
 
         return true;
     }
