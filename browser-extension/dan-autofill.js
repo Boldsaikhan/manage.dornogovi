@@ -152,6 +152,22 @@
         return true;
     };
 
+    /** Богино мэдэгдэл — юу болсныг хэрэглэгч харна. */
+    const toast = (message) => {
+        const box = document.createElement('div');
+
+        box.textContent = message;
+        box.style.cssText = [
+            'position:fixed', 'z-index:2147483647', 'right:16px', 'bottom:16px',
+            'max-width:22rem', 'padding:10px 14px', 'border-radius:10px',
+            'background:#15335d', 'color:#fff', 'font:500 13px/1.45 system-ui,Arial,sans-serif',
+            'box-shadow:0 8px 24px rgba(15,23,42,.25)',
+        ].join(';');
+
+        document.body.appendChild(box);
+        setTimeout(() => box.remove(), 6000);
+    };
+
     const fill = () => {
         if (filled || ! credential) return false;
 
@@ -184,6 +200,8 @@
         setValue(pwField, credential.password);
 
         filled = true;
+
+        toast('Manage: ДАН-ы мэдээллийг бөглөлөө. Баталгаажуулах кодоо оруулна уу.');
 
         // 5. Код илгээх — маягт төлөвөө шинэчлэх зав өгөөд илгээнэ.
         setTimeout(() => {
