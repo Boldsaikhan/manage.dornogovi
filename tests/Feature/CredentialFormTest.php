@@ -75,6 +75,44 @@ class CredentialFormTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page->where('system.saved_username', null));
     }
 
+    public function test_dan_system_defaults_to_the_dan_method(): void
+    {
+        $user = User::factory()->create();
+        $system = $this->system();
+        $system->forceFill(['supports_dan' => true])->save();
+        $system->viewers()->attach($user->id);
+
+        // Мэдээлэл хадгалаагүй — ДАН-аар нэвтэрдэг тул ДАН нь анхны сонголт.
+        $this->actingAs($user)
+            ->get(route('systems.show', $system->id))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('system.supports_dan', true)
+                ->where('system.auth_type', System::AUTH_DAN)
+            );
+    }
+
+    public function test_saved_method_wins_over_the_default(): void
+    {
+        $user = User::factory()->create();
+        $system = $this->system();
+        $system->forceFill(['supports_dan' => true])->save();
+        $system->viewers()->attach($user->id);
+
+        UserCredential::create([
+            'user_id' => $user->id,
+            'system_id' => $system->id,
+            'auth_type' => System::AUTH_PASSWORD,
+            'username_encrypted' => 'ner',
+            'password_encrypted' => 'nuuts',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('systems.show', $system->id))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('system.auth_type', System::AUTH_PASSWORD)
+            );
+    }
+
     public function test_saving_without_a_password_keeps_the_stored_one(): void
     {
         $user = User::factory()->create();

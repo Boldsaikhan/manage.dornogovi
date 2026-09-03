@@ -200,9 +200,16 @@ const removeCredential = () => {
                     <div v-if="system.supports_dan" class="sm:col-span-2">
                         <label class="mb-1 block text-xs font-medium text-brand-navy-700">Нэвтрэх арга</label>
                         <select v-model="form.auth_type" class="ui-input">
-                            <option value="password">Нэвтрэх нэр / нууц үг</option>
                             <option value="dan">ДАН-аар нэвтрэх</option>
+                            <option value="password">Нэвтрэх нэр / нууц үг</option>
                         </select>
+
+                        <p v-if="isDan" class="mt-1.5 rounded-xl bg-brand-navy-50 px-3 py-2 text-xs leading-relaxed text-brand-navy-700">
+                            Регистрийн дугаар, ДАН нууц үгээ хадгална. «Нэвтрэх» дарахад ДАН-ы
+                            «Нэг удаагийн код» хэсэгт автоматаар бөглөж, баталгаажуулах кодыг
+                            утас руу илгээх хүртэл гүйцэтгэнэ.
+                            <strong>Кодыг та өөрөө оруулна.</strong>
+                        </p>
                     </div>
 
                     <div class="sm:col-span-2">
