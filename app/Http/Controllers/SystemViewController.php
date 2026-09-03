@@ -35,6 +35,10 @@ class SystemViewController extends Controller
                 'requires_login' => (bool) $system->requires_login,
                 'supports_dan' => (bool) $system->supports_dan,
                 'has_credential' => $credential !== null,
+                // Хадгалсан нэвтрэх нэр — нууц үг биш тул сан нээлттэй үед харуулна.
+                'saved_username' => \App\Support\Vault::isUnlocked($request)
+                    ? $credential?->username_encrypted
+                    : null,
                 'auth_type' => $credential?->auth_type ?? System::AUTH_PASSWORD,
                 'remember_device' => (bool) ($credential?->remember_device),
             ],

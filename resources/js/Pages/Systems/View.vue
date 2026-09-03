@@ -20,10 +20,55 @@ const vaultUnlocked = computed(() => page.props.vault?.unlocked ?? false);
 const form = useForm({
     system_id: props.system.id,
     auth_type: props.system.auth_type || 'password',
-    username: '',
+    // Хадгалсан нэвтрэх нэрийг харуулна — юу хадгалсанаа хараад засах боломжтой.
+    username: props.system.saved_username || '',
     password: '',
     remember_device: !! props.system.remember_device,
 });
+
+/* ---------- Хадгалсан нууц үгийг харах ---------- */
+
+const revealOpen = ref(false);
+const revealPassword = ref('');
+const revealError = ref('');
+const revealBusy = ref(false);
+
+const toggleReveal = () => {
+    // Шинээр бичиж байгаа бол зүгээр л харуулна/нуна.
+    if (! props.system.has_credential || form.password) {
+        showPassword.value = ! showPassword.value;
+
+        return;
+    }
+
+    revealOpen.value = ! revealOpen.value;
+    revealPassword.value = '';
+    revealError.value = '';
+};
+
+const submitReveal = async () => {
+    if (revealBusy.value || ! revealPassword.value) return;
+
+    revealBusy.value = true;
+    revealError.value = '';
+
+    try {
+        const { data } = await window.axios.post(route('credentials.reveal', props.system.id), {
+            account_password: revealPassword.value,
+        });
+
+        form.username = data.username ?? form.username;
+        form.password = data.password ?? '';
+        showPassword.value = true;
+        revealOpen.value = false;
+        revealPassword.value = '';
+    } catch (e) {
+        revealError.value = e?.response?.data?.errors?.account_password?.[0]
+            || 'Харуулж чадсангүй.';
+    } finally {
+        revealBusy.value = false;
+    }
+};
 
 const isDan = computed(() => form.auth_type === 'dan');
 
@@ -34,7 +79,10 @@ watch(
         form.auth_type = props.system.auth_type || 'password';
         form.remember_device = !! props.system.remember_device;
         form.reset('username', 'password');
+        form.username = props.system.saved_username || '';
         form.clearErrors();
+        revealOpen.value = false;
+        showPassword.value = false;
         loading.value = true;
         frameKey.value++;
     },
@@ -182,18 +230,49 @@ const removeCredential = () => {
                                 v-model="form.password"
                                 :type="showPassword ? 'text' : 'password'"
                                 autocomplete="new-password"
-                                required
+                                :required="! system.has_credential"
                                 class="ui-input flex-1"
                                 :placeholder="system.has_credential ? 'Шинэчлэх бол дахин оруулна' : 'Нууц үг'"
                             />
                             <button
                                 type="button"
                                 class="shrink-0 rounded-md border border-slate-200 px-3 text-xs text-slate-600 hover:bg-slate-50"
-                                @click="showPassword = ! showPassword"
+                                @click="toggleReveal"
                             >
-                                {{ showPassword ? 'Нуух' : 'Харах' }}
+                                {{ showPassword && form.password ? 'Нуух' : 'Харах' }}
                             </button>
                         </div>
+
+                        <!-- Хадгалсан нууц үгийг харах — өөрийн нууц үгээр баталгаажуулна -->
+                        <div v-if="revealOpen" class="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <p class="mb-2 text-xs text-slate-600">
+                                Хадгалсан нууц үгийг харахын тулд өөрийн нууц үгээ оруулна уу.
+                            </p>
+                            <div class="flex flex-wrap gap-2">
+                                <input
+                                    v-model="revealPassword"
+                                    type="password"
+                                    autocomplete="current-password"
+                                    class="ui-input min-w-0 flex-1"
+                                    placeholder="Manage-ийн нууц үг"
+                                    @keyup.enter="submitReveal"
+                                />
+                                <button
+                                    type="button"
+                                    class="ui-btn-ghost shrink-0"
+                                    :disabled="revealBusy"
+                                    @click="submitReveal"
+                                >
+                                    {{ revealBusy ? 'Шалгаж байна…' : 'Харуулах' }}
+                                </button>
+                            </div>
+                            <p v-if="revealError" class="mt-1 text-xs text-red-600">{{ revealError }}</p>
+                        </div>
+
+                        <p v-else-if="system.has_credential && ! form.password" class="mt-1 text-xs text-slate-500">
+                            Нууц үг хадгалагдсан. Хоосон орхивол хэвээр үлдэнэ.
+                        </p>
+
                         <InputError :message="form.errors.password" class="mt-1" />
                     </div>
 
