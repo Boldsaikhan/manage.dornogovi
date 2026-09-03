@@ -114,6 +114,11 @@
         const stay = document.getElementById('stay');
         const hasExtension = document.documentElement.dataset.mdExtension === '1';
 
+        // Гар утас — өргөтгөл суудаггүй тул автоматаар бөглөх боломжгүй.
+        // Автоматаар үсрэхийн оронд мэдээллийг тод харуулж, хуулах товч өгнө.
+        const onPhone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+            || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform));
+
         let timer = null;
 
         const go = () => location.replace(target);
@@ -175,8 +180,17 @@
 
             // Өргөтгөл хариу өгөхгүй бол ч гацахгүй.
             timer = setTimeout(go, 2000);
+        } else if (onPhone) {
+            // Утсан дээр өөрөө үсрэхгүй — хэрэглэгч нэр, нууц үгээ хуулж аваад орно.
+            status.textContent = 'Гар утсан дээр автомат бөглөлт ажиллахгүй. '
+                + 'Доорх нэр, нууц үгийг хуулаад «Одоо шилжих» дарна уу.';
+
+            document.getElementById('hint').textContent =
+                'Зөвлөмж: нэрээ хуулаад шилжиж бөглөөд, буцаж ирээд нууц үгээ хуулна.';
+
+            stay.style.display = 'none';
         } else {
-            // Өргөтгөлгүй: нууц үгийг хуулаад нэвтрэх хуудас руу шилжинэ.
+            // Өргөтгөлгүй компьютер: нууц үгийг хуулаад нэвтрэх хуудас руу шилжинэ.
             timer = setTimeout(go, 1200);
 
             navigator.clipboard.writeText(document.getElementById('p').value).catch(() => {
