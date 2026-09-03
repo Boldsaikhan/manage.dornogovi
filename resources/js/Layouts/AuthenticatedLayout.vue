@@ -95,6 +95,7 @@ const iconPaths = {
     phone: 'M5 3h3l2 5-2.5 1.5a12 12 0 006 6L15 13l5 2v3a2 2 0 01-2.2 2A16.8 16.8 0 013 5.2 2 2 0 015 3z',
     award: 'M12 15l-3.5 2 1-4-3-2.5 4-.3L12 6l1.5 4.2 4 .3-3 2.5 1 4L12 15zM8 21h8M9 18v3M15 18v3',
     graduation: 'M22 10L12 5 2 10l10 5 10-5zM6 12v5c0 2 3 3 6 3s6-1 6-3v-5',
+    pencil: 'M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z',
     chevronLeft: 'M15 18l-6-6 6-6',
     chevronRight: 'M9 18l6-6-6-6',
 };
@@ -174,6 +175,12 @@ const linkedSystemOpenUrl = (sys) => {
     return sys.entry_url;
 };
 
+const openSystemSettings = (sys) => {
+    sidebarOpen.value = false;
+    hideNavTip();
+    router.visit(route('systems.show', sys.id));
+};
+
 const onLinkedSystemClick = (sys, event) => {
     sidebarOpen.value = false;
 
@@ -241,25 +248,45 @@ const onLinkedSystemClick = (sys, event) => {
                         >
                             Холбосон системүүд
                         </div>
-                        <a
+                        <div
                             v-for="sys in linkedSystems"
                             :key="'sys-'+sys.id"
-                            :href="linkedSystemOpenUrl(sys)"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="ui-nav-link relative"
-                            :class="sidebarCollapsed ? 'lg:justify-center lg:px-0' : ''"
-                            @click="onLinkedSystemClick(sys, $event)"
-                            @mouseenter="showNavTip($event, sys.name)"
-                            @mouseleave="hideNavTip"
-                            @focus="showNavTip($event, sys.name)"
-                            @blur="hideNavTip"
+                            class="group/sys relative flex items-center"
                         >
-                            <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                                <path :d="iconPaths.globe" />
-                            </svg>
-                            <span class="min-w-0 flex-1 truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ sys.name }}</span>
-                        </a>
+                            <!-- Нэр дээр дарахад тухайн систем рүү шууд нэвтэрнэ -->
+                            <a
+                                :href="linkedSystemOpenUrl(sys)"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="ui-nav-link relative min-w-0 flex-1"
+                                :class="sidebarCollapsed ? 'lg:justify-center lg:px-0' : 'pr-9'"
+                                @click="onLinkedSystemClick(sys, $event)"
+                                @mouseenter="showNavTip($event, sys.name)"
+                                @mouseleave="hideNavTip"
+                                @focus="showNavTip($event, sys.name)"
+                                @blur="hideNavTip"
+                            >
+                                <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                    <path :d="iconPaths.globe" />
+                                </svg>
+                                <span class="min-w-0 flex-1 truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ sys.name }}</span>
+                            </a>
+
+                            <!-- Засах — нэвтрэх нэр, нууц үгийн тохиргоо -->
+                            <button
+                                v-if="! sidebarCollapsed"
+                                type="button"
+                                class="absolute right-1.5 rounded-lg p-1.5 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-brand-navy-700 focus:opacity-100 group-hover/sys:opacity-100"
+                                :title="sys.name + ' — нэвтрэх тохиргоо'"
+                                @click.stop.prevent="openSystemSettings(sys)"
+                                @mouseenter="showNavTip($event, 'Нэвтрэх тохиргоо')"
+                                @mouseleave="hideNavTip"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                    <path :d="iconPaths.pencil" />
+                                </svg>
+                            </button>
+                        </div>
                     </template>
                     <template v-else>
                         <div

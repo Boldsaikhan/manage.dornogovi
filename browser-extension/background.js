@@ -14,6 +14,30 @@ const key = (host) => `pending:${host}`;
 // Төхөөрөмжийн санах (chrome.storage.local) — браузер хаагдсан ч үлдэнэ.
 const deviceKey = (host) => `device:${host}`;
 
+// «gov.mn» мэтийн 2 түвшний өргөтгөлүүд — эдгээрт нэг түвшин илүү авна.
+const TWO_LEVEL_SUFFIXES = ['gov.mn', 'org.mn', 'edu.mn', 'com.mn', 'net.mn'];
+
+/**
+ * Хостын үндсэн домэйн.
+ *
+ * Нэвтрэх хуудас өөр дэд домэйн руу шилждэг (erp.e-mongolia.mn → auth.e-mongolia.mn)
+ * тул мэдээллийг үндсэн домэйн дотор нь тааруулна. `unelgee.gov.mn` ба
+ * `shilen.gov.mn` хоорондоо холилдохгүйн тулд gov.mn-д 3 түвшин авна.
+ */
+const baseDomain = (host) => {
+    const parts = String(host || '').toLowerCase().split('.').filter(Boolean);
+
+    if (parts.length <= 2) {
+        return parts.join('.');
+    }
+
+    const lastTwo = parts.slice(-2).join('.');
+
+    return TWO_LEVEL_SUFFIXES.includes(lastTwo)
+        ? parts.slice(-3).join('.')
+        : lastTwo;
+};
+
 // Мэдээлэл хадгалуулж чадах платформын хаягууд (production + локал хөгжүүлэлт).
 const ALLOWED_ORIGINS = [
     'https://manage.dornogovi.gov.mn/',
@@ -57,26 +81,70 @@ const store = async (message) => {
 };
 
 const take = async (host, mode) => {
-    const k = key(host);
-    const data = await chrome.storage.session.get(k);
-    const entry = data[k];
+    const wanted = mode || 'password';
+    const matchesMode = (entry) => !! entry && (entry.mode ?? 'password') === wanted;
+    const now = Date.now();
+    const base = baseDomain(host);
 
-    // Нэг удаа ашиглаад шууд устгана.
-    await chrome.storage.session.remove(k);
+    const session = await chrome.storage.session.get(null);
+    const exactKey = key(host);
 
-    const fresh = entry && entry.expiresAt >= Date.now() ? entry : null;
+    let chosenKey = null;
+    let fresh = null;
 
-    // Платформаас ирсэн мэдээлэл байхгүй бол төхөөрөмжид санасаныг авна.
-    const remembered = fresh
-        ? null
-        : (await chrome.storage.local.get(deviceKey(host)))[deviceKey(host)] ?? null;
+    if (session[exactKey] && session[exactKey].expiresAt >= now && matchesMode(session[exactKey])) {
+        chosenKey = exactKey;
+        fresh = session[exactKey];
+    } else {
+        // Нэвтрэх хуудас өөр дэд домэйн руу шилжсэн байж болно.
+        for (const [candidateKey, candidate] of Object.entries(session)) {
+            if (! candidateKey.startsWith('pending:')) continue;
+            if (! candidate || candidate.expiresAt < now || ! matchesMode(candidate)) continue;
+            if (baseDomain(candidateKey.slice('pending:'.length)) !== base) continue;
+
+            chosenKey = candidateKey;
+            fresh = candidate;
+            break;
+        }
+    }
+
+    // Хугацаа нь дууссан үлдэгдлийг цэвэрлэнэ.
+    const stale = Object.entries(session)
+        .filter(([k2, v]) => k2.startsWith('pending:') && (! v || v.expiresAt < now))
+        .map(([k2]) => k2);
+
+    if (stale.length) {
+        await chrome.storage.session.remove(stale);
+    }
+
+    // Ашигласан мэдээллийг л устгана — өөр горимынхыг хөндөхгүй.
+    if (chosenKey) {
+        await chrome.storage.session.remove(chosenKey);
+    }
+
+    let remembered = null;
+
+    if (! fresh) {
+        const local = await chrome.storage.local.get(null);
+        const exactDevice = local[deviceKey(host)];
+
+        if (matchesMode(exactDevice)) {
+            remembered = exactDevice;
+        } else {
+            for (const [candidateKey, candidate] of Object.entries(local)) {
+                if (! candidateKey.startsWith('device:')) continue;
+                if (! matchesMode(candidate)) continue;
+                if (baseDomain(candidateKey.slice('device:'.length)) !== base) continue;
+
+                remembered = candidate;
+                break;
+            }
+        }
+    }
 
     const result = fresh ?? remembered;
 
     if (! result) return null;
-
-    // Хүссэн горимтой таарахгүй бол өгөхгүй (dan — password).
-    if (mode && (result.mode ?? 'password') !== mode) return null;
 
     return { mode: result.mode ?? 'password', username: result.username, password: result.password };
 };
