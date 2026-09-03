@@ -15,25 +15,26 @@ class LaunchController extends Controller
      * Систем рүү нэвтрэх завсрын хуудас. Шинэ табд нээгдэж, тохиргоо бүрэн бол
      * нуугдмал маягтаар шууд илгээнэ, үгүй бол мэдээллийг хуулж өгнө.
      */
-    public function __invoke(Request $request, System $system): RedirectResponse|Response
+    public function __invoke(Request $request, System $system): Response|RedirectResponse
     {
         abort_unless($system->is_active, 404);
         abort_unless($system->isVisibleTo($request->user()), 403);
-
-        if (! Vault::isUnlocked($request)) {
-            return redirect()
-                ->route('systems.show', $system)
-                ->with('warning', 'Нэвтрэх мэдээллийн сан түгжээтэй байна. Эхлээд сангаа нээнэ үү.');
-        }
 
         $credential = UserCredential::where('user_id', $request->user()->id)
             ->where('system_id', $system->id)
             ->first();
 
+        // Мэдээлэл хадгалаагүй — самбар дээр нь хадгалуулна.
         if (! $credential) {
+            return redirect()->route('systems.show', $system->id);
+        }
+
+        // Сан түгжээтэй — системийн хуудсанд нээлгэнэ. Нээгдмэгц тэр хуудас
+        // өөрөө энэ систем рүү үргэлжлүүлнэ (launch_after_unlock).
+        if (! Vault::isUnlocked($request)) {
             return redirect()
                 ->route('systems.show', $system)
-                ->with('info', 'Эхлээд нэвтрэх нэр, нууц үгээ хадгална уу.');
+                ->with('launch_after_unlock', $system->id);
         }
 
         $credential->forceFill(['last_used_at' => now()])->save();

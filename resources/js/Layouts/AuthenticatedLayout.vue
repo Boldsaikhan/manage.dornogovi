@@ -160,15 +160,28 @@ const isCurrent = (routeName) => {
 };
 
 const linkedSystemOpenUrl = (sys) => {
-    if (sys.requires_login && sys.has_credential && vaultUnlocked.value) {
+    // Мэдээлэл хадгалсан бол сан түгжээтэй эсэхээс үл хамааран завсрын хуудсаар
+    // явна — тэр хуудас өөрөө сан нээлгээд үргэлжлүүлнэ.
+    if (sys.requires_login && sys.has_credential) {
         return route('systems.launch', sys.id);
+    }
+
+    // Нэвтрэх шаардлагатай хэрнээ мэдээлэл хадгалаагүй — системийн хуудсанд хадгалуулна.
+    if (sys.requires_login) {
+        return route('systems.show', sys.id);
     }
 
     return sys.entry_url;
 };
 
-const onLinkedSystemClick = () => {
+const onLinkedSystemClick = (sys, event) => {
     sidebarOpen.value = false;
+
+    // Мэдээлэл хадгалаагүй систем — шинэ таб нээхгүй, апп дотроо үлдэнэ.
+    if (sys.requires_login && ! sys.has_credential) {
+        event.preventDefault();
+        router.visit(route('systems.show', sys.id));
+    }
 };
 </script>
 
@@ -236,7 +249,7 @@ const onLinkedSystemClick = () => {
                             rel="noopener noreferrer"
                             class="ui-nav-link relative"
                             :class="sidebarCollapsed ? 'lg:justify-center lg:px-0' : ''"
-                            @click="onLinkedSystemClick"
+                            @click="onLinkedSystemClick(sys, $event)"
                             @mouseenter="showNavTip($event, sys.name)"
                             @mouseleave="hideNavTip"
                             @focus="showNavTip($event, sys.name)"

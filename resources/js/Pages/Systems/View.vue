@@ -48,6 +48,19 @@ const canLaunch = computed(() => (
 
 const launchUrl = computed(() => route('systems.launch', props.system.id));
 
+// Хажуугийн цэснээс нэвтрэхийг оролдоод сан түгжээтэй байсан тохиолдол —
+// нээмэгц шууд үргэлжлүүлнэ (ижил табд, тиймээс popup хаагдахгүй).
+const pendingLaunch = ref(
+    Number(page.props.flash?.launch_after_unlock ?? 0) === Number(props.system.id),
+);
+
+watch(vaultUnlocked, (unlocked) => {
+    if (unlocked && pendingLaunch.value) {
+        pendingLaunch.value = false;
+        window.location.href = launchUrl.value;
+    }
+});
+
 const openUrl = computed(() => (canLaunch.value ? launchUrl.value : props.target));
 
 const reload = () => {
@@ -219,7 +232,9 @@ const removeCredential = () => {
                     </template>
                     <template v-else-if="! vaultUnlocked">
                         <p class="mb-3 text-sm text-slate-600">
-                            Хадгалсан мэдээллээр нэвтрэхийн тулд сангаа нээнэ үү.
+                            {{ pendingLaunch
+                                ? 'Сан түгжээтэй байна. Нээвэл ' + system.name + ' рүү шууд үргэлжилнэ.'
+                                : 'Хадгалсан мэдээллээр нэвтрэхийн тулд сангаа нээнэ үү.' }}
                         </p>
                         <VaultUnlockForm />
                     </template>
