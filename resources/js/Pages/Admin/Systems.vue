@@ -470,6 +470,27 @@ const checkEmbed = (system) => {
     router.post(route('admin.systems.check-embed', system.id), {}, { preserveScroll: true });
 };
 
+const detecting = ref(null);
+
+/**
+ * Нэвтрэх маягтыг автоматаар таниулна.
+ *
+ * Амжилттай бол form_post горим тохируулагдаж, өргөтгөлгүй — гар утсан дээр ч
+ * нэг товшилтоор нэвтэрдэг болно.
+ */
+const detectLoginForm = (system) => {
+    if (detecting.value) return;
+
+    detecting.value = system.id;
+
+    router.post(route('admin.systems.detect-login', system.id), {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            detecting.value = null;
+        },
+    });
+};
+
 const notice = computed(() => {
     const formErrors = [
         ...Object.values(aiForm.errors ?? {}),
@@ -978,6 +999,15 @@ const saveAi = () => {
                                 </button>
                                 <button type="button" class="text-brand-navy-500 hover:underline" @click="checkEmbed(system)">
                                     Дотор нээгдэхийг шалгах
+                                </button>
+                                <button
+                                    type="button"
+                                    class="text-emerald-700 hover:underline disabled:opacity-50"
+                                    :disabled="detecting === system.id"
+                                    title="Нэвтрэх хуудсыг уншиж form_post тохиргоог өөрөө олно — утсан дээр ч шууд нэвтэрнэ"
+                                    @click="detectLoginForm(system)"
+                                >
+                                    {{ detecting === system.id ? 'Таньж байна…' : 'Нэвтрэх маягтыг таних' }}
                                 </button>
                                 <button type="button" class="text-rose-600 hover:underline" @click="removeSystem(system)">
                                     Устгах
