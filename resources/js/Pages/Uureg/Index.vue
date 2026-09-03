@@ -128,8 +128,60 @@ const showAddForm = ref(false);
 const addFormRoot = ref(null);
 const wordPreviewing = ref(false);
 const wordConfirming = ref(false);
-const wordPreview = ref(null); // { document_id, original_name, kind, layout, count, rows }
-const isPrepPreview = computed(() => (wordPreview.value?.layout || wordPreview.value?.kind) === 'prep_plan');
+// { document_id, original_name, columns, headers, raw_rows, mapping, count }
+const wordPreview = ref(null);
+
+/** Хүснэгтийн толгой → Word баганын индекс. */
+const wordMapping = ref({});
+
+const previewColumns = computed(() => wordPreview.value?.columns ?? []);
+
+/** Word файлын баганууд — сонгох жагсаалтад. */
+const wordColumnOptions = computed(() => {
+    const preview = wordPreview.value;
+
+    if (! preview) return [];
+
+    const width = Math.max(
+        preview.headers?.length ?? 0,
+        ...(preview.raw_rows ?? []).slice(0, 30).map((row) => row.length),
+    );
+
+    return Array.from({ length: width }, (_, index) => ({
+        index,
+        label: (preview.headers?.[index] || '').trim() || `${index + 1}-р багана`,
+    }));
+});
+
+/** Тааруулалтын дагуу мөрийг бүрдүүлнэ (цонхны урьдчилсан харагдац). */
+const mappedPreviewRows = computed(() => {
+    const preview = wordPreview.value;
+
+    if (! preview) return [];
+
+    return (preview.raw_rows ?? []).map((cells) => {
+        const row = {};
+
+        previewColumns.value.forEach((col) => {
+            const index = wordMapping.value[col.key];
+            row[col.key] = index == null ? '' : (cells[index] ?? '');
+        });
+
+        return row;
+    });
+});
+
+/** Тааруулагдсан баганын тоо. */
+const mappedColumnCount = computed(() => (
+    previewColumns.value.filter((col) => wordMapping.value[col.key] != null).length
+));
+
+const setWordMapping = (key, value) => {
+    wordMapping.value = {
+        ...wordMapping.value,
+        [key]: value === '' || value === null ? null : Number(value),
+    };
+};
 
 const showNewKind = ref(false);
 const newKindForm = useForm({
@@ -1003,6 +1055,7 @@ const pickWordFile = () => {
 
 const closeWordPreview = () => {
     wordPreview.value = null;
+    wordMapping.value = {};
     wordPreviewing.value = false;
     wordConfirming.value = false;
 };
@@ -1024,6 +1077,7 @@ const openWordPreview = async ({ file = null, documentId = null } = {}) => {
 
         const { data } = await window.axios.post(route('tasks.documents.preview'), body);
         wordPreview.value = data;
+        wordMapping.value = { ...(data.mapping ?? {}) };
         router.reload({ only: ['documents'], preserveScroll: true, preserveState: true });
 
         if (! data.count) {
@@ -1063,7 +1117,7 @@ const confirmWordImport = (replace) => {
     wordConfirming.value = true;
     router.post(
         route('tasks.documents.import', docId),
-        { replace: !! replace },
+        { replace: !! replace, mapping: wordMapping.value },
         {
             preserveScroll: true,
             onFinish: () => {
@@ -2182,7 +2236,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
         <Modal :show="!! wordPreview" max-width="7xl" @close="closeWordPreview">
             <div class="flex max-h-[85vh] flex-col">
                 <div class="border-b border-slate-100 px-5 py-4 sm:px-6">
-                    <h3 class="text-base font-semibold text-slate-800">Word-ийн урьдчилсан харагдах байдал</h3>
+                    <h3 class="text-base font-semibold text-slate-800">Word файлыг хүснэгтэд тааруулах</h3>
                     <p class="mt-0.5 text-sm text-slate-500">
                         <span class="font-medium text-slate-700">{{ wordPreview?.original_name }}</span>
                         · {{ wordPreview?.count ?? 0 }} мөр · хүснэгтэд оруулахаасаа өмнө шалгана уу
@@ -2190,47 +2244,98 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                 </div>
 
                 <div class="min-h-0 flex-1 overflow-auto px-3 py-3 sm:px-5">
-                    <div class="overflow-x-auto rounded-xl border border-slate-200">
-                        <table class="w-full min-w-[40rem] border-collapse text-left text-sm">
-                            <thead class="bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                                <tr>
-                                    <th class="w-12 px-3 py-2.5">№</th>
-                                    <template v-if="isPrepPreview">
-                                        <th class="px-3 py-2.5">Ажлын чиглэл</th>
-                                        <th class="px-3 py-2.5">Арга хэмжээ</th>
-                                        <th class="px-3 py-2.5">Хугацаа</th>
-                                        <th class="px-3 py-2.5">Хариуцах эзэн</th>
-                                        <th class="px-3 py-2.5">Хамтран хэрэгжүүлэх</th>
-                                    </template>
-                                    <template v-else>
-                                        <th class="px-3 py-2.5">Үүрэг чиглэл</th>
-                                        <th class="px-3 py-2.5">Хариуцах эзэн</th>
-                                        <th class="px-3 py-2.5">Хяналт тавих</th>
-                                    </template>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100 bg-white">
-                                <tr
-                                    v-for="(row, idx) in (wordPreview?.rows || [])"
-                                    :key="idx"
-                                    class="align-top"
+                    <!-- 1. Багана тааруулалт -->
+                    <div class="rounded-xl border border-brand-navy-100 bg-brand-navy-50/40 p-3 sm:p-4">
+                        <h4 class="text-sm font-semibold text-brand-navy-800">Багана тааруулах</h4>
+                        <p class="mt-0.5 text-xs text-slate-500">
+                            Хүснэгтийн толгой бүрд Word файлын аль багана орохыг сонгоно.
+                            Толгойн нэрээр нь урьдчилан таамагласан — шаардлагатай бол засна уу.
+                        </p>
+
+                        <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                            <label
+                                v-for="col in previewColumns"
+                                :key="'map-' + col.key"
+                                class="block rounded-xl border border-slate-200 bg-white px-3 py-2"
+                            >
+                                <span class="mb-1 flex items-center gap-1.5 text-xs font-semibold text-brand-navy-800">
+                                    {{ col.label }}
+                                    <span
+                                        v-if="wordMapping[col.key] == null"
+                                        class="rounded-md bg-slate-100 px-1.5 text-[10px] font-medium text-slate-500"
+                                    >хоосон</span>
+                                </span>
+                                <select
+                                    class="w-full rounded-lg border-slate-300 py-1.5 text-sm"
+                                    :value="wordMapping[col.key] ?? ''"
+                                    @change="setWordMapping(col.key, $event.target.value)"
                                 >
-                                    <td class="px-3 py-2.5 text-slate-400">{{ idx + 1 }}</td>
-                                    <template v-if="isPrepPreview">
-                                        <td class="px-3 py-2.5 text-slate-700">{{ row.sector || '—' }}</td>
-                                        <td class="max-w-md whitespace-pre-wrap px-3 py-2.5 text-slate-800">{{ row.text || '—' }}</td>
-                                        <td class="px-3 py-2.5 text-slate-700">{{ row.period || '—' }}</td>
-                                        <td class="px-3 py-2.5 text-slate-700">{{ row.responsible || '—' }}</td>
-                                        <td class="px-3 py-2.5 text-slate-700">{{ row.collaborator || '—' }}</td>
-                                    </template>
-                                    <template v-else>
-                                        <td class="max-w-lg whitespace-pre-wrap px-3 py-2.5 text-slate-800">{{ row.text || '—' }}</td>
-                                        <td class="px-3 py-2.5 text-slate-700">{{ row.responsible || '—' }}</td>
-                                        <td class="px-3 py-2.5 text-slate-700">{{ row.collaborator || '—' }}</td>
-                                    </template>
-                                </tr>
-                            </tbody>
-                        </table>
+                                    <option value="">— оруулахгүй —</option>
+                                    <option
+                                        v-for="option in wordColumnOptions"
+                                        :key="'opt-' + col.key + '-' + option.index"
+                                        :value="option.index"
+                                    >
+                                        {{ option.label }}
+                                    </option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <p v-if="! mappedColumnCount" class="mt-2 text-xs font-medium text-red-600">
+                            Дор хаяж нэг багана тааруулна уу — эс бөгөөс мөр хоосон орно.
+                        </p>
+                    </div>
+
+                    <!-- 2. Яаж орохыг харуулсан урьдчилсан харагдац -->
+                    <div class="mt-4">
+                        <h4 class="mb-2 text-sm font-semibold text-slate-800">
+                            Ингэж орно
+                            <span class="ml-1 font-normal text-slate-500">— эхний {{ Math.min(mappedPreviewRows.length, 20) }} мөр</span>
+                        </h4>
+
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="w-full min-w-[40rem] border-collapse text-left text-sm">
+                                <thead class="bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                    <tr>
+                                        <th class="w-12 px-3 py-2.5">№</th>
+                                        <th
+                                            v-for="col in previewColumns"
+                                            :key="'ph-' + col.key"
+                                            class="px-3 py-2.5"
+                                        >
+                                            {{ col.label }}
+                                            <span class="block text-[10px] font-normal normal-case text-slate-400">
+                                                {{ wordMapping[col.key] == null
+                                                    ? '—'
+                                                    : (wordColumnOptions[wordMapping[col.key]]?.label ?? '—') }}
+                                            </span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 bg-white">
+                                    <tr
+                                        v-for="(row, idx) in mappedPreviewRows.slice(0, 20)"
+                                        :key="'pr-' + idx"
+                                        class="align-top"
+                                    >
+                                        <td class="px-3 py-2.5 text-slate-400">{{ idx + 1 }}</td>
+                                        <td
+                                            v-for="col in previewColumns"
+                                            :key="'pc-' + idx + '-' + col.key"
+                                            class="max-w-md whitespace-pre-wrap px-3 py-2.5"
+                                            :class="row[col.key] ? 'text-slate-800' : 'text-slate-300'"
+                                        >
+                                            {{ row[col.key] || '—' }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <p v-if="mappedPreviewRows.length > 20" class="mt-2 text-xs text-slate-500">
+                            … нийт {{ mappedPreviewRows.length }} мөр орно.
+                        </p>
                     </div>
                 </div>
 
@@ -2245,7 +2350,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                         <button
                             type="button"
                             class="ui-btn-ghost"
-                            :disabled="wordConfirming || ! wordPreview?.count"
+                            :disabled="wordConfirming || ! wordPreview?.count || ! mappedColumnCount"
                             @click="confirmWordImport(true)"
                         >
                             Орлуулах
@@ -2253,7 +2358,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                         <button
                             type="button"
                             class="ui-btn-primary"
-                            :disabled="wordConfirming || ! wordPreview?.count"
+                            :disabled="wordConfirming || ! wordPreview?.count || ! mappedColumnCount"
                             @click="confirmWordImport(false)"
                         >
                             {{ wordConfirming ? 'Оруулж байна…' : 'Хүснэгтэд нэмэх' }}

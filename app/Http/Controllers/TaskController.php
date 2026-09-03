@@ -536,15 +536,25 @@ class TaskController extends Controller
             $kind = $document->source->key;
         }
 
-        $rows = $this->parseDocumentRows($document, $kind);
+        $source = $document->source;
+        $columns = $source?->resolvedColumns() ?? [];
+        $columnKeys = array_column($columns, 'key');
+
+        $raw = $this->parseRawTable($document);
+        $mapping = TaskDocxParser::guessMapping($raw['headers'], $columnKeys);
 
         return response()->json([
             'document_id' => $document->id,
             'original_name' => $document->original_name,
             'kind' => $kind,
-            'layout' => $document->source?->layout ?: $kind,
-            'count' => count($rows),
-            'rows' => $rows,
+            'layout' => $source?->layout ?: $kind,
+            // Хүснэгтийн сонгосон толгой — цонх эдгээрт тааруулна.
+            'columns' => $columns,
+            // Word файлын толгой болон түүхий мөрүүд.
+            'headers' => $raw['headers'],
+            'raw_rows' => $raw['rows'],
+            'mapping' => $mapping,
+            'count' => count($raw['rows']),
         ]);
     }
 
@@ -555,7 +565,18 @@ class TaskController extends Controller
             403
         );
 
-        $imported = $this->importRows($document, $document->source->key, $request->boolean('replace'));
+        $data = $request->validate([
+            'replace' => ['nullable', 'boolean'],
+            'mapping' => ['nullable', 'array'],
+            'mapping.*' => ['nullable', 'integer', 'min:0', 'max:60'],
+        ]);
+
+        $imported = $this->importRows(
+            $document,
+            $document->source->key,
+            $request->boolean('replace'),
+            $this->sanitizeMapping($document, $data['mapping'] ?? null),
+        );
 
         if ($imported === 0) {
             return back(303)->withErrors([
@@ -569,6 +590,51 @@ class TaskController extends Controller
     /**
      * @return array<int, array<string, string|null>>
      */
+    /**
+     * Word-ийн эхний хүснэгтийг түүхийгээр нь уншина.
+     *
+     * @return array{headers: list<string>, rows: list<list<string>>}
+     */
+    private function parseRawTable(TaskDocument $document): array
+    {
+        if (! Storage::disk('local')->exists($document->path)) {
+            return ['headers' => [], 'rows' => []];
+        }
+
+        if (strtolower(pathinfo($document->original_name, PATHINFO_EXTENSION)) !== 'docx') {
+            return ['headers' => [], 'rows' => []];
+        }
+
+        try {
+            return app(TaskDocxParser::class)->rawTable(Storage::disk('local')->path($document->path));
+        } catch (Throwable) {
+            return ['headers' => [], 'rows' => []];
+        }
+    }
+
+    /**
+     * Хүснэгтийн толгойд байгаа талбарыг л үлдээнэ.
+     *
+     * @param  array<string, mixed>|null  $mapping
+     * @return array<string, int|null>|null
+     */
+    private function sanitizeMapping(TaskDocument $document, ?array $mapping): ?array
+    {
+        if ($mapping === null) {
+            return null;
+        }
+
+        $allowed = $document->source?->columnKeyList() ?? [];
+        $clean = [];
+
+        foreach ($allowed as $key) {
+            $value = $mapping[$key] ?? null;
+            $clean[$key] = is_numeric($value) ? (int) $value : null;
+        }
+
+        return $clean;
+    }
+
     private function parseDocumentRows(TaskDocument $document, string $kind): array
     {
         if (! Storage::disk('local')->exists($document->path)) {
@@ -609,9 +675,14 @@ class TaskController extends Controller
     /**
      * Word файлын хүснэгтийг үүргийн мөр болгож хадгална.
      */
-    private function importRows(TaskDocument $document, string $kind, bool $replace): int
+    /**
+     * @param  array<string, int|null>|null  $mapping
+     */
+    private function importRows(TaskDocument $document, string $kind, bool $replace, ?array $mapping = null): int
     {
-        $rows = $this->parseDocumentRows($document, $kind);
+        $rows = $mapping === null
+            ? $this->parseDocumentRows($document, $kind)
+            : app(TaskDocxParser::class)->rowsFromMapping($this->parseRawTable($document)['rows'], $mapping);
 
         if (! $rows) {
             return 0;
