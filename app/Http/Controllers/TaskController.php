@@ -725,6 +725,11 @@ class TaskController extends Controller
 
         $document->delete();
 
+        // Урьдчилан харахаас «Болих» дарсан — мэдэгдэл харуулах шаардлагагүй.
+        if ($request->boolean('discarded')) {
+            return back(303);
+        }
+
         return back(303)->with('success', 'Файл устгалаа.');
     }
 

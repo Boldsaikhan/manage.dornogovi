@@ -168,6 +168,30 @@ class TaskModuleTest extends TestCase
         $this->assertSame('Шинэ үүрэг чиглэл', Task::first()->text);
     }
 
+    public function test_cancelled_preview_removes_the_uploaded_file(): void
+    {
+        Storage::fake('local');
+
+        $admin = User::factory()->create(['is_admin' => true]);
+        $path = $this->makeDirectiveDocx();
+        $file = new UploadedFile($path, 'directive.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', null, true);
+
+        $this->actingAs($admin)
+            ->postJson(route('tasks.documents.preview'), ['kind' => 'directive', 'file' => $file])
+            ->assertOk();
+
+        $doc = TaskDocument::firstOrFail();
+
+        // «Болих» — файл жагсаалтад үлдэхгүй, мөр ч орохгүй.
+        $this->actingAs($admin)
+            ->delete(route('tasks.documents.destroy', $doc), ['discarded' => true])
+            ->assertRedirect()
+            ->assertSessionMissing('success');
+
+        $this->assertDatabaseCount('task_documents', 0);
+        $this->assertDatabaseCount('tasks', 0);
+    }
+
     public function test_admin_can_create_and_delete_custom_section(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

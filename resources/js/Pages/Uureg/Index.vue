@@ -1053,16 +1053,33 @@ const pickWordFile = () => {
     fileInput.value?.click();
 };
 
-const closeWordPreview = () => {
+/** Урьдчилан харах нь дөнгөж байршуулсан файлынх эсэх. */
+const wordPreviewIsNew = ref(false);
+
+const closeWordPreview = ({ discard = false } = {}) => {
+    const docId = wordPreview.value?.document_id;
+    const wasNew = wordPreviewIsNew.value;
+
     wordPreview.value = null;
     wordMapping.value = {};
     wordPreviewing.value = false;
     wordConfirming.value = false;
+    wordPreviewIsNew.value = false;
+
+    // Болих: дөнгөж байршуулсан файлыг үлдээхгүй — «Оруулах» дарж байж ордог.
+    if (discard && wasNew && docId) {
+        router.delete(route('tasks.documents.destroy', docId), {
+            data: { discarded: true },
+            preserveScroll: true,
+            preserveState: true,
+        });
+    }
 };
 
 const openWordPreview = async ({ file = null, documentId = null } = {}) => {
     wordPreviewing.value = true;
     wordPreview.value = null;
+    wordPreviewIsNew.value = !! file;
 
     try {
         const body = new FormData();
@@ -1078,11 +1095,10 @@ const openWordPreview = async ({ file = null, documentId = null } = {}) => {
         const { data } = await window.axios.post(route('tasks.documents.preview'), body);
         wordPreview.value = data;
         wordMapping.value = { ...(data.mapping ?? {}) };
-        router.reload({ only: ['documents'], preserveScroll: true, preserveState: true });
 
         if (! data.count) {
             alert('Хүснэгт олдсонгүй. .docx хэлбэртэй, хүснэгттэй файл байх шаардлагатай.');
-            closeWordPreview();
+            closeWordPreview({ discard: true });
         }
     } catch (e) {
         const msg = e?.response?.data?.message
@@ -1090,7 +1106,7 @@ const openWordPreview = async ({ file = null, documentId = null } = {}) => {
             || e?.message
             || 'Word файлыг уншиж чадсангүй.';
         alert(msg);
-        closeWordPreview();
+        closeWordPreview({ discard: true });
     } finally {
         wordPreviewing.value = false;
         uploadForm.reset('file');
@@ -1124,6 +1140,8 @@ const confirmWordImport = (replace) => {
                 wordConfirming.value = false;
             },
             onSuccess: () => {
+                // Импорт амжилттай — файл жагсаалтад үлдэнэ.
+                wordPreviewIsNew.value = false;
                 closeWordPreview();
             },
         },
@@ -2233,7 +2251,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
         </div>
 
         <!-- Word урьдчилсан харах -->
-        <Modal :show="!! wordPreview" max-width="7xl" @close="closeWordPreview">
+        <Modal :show="!! wordPreview" max-width="7xl" @close="closeWordPreview({ discard: true })">
             <div class="flex max-h-[85vh] flex-col">
                 <div class="border-b border-slate-100 px-5 py-4 sm:px-6">
                     <h3 class="text-base font-semibold text-slate-800">Word файлыг хүснэгтэд тааруулах</h3>
@@ -2344,7 +2362,12 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                         «Нэмэх» — одоогийн мөр дээр нэмнэ. «Орлуулах» — бүх мөрийг солино.
                     </p>
                     <div class="flex flex-wrap gap-2">
-                        <button type="button" class="ui-btn-ghost" :disabled="wordConfirming" @click="closeWordPreview">
+                        <button
+                            type="button"
+                            class="ui-btn-ghost"
+                            :disabled="wordConfirming"
+                            @click="closeWordPreview({ discard: true })"
+                        >
                             Болих
                         </button>
                         <button
