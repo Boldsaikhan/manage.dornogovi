@@ -25,7 +25,8 @@ const TWO_LEVEL_SUFFIXES = ['gov.mn', 'org.mn', 'edu.mn', 'com.mn', 'net.mn'];
  * `shilen.gov.mn` хоорондоо холилдохгүйн тулд gov.mn-д 3 түвшин авна.
  */
 const baseDomain = (host) => {
-    const parts = String(host || '').toLowerCase().split('.').filter(Boolean);
+    // «mail.gov.mn:9071» — порт нь домэйны хэсэг биш.
+    const parts = String(host || '').toLowerCase().split(':')[0].split('.').filter(Boolean);
 
     if (parts.length <= 2) {
         return parts.join('.');
@@ -160,7 +161,13 @@ const take = async (host, mode) => {
 
     if (! result) return null;
 
-    return { mode: result.mode ?? 'password', username: result.username, password: result.password };
+    return {
+        mode: result.mode ?? 'password',
+        // pending = платформоос шинээр дарсан, device = төхөөрөмжид санасан.
+        source: fresh ? 'pending' : 'device',
+        username: result.username,
+        password: result.password,
+    };
 };
 
 

@@ -168,6 +168,34 @@
         setTimeout(() => box.remove(), 6000);
     };
 
+
+    /**
+     * Давталтын хамгаалалт.
+     *
+     * «Төхөөрөмжид санасан» мэдээлэл нь хадгалагдсаар байдаг тул нэвтрэлт
+     * амжилтгүй болоод нэвтрэх хуудас руу буцахад дахин бөглөөд дахин илгээж,
+     * төгсгөлгүй давтдаг байв. Тиймээс нэг session-д НЭГ л удаа автоматаар
+     * илгээнэ. Платформоос шинээр дарж ирсэн бол дахин зөвшөөрнө.
+     */
+    const ATTEMPT_KEY = 'md_autofill_attempt';
+    const ATTEMPT_TTL_MS = 10 * 60 * 1000;
+
+    const alreadySubmitted = () => {
+        try {
+            return Date.now() - Number(sessionStorage.getItem(ATTEMPT_KEY) || 0) < ATTEMPT_TTL_MS;
+        } catch {
+            return false;
+        }
+    };
+
+    const markSubmitted = () => {
+        try {
+            sessionStorage.setItem(ATTEMPT_KEY, String(Date.now()));
+        } catch {
+            // ignore
+        }
+    };
+
     const fill = () => {
         if (filled || ! credential) return false;
 
@@ -201,18 +229,26 @@
 
         filled = true;
 
-        toast('Manage: ДАН-ы мэдээллийг бөглөлөө. Баталгаажуулах кодоо оруулна уу.');
+        const maySubmit = credential.source === 'pending' || ! alreadySubmitted();
 
-        // 5. Код илгээх — маягт төлөвөө шинэчлэх зав өгөөд илгээнэ.
-        setTimeout(() => {
-            submitted = submit();
+        toast(maySubmit
+            ? 'Manage: ДАН-ы мэдээллийг бөглөлөө. Баталгаажуулах кодоо оруулна уу.'
+            : 'Manage: мэдээллийг бөглөлөө. «Нэвтрэх» дарна уу.');
 
-            // Код ирэх хүртэл хүлээгээд, талбарт нь фокус тавина.
-            let tries = 0;
-            const otpTimer = setInterval(() => {
-                if (focusOtpField() || ++tries > 25) clearInterval(otpTimer);
-            }, 400);
-        }, 350);
+        if (maySubmit) {
+            markSubmitted();
+
+            // 5. Код илгээх — маягт төлөвөө шинэчлэх зав өгөөд илгээнэ.
+            setTimeout(() => {
+                submitted = submit();
+
+                // Код ирэх хүртэл хүлээгээд, талбарт нь фокус тавина.
+                let tries = 0;
+                const otpTimer = setInterval(() => {
+                    if (focusOtpField() || ++tries > 25) clearInterval(otpTimer);
+                }, 400);
+            }, 350);
+        }
 
         credential = null;
 
@@ -242,7 +278,7 @@
         }, POLL_MS);
     };
 
-    chrome.runtime.sendMessage({ type: 'take', host: location.hostname, mode: 'dan' }, (entry) => {
+    chrome.runtime.sendMessage({ type: 'take', host: location.host, mode: 'dan' }, (entry) => {
         if (chrome.runtime.lastError) return;
 
         start(entry);
