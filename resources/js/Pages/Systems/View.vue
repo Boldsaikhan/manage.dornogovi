@@ -4,6 +4,7 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import VaultUnlockForm from '@/Components/VaultUnlockForm.vue';
+import Modal from '@/Components/Modal.vue';
 
 const props = defineProps({
     system: Object,
@@ -46,6 +47,28 @@ const toggleReveal = () => {
     revealError.value = '';
 };
 
+/** Амжилттай бол цонхонд харуулна. */
+const revealedPassword = ref('');
+const revealCopied = ref(false);
+
+const closeReveal = () => {
+    revealOpen.value = false;
+    revealPassword.value = '';
+    revealError.value = '';
+    revealedPassword.value = '';
+    revealCopied.value = false;
+};
+
+const copyRevealed = async () => {
+    try {
+        await navigator.clipboard.writeText(revealedPassword.value);
+        revealCopied.value = true;
+        setTimeout(() => (revealCopied.value = false), 1500);
+    } catch {
+        // Хуулах боломжгүй — гараар сонгоно.
+    }
+};
+
 const submitReveal = async () => {
     if (revealBusy.value || ! revealPassword.value) return;
 
@@ -59,8 +82,8 @@ const submitReveal = async () => {
 
         form.username = data.username ?? form.username;
         form.password = data.password ?? '';
+        revealedPassword.value = data.password ?? '';
         showPassword.value = true;
-        revealOpen.value = false;
         revealPassword.value = '';
     } catch (e) {
         revealError.value = e?.response?.data?.errors?.account_password?.[0]
@@ -243,40 +266,27 @@ const removeCredential = () => {
                             />
                             <button
                                 type="button"
-                                class="shrink-0 rounded-md border border-slate-200 px-3 text-xs text-slate-600 hover:bg-slate-50"
+                                class="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-brand-navy-300 hover:bg-slate-50"
+                                :title="system.has_credential && ! form.password
+                                    ? 'Хадгалсан нууц үгийг харах — өөрийн нууц үгээр баталгаажуулна'
+                                    : 'Бичиж буй нууц үгийг харах'"
                                 @click="toggleReveal"
                             >
+                                <svg
+                                    v-if="system.has_credential && ! form.password"
+                                    class="h-3.5 w-3.5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V7a4.5 4.5 0 10-9 0v3.5M6 10.5h12a1.5 1.5 0 011.5 1.5v7A1.5 1.5 0 0118 20.5H6A1.5 1.5 0 014.5 19v-7A1.5 1.5 0 016 10.5z" />
+                                </svg>
                                 {{ showPassword && form.password ? 'Нуух' : 'Харах' }}
                             </button>
                         </div>
 
-                        <!-- Хадгалсан нууц үгийг харах — өөрийн нууц үгээр баталгаажуулна -->
-                        <div v-if="revealOpen" class="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                            <p class="mb-2 text-xs text-slate-600">
-                                Хадгалсан нууц үгийг харахын тулд өөрийн нууц үгээ оруулна уу.
-                            </p>
-                            <div class="flex flex-wrap gap-2">
-                                <input
-                                    v-model="revealPassword"
-                                    type="password"
-                                    autocomplete="current-password"
-                                    class="ui-input min-w-0 flex-1"
-                                    placeholder="Manage-ийн нууц үг"
-                                    @keyup.enter="submitReveal"
-                                />
-                                <button
-                                    type="button"
-                                    class="ui-btn-ghost shrink-0"
-                                    :disabled="revealBusy"
-                                    @click="submitReveal"
-                                >
-                                    {{ revealBusy ? 'Шалгаж байна…' : 'Харуулах' }}
-                                </button>
-                            </div>
-                            <p v-if="revealError" class="mt-1 text-xs text-red-600">{{ revealError }}</p>
-                        </div>
-
-                        <p v-else-if="system.has_credential && ! form.password" class="mt-1 text-xs text-slate-500">
+                        <p v-if="system.has_credential && ! form.password" class="mt-1 text-xs text-slate-500">
                             Нууц үг хадгалагдсан. Хоосон орхивол хэвээр үлдэнэ.
                         </p>
 
@@ -409,5 +419,79 @@ const removeCredential = () => {
                 </div>
             </div>
         </div>
+        <!-- Хадгалсан нууц үгийг харах -->
+        <Modal :show="revealOpen" max-width="md" @close="closeReveal">
+            <div class="p-6">
+                <div class="flex items-start gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-navy-50 text-brand-navy-600">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V7a4.5 4.5 0 10-9 0v3.5M6 10.5h12a1.5 1.5 0 011.5 1.5v7A1.5 1.5 0 0118 20.5H6A1.5 1.5 0 014.5 19v-7A1.5 1.5 0 016 10.5z" />
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="text-base font-semibold text-brand-navy-900">
+                            Хадгалсан нууц үгийг харах
+                        </h3>
+                        <p class="mt-0.5 text-sm text-slate-500">{{ system.name }}</p>
+                    </div>
+                </div>
+
+                <!-- 1. Баталгаажуулалт -->
+                <template v-if="! revealedPassword">
+                    <p class="mt-4 text-sm leading-relaxed text-slate-600">
+                        Өөр хүн харахаас сэргийлэх үүднээс өөрийнхөө
+                        <strong class="text-brand-navy-700">Manage-ийн нууц үг</strong>-ийг оруулна уу.
+                    </p>
+
+                    <label class="ui-label mt-4">Таны Manage-ийн нууц үг</label>
+                    <input
+                        v-model="revealPassword"
+                        type="password"
+                        autocomplete="current-password"
+                        class="ui-input"
+                        placeholder="Энэ системд нэвтэрдэг нууц үг"
+                        @keyup.enter="submitReveal"
+                    />
+                    <p class="mt-1 text-xs text-slate-400">{{ page.props.auth?.user?.email || page.props.auth?.user?.phone }}</p>
+                    <p v-if="revealError" class="mt-1.5 text-sm text-red-600">{{ revealError }}</p>
+
+                    <div class="mt-6 flex justify-end gap-2">
+                        <button type="button" class="ui-btn-ghost" @click="closeReveal">Болих</button>
+                        <button
+                            type="button"
+                            class="ui-btn-primary"
+                            :disabled="revealBusy || ! revealPassword"
+                            @click="submitReveal"
+                        >
+                            {{ revealBusy ? 'Шалгаж байна…' : 'Харуулах' }}
+                        </button>
+                    </div>
+                </template>
+
+                <!-- 2. Үр дүн -->
+                <template v-else>
+                    <label class="ui-label mt-4">Хадгалсан нууц үг</label>
+                    <div class="flex gap-2">
+                        <input
+                            :value="revealedPassword"
+                            type="text"
+                            readonly
+                            class="ui-input flex-1 font-mono"
+                            @focus="$event.target.select()"
+                        />
+                        <button type="button" class="ui-btn-ghost shrink-0" @click="copyRevealed">
+                            {{ revealCopied ? 'Хуулагдлаа' : 'Хуулах' }}
+                        </button>
+                    </div>
+                    <p class="mt-2 text-xs text-slate-500">
+                        Маягтад бас бөглөгдсөн — засаад «Шинэчлэх» дарвал шинэчлэгдэнэ.
+                    </p>
+
+                    <div class="mt-6 flex justify-end">
+                        <button type="button" class="ui-btn-primary" @click="closeReveal">Хаах</button>
+                    </div>
+                </template>
+            </div>
+        </Modal>
     </AuthenticatedLayout>
 </template>
