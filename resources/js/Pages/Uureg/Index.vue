@@ -103,7 +103,11 @@ const closeDownload = (event) => {
 };
 
 onMounted(() => document.addEventListener('click', closeDownload));
-onBeforeUnmount(() => document.removeEventListener('click', closeDownload));
+onBeforeUnmount(() => {
+    document.removeEventListener('click', closeDownload);
+    // Чирэлт дундуур хуудас солигдвол сонсогчид үлдэхээс сэргийлнэ.
+    onColumnPointerUp();
+});
 
 const drafts = reactive({});
 const fileInput = ref(null);
@@ -122,6 +126,11 @@ const newKindForm = useForm({
 const deletingKind = ref(false);
 
 const toggleNewKindColumn = (key) => {
+    // Чирээд тавихад гарах click нь сонголтыг унтраахаас сэргийлнэ.
+    if (Date.now() < suppressColumnClickUntil) {
+        return;
+    }
+
     const selected = [...newKindForm.columns];
     const index = selected.indexOf(key);
 
@@ -165,6 +174,74 @@ const moveNewKindColumn = (key, step) => {
 };
 
 const newKindColumnIndex = (key) => newKindForm.columns.indexOf(key);
+
+/* ---------- Багануудыг чирж зөөх ----------
+ *
+ * HTML5 drag&drop-ыг ашиглахгүй — энэ төсөлд найдваргүй болох нь батлагдсан.
+ * Pointer event-ээр өөрсдөө хөтөлж, elementFromPoint-оор доорх чипийг олно.
+ */
+const draggingColumn = ref(null);
+let columnDragStart = null;
+let columnDragMoved = false;
+let suppressColumnClickUntil = 0;
+
+const onColumnPointerMove = (event) => {
+    if (! columnDragStart) return;
+
+    const dx = event.clientX - columnDragStart.x;
+    const dy = event.clientY - columnDragStart.y;
+
+    // Санамсаргүй бага хөдөлгөөнийг чирэлт гэж үзэхгүй.
+    if (! columnDragMoved && Math.hypot(dx, dy) < 5) return;
+
+    columnDragMoved = true;
+    draggingColumn.value = columnDragStart.key;
+    event.preventDefault();
+
+    const el = document.elementFromPoint(event.clientX, event.clientY);
+    const overKey = el?.closest('[data-col-drop]')?.dataset.colDrop;
+
+    if (! overKey || overKey === draggingColumn.value || ! isNewKindColumnOn(overKey)) return;
+
+    const cols = [...newKindForm.columns];
+    const from = cols.indexOf(draggingColumn.value);
+    const to = cols.indexOf(overKey);
+
+    if (from < 0 || to < 0) return;
+
+    cols.splice(to, 0, cols.splice(from, 1)[0]);
+    newKindForm.columns = cols;
+};
+
+const onColumnPointerUp = () => {
+    window.removeEventListener('pointermove', onColumnPointerMove);
+    window.removeEventListener('pointerup', onColumnPointerUp);
+    window.removeEventListener('pointercancel', onColumnPointerUp);
+    document.body.classList.remove('select-none');
+
+    // Чирсний дараах click нь тэмдэглэгээг санамсаргүй унтраахаас сэргийлнэ.
+    if (columnDragMoved) {
+        suppressColumnClickUntil = Date.now() + 300;
+    }
+
+    columnDragStart = null;
+    columnDragMoved = false;
+    draggingColumn.value = null;
+};
+
+const onColumnPointerDown = (event, key) => {
+    // Тэмдэглэх нүд, зөөх товч дээр дарахад чирэлт эхлүүлэхгүй.
+    if (event.target.closest('input, button')) return;
+    if (! isNewKindColumnOn(key)) return;
+
+    columnDragStart = { key, x: event.clientX, y: event.clientY };
+    columnDragMoved = false;
+    document.body.classList.add('select-none');
+
+    window.addEventListener('pointermove', onColumnPointerMove, { passive: false });
+    window.addEventListener('pointerup', onColumnPointerUp);
+    window.addEventListener('pointercancel', onColumnPointerUp);
+};
 
 const submitNewKind = () => {
     newKindForm.post(route('tasks.sources.store'), {
@@ -1198,16 +1275,24 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                     <fieldset>
                         <legend class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                             Хүснэгтийн толгой
+                            <span class="ml-2 font-normal normal-case tracking-normal text-slate-400">
+                                — чирж эсвэл ‹ › товчоор байрлалыг солино
+                            </span>
                         </legend>
                         <!-- Нэг мөрөнд — багтахгүй бол хажуу тийш гүйнэ. Зүүнээс барууншаа баганын дараалал. -->
                         <div class="-mx-1 flex items-stretch gap-2 overflow-x-auto px-1 pb-1">
                             <div
                                 v-for="col in orderedColumnChoices"
                                 :key="'new-col-' + col.key"
+                                :data-col-drop="col.key"
                                 class="flex shrink-0 items-center gap-1.5 rounded-xl border px-2.5 py-2 text-sm transition"
-                                :class="isNewKindColumnOn(col.key)
-                                    ? 'border-brand-navy-300 bg-brand-navy-50 text-brand-navy-800'
-                                    : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'"
+                                :class="[
+                                    isNewKindColumnOn(col.key)
+                                        ? 'cursor-grab touch-none border-brand-navy-300 bg-brand-navy-50 text-brand-navy-800 active:cursor-grabbing'
+                                        : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50',
+                                    draggingColumn === col.key ? 'opacity-50 ring-2 ring-brand-navy-400' : '',
+                                ]"
+                                @pointerdown="onColumnPointerDown($event, col.key)"
                             >
                                 <label class="flex cursor-pointer items-center gap-1.5 whitespace-nowrap">
                                     <input
