@@ -1,5 +1,63 @@
 # NDC рүү илгээх хүсэлт — 2026-09-04
 
+## ✉️ БОГИНО ХУВИЛБАР — хуулж илгээх
+
+**Хэнд:** `admin@ndc.gov.mn` · **Хуулбар:** `it@dornogovi.gov.mn`
+**Мөн:** mcloud.gov.mn → «Холбоо барих»
+
+**Сэдэв:**
+
+```
+manage.dornogovi.gov.mn — Skytel DNS дээр NXDOMAIN хэвээр (үргэлжлэл)
+```
+
+**Агуулга:**
+
+```
+Сайн байна уу.
+
+Дорноговь аймгийн ЗДТГ. Өмнөх хүсэлтийн үргэлжлэл.
+
+Танай засварын дараа Univision дээр асуудал арилсан, баярлалаа.
+Гэвч Skytel дээр хэвээр байна:
+
+  Google 8.8.8.8         → 202.37.109.67   OK
+  Cloudflare 1.1.1.1     → 202.37.109.67   OK
+  Univision 59.153.112.2 → 202.37.109.67   OK
+  Skytel 103.206.153.188 → NXDOMAIN        АЛДАА
+
+Сайт өөрөө хэвийн: https://manage.dornogovi.gov.mn/login → 200
+
+dornogovi.gov.mn бүсийн SOA minimum (сөрөг кэш) TTL = 86400 буюу 24 цаг.
+Тиймээс authoritative серверүүдийн аль нэг нь зөрүүтэй байвал ISP-ийн кэш
+өдөр бүр дахин «хордоно».
+
+ХҮСЭЛТ
+
+1. ns.gov.mn, ns1, ns3, ns4 дөрвүүлэн ижил хариу өгч байгааг шалгана уу:
+     dig +short A manage.dornogovi.gov.mn @ns.gov.mn
+     dig +short A manage.dornogovi.gov.mn @ns1.gov.mn
+     dig +short A manage.dornogovi.gov.mn @ns3.gov.mn
+     dig +short A manage.dornogovi.gov.mn @ns4.gov.mn
+   Дөрвүүлэнд 202.37.109.67 гарах ёстой.
+
+2. SOA-ийн minimum TTL-ийг 86400 → 300 болгож бууруулна уу. Ингэвэл
+   цаашид ийм алдаа 24 цаг биш 5 минутад засарна.
+
+3. Кэш дуустал хүлээхгүйн тулд ШИНЭ нэр нэмж өгнө үү:
+     erp.dornogovi.gov.mn.  IN  A  202.37.109.67   TTL 300
+   Урьд асуугдаж байгаагүй нэр тул бүх ISP дээр шууд ажиллана. Бид энэ
+   нэрийг nginx болон гэрчилгээндээ нэмнэ.
+
+Холбоо барих: it@dornogovi.gov.mn
+
+Баярлалаа.
+```
+
+---
+
+## Дэлгэрэнгүй хувилбар
+
 **Хаана:** `admin@ndc.gov.mn` (SOA-д бүртгэлтэй хариуцагч) · mcloud.gov.mn → «Холбоо барих»
 **Хуулбар:** `it@dornogovi.gov.mn`
 
