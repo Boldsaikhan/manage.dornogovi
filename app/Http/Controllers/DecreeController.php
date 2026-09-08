@@ -281,14 +281,18 @@ class DecreeController extends Controller
             default => 'Тушаалын гарчиг',
         };
 
-        $headings = ['№', 'Дугаар', 'Огноо', $titleCol, 'Хуудас', 'Хавсралт', 'Хавсралтын хуудас', 'Боловсруулсан'];
-        $widths = [600, 1000, 1200, 4200, 900, 2800, 1200, 2400];
-        $center = [0, 1, 2, 4, 6];
+        $headings = [
+            '№', 'Батлагдсан огноо', 'Бүртгэлийн дугаар', $titleCol, 'Хуудасны тоо',
+            'Дагаж мөрдөх огноо', 'Хавсралтын нэр', 'Хавсралтын хуудас',
+            'Эх хувийн шинж', 'Хэргийн индекс', 'Боловсруулсан',
+        ];
+        $widths = [500, 1100, 1000, 3200, 800, 1100, 2200, 900, 1400, 1100, 1900];
+        $center = [0, 1, 2, 4, 5, 7, 9];
 
         if ($tab === 'niit') {
             $headings[] = 'Төрөл';
             $widths[] = 1400;
-            $center[] = 8;
+            $center[] = count($headings) - 1;
         }
 
         $sheetRows = [];
@@ -297,12 +301,15 @@ class DecreeController extends Controller
         foreach ($rows as $row) {
             $cells = [
                 (string) $row['no'],
-                (string) ($row['number'] ?? ''),
                 (string) ($row['issued_on_display'] ?? ''),
+                (string) ($row['number'] ?? ''),
                 (string) ($row['title'] ?? ''),
                 (string) ($row['page_count'] ?? ''),
+                (string) ($row['effective_on'] ?? ''),
                 (string) ($row['attachment_name'] ?? ''),
                 (string) ($row['attachment_pages'] ?? ''),
+                (string) ($row['original_form'] ?? ''),
+                (string) ($row['file_index'] ?? ''),
                 (string) ($row['person_name'] ?? ''),
             ];
 
@@ -519,8 +526,11 @@ class DecreeController extends Controller
                 'title' => ['nullable', 'string', 'max:1000'],
                 'issued_on' => ['nullable', 'date'],
                 'page_count' => ['nullable', 'integer', 'min:0', 'max:9999'],
+                'effective_on' => ['nullable', 'date'],
                 'attachment_name' => ['nullable', 'string', 'max:500'],
                 'attachment_pages' => ['nullable', 'integer', 'min:0', 'max:9999'],
+                'original_form' => ['nullable', 'string', 'max:255'],
+                'file_index' => ['nullable', 'string', 'max:100'],
                 'person_name' => ['nullable', 'string', 'max:255'],
                 'body' => ['nullable', 'string', 'max:20000'],
             ]);
@@ -534,8 +544,11 @@ class DecreeController extends Controller
                 'title' => $data['title'] ?? '',
                 'issued_on' => $data['issued_on'] ?? null,
                 'page_count' => $data['page_count'] ?? null,
+                'effective_on' => $data['effective_on'] ?? null,
                 'attachment_name' => $data['attachment_name'] ?? null,
                 'attachment_pages' => $data['attachment_pages'] ?? null,
+                'original_form' => $data['original_form'] ?? null,
+                'file_index' => $data['file_index'] ?? null,
                 'person_name' => $person !== '' ? $person : null,
                 'body' => $data['body'] ?? null,
                 'created_by' => $request->user()->id,
@@ -613,8 +626,11 @@ class DecreeController extends Controller
                 'title' => ['sometimes', 'nullable', 'string', 'max:1000'],
                 'issued_on' => ['sometimes', 'nullable', 'date'],
                 'page_count' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:9999'],
+                'effective_on' => ['sometimes', 'nullable', 'date'],
                 'attachment_name' => ['sometimes', 'nullable', 'string', 'max:500'],
                 'attachment_pages' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:9999'],
+                'original_form' => ['sometimes', 'nullable', 'string', 'max:255'],
+                'file_index' => ['sometimes', 'nullable', 'string', 'max:100'],
                 'person_name' => ['sometimes', 'nullable', 'string', 'max:255'],
                 'body' => ['sometimes', 'nullable', 'string', 'max:20000'],
             ]);
@@ -684,7 +700,10 @@ class DecreeController extends Controller
             'title' => 'Гарчиг',
             'issued_on' => 'Огноо',
             'page_count' => 'Хуудасны тоо',
+            'effective_on' => 'Дагаж мөрдөх огноо',
             'attachment_name' => 'Хавсралт',
+            'original_form' => 'Эх хувийн шинж',
+            'file_index' => 'Хэргийн индекс',
             'qty_zahiramj' => 'Захирамжийн тоо',
             'qty_tushaal' => 'Тушаалын тоо',
         ];
@@ -897,8 +916,11 @@ class DecreeController extends Controller
             'number' => $d->number,
             'title' => $d->title,
             'page_count' => $d->page_count,
+            'effective_on' => optional($d->effective_on)?->format('Y-m-d'),
             'attachment_name' => $d->attachment_name,
             'attachment_pages' => $d->attachment_pages,
+            'original_form' => $d->original_form,
+            'file_index' => $d->file_index,
             'person_name' => $d->person_name,
             'qty_zahiramj' => $d->qty_zahiramj ?: '',
             'qty_zahiramj_mn' => $d->qty_zahiramj_mn ?: '',
