@@ -84,6 +84,35 @@ class Decree extends Model
         return self::KINDS[$this->kind] ?? ($this->kind ?: '—');
     }
 
+    /**
+     * Бүртгэлийн дугаарын угтвар — А/Б хэлбэр.
+     *
+     * Албан ёсны маягтад дугаарыг «А/01» гэж бичдэг. Өгөгдлийн санд зөвхөн
+     * дугаарыг хадгалж, угтварыг төрлөөс нь гаргаж харуулна.
+     */
+    public function numberPrefix(): ?string
+    {
+        return match ($this->kind) {
+            'zahiramj_a', 'tushaal_a' => 'А',
+            'zahiramj_b', 'tushaal_b' => 'Б',
+            default => null,
+        };
+    }
+
+    /** Харуулах дугаар: «А/01». Дугааргүй бол хоосон. */
+    public function numberDisplay(): string
+    {
+        $number = trim((string) $this->number);
+
+        if ($number === '') {
+            return '';
+        }
+
+        $prefix = $this->numberPrefix();
+
+        return $prefix ? $prefix.'/'.$number : $number;
+    }
+
     public function isBlankIssue(): bool
     {
         return $this->category === 'blank';

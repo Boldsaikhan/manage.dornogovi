@@ -781,15 +781,23 @@ const docColumnCount = computed(() => {
                                 />
                             </td>
                             <td :class="cellClass">
-                                <SheetCell
-                                    v-if="drafts[row.id]"
-                                    v-model="drafts[row.id].number"
-                                    align="center"
-                                    :editable="canManage"
-                                    empty-label=""
-                                    placeholder="Дугаар…"
-                                    @commit="(v) => saveField(row.id, 'number', v)"
-                                />
+                                <div class="flex items-center justify-center">
+                                    <!-- Угтвар нь төрлөөсөө гардаг тул засварлахгүй -->
+                                    <span
+                                        v-if="row.number_prefix"
+                                        class="shrink-0 pl-1 text-slate-500"
+                                    >{{ row.number_prefix }}/</span>
+                                    <SheetCell
+                                        v-if="drafts[row.id]"
+                                        v-model="drafts[row.id].number"
+                                        align="center"
+                                        class="min-w-0 flex-1"
+                                        :editable="canManage"
+                                        empty-label=""
+                                        placeholder="01"
+                                        @commit="(v) => saveField(row.id, 'number', v)"
+                                    />
+                                </div>
                             </td>
                             <td :class="cellClass">
                                 <SheetCell

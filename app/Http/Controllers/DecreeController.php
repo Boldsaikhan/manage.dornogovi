@@ -302,7 +302,7 @@ class DecreeController extends Controller
             $cells = [
                 (string) $row['no'],
                 (string) ($row['issued_on_display'] ?? ''),
-                (string) ($row['number'] ?? ''),
+                (string) ($row['number_display'] ?? $row['number'] ?? ''),
                 (string) ($row['title'] ?? ''),
                 (string) ($row['page_count'] ?? ''),
                 (string) ($row['effective_on'] ?? ''),
@@ -914,6 +914,8 @@ class DecreeController extends Controller
             'kind_label' => $d->kindLabel(),
             'blank_number' => $d->blank_number,
             'number' => $d->number,
+            'number_prefix' => $d->numberPrefix(),
+            'number_display' => $d->numberDisplay(),
             'title' => $d->title,
             'page_count' => $d->page_count,
             'effective_on' => optional($d->effective_on)?->format('Y-m-d'),

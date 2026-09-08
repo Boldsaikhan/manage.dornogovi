@@ -67,6 +67,51 @@ class DecreeRegisterColumnsTest extends TestCase
         $this->assertSame('02-11', $decree->file_index);
     }
 
+    public function test_the_number_is_shown_with_the_kind_prefix(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $this->decree();
+
+        $this->actingAs($admin)
+            ->get(route('decrees.index', ['tab' => 'zahiramj_a']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                // Санд зөвхөн дугаар, харуулахдаа угтвартай.
+                ->where('rows.0.number', '01')
+                ->where('rows.0.number_prefix', 'А')
+                ->where('rows.0.number_display', 'А/01')
+            );
+    }
+
+    public function test_the_b_kind_uses_its_own_prefix(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        Decree::create([
+            'category' => 'zahiramj',
+            'kind' => 'zahiramj_b',
+            'number' => '07',
+            'title' => 'Б төрлийн захирамж',
+            'issued_on' => '2026-09-02',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('decrees.index', ['tab' => 'zahiramj_b']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('rows.0.number_display', 'Б/07')
+            );
+    }
+
+    public function test_the_printed_page_uses_the_prefixed_number(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $this->decree();
+
+        $this->actingAs($admin)
+            ->get(route('decrees.print', ['tab' => 'zahiramj_a']))
+            ->assertOk()
+            ->assertSee('А/01');
+    }
+
     public function test_print_page_shows_the_official_headings(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
