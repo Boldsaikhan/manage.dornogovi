@@ -479,7 +479,7 @@ const docColumnCount = computed(() => {
                                 Хэвлэмэл хуудасны дугаар
                             </th>
                             <th colspan="2" class="decree-sheet__head-group--void">
-                                Үрэгдүүлсэн хуудасны дугаар
+                                Хүчингүй болгосон хэвлэмэл хуудасны тоо
                             </th>
                             <th rowspan="2">
                                 Хүлээн авсан<br>гарын үсэг
