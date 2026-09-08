@@ -82,6 +82,19 @@ class TravelAssignmentSheetTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page->has('rows', 1));
     }
 
+    public function test_the_new_record_form_uses_the_a4_sheet_layout(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->get(route('assignments.index', ['scope' => 'chief']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('formLayout', 'assignment_sheet')
+                ->where('formMeta.lines.0', 'ДОРНОГОВЬ АЙМГИЙН ЗДТГ-ЫН')
+                ->has('formMeta.budget_kinds', 3)
+            );
+    }
+
     public function test_a_user_without_access_cannot_print(): void
     {
         $user = User::factory()->create();

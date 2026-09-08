@@ -160,7 +160,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (['Байр', 'Зам хоног', 'Түлш, шатахуун'] as $i => $kind)
+            @foreach (\App\Support\AssignmentSheet::BUDGET_KINDS as $i => $kind)
                 <tr>
                     <td class="no">{{ $i + 1 }}</td>
                     <td class="kind">{{ $kind }}</td>

@@ -4,6 +4,7 @@ import { router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
+import AssignmentSheetForm from '@/Components/AssignmentSheetForm.vue';
 
 const props = defineProps({
     module: String,
@@ -21,7 +22,12 @@ const props = defineProps({
     scopeField: { type: String, default: null },
     directory: { type: Array, default: () => [] },
     rowActions: { type: Array, default: () => [] },
+    // Тусгай маягт (A4 хэлбэрээр бөглөх) — жишээ нь томилолтын удирдамж.
+    formLayout: { type: String, default: null },
+    formMeta: { type: Object, default: () => ({}) },
 });
+
+const isSheetForm = computed(() => props.formLayout === 'assignment_sheet');
 
 const showScopePanel = ref(false);
 const showNewScope = ref(false);
@@ -536,13 +542,21 @@ const destroyRow = (id) => {
             </Teleport>
         </div>
 
-        <Modal :show="showForm && canManage" max-width="2xl" @close="closeForm">
-            <form class="p-6" @submit.prevent="submit">
+        <Modal :show="showForm && canManage" :max-width="isSheetForm ? '4xl' : '2xl'" @close="closeForm">
+            <form :class="isSheetForm ? 'p-4 sm:p-6' : 'p-6'" @submit.prevent="submit">
                 <div class="mb-5 flex items-start justify-between gap-3">
                     <div>
-                        <h3 class="text-base font-semibold text-brand-navy-900">Шинэ бүртгэл</h3>
+                        <h3 class="text-base font-semibold text-brand-navy-900">
+                            {{ isSheetForm ? 'Томилолтын удирдамж' : 'Шинэ бүртгэл' }}
+                        </h3>
                         <p class="mt-0.5 text-sm text-slate-500">
-                            {{ activeScopeLabel && activeScope !== 'all' ? activeScopeLabel : title }} — мэдээллээ оруулна уу.
+                            <template v-if="isSheetForm">
+                                {{ activeScopeLabel && activeScope !== 'all' ? activeScopeLabel + ' батална' : 'Батлах албан тушаалтныг табаас сонгоно' }}
+                                — хэвлэгдэх маягтын дагуу бөглөнө үү.
+                            </template>
+                            <template v-else>
+                                {{ activeScopeLabel && activeScope !== 'all' ? activeScopeLabel : title }} — мэдээллээ оруулна уу.
+                            </template>
                         </p>
                     </div>
                     <button
@@ -557,7 +571,10 @@ const destroyRow = (id) => {
                     </button>
                 </div>
 
-                <div class="grid max-h-[65vh] gap-4 overflow-y-auto pr-1 md:grid-cols-2">
+                <div class="max-h-[70vh] overflow-y-auto pr-1">
+                <AssignmentSheetForm v-if="isSheetForm" :form="form" :meta="formMeta" />
+
+                <div v-else class="grid gap-4 md:grid-cols-2">
                     <div
                         v-for="field in fields"
                         :key="field.name"
@@ -659,6 +676,7 @@ const destroyRow = (id) => {
                         </p>
                         <InputError :message="form.errors[field.name]" class="mt-1" />
                     </div>
+                </div>
                 </div>
 
                 <div class="mt-6 flex justify-end gap-2 border-t border-slate-100 pt-4">
