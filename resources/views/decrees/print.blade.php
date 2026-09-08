@@ -333,7 +333,7 @@
                                 <tr>
                                     <td class="center">{{ $row['no'] }}</td>
                                     <td class="center">{{ $row['issued_on_display'] }}</td>
-                                    <td class="center">{{ $row['number'] }}</td>
+                                    <td class="center">{{ $row['number_display'] ?: $row['number'] }}</td>
                                     <td>{{ $row['title'] }}</td>
                                     <td class="center">{{ $row['page_count'] }}</td>
                                     <td class="center">{{ $row['effective_on'] }}</td>
