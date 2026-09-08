@@ -13,6 +13,7 @@ const props = defineProps({
     departmentUnits: { type: Array, default: () => [] },
     unitTypes: { type: Object, default: () => ({}) },
     canManage: Boolean,
+    isAdmin: { type: Boolean, default: false },
 });
 
 const page = usePage();
@@ -84,6 +85,51 @@ const toggleAllVisible = () => {
 const exportUrl = computed(() => (selectedCount.value
     ? route('phone-directory.export', { ids: [...selectedIds.value].join(',') })
     : route('phone-directory.export')));
+
+/* ---------- Нэвтрэх нэр, нууц үг шинэчлэх (зөвхөн админ) ---------- */
+
+const accountRow = ref(null);
+const accountForm = useForm({ login: '', password: '' });
+const accountShowPassword = ref(false);
+
+const openAccount = (row) => {
+    accountRow.value = row;
+    accountForm.reset();
+    accountForm.clearErrors();
+    accountForm.login = row.account?.login ?? row.mobile_phone ?? '';
+    accountShowPassword.value = false;
+};
+
+const closeAccount = () => {
+    accountRow.value = null;
+    accountForm.reset();
+    accountForm.clearErrors();
+};
+
+/** Уншихад ойлгомжтой түр нууц үг санал болгоно. */
+const suggestPassword = () => {
+    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lower = 'abcdefghijkmnpqrstuvwxyz';
+    const digits = '23456789';
+    const pool = upper + lower + digits;
+    const pick = (set) => set[Math.floor(Math.random() * set.length)];
+
+    const chars = [pick(upper), pick(lower), pick(digits)];
+
+    while (chars.length < 10) chars.push(pick(pool));
+
+    accountForm.password = chars.sort(() => Math.random() - 0.5).join('');
+    accountShowPassword.value = true;
+};
+
+const submitAccount = () => {
+    if (! accountRow.value) return;
+
+    accountForm.patch(route('admin.phone-directory.account', accountRow.value.id), {
+        preserveScroll: true,
+        onSuccess: () => closeAccount(),
+    });
+};
 
 const editingId = ref(null);
 const isEditing = computed(() => editingId.value !== null);
@@ -659,6 +705,17 @@ const closeDirectoryForm = () => {
                                 <td class="text-center">{{ row.office_phone || '—' }}</td>
                                 <td class="text-center">{{ row.mobile_phone || '—' }}</td>
                                 <td v-if="editingActive" class="text-right whitespace-nowrap">
+                                    <button
+                                        v-if="isAdmin"
+                                        type="button"
+                                        class="mr-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 hover:border-brand-navy-300 hover:bg-slate-50"
+                                        :title="row.account
+                                            ? 'Нэвтрэх нэр, нууц үгийг шинэчлэх'
+                                            : 'Нэвтрэх эрх үүсээгүй байна'"
+                                        @click="openAccount(row)"
+                                    >
+                                        {{ row.account ? '🔑' : '🔒' }}
+                                    </button>
                                     <span v-if="canInsert" class="mr-1 inline-flex align-middle">
                                         <button
                                             type="button"
@@ -724,6 +781,80 @@ const closeDirectoryForm = () => {
                 </table>
             </div>
         </div>
+
+        <!-- Modal: нэвтрэх нэр, нууц үг -->
+        <Modal :show="!! accountRow" max-width="md" @close="closeAccount">
+            <form class="p-6" @submit.prevent="submitAccount">
+                <h3 class="text-base font-semibold text-brand-navy-900">Нэвтрэх нэр, нууц үг</h3>
+                <p class="mt-0.5 text-sm text-slate-500">
+                    {{ accountRow?.person_name }}
+                    <template v-if="accountRow?.position"> · {{ accountRow.position }}</template>
+                </p>
+
+                <p
+                    v-if="accountRow && ! accountRow.account"
+                    class="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800"
+                >
+                    Энэ хүнд нэвтрэх эрх үүсээгүй байна. «Хандах эрх» хэсгээс бүртгэл
+                    үүсгэсний дараа энд нууц үгийг нь шинэчилж болно.
+                </p>
+
+                <template v-else>
+                    <div class="mt-4">
+                        <label class="ui-label">Нэвтрэх нэр (гар утас)</label>
+                        <input v-model="accountForm.login" type="tel" inputmode="numeric" class="ui-input" />
+                        <InputError :message="accountForm.errors.login" class="mt-1" />
+                        <p class="mt-1 text-xs text-slate-400">
+                            Өөрчилвөл утасны жагсаалтын дугаар нь ч зэрэг шинэчлэгдэнэ.
+                        </p>
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="ui-label">Шинэ нууц үг</label>
+                        <div class="flex gap-2">
+                            <input
+                                v-model="accountForm.password"
+                                :type="accountShowPassword ? 'text' : 'password'"
+                                class="ui-input flex-1"
+                                placeholder="Хоосон орхивол хэвээр үлдэнэ"
+                                autocomplete="new-password"
+                            />
+                            <button
+                                type="button"
+                                class="shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-600 hover:bg-slate-50"
+                                @click="accountShowPassword = ! accountShowPassword"
+                            >
+                                {{ accountShowPassword ? 'Нуух' : 'Харах' }}
+                            </button>
+                            <button
+                                type="button"
+                                class="shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-600 hover:bg-slate-50"
+                                title="Санамсаргүй нууц үг үүсгэнэ"
+                                @click="suggestPassword"
+                            >
+                                Санал
+                            </button>
+                        </div>
+                        <InputError :message="accountForm.errors.password" class="mt-1" />
+                        <p class="mt-1 text-xs text-slate-400">
+                            Хамгийн багадаа 6 тэмдэгт. Тухайн хүнд амаар эсвэл бичгээр дамжуулна уу.
+                        </p>
+                    </div>
+                </template>
+
+                <div class="mt-6 flex justify-end gap-2 border-t border-slate-100 pt-4">
+                    <button type="button" class="ui-btn-ghost" @click="closeAccount">Болих</button>
+                    <button
+                        v-if="accountRow?.account"
+                        type="submit"
+                        class="ui-btn-primary"
+                        :disabled="accountForm.processing"
+                    >
+                        {{ accountForm.processing ? 'Хадгалж байна…' : 'Шинэчлэх' }}
+                    </button>
+                </div>
+            </form>
+        </Modal>
 
         <!-- Modal: directory add / edit -->
         <Modal :show="showForm && editingActive && isDirectory" max-width="2xl" @close="closeDirectoryForm">

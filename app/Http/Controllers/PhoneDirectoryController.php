@@ -34,18 +34,41 @@ class PhoneDirectoryController extends Controller
             ->orderBy('id')
             ->get();
 
+        $isAdmin = (bool) $request->user()->is_admin;
+
+        // Админд — мөр бүрийн нэвтрэх эрх байгаа эсэх (утсаар нь холбоно).
+        $accounts = $isAdmin
+            ? \App\Models\User::query()
+                ->whereNotNull('phone')
+                ->get(['id', 'phone', 'email'])
+                ->keyBy(fn ($user) => \App\Models\User::normalizePhone($user->phone))
+            : collect();
+
         $groups = $entries
             ->groupBy('org_name')
             ->map(fn ($rows, $orgName) => [
                 'org_name' => $orgName,
                 'category' => $this->normalizeDirectoryCategory($rows->first()->category ?? null),
-                'rows' => $rows->map(fn (PhoneDirectoryEntry $row) => [
-                    'id' => $row->id,
-                    'person_name' => $row->person_name,
-                    'position' => $row->position,
-                    'office_phone' => $row->office_phone,
-                    'mobile_phone' => $row->mobile_phone,
-                ])->values(),
+                'rows' => $rows->map(function (PhoneDirectoryEntry $row) use ($isAdmin, $accounts) {
+                    $data = [
+                        'id' => $row->id,
+                        'person_name' => $row->person_name,
+                        'position' => $row->position,
+                        'office_phone' => $row->office_phone,
+                        'mobile_phone' => $row->mobile_phone,
+                    ];
+
+                    if ($isAdmin) {
+                        $account = $accounts->get(\App\Models\User::normalizePhone($row->mobile_phone));
+
+                        $data['account'] = $account ? [
+                            'login' => $account->phone,
+                            'email' => $account->email,
+                        ] : null;
+                    }
+
+                    return $data;
+                })->values(),
             ])
             ->values();
 
@@ -65,6 +88,7 @@ class PhoneDirectoryController extends Controller
             'orgNames' => $entries->pluck('org_name')->unique()->values(),
             'categories' => PhoneDirectoryEntry::CATEGORIES,
             'canManage' => ModuleAccess::canEdit($request->user(), self::MODULE),
+            'isAdmin' => $isAdmin,
         ]);
     }
 

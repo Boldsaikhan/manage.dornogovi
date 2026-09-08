@@ -98,6 +98,83 @@ class UserAccessController extends Controller
     /**
      * Ролийн загварыг хадгална — тухайн түвшинг сонгоход энэ эрхүүд хэрэгжинэ.
      */
+    /**
+     * Утасны жагсаалтын мөрөөс тухайн хүний нэвтрэх нэр / нууц үгийг шинэчилнэ.
+     *
+     * Холбоос нь гар утасны дугаар — бүртгэл нь мөн утсаараа нэвтэрдэг.
+     */
+    public function updateDirectoryAccount(Request $request, PhoneDirectoryEntry $entry): RedirectResponse
+    {
+        $data = $request->validate([
+            'login' => ['nullable', 'string', 'max:20'],
+            'password' => ['nullable', 'string', 'min:6', 'max:255'],
+        ]);
+
+        $login = $data['login'] ?? null;
+        $password = $data['password'] ?? null;
+
+        if (! $login && ! $password) {
+            return back()->withErrors(['login' => 'Нэвтрэх нэр эсвэл нууц үгийн аль нэгийг оруулна уу.']);
+        }
+
+        $user = User::query()
+            ->whereNotNull('phone')
+            ->get(['id', 'phone'])
+            ->first(fn (User $u) => User::normalizePhone($u->phone) === User::normalizePhone($entry->mobile_phone));
+
+        if (! $user) {
+            return back()->withErrors([
+                'login' => sprintf(
+                    '«%s»-д нэвтрэх эрх үүсээгүй байна (гар утас: %s). Эхлээд «Хандах эрх» хэсгээс бүртгэл үүсгэнэ үү.',
+                    $entry->person_name,
+                    $entry->mobile_phone ?: '—',
+                ),
+            ]);
+        }
+
+        $user = User::findOrFail($user->id);
+        $changes = [];
+
+        if ($login) {
+            $normalized = User::normalizePhone($login);
+
+            if (! $normalized) {
+                return back()->withErrors(['login' => 'Нэвтрэх нэр (утасны дугаар) буруу байна.']);
+            }
+
+            $taken = User::query()
+                ->whereKeyNot($user->id)
+                ->whereNotNull('phone')
+                ->get(['id', 'phone'])
+                ->contains(fn (User $u) => User::normalizePhone($u->phone) === $normalized);
+
+            if ($taken) {
+                return back()->withErrors(['login' => 'Энэ дугаараар өөр бүртгэл байна.']);
+            }
+
+            $user->phone = $normalized;
+            $changes[] = 'нэвтрэх нэр';
+        }
+
+        if ($password) {
+            $user->password = Hash::make($password);
+            $changes[] = 'нууц үг';
+        }
+
+        $user->save();
+
+        // Утасны жагсаалтын дугаарыг ч зэрэг тааруулна.
+        if ($login) {
+            $entry->forceFill(['mobile_phone' => $user->phone])->save();
+        }
+
+        return back()->with('success', sprintf(
+            '«%s» — %s шинэчлэгдлээ.',
+            $entry->person_name,
+            implode(', ', $changes),
+        ));
+    }
+
     public function updateRole(Request $request, string $role): RedirectResponse
     {
         $model = Role::query()->where('key', $role)->firstOrFail();
