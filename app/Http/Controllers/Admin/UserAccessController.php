@@ -122,14 +122,39 @@ class UserAccessController extends Controller
             ->get(['id', 'phone'])
             ->first(fn (User $u) => User::normalizePhone($u->phone) === User::normalizePhone($entry->mobile_phone));
 
+        // Эрх байхгүй бол энд шууд үүсгэнэ — өөр хуудас руу явуулах шаардлагагүй.
         if (! $user) {
-            return back()->withErrors([
-                'login' => sprintf(
-                    '«%s»-д нэвтрэх эрх үүсээгүй байна (гар утас: %s). Эхлээд «Хандах эрх» хэсгээс бүртгэл үүсгэнэ үү.',
-                    $entry->person_name,
-                    $entry->mobile_phone ?: '—',
-                ),
-            ]);
+            if (! $password) {
+                return back()->withErrors([
+                    'password' => 'Шинэ бүртгэл үүсгэхийн тулд нууц үг оруулна уу.',
+                ]);
+            }
+
+            // User загварт «hashed» cast байгаа тул ЦЭВЭР нууц үг дамжуулна.
+            $created = app(HeltesAccountProvisioner::class)->createForEntry(
+                $entry,
+                $password,
+                $login ? User::normalizePhone($login) : null,
+            );
+
+            if (! $created) {
+                return back()->withErrors([
+                    'login' => sprintf(
+                        '«%s»-д бүртгэл үүсгэж чадсангүй. Хүний нэр, гар утас нь бүрэн эсэхийг шалгана уу.',
+                        $entry->person_name,
+                    ),
+                ]);
+            }
+
+            if ($created->phone && $created->phone !== $entry->mobile_phone) {
+                $entry->forceFill(['mobile_phone' => $created->phone])->save();
+            }
+
+            return back()->with('success', sprintf(
+                '«%s» — нэвтрэх эрх үүслээ. Нэвтрэх нэр: %s',
+                $entry->person_name,
+                $created->phone,
+            ));
         }
 
         $user = User::findOrFail($user->id);

@@ -64,14 +64,34 @@ class PhoneDirectoryAccountTest extends TestCase
             ->assertSessionHasErrors('login');
     }
 
-    public function test_without_an_account_it_explains_instead_of_failing(): void
+    public function test_an_account_is_created_when_none_exists(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
         $entry = $this->entry('91000000');
 
         $this->actingAs($admin)
             ->patch(route('admin.phone-directory.account', $entry), ['password' => 'shine-nuuts'])
-            ->assertSessionHasErrors('login');
+            ->assertSessionHasNoErrors();
+
+        $created = User::query()->where('phone', '91000000')->first();
+
+        $this->assertNotNull($created, 'Бүртгэл үүсэх ёстой.');
+        $this->assertSame('Б.Болд', $created->name);
+        $this->assertTrue(Hash::check('shine-nuuts', $created->password));
+        // И-мэйл автоматаар оноогдоно.
+        $this->assertNotEmpty($created->email);
+    }
+
+    public function test_creating_without_a_password_is_rejected(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $entry = $this->entry('91000000');
+
+        $this->actingAs($admin)
+            ->patch(route('admin.phone-directory.account', $entry), ['login' => '91000000'])
+            ->assertSessionHasErrors('password');
+
+        $this->assertDatabaseMissing('users', ['phone' => '91000000']);
     }
 
     public function test_empty_request_is_rejected(): void
