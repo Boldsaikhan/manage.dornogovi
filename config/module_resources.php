@@ -58,10 +58,20 @@ return [
     'assignments' => [
         'model' => App\Models\TravelAssignment::class,
         'title' => 'Томилолтын бүртгэл',
-        'description' => 'Албан томилолтын бүртгэл, хяналт.',
+        'description' => 'Албан томилолтын удирдамж — батлах албан тушаалтнаар нь бүртгэж, маягтаар хэвлэнэ.',
+        // «БАТЛАВ» хэсэгт хэн гарын үсэг зурахаар нь тусад нь бүртгэнэ.
+        'scope_column' => 'approver',
+        'scope_label' => 'Батлах албан тушаалтан',
+        'default_scope' => 'governor',
+        'scopes' => [
+            'governor' => 'Засаг дарга',
+            'deputy' => 'Засаг даргын орлогч',
+            'chief' => 'Тамгын газрын дарга',
+        ],
         'columns' => [
             ['key' => 'user_name', 'label' => 'Албан хаагч'],
             ['key' => 'destination', 'label' => 'Очих газар'],
+            ['key' => 'purpose', 'label' => 'Зорилго'],
             ['key' => 'start_date', 'label' => 'Эхлэх'],
             ['key' => 'end_date', 'label' => 'Дуусах'],
             ['key' => 'order_number', 'label' => 'Тушаалын дугаар'],
@@ -69,14 +79,20 @@ return [
         ],
         'fields' => [
             ['name' => 'destination', 'label' => 'Очих газар', 'type' => 'text', 'required' => true],
-            ['name' => 'purpose', 'label' => 'Зорилго', 'type' => 'text'],
-            ['name' => 'start_date', 'label' => 'Эхлэх', 'type' => 'date', 'required' => true],
-            ['name' => 'end_date', 'label' => 'Дуусах', 'type' => 'date', 'required' => true],
+            ['name' => 'purpose', 'label' => '1. Зорилго', 'type' => 'textarea'],
+            ['name' => 'composition', 'label' => '2. Бүрэлдэхүүн', 'type' => 'textarea'],
+            ['name' => 'start_date', 'label' => '3. Хугацаа — эхлэх', 'type' => 'date', 'required' => true],
+            ['name' => 'end_date', 'label' => '3. Хугацаа — дуусах', 'type' => 'date', 'required' => true],
+            ['name' => 'scope_of_work', 'label' => '4. Томилолтын хүрээнд /ажлын чиглэл/', 'type' => 'textarea'],
             ['name' => 'order_number', 'label' => 'Тушаалын дугаар', 'type' => 'text'],
+            ['name' => 'report', 'label' => 'Томилолтын тайлан', 'type' => 'textarea'],
             ['name' => 'note', 'label' => 'Тэмдэглэл', 'type' => 'textarea'],
             ['name' => 'status', 'label' => 'Төлөв', 'type' => 'select', 'options' => [
                 'pending' => 'Хүлээгдэж буй', 'approved' => 'Зөвшөөрсөн', 'done' => 'Дууссан',
             ]],
+        ],
+        'row_actions' => [
+            ['label' => 'Удирдамж хэвлэх', 'url' => '/modules/assignments/{id}/sheet', 'target' => '_blank'],
         ],
         'defaults' => ['status' => 'pending'],
         'on_create' => 'attach_user_department',

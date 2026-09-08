@@ -23,6 +23,7 @@ use App\Http\Controllers\PwaManifestController;
 use App\Http\Controllers\RegulationCategoryController;
 use App\Http\Controllers\SystemViewController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TravelAssignmentSheetController;
 use App\Http\Controllers\UndoController;
 use App\Http\Controllers\VaultController;
 use App\Http\Controllers\PushSubscriptionController;
@@ -109,6 +110,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/modules/awards/{award}', [AwardController::class, 'destroy'])->name('awards.destroy');
 
     Route::get('/modules/assignments', [ModuleResourceController::class, 'index'])->name('assignments.index');
+    Route::get('/modules/assignments/{assignment}/sheet', [TravelAssignmentSheetController::class, 'show'])->name('assignments.sheet');
     Route::get('/modules/regulations', [ModuleResourceController::class, 'index'])->name('regulations.index');
     Route::post('/modules/regulations/categories', [RegulationCategoryController::class, 'store'])->name('regulations.categories.store');
     Route::patch('/modules/regulations/categories/{category}', [RegulationCategoryController::class, 'update'])->name('regulations.categories.update');
