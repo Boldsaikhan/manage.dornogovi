@@ -336,7 +336,7 @@
                                     <td class="center">{{ $row['number_display'] ?: $row['number'] }}</td>
                                     <td>{{ $row['title'] }}</td>
                                     <td class="center">{{ $row['page_count'] }}</td>
-                                    <td class="center">{{ $row['effective_on'] }}</td>
+                                    <td class="center">{{ $row['effective_on_display'] ?: $row['effective_on'] }}</td>
                                     <td>{{ $row['attachment_name'] }}</td>
                                     <td class="center">{{ $row['attachment_pages'] }}</td>
                                     <td>{{ $row['original_form'] }}</td>
