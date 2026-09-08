@@ -47,7 +47,7 @@ class DecreePrintTest extends TestCase
             ->get(route('decrees.print', ['tab' => 'blank']))
             ->assertOk()
             ->assertSee('Хэвлэмэл хуудасны бүртгэл')
-            ->assertSee('Үрэгдүүлсэн хуудасны дугаар')
+            ->assertSee('Хүчингүй болгосон хэвлэмэл хуудасны тоо')
             ->assertSee('Цаасны хэмжээ')
             ->assertSee('Захын зай (мм)')
             ->assertSee('id="paperSize"', false)
