@@ -208,21 +208,22 @@ const addRow = () => {
 };
 
 /**
- * Мөр бүр «засах» товч дарж байж засварлагдана.
+ * «Засварлах» горим — толгойн товчоор асаана.
  *
- * Ингэснээр нүд дээр санамсаргүй дарж утга өөрчлөгдөхөөс сэргийлнэ.
+ * Унтраалттай үед хүснэгт зөвхөн харагдана: нүдэн дээр санамсаргүй дарж утга
+ * өөрчлөгдөхгүй. Асаалттай үед бүх нүд идэвхжиж, мөр устгах товч гарна.
  */
-const editingRowId = ref(null);
+const editMode = ref(false);
 
-const rowEditable = (id) => canManage.value && editingRowId.value === id;
+const rowEditable = () => canManage.value && editMode.value;
 
-const toggleRowEdit = (id) => {
-    editingRowId.value = editingRowId.value === id ? null : id;
+const toggleEditMode = () => {
+    editMode.value = ! editMode.value;
 };
 
 // Таб солигдоход засварын горим хаагдана.
 watch(() => props.tab, () => {
-    editingRowId.value = null;
+    editMode.value = false;
 });
 
 const saveField = (id, field, value) => {
@@ -461,6 +462,18 @@ const docColumnCount = computed(() => {
                         </div>
                     </div>
                     <button
+                        v-if="canManage"
+                        type="button"
+                        class="ui-btn-ghost"
+                        :class="editMode ? '!border-brand-navy-500 !bg-brand-navy-50 !text-brand-navy-800' : ''"
+                        :title="editMode
+                            ? 'Засварыг дуусгаад хүснэгтийг түгжинэ'
+                            : 'Нүднүүдийг засварлах боломжтой болгоно'"
+                        @click="toggleEditMode"
+                    >
+                        {{ editMode ? 'Засварыг дуусгах' : 'Засварлах' }}
+                    </button>
+                    <button
                         v-if="canAddRow"
                         type="button"
                         class="ui-btn-accent"
@@ -546,7 +559,7 @@ const docColumnCount = computed(() => {
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].person_name"
-                                    :editable="rowEditable(row.id)"
+                                    :editable="rowEditable()"
                                     :options="people"
                                     empty-label=""
                                     placeholder="Нэр сонгох…"
@@ -559,7 +572,7 @@ const docColumnCount = computed(() => {
                                     v-model="drafts[row.id].issued_on"
                                     type="date"
                                     align="center"
-                                    :editable="rowEditable(row.id)"
+                                    :editable="rowEditable()"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'issued_on', v)"
                                 />
@@ -657,7 +670,7 @@ const docColumnCount = computed(() => {
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].num_zahiramj"
                                     align="center"
-                                    :editable="rowEditable(row.id)"
+                                    :editable="rowEditable()"
                                     empty-label=""
                                     placeholder="авто"
                                     @commit="(v) => saveField(row.id, 'num_zahiramj', v)"
@@ -668,7 +681,7 @@ const docColumnCount = computed(() => {
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].num_tushaal"
                                     align="center"
-                                    :editable="rowEditable(row.id)"
+                                    :editable="rowEditable()"
                                     empty-label=""
                                     placeholder="авто"
                                     @commit="(v) => saveField(row.id, 'num_tushaal', v)"
@@ -679,7 +692,7 @@ const docColumnCount = computed(() => {
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].void_zahiramj"
                                     align="center"
-                                    :editable="rowEditable(row.id)"
+                                    :editable="rowEditable()"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'void_zahiramj', v)"
                                 />
@@ -689,7 +702,7 @@ const docColumnCount = computed(() => {
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].void_tushaal"
                                     align="center"
-                                    :editable="rowEditable(row.id)"
+                                    :editable="rowEditable()"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'void_tushaal', v)"
                                 />
@@ -698,35 +711,14 @@ const docColumnCount = computed(() => {
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].body"
-                                    :editable="rowEditable(row.id)"
+                                    :editable="rowEditable()"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'body', v)"
                                 />
                             </td>
                             <td v-if="canManage" class="px-1 py-1 text-center">
                                 <button
-                                    type="button"
-                                    class="ui-icon-btn mx-auto"
-                                    :class="editingRowId === row.id ? '!bg-brand-navy-600 !text-white' : ''"
-                                    :title="editingRowId === row.id ? 'Засварыг дуусгах' : 'Мөрийг засах'"
-                                    :aria-label="editingRowId === row.id ? 'Засварыг дуусгах' : 'Мөрийг засах'"
-                                    @click="toggleRowEdit(row.id)"
-                                >
-                                    <svg
-                                        v-if="editingRowId === row.id"
-                                        class="h-4 w-4"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                    <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
-                                    </svg>
-                                </button>
-                                <button
+                                    v-if="editMode"
                                     type="button"
                                     class="ui-icon-btn mx-auto"
                                     title="Устгах"
@@ -831,7 +823,7 @@ const docColumnCount = computed(() => {
                                     v-model="drafts[row.id].issued_on"
                                     type="date"
                                     align="center"
-                                    :editable="rowEditable(row.id)"
+                                    :editable="rowEditable()"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'issued_on', v)"
                                 />
@@ -848,7 +840,7 @@ const docColumnCount = computed(() => {
                                         v-model="drafts[row.id].number"
                                         align="center"
                                         class="min-w-0 flex-1"
-                                        :editable="rowEditable(row.id)"
+                                        :editable="rowEditable()"
                                         empty-label=""
                                         placeholder="01"
                                         @commit="(v) => saveField(row.id, 'number', v)"
@@ -860,7 +852,7 @@ const docColumnCount = computed(() => {
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].title"
                                     multiline
-                                    :editable="rowEditable(row.id)"
+                                    :editable="rowEditable()"
                                     empty-label=""
                                     placeholder="Гарчиг…"
                                     @commit="(v) => saveField(row.id, 'title', v)"
@@ -872,7 +864,7 @@ const docColumnCount = computed(() => {
                                     v-model="drafts[row.id].page_count"
                                     type="number"
                                     align="center"
-                                    :editable="rowEditable(row.id)"
+                                    :editable="rowEditable()"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'page_count', v)"
                                 />
@@ -883,7 +875,7 @@ const docColumnCount = computed(() => {
                                     v-model="drafts[row.id].effective_on"
                                     type="date"
                                     align="center"
-                                    :editable="rowEditable(row.id)"
+                                    :editable="rowEditable()"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'effective_on', v)"
                                 />
@@ -892,7 +884,7 @@ const docColumnCount = computed(() => {
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].attachment_name"
-                                    :editable="rowEditable(row.id)"
+                                    :editable="rowEditable()"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'attachment_name', v)"
                                 />
@@ -903,7 +895,7 @@ const docColumnCount = computed(() => {
                                     v-model="drafts[row.id].attachment_pages"
                                     type="number"
                                     align="center"
-                                    :editable="rowEditable(row.id)"
+                                    :editable="rowEditable()"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'attachment_pages', v)"
                                 />
@@ -912,7 +904,7 @@ const docColumnCount = computed(() => {
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].original_form"
-                                    :editable="rowEditable(row.id)"
+                                    :editable="rowEditable()"
                                     empty-label=""
                                     placeholder="Эх хувь…"
                                     @commit="(v) => saveField(row.id, 'original_form', v)"
@@ -923,7 +915,7 @@ const docColumnCount = computed(() => {
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].file_index"
                                     align="center"
-                                    :editable="rowEditable(row.id)"
+                                    :editable="rowEditable()"
                                     empty-label=""
                                     placeholder="Индекс…"
                                     @commit="(v) => saveField(row.id, 'file_index', v)"
@@ -933,7 +925,7 @@ const docColumnCount = computed(() => {
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].person_name"
-                                    :editable="rowEditable(row.id)"
+                                    :editable="rowEditable()"
                                     :options="officialOptions"
                                     align="center"
                                     empty-label=""
@@ -998,30 +990,7 @@ const docColumnCount = computed(() => {
                                         </svg>
                                     </button>
                                     <button
-                                        v-if="canManage"
-                                        type="button"
-                                        class="ui-icon-btn"
-                                        :class="editingRowId === row.id ? '!bg-brand-navy-600 !text-white' : ''"
-                                        :title="editingRowId === row.id ? 'Засварыг дуусгах' : 'Мөрийг засах'"
-                                        :aria-label="editingRowId === row.id ? 'Засварыг дуусгах' : 'Мөрийг засах'"
-                                        @click="toggleRowEdit(row.id)"
-                                    >
-                                        <svg
-                                            v-if="editingRowId === row.id"
-                                            class="h-4 w-4"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                                        </svg>
-                                        <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
-                                        </svg>
-                                    </button>
-                                    <button
-                                        v-if="canManage"
+                                        v-if="canManage && editMode"
                                         type="button"
                                         class="ui-icon-btn"
                                         title="Мөр устгах"
