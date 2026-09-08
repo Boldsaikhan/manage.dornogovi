@@ -7,10 +7,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TravelAssignment extends Model
 {
-    protected $fillable = [
-        'user_id', 'department_id', 'destination', 'purpose', 'start_date',
-        'end_date', 'order_number', 'status', 'note',
+    /** «БАТЛАВ» хэсэгт гарын үсэг зурах албан тушаалтан. */
+    public const APPROVERS = [
+        'governor' => 'Засаг дарга',
+        'deputy' => 'Засаг даргын орлогч',
+        'chief' => 'Тамгын газрын дарга',
     ];
+
+    protected $fillable = [
+        'user_id', 'department_id', 'approver', 'destination', 'purpose',
+        'composition', 'scope_of_work', 'start_date', 'end_date',
+        'order_number', 'status', 'note', 'report',
+    ];
+
+    public function approverLabel(): string
+    {
+        return self::APPROVERS[$this->approver] ?? self::APPROVERS['governor'];
+    }
 
     protected function casts(): array
     {
