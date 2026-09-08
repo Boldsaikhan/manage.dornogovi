@@ -112,6 +112,41 @@ class DecreeRegisterColumnsTest extends TestCase
             ->assertSee('А/01');
     }
 
+    public function test_effective_date_defaults_to_the_approved_date(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $decree = Decree::create([
+            'category' => 'zahiramj',
+            'kind' => 'zahiramj_a',
+            'number' => '05',
+            'title' => 'Дагаж мөрдөх огноогүй',
+            'issued_on' => '2026-09-10',
+        ]);
+
+        $this->assertNull($decree->effective_on);
+
+        $this->actingAs($admin)
+            ->get(route('decrees.index', ['tab' => 'zahiramj_a']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                // Санд хоосон, харагдахдаа батлагдсан огноогоо дагана.
+                ->where('rows.0.effective_on', null)
+                ->where('rows.0.effective_on_display', '2026-09-10')
+            );
+    }
+
+    public function test_an_explicit_effective_date_wins(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $this->decree();
+
+        $this->actingAs($admin)
+            ->get(route('decrees.index', ['tab' => 'zahiramj_a']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('rows.0.effective_on_display', '2026-09-05')
+            );
+    }
+
     public function test_print_page_shows_the_official_headings(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

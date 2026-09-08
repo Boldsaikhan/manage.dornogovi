@@ -172,6 +172,12 @@ const syncDrafts = () => {
             drafts[row.id] = Object.fromEntries(blankFields.map((f) => [f, row[f] ?? '']));
         } else {
             drafts[row.id] = Object.fromEntries(docFields.map((f) => [f, row[f] ?? '']));
+
+            // «Дагаж мөрдөх» огноог тусад нь заагаагүй бол батлагдсан огноогоор
+            // урьдчилан харуулна. Хэрэглэгч засвал өөрийнх нь утга хадгалагдана.
+            if (! drafts[row.id].effective_on) {
+                drafts[row.id].effective_on = row.issued_on ?? '';
+            }
         }
     });
 };
@@ -222,6 +228,16 @@ const saveField = (id, field, value) => {
 
     if (drafts[id] && Object.prototype.hasOwnProperty.call(drafts[id], field)) {
         drafts[id][field] = next ?? '';
+    }
+
+    // Батлагдсан огноог сольсон бөгөөд дагаж мөрдөхийг нь тусад нь заагаагүй
+    // бол харагдах утгыг нь дагуулна.
+    if (field === 'issued_on' && drafts[id]) {
+        const row = props.rows.find((r) => r.id === id);
+
+        if (row && ! row.effective_on) {
+            drafts[id].effective_on = next ?? '';
+        }
     }
 
     router.patch(

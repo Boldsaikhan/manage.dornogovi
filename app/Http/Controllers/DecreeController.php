@@ -305,7 +305,7 @@ class DecreeController extends Controller
                 (string) ($row['number_display'] ?? $row['number'] ?? ''),
                 (string) ($row['title'] ?? ''),
                 (string) ($row['page_count'] ?? ''),
-                (string) ($row['effective_on'] ?? ''),
+                (string) ($row['effective_on_display'] ?? $row['effective_on'] ?? ''),
                 (string) ($row['attachment_name'] ?? ''),
                 (string) ($row['attachment_pages'] ?? ''),
                 (string) ($row['original_form'] ?? ''),
@@ -919,6 +919,8 @@ class DecreeController extends Controller
             'title' => $d->title,
             'page_count' => $d->page_count,
             'effective_on' => optional($d->effective_on)?->format('Y-m-d'),
+            // Тусад нь заагаагүй бол батлагдсан огноогоо дагана.
+            'effective_on_display' => optional($d->effective_on ?: $d->issued_on)?->format('Y-m-d'),
             'attachment_name' => $d->attachment_name,
             'attachment_pages' => $d->attachment_pages,
             'original_form' => $d->original_form,
