@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PhoneDirectoryEntry;
 use App\Models\RegulationCategory;
+use App\Support\AssignmentSheet;
 use App\Support\ModuleAccess;
 use App\Support\ModuleOwnScope;
 use Illuminate\Database\Eloquent\Model;
@@ -94,10 +95,33 @@ class ModuleResourceController extends Controller
             'directory' => $this->directoryFor($config),
             'rows' => $rows,
             'rowActions' => $config['row_actions'] ?? [],
+            // Тусгай маягттай модуль (жишээ нь томилолтын удирдамж) — A4 хэлбэрээр бөглөнө.
+            'formLayout' => $config['form_layout'] ?? null,
+            'formMeta' => $this->formMeta($config, $activeScope),
             'canManage' => ModuleAccess::canEdit($request->user(), $module),
             'storeUrl' => route('modules.store', $module),
             'destroyUrlTemplate' => url('/modules/'.$module).'/{id}',
         ]);
+    }
+
+    /**
+     * A4 маягтаар бөглөх модулийн толгойн мэдээлэл.
+     *
+     * Идэвхтэй таб (батлах албан тушаалтан) солигдоход «БАТЛАВ» толгой,
+     * гарын үсэг зурах хүний нэр хамт өөрчлөгдөнө.
+     */
+    private function formMeta(array $config, string $activeScope): array
+    {
+        if (($config['form_layout'] ?? null) !== 'assignment_sheet') {
+            return [];
+        }
+
+        return [
+            'lines' => AssignmentSheet::lines($activeScope),
+            'signer' => AssignmentSheet::signerName($activeScope),
+            'year' => now()->format('Y'),
+            'budget_kinds' => AssignmentSheet::BUDGET_KINDS,
+        ];
     }
 
     public function store(Request $request, string $module): RedirectResponse

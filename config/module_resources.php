@@ -94,6 +94,8 @@ return [
         'row_actions' => [
             ['label' => 'Удирдамж хэвлэх', 'url' => '/modules/assignments/{id}/sheet', 'target' => '_blank'],
         ],
+        // Шинэ бүртгэлийг A4 маягтын хэлбэрээр бөглөнө.
+        'form_layout' => 'assignment_sheet',
         'defaults' => ['status' => 'pending'],
         'on_create' => 'attach_user_department',
     ],
