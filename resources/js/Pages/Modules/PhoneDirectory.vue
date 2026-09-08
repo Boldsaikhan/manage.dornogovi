@@ -36,6 +36,55 @@ const form = useForm({
     before_org_name: '',
 });
 
+/* ---------- Сонголт: хайлтын үр дүнгээс сонгоод Word-оор татах ---------- */
+
+const selectedIds = ref(new Set());
+
+const selectedCount = computed(() => selectedIds.value.size);
+
+const isSelected = (id) => selectedIds.value.has(id);
+
+const toggleRow = (id) => {
+    const next = new Set(selectedIds.value);
+
+    next.has(id) ? next.delete(id) : next.add(id);
+    selectedIds.value = next;
+};
+
+/** Тухайн бүлгийн бүх мөр сонгогдсон эсэх. */
+const groupSelected = (group) => group.rows.length > 0
+    && group.rows.every((row) => selectedIds.value.has(row.id));
+
+const toggleGroup = (group) => {
+    const next = new Set(selectedIds.value);
+    const all = groupSelected(group);
+
+    group.rows.forEach((row) => (all ? next.delete(row.id) : next.add(row.id)));
+    selectedIds.value = next;
+};
+
+const clearSelection = () => {
+    selectedIds.value = new Set();
+};
+
+/** Одоо харагдаж буй (хайлтад тохирсон) бүх мөр. */
+const visibleIds = computed(() => filteredGroups.value.flatMap((g) => g.rows.map((r) => r.id)));
+
+const allVisibleSelected = computed(() => visibleIds.value.length > 0
+    && visibleIds.value.every((id) => selectedIds.value.has(id)));
+
+const toggleAllVisible = () => {
+    const next = new Set(selectedIds.value);
+    const all = allVisibleSelected.value;
+
+    visibleIds.value.forEach((id) => (all ? next.delete(id) : next.add(id)));
+    selectedIds.value = next;
+};
+
+const exportUrl = computed(() => (selectedCount.value
+    ? route('phone-directory.export', { ids: [...selectedIds.value].join(',') })
+    : route('phone-directory.export')));
+
 const editingId = ref(null);
 const isEditing = computed(() => editingId.value !== null);
 
@@ -383,11 +432,22 @@ const closeDirectoryForm = () => {
                 <div class="flex flex-wrap gap-2">
                     <a
                         v-if="isDirectory && total"
-                        :href="route('phone-directory.export')"
+                        :href="exportUrl"
                         class="ui-btn-ghost"
+                        :title="selectedCount
+                            ? `Сонгосон ${selectedCount} бүртгэлийг Word-оор татна`
+                            : 'Бүх бүртгэлийг Word-оор татна'"
                     >
-                        Word татах
+                        {{ selectedCount ? `Сонгосныг татах (${selectedCount})` : 'Word татах' }}
                     </a>
+                    <button
+                        v-if="selectedCount"
+                        type="button"
+                        class="ui-btn-ghost"
+                        @click="clearSelection"
+                    >
+                        Сонголт цуцлах
+                    </button>
                     <button
                         v-if="canManage && isDirectory"
                         type="button"
@@ -453,6 +513,16 @@ const closeDirectoryForm = () => {
                 <table class="ui-table min-w-[720px]">
                     <thead>
                         <tr>
+                            <th class="w-10 text-center">
+                                <input
+                                    type="checkbox"
+                                    class="rounded border-slate-300 text-brand-navy-600"
+                                    :checked="allVisibleSelected"
+                                    :disabled="! visibleIds.length"
+                                    title="Харагдаж буй бүгдийг сонгох"
+                                    @change="toggleAllVisible"
+                                />
+                            </th>
                             <th class="w-14 text-center">№</th>
                             <th>Овог нэр</th>
                             <th>Албан тушаал</th>
@@ -468,7 +538,7 @@ const closeDirectoryForm = () => {
                                 class="group/ins"
                                 :data-drop="'gap:' + group.org_name"
                             >
-                                <td :colspan="editingActive ? 6 : 5" class="!py-0.5 text-center">
+                                <td :colspan="editingActive ? 7 : 6" class="!py-0.5 text-center">
                                     <button
                                         type="button"
                                         class="w-full rounded-lg border border-dashed py-1 text-xs font-medium transition focus:opacity-100"
@@ -491,6 +561,15 @@ const closeDirectoryForm = () => {
                                 ]"
                                 :data-drop="'grp:' + group.org_name"
                             >
+                                <td class="text-center align-middle">
+                                    <input
+                                        type="checkbox"
+                                        class="rounded border-slate-300 text-brand-navy-600"
+                                        :checked="groupSelected(group)"
+                                        :title="group.org_name + ' — бүгдийг сонгох'"
+                                        @change="toggleGroup(group)"
+                                    />
+                                </td>
                                 <td :colspan="editingActive ? 6 : 5" class="text-center font-semibold italic text-brand-navy-800">
                                     <span
                                         v-if="canInsert"
@@ -550,9 +629,18 @@ const closeDirectoryForm = () => {
                                 :class="[
                                     isDraggingRow && dragging.id === row.id ? 'opacity-40' : '',
                                     dropToken === 'row:' + row.id ? 'outline outline-2 -outline-offset-2 outline-brand-navy-500' : '',
+                                    isSelected(row.id) ? '!bg-brand-navy-50' : '',
                                 ]"
                                 :data-drop="'row:' + row.id"
                             >
+                                <td class="text-center align-middle">
+                                    <input
+                                        type="checkbox"
+                                        class="rounded border-slate-300 text-brand-navy-600"
+                                        :checked="isSelected(row.id)"
+                                        @change="toggleRow(row.id)"
+                                    />
+                                </td>
                                 <td class="text-center">
                                     <span
                                         v-if="canInsert"
@@ -595,7 +683,7 @@ const closeDirectoryForm = () => {
                                 v-if="canInsert && dragging"
                                 :data-drop="'end:' + group.org_name"
                             >
-                                <td :colspan="editingActive ? 6 : 5" class="!py-1 text-center">
+                                <td :colspan="editingActive ? 7 : 6" class="!py-1 text-center">
                                     <span
                                         class="block rounded-lg border border-dashed py-1 text-xs font-medium"
                                         :class="dropToken === 'end:' + group.org_name
@@ -612,7 +700,7 @@ const closeDirectoryForm = () => {
                             class="group/ins"
                             data-drop="tail"
                         >
-                            <td :colspan="editingActive ? 6 : 5" class="!py-0.5 text-center">
+                            <td :colspan="editingActive ? 7 : 6" class="!py-0.5 text-center">
                                 <button
                                     type="button"
                                     class="w-full rounded-lg border border-dashed py-1 text-xs font-medium transition focus:opacity-100"
@@ -628,7 +716,7 @@ const closeDirectoryForm = () => {
                             </td>
                         </tr>
                         <tr v-if="!filteredGroups.length">
-                            <td :colspan="editingActive ? 6 : 5" class="!py-12 text-center text-slate-400">
+                            <td :colspan="editingActive ? 7 : 6" class="!py-12 text-center text-slate-400">
                                 {{ search ? 'Хайлтад тохирох бүртгэл алга.' : 'Одоогоор бүртгэл алга.' }}
                             </td>
                         </tr>
