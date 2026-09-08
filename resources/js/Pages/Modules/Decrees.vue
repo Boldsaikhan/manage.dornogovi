@@ -160,8 +160,9 @@ const blankFields = [
 ];
 
 const docFields = [
-    'kind', 'number', 'issued_on', 'title', 'page_count',
-    'attachment_name', 'attachment_pages', 'person_name', 'body',
+    'kind', 'number', 'issued_on', 'title', 'page_count', 'effective_on',
+    'attachment_name', 'attachment_pages', 'original_form', 'file_index',
+    'person_name', 'body',
 ];
 
 const syncDrafts = () => {
@@ -698,30 +699,39 @@ const docColumnCount = computed(() => {
                 <div class="decree-sheet__banner">
                     Аймгийн Засаг даргын {{ docLabel }}ийн бүртгэл
                 </div>
-                <table class="decree-sheet__table min-w-[1040px]">
+                <table class="decree-sheet__table min-w-[1400px]">
                     <colgroup>
                         <col style="width: 2.5rem" />
-                        <col style="width: 5rem" />
                         <col style="width: 6.5rem" />
+                        <col style="width: 5rem" />
                         <col />
                         <col style="width: 4.5rem" />
+                        <col style="width: 6.5rem" />
                         <col style="width: 10rem" />
                         <col style="width: 4.5rem" />
+                        <col style="width: 7rem" />
+                        <col style="width: 6rem" />
                         <col style="width: 8rem" />
                         <col v-if="isNiit" style="width: 6.5rem" />
                         <col style="width: 6.5rem" />
                     </colgroup>
                     <thead>
                         <tr>
-                            <th rowspan="2" class="w-10">№</th>
-                            <th rowspan="2" class="w-20">Дугаар</th>
-                            <th rowspan="2" class="w-24">Огноо</th>
-                            <th rowspan="2">{{ titleLabel }}</th>
-                            <th rowspan="2" class="w-20">
-                                Хуудасны<br>тоо
+                            <th rowspan="2" class="w-10">Д/д</th>
+                            <th colspan="4" class="decree-sheet__head-group--issued">
+                                Захирамжлалын баримт бичгийн үндсэн мэдээлэл
+                            </th>
+                            <th rowspan="2" class="w-24">
+                                Дагаж мөрдөх<br>он, сар, өдөр
                             </th>
                             <th colspan="2" class="decree-sheet__head-group--issued">
                                 Хавсралтын мэдээлэл
+                            </th>
+                            <th rowspan="2" class="w-28">
+                                Баримт бичгийн<br>эх хувийн шинж
+                            </th>
+                            <th rowspan="2" class="w-24">
+                                ХХНЖ-ын<br>хэргийн индекс
                             </th>
                             <th rowspan="2" class="w-36">
                                 Боловсруулсан<br>албан тушаалтан
@@ -730,6 +740,10 @@ const docColumnCount = computed(() => {
                             <th rowspan="2" class="w-24">Зураг</th>
                         </tr>
                         <tr>
+                            <th class="w-24">Батлагдсан<br>огноо</th>
+                            <th class="w-20">Бүртгэлийн<br>дугаар</th>
+                            <th>{{ titleLabel }}</th>
+                            <th class="w-20">Хуудасны<br>тоо</th>
                             <th>Баримт бичгийн нэр</th>
                             <th class="w-20">Хуудасны тоо</th>
                         </tr>
@@ -742,8 +756,11 @@ const docColumnCount = computed(() => {
                             <th>6</th>
                             <th>7</th>
                             <th>8</th>
-                            <th v-if="isNiit">9</th>
-                            <th>{{ isNiit ? 10 : 9 }}</th>
+                            <th>9</th>
+                            <th>10</th>
+                            <th>—</th>
+                            <th v-if="isNiit">—</th>
+                            <th>—</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -755,23 +772,23 @@ const docColumnCount = computed(() => {
                             <td :class="cellClass">
                                 <SheetCell
                                     v-if="drafts[row.id]"
-                                    v-model="drafts[row.id].number"
-                                    align="center"
-                                    :editable="canManage"
-                                    empty-label=""
-                                    placeholder="Дугаар…"
-                                    @commit="(v) => saveField(row.id, 'number', v)"
-                                />
-                            </td>
-                            <td :class="cellClass">
-                                <SheetCell
-                                    v-if="drafts[row.id]"
                                     v-model="drafts[row.id].issued_on"
                                     type="date"
                                     align="center"
                                     :editable="canManage"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'issued_on', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].number"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    placeholder="Дугаар…"
+                                    @commit="(v) => saveField(row.id, 'number', v)"
                                 />
                             </td>
                             <td :class="cellClass">
@@ -799,6 +816,17 @@ const docColumnCount = computed(() => {
                             <td :class="cellClass">
                                 <SheetCell
                                     v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].effective_on"
+                                    type="date"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'effective_on', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
                                     v-model="drafts[row.id].attachment_name"
                                     :editable="canManage"
                                     empty-label=""
@@ -814,6 +842,27 @@ const docColumnCount = computed(() => {
                                     :editable="canManage"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'attachment_pages', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].original_form"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    placeholder="Эх хувь…"
+                                    @commit="(v) => saveField(row.id, 'original_form', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].file_index"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    placeholder="Индекс…"
+                                    @commit="(v) => saveField(row.id, 'file_index', v)"
                                 />
                             </td>
                             <td :class="cellClass">

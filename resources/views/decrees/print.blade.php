@@ -303,43 +303,51 @@
                     <table>
                         <thead>
                             <tr>
-                                <th rowspan="2" style="width:4%">№</th>
-                                <th rowspan="2" style="width:8%">Дугаар</th>
-                                <th rowspan="2" style="width:10%">Огноо</th>
-                                <th rowspan="2">{{ $titleLabel }}</th>
-                                <th rowspan="2" style="width:7%">Хуудасны тоо</th>
+                                <th rowspan="2" style="width:3%">Д/д</th>
+                                <th colspan="4">Захирамжлалын баримт бичгийн үндсэн мэдээлэл</th>
+                                <th rowspan="2" style="width:8%">Дагаж мөрдөх<br>он, сар, өдөр</th>
                                 <th colspan="2">Хавсралтын мэдээлэл</th>
-                                <th rowspan="2" style="width:14%">Боловсруулсан албан тушаалтан</th>
+                                <th rowspan="2" style="width:9%">Баримт бичгийн<br>эх хувийн шинж</th>
+                                <th rowspan="2" style="width:8%">ХХНЖ-ын<br>хэргийн индекс</th>
+                                <th rowspan="2" style="width:11%">Боловсруулсан<br>албан тушаалтан</th>
                                 @if ($isNiit)
-                                    <th rowspan="2" style="width:9%">Төрөл</th>
+                                    <th rowspan="2" style="width:8%">Төрөл</th>
                                 @endif
                             </tr>
                             <tr>
-                                <th style="width:14%">Баримт бичгийн нэр</th>
-                                <th style="width:7%">Хуудасны тоо</th>
+                                <th style="width:8%">Батлагдсан огноо</th>
+                                <th style="width:7%">Бүртгэлийн дугаар</th>
+                                <th>{{ $titleLabel }}</th>
+                                <th style="width:6%">Хуудасны тоо</th>
+                                <th style="width:12%">Баримт бичгийн нэр</th>
+                                <th style="width:6%">Хуудасны тоо</th>
                             </tr>
                             <tr class="idx">
-                                <td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td>
-                                @if ($isNiit)<td>9</td>@endif
+                                <td>1</td><td>2</td><td>3</td><td>4</td><td>5</td>
+                                <td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>—</td>
+                                @if ($isNiit)<td>—</td>@endif
                             </tr>
                         </thead>
                         <tbody>
                             @forelse ($rows as $row)
                                 <tr>
                                     <td class="center">{{ $row['no'] }}</td>
-                                    <td class="center">{{ $row['number'] }}</td>
                                     <td class="center">{{ $row['issued_on_display'] }}</td>
+                                    <td class="center">{{ $row['number'] }}</td>
                                     <td>{{ $row['title'] }}</td>
                                     <td class="center">{{ $row['page_count'] }}</td>
+                                    <td class="center">{{ $row['effective_on'] }}</td>
                                     <td>{{ $row['attachment_name'] }}</td>
                                     <td class="center">{{ $row['attachment_pages'] }}</td>
+                                    <td>{{ $row['original_form'] }}</td>
+                                    <td class="center">{{ $row['file_index'] }}</td>
                                     <td>{{ $row['person_name'] }}</td>
                                     @if ($isNiit)
                                         <td class="center">{{ $row['kind_label'] }}</td>
                                     @endif
                                 </tr>
                             @empty
-                                <tr><td colspan="{{ $isNiit ? 9 : 8 }}" class="center">Бүртгэл алга.</td></tr>
+                                <tr><td colspan="{{ $isNiit ? 12 : 11 }}" class="center">Бүртгэл алга.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

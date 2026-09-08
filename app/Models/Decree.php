@@ -28,8 +28,11 @@ class Decree extends Model
         'number',
         'title',
         'page_count',
+        'effective_on',
         'attachment_name',
         'attachment_pages',
+        'original_form',
+        'file_index',
         'person_name',
         'qty_zahiramj',
         'qty_zahiramj_mn',
@@ -53,6 +56,7 @@ class Decree extends Model
     {
         return [
             'issued_on' => 'date',
+            'effective_on' => 'date',
             'page_count' => 'integer',
             'attachment_pages' => 'integer',
             'qty_zahiramj' => 'integer',
