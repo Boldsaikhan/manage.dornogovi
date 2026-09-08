@@ -72,11 +72,27 @@ class PhoneDirectoryController extends Controller
     {
         abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
 
-        $groups = PhoneDirectoryEntry::query()
+        // Сонгосон мөр байвал зөвхөн тэдгээрийг татна.
+        $ids = collect(explode(',', (string) $request->query('ids', '')))
+            ->map(fn ($id) => (int) trim($id))
+            ->filter()
+            ->unique()
+            ->values();
+
+        $query = PhoneDirectoryEntry::query()
             ->orderBy('org_order')
             ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get()
+            ->orderBy('id');
+
+        if ($ids->isNotEmpty()) {
+            $query->whereIn('id', $ids->all());
+        }
+
+        $entries = $query->get();
+
+        abort_if($entries->isEmpty(), 404, 'Татах бүртгэл алга.');
+
+        $groups = $entries
             ->groupBy('org_name')
             ->map(fn ($rows, $orgName) => [
                 'org_name' => $orgName,
@@ -90,12 +106,14 @@ class PhoneDirectoryController extends Controller
             ->values()
             ->all();
 
+        $title = $ids->isNotEmpty() ? 'Утасны жагсаалт (сонгосон)' : 'Утасны жагсаалт';
+
         $tmp = tempnam(sys_get_temp_dir(), 'phones');
-        $writer->write($groups, $tmp);
+        $writer->write($groups, $tmp, $title);
         $content = (string) file_get_contents($tmp);
         @unlink($tmp);
 
-        $fileName = 'Утасны жагсаалт '.now()->format('Y-m-d').'.docx';
+        $fileName = $title.' '.now()->format('Y-m-d').'.docx';
 
         return response($content, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
