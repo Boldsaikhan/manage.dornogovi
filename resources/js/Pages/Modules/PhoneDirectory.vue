@@ -795,11 +795,12 @@ const closeDirectoryForm = () => {
                     v-if="accountRow && ! accountRow.account"
                     class="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800"
                 >
-                    Энэ хүнд нэвтрэх эрх үүсээгүй байна. «Хандах эрх» хэсгээс бүртгэл
-                    үүсгэсний дараа энд нууц үгийг нь шинэчилж болно.
+                    Энэ хүнд нэвтрэх эрх үүсээгүй байна. Доор нууц үг оруулаад
+                    <strong>«Бүртгэл үүсгэх»</strong> дарвал энд шууд үүснэ.
+                    И-мэйл, хэлтэс, роль нь автоматаар оноогдоно.
                 </p>
 
-                <template v-else>
+                <template>
                     <div class="mt-4">
                         <label class="ui-label">Нэвтрэх нэр (гар утас)</label>
                         <input v-model="accountForm.login" type="tel" inputmode="numeric" class="ui-input" />
@@ -816,7 +817,9 @@ const closeDirectoryForm = () => {
                                 v-model="accountForm.password"
                                 :type="accountShowPassword ? 'text' : 'password'"
                                 class="ui-input flex-1"
-                                placeholder="Хоосон орхивол хэвээр үлдэнэ"
+                                :placeholder="accountRow?.account
+                                ? 'Хоосон орхивол хэвээр үлдэнэ'
+                                : 'Шинэ бүртгэлд заавал'"
                                 autocomplete="new-password"
                             />
                             <button
@@ -845,12 +848,13 @@ const closeDirectoryForm = () => {
                 <div class="mt-6 flex justify-end gap-2 border-t border-slate-100 pt-4">
                     <button type="button" class="ui-btn-ghost" @click="closeAccount">Болих</button>
                     <button
-                        v-if="accountRow?.account"
                         type="submit"
                         class="ui-btn-primary"
                         :disabled="accountForm.processing"
                     >
-                        {{ accountForm.processing ? 'Хадгалж байна…' : 'Шинэчлэх' }}
+                        {{ accountForm.processing
+                            ? 'Хадгалж байна…'
+                            : (accountRow?.account ? 'Шинэчлэх' : 'Бүртгэл үүсгэх') }}
                     </button>
                 </div>
             </form>

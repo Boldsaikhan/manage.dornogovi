@@ -394,6 +394,43 @@ class HeltesAccountProvisioner
     /**
      * @param  array{name: string, phone: string, password: string, position: string, latin: string}  $creds
      */
+    /**
+     * Утасны жагсаалтын мөрөөс нэг хүнд нэвтрэх эрх үүсгэнэ.
+     *
+     * Админ хуудсаас гараар дуудахад зориулав — бөөнөөр үүсгэх урсгалтай
+     * ижил дүрмээр (и-мэйл, хэлтэс, роль) бүртгэнэ.
+     */
+    public function createForEntry(PhoneDirectoryEntry $entry, string $password, ?string $phone = null): ?User
+    {
+        $creds = $this->credentials($entry);
+
+        if (! $creds) {
+            return null;
+        }
+
+        $creds['password'] = $password;
+
+        if ($phone !== null && $phone !== '') {
+            $creds['phone'] = $phone;
+        }
+
+        return $this->createUser($creds, $entry, $this->looksLikeHead($entry));
+    }
+
+    /** Албан тушаал нь дарга эсэх — роль сонгоход хэрэглэнэ. */
+    private function looksLikeHead(PhoneDirectoryEntry $entry): bool
+    {
+        return str_contains(mb_strtolower((string) $entry->position), 'дарга');
+    }
+
+    /** Санал болгох и-мэйл (давхардахгүй). */
+    public function suggestEmail(PhoneDirectoryEntry $entry): ?string
+    {
+        $creds = $this->credentials($entry);
+
+        return $creds ? $this->uniqueEmail($creds['latin']) : null;
+    }
+
     private function createUser(array $creds, PhoneDirectoryEntry $entry, bool $isHead): User
     {
         $user = User::create([
