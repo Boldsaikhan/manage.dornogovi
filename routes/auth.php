@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Auth\PhonePasswordResetController;
 use App\Http\Controllers\Auth\QrLoginController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
@@ -51,6 +52,26 @@ Route::middleware('guest')->group(function () {
 
     Route::post('reset-password', [NewPasswordController::class, 'store'])
         ->name('password.store');
+
+    // Утасны дугаараар сэргээх — verify.mn-ээр нэг удаагийн код.
+    Route::post('forgot-password/phone', [PhonePasswordResetController::class, 'send'])
+        ->middleware('throttle:6,1')
+        ->name('password.phone.send');
+
+    Route::post('forgot-password/phone/confirm', [PhonePasswordResetController::class, 'confirm'])
+        ->middleware('throttle:20,1')
+        ->name('password.phone.confirm');
+
+    Route::get('forgot-password/phone/status', [PhonePasswordResetController::class, 'status'])
+        ->middleware('throttle:240,1')
+        ->name('password.phone.status');
+
+    Route::post('forgot-password/phone/password', [PhonePasswordResetController::class, 'update'])
+        ->middleware('throttle:20,1')
+        ->name('password.phone.update');
+
+    Route::post('forgot-password/phone/cancel', [PhonePasswordResetController::class, 'cancel'])
+        ->name('password.phone.cancel');
 });
 
 Route::middleware('auth')->group(function () {

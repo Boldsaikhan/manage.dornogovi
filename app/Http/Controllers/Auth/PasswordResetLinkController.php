@@ -25,10 +25,12 @@ class PasswordResetLinkController extends Controller
     /** Түр нууц үгийн урт. */
     private const PASSWORD_LENGTH = 10;
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
         return Inertia::render('Auth/ForgotPassword', [
             'status' => session('status'),
+            // Утасны сувгийн алхам (дугаар → код → шинэ нууц үг).
+            'phoneState' => PhonePasswordResetController::state($request),
         ]);
     }
 
