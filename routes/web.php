@@ -175,6 +175,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/phone-directory/{entry}/account', [UserAccessController::class, 'updateDirectoryAccount'])->name('phone-directory.account');
         Route::patch('/ai-settings', [SystemSettingsController::class, 'updateAi'])->name('ai-settings.update');
         Route::patch('/verify-settings', [SystemSettingsController::class, 'updateVerify'])->name('verify-settings.update');
+        Route::post('/verify-settings/test', [SystemSettingsController::class, 'testVerify'])->middleware('throttle:20,1')->name('verify-settings.test');
         Route::patch('/menu-settings', [SystemSettingsController::class, 'updateMenus'])->name('menu-settings.update');
 
         Route::get('/users', [UserAccessController::class, 'index'])->name('users.index');

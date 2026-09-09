@@ -104,6 +104,37 @@ class VerifySettingsTest extends TestCase
         $this->assertNotSame($first, app(VerifySettings::class)->callbackSecret());
     }
 
+    public function test_the_admin_can_probe_the_connection(): void
+    {
+        Http::fake(['api.verify.mn/sessions' => Http::response([
+            'sessionId' => 'sess-probe',
+            'displayInstruction' => 'Та 99112233 дугаараас 144773 руу илгээнэ үү.',
+        ], 201)]);
+
+        $settings = app(VerifySettings::class);
+        $settings->set(VerifySettings::KEY_ENABLED, '1');
+        $settings->setApiKey('vrf_ok');
+
+        $this->actingAs(User::factory()->create(['is_admin' => true, 'phone' => '99112233']))
+            ->post(route('admin.verify-settings.test'))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+    }
+
+    public function test_a_bad_api_key_is_reported(): void
+    {
+        Http::fake(['api.verify.mn/sessions' => Http::response(['message' => 'unauthorized'], 401)]);
+
+        $settings = app(VerifySettings::class);
+        $settings->set(VerifySettings::KEY_ENABLED, '1');
+        $settings->setApiKey('vrf_buruu');
+
+        $this->actingAs(User::factory()->create(['is_admin' => true, 'phone' => '99112233']))
+            ->post(route('admin.verify-settings.test'))
+            ->assertRedirect()
+            ->assertSessionHas('warning', fn (string $message) => str_contains($message, '401'));
+    }
+
     public function test_a_non_admin_cannot_change_the_settings(): void
     {
         $this->actingAs(User::factory()->create())

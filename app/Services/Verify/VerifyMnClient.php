@@ -102,6 +102,67 @@ class VerifyMnClient
     }
 
     /**
+     * Тохиргоог шалгах — жинхэнэ session үүсгэж үзнэ.
+     *
+     * Session үүсэх нь төлбөргүй (хэрэглэгч SMS илгээж байж л төлбөр гарна),
+     * тиймээс API түлхүүр зөв эсэхийг аюулгүйгээр шалгаж болно.
+     *
+     * @return array{ok: bool, status: int, message: string, session: ?array<string, mixed>}
+     */
+    public function probe(string $phone): array
+    {
+        if (! $this->settings->enabled()) {
+            return ['ok' => false, 'status' => 0, 'message' => 'Тохиргоо идэвхгүй байна.', 'session' => null];
+        }
+
+        if (! filled($this->settings->apiKey())) {
+            return ['ok' => false, 'status' => 0, 'message' => 'API түлхүүр оруулаагүй байна.', 'session' => null];
+        }
+
+        try {
+            $response = Http::timeout((int) config('verify.timeout', 15))
+                ->withToken((string) $this->settings->apiKey())
+                ->acceptJson()
+                ->post(config('verify.base_url').'/sessions', array_filter([
+                    'phone' => $phone,
+                    'text' => $this->generateCode(),
+                    'callback' => $this->callbackUrl(),
+                    'responseSms' => $this->settings->responseSms() ?: null,
+                ]));
+
+            if ($response->successful()) {
+                return [
+                    'ok' => true,
+                    'status' => $response->status(),
+                    'message' => 'Session амжилттай үүслээ.',
+                    'session' => (array) $response->json(),
+                ];
+            }
+
+            $message = match ($response->status()) {
+                401 => 'API түлхүүр буруу байна (401).',
+                400 => 'Хүсэлтийн утга буруу байна (400): '.$response->body(),
+                409 => 'Энэ дугаарт идэвхтэй session байна (409) — холболт ажиллаж байна.',
+                default => 'verify.mn '.$response->status().': '.$response->body(),
+            };
+
+            return [
+                'ok' => $response->status() === 409,
+                'status' => $response->status(),
+                'message' => $message,
+                'session' => null,
+            ];
+        } catch (Throwable $e) {
+            return [
+                'ok' => false,
+                'status' => 0,
+                'message' => 'Холбогдож чадсангүй: '.$e->getMessage(),
+                'session' => null,
+            ];
+        }
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     private function createSession(string $phone, string $code): ?array
