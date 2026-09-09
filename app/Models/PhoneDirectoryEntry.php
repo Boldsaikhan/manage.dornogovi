@@ -187,6 +187,51 @@ class PhoneDirectoryEntry extends Model
         return array_values(array_unique($names));
     }
 
+    /**
+     * Хэрэглэгчтэй тохирох утасны жагсаалтын мөр.
+     *
+     * Эхлээд дугаараар нь (гар / ажлын), олдохгүй бол нэрээр нь тулгана.
+     * Нэрээр олдсон мөр нэгээс олон бол алийг нь ч сонгохгүй — эргэлзээтэй.
+     */
+    public static function forUser(\App\Models\User $user): ?self
+    {
+        $phone = \App\Models\User::normalizePhone($user->phone);
+        $rows = static::query()->orderBy('org_order')->orderBy('sort_order')->get();
+
+        if ($phone !== null) {
+            $byPhone = $rows->first(function (self $row) use ($phone) {
+                return \App\Models\User::normalizePhone($row->mobile_phone) === $phone
+                    || \App\Models\User::normalizePhone($row->office_phone) === $phone;
+            });
+
+            if ($byPhone) {
+                return $byPhone;
+            }
+        }
+
+        $short = \App\Support\PersonName::short((string) $user->name);
+
+        if ($short === '') {
+            return null;
+        }
+
+        $byName = $rows->filter(function (self $row) use ($short) {
+            $full = trim((string) $row->person_name);
+
+            return $full !== '' && (\App\Support\PersonName::short($full) ?: $full) === $short;
+        });
+
+        return $byName->count() === 1 ? $byName->first() : null;
+    }
+
+    /** Тухайн мөрийн нэвтрэх нэр болох дугаар — гар утас нь тэргүүн ээлжинд. */
+    public function loginPhone(): ?string
+    {
+        return \App\Models\User::normalizePhone(
+            self::preferredPhone($this->mobile_phone, $this->office_phone)
+        );
+    }
+
     public static function preferredPhone(?string $mobile, ?string $office): ?string
     {
         foreach ([$mobile, $office] as $raw) {

@@ -395,6 +395,30 @@ const suggestPassword = () => {
     showPassword.value = true;
 };
 
+/** Утасны жагсаалтын дугаартай зөрж байгаа бүртгэлүүд. */
+const mismatchedLogins = computed(
+    () => props.users.filter((u) => u.directory_phone && ! u.login_matches_directory),
+);
+
+/** Нэвтрэх нэрийг утасны жагсаалтын дугаараар солино. */
+const syncingLogin = ref(false);
+
+const syncLogin = () => {
+    if (! selected.value || syncingLogin.value) return;
+
+    syncingLogin.value = true;
+    router.patch(route('admin.users.login', selected.value.id), {}, {
+        preserveScroll: true,
+        onFinish: () => { syncingLogin.value = false; },
+    });
+};
+
+const syncAllLogins = () => {
+    if (! confirm('Бүх бүртгэлийн нэвтрэх нэрийг утасны жагсаалтын дугаараар шинэчлэх үү?')) return;
+
+    router.post(route('admin.users.sync-logins'), {}, { preserveScroll: true });
+};
+
 const savePassword = () => {
     if (! selected.value) return;
 
@@ -475,6 +499,19 @@ const pickFromDirectory = (value) => {
                         <span class="ml-1 font-medium text-slate-400">
                             {{ userSearch.trim() ? `${filteredUsers.length}/${users.length}` : users.length }}
                         </span>
+                    </div>
+                    <div
+                        v-if="mismatchedLogins.length"
+                        class="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-[11px] leading-relaxed text-rose-700"
+                    >
+                        {{ mismatchedLogins.length }} бүртгэлийн нэвтрэх нэр утасны жагсаалтын дугаартай зөрж байна.
+                        <button
+                            type="button"
+                            class="mt-1 block font-semibold underline underline-offset-2 hover:text-rose-900"
+                            @click="syncAllLogins"
+                        >
+                            Бүгдийг жагсаалтаар тулгах →
+                        </button>
                     </div>
                     <input
                         v-model="userSearch"
@@ -623,11 +660,42 @@ const pickFromDirectory = (value) => {
                     <!-- Нууц үг — ролийн хадгалалтаас тусдаа -->
                     <div class="space-y-2 rounded-xl border border-amber-200 bg-amber-50/50 p-3">
                         <div class="flex flex-wrap items-center justify-between gap-2">
-                            <p class="text-sm font-semibold text-brand-navy-800">Нэвтрэх нууц үг</p>
+                            <p class="text-sm font-semibold text-brand-navy-800">Нэвтрэх нэр, нууц үг</p>
                             <span class="text-xs text-slate-500">
                                 Нэвтрэх нэр: <b class="text-brand-navy-700">{{ selected.phone || selected.email }}</b>
                             </span>
                         </div>
+
+                        <!-- Нэвтрэх нэр нь утасны жагсаалтын дугаар байх ёстой -->
+                        <div
+                            v-if="selected.directory_phone && ! selected.login_matches_directory"
+                            class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2"
+                        >
+                            <p class="text-xs text-rose-700">
+                                Утасны жагсаалтад
+                                <b>{{ selected.directory_phone }}</b>
+                                гэж бүртгэлтэй байна — нэвтрэх нэр нь энэ дугаар байх ёстой.
+                            </p>
+                            <button
+                                type="button"
+                                class="ui-btn-ghost !py-1 !text-xs"
+                                :disabled="syncingLogin"
+                                @click="syncLogin"
+                            >
+                                {{ syncingLogin ? 'Солиж байна…' : 'Жагсаалтын дугаараар солих' }}
+                            </button>
+                        </div>
+                        <p
+                            v-else-if="! selected.directory_phone"
+                            class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700"
+                        >
+                            Энэ албан хаагч утасны жагсаалтад олдсонгүй. Нэвтрэх нэр нь жагсаалтад
+                            бүртгэлтэй дугаар байх ёстой тул эхлээд «Утасны жагсаалт»-д бүртгэнэ үү.
+                        </p>
+                        <p v-else class="text-xs text-emerald-700">
+                            Нэвтрэх нэр нь утасны жагсаалтын дугаартай таарч байна.
+                        </p>
+
                         <p class="text-xs text-slate-500">
                             Хуучин нууц үгийг харах боломжгүй (шифрлэгдсэн). Мартсан бол шинээр тавьж өгнө.
                         </p>
