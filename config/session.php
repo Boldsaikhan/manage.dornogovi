@@ -32,7 +32,22 @@ return [
     |
     */
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 30),
+    'lifetime' => (int) env('SESSION_LIFETIME', 43200),
+
+    /*
+    | Хамгийн богино нь хэдэн хоног байх вэ (өдрөөр).
+    |
+    | Нэг нэвтэрсэн бол «Гарах» дартал нэвтэрсэн хэвээр байх ёстой. .env дэх
+    | SESSION_LIFETIME үүнээс бага байвал AppServiceProvider энэ утгыг мөрдүүлнэ.
+    */
+    'min_days' => (int) env('SESSION_MIN_DAYS', 30),
+
+    /*
+    | Гар утсан дээр хэдэн минут идэвхгүй байвал түгжих вэ.
+    |
+    | Түгжээг зөвхөн хуруу/царайгаар тайлна — дахин нэвтрэх шаардлагагүй.
+    */
+    'idle_lock_minutes' => (int) env('SESSION_IDLE_LOCK_MINUTES', 30),
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 
