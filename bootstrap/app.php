@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -37,6 +38,27 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Хурдны хязгаарт хүрэхэд хар дэлгэц биш, эелдэг мэдэгдэл.
+        $exceptions->render(function (TooManyRequestsHttpException $e, Request $request) {
+            $seconds = (int) ($e->getHeaders()['Retry-After'] ?? 60);
+            $message = sprintf(
+                'Хэт олон оролдлого хийлээ. %d секундын дараа дахин оролдоно уу.',
+                max(1, $seconds),
+            );
+
+            if ($request->expectsJson() && ! $request->header('X-Inertia')) {
+                return response()->json(['message' => $message], 429);
+            }
+
+            // Аль хуудсанд буцахаас хамаарч тохирох талбар дор нь харагдана.
+            return back(303)->withErrors([
+                'phone' => $message,
+                'login' => $message,
+                'code' => $message,
+                'email' => $message,
+            ]);
+        });
+
         // iPhone/Safari дээр CSRF тасрахад 419 модал биш, нэвтрэх хуудас руу буцаана.
         $exceptions->respond(function ($response, $e, Request $request) {
             if ($response->getStatusCode() !== 419) {
