@@ -7,6 +7,7 @@ use App\Models\PhoneVerification;
 use App\Models\User;
 use App\Services\Sms\SmsSender;
 use App\Services\Verify\VerifyMnClient;
+use App\Services\Verify\VerifySettings;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -38,7 +39,10 @@ class PhonePasswordResetController extends Controller
 
     private const PENDING_KEY = 'password_reset.phone_verification_id';
 
-    public function __construct(private VerifyMnClient $verify) {}
+    public function __construct(
+        private VerifyMnClient $verify,
+        private VerifySettings $settings,
+    ) {}
 
     /**
      * Хуудасны одоогийн алхам.
@@ -57,7 +61,7 @@ class PhonePasswordResetController extends Controller
                 'sms_uri' => null,
                 'instruction' => null,
                 'expires_at' => null,
-                'shortcode' => (string) config('verify.shortcode', '144773'),
+                'shortcode' => app(VerifySettings::class)->shortcode(),
                 'sms_cost' => (int) config('verify.sms_cost', 150),
             ];
         }
@@ -69,7 +73,7 @@ class PhonePasswordResetController extends Controller
             'sms_uri' => $record->sms_uri,
             'instruction' => $record->instruction,
             'expires_at' => optional($record->expires_at)?->toIso8601String(),
-            'shortcode' => (string) config('verify.shortcode', '144773'),
+            'shortcode' => app(VerifySettings::class)->shortcode(),
             'sms_cost' => (int) config('verify.sms_cost', 150),
         ];
     }
@@ -195,7 +199,7 @@ class PhonePasswordResetController extends Controller
 
         if ($record->channel === 'verify.mn') {
             throw ValidationException::withMessages([
-                'code' => 'Кодоо '.config('verify.shortcode', '144773').' дугаар руу SMS-ээр илгээнэ үү.',
+                'code' => 'Кодоо '.$this->settings->shortcode().' дугаар руу SMS-ээр илгээнэ үү.',
             ]);
         }
 
@@ -305,7 +309,7 @@ class PhonePasswordResetController extends Controller
      */
     public function callback(Request $request, string $secret): Response
     {
-        $expected = trim((string) config('verify.callback_secret'));
+        $expected = $this->settings->callbackSecret();
 
         abort_unless($expected !== '' && hash_equals($expected, $secret), 404);
 
