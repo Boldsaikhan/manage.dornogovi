@@ -12,7 +12,16 @@ const props = defineProps({
     /** Утасны сувгийн алхам: phone → code → password. */
     phoneState: {
         type: Object,
-        default: () => ({ step: 'phone', phone: null, channel: null }),
+        default: () => ({
+            step: 'phone',
+            phone: null,
+            channel: null,
+            sms_uri: null,
+            instruction: null,
+            expires_at: null,
+            shortcode: '144773',
+            sms_cost: 150,
+        }),
     },
 });
 
@@ -78,14 +87,14 @@ const startPolling = () => {
         try {
             const { data } = await axios.get(route('password.phone.status'));
 
-            if (data?.verified) {
+            if (data?.verified || data?.expired) {
                 stopPolling();
                 router.reload({ only: ['phoneState'] });
             }
         } catch {
             // Сүлжээ тасарвал дараагийн оролдлогод дахин шалгана.
         }
-    }, 4000);
+    }, 3000);
 };
 
 watch(step, (value) => (value === 'code' ? startPolling() : stopPolling()), { immediate: true });
@@ -101,6 +110,51 @@ const maskedPhone = computed(() => {
 
     return phone ? `${phone.slice(0, 4)}••••` : '';
 });
+
+/** verify.mn — хэрэглэгч ӨӨРӨӨ богино дугаар руу кодоо илгээнэ (MO SMS). */
+const isMoSms = computed(() => props.phoneState?.channel === 'verify.mn');
+
+const shortcode = computed(() => props.phoneState?.shortcode || '144773');
+const smsCost = computed(() => props.phoneState?.sms_cost || 150);
+
+/** Илгээх кодыг sms: холбоосоос салгаж том үсгээр харуулна. */
+const sentCode = computed(() => {
+    const uri = props.phoneState?.sms_uri || '';
+    const match = uri.match(/body=([^&]+)/);
+
+    return match ? decodeURIComponent(match[1]) : '';
+});
+
+const remaining = ref('');
+let ticker = null;
+
+const updateRemaining = () => {
+    const iso = props.phoneState?.expires_at;
+
+    if (! iso) {
+        remaining.value = '';
+
+        return;
+    }
+
+    const left = Math.max(0, Math.floor((new Date(iso).getTime() - Date.now()) / 1000));
+    const mm = String(Math.floor(left / 60)).padStart(2, '0');
+    const ss = String(left % 60).padStart(2, '0');
+
+    remaining.value = `${mm}:${ss}`;
+};
+
+watch(step, (value) => {
+    clearInterval(ticker);
+    ticker = null;
+
+    if (value === 'code') {
+        updateRemaining();
+        ticker = setInterval(updateRemaining, 1000);
+    }
+}, { immediate: true });
+
+onBeforeUnmount(() => clearInterval(ticker));
 </script>
 
 <template>
@@ -153,9 +207,9 @@ const maskedPhone = computed(() => {
                 <!-- 1. Утасны дугаар -->
                 <template v-if="channel === 'phone' && step === 'phone'">
                     <p class="mt-5 text-sm leading-relaxed text-slate-500">
-                        Бүртгэлтэй утасны дугаараа оруулна уу. Бид тухайн дугаар руу
-                        <strong class="text-brand-navy-700">нэг удаагийн баталгаажуулах код</strong>
-                        илгээнэ.
+                        Бүртгэлтэй утасны дугаараа оруулна уу. Дараа нь та тухайн дугаараасаа
+                        <strong class="text-brand-navy-700">{{ shortcode }}</strong> дугаар руу
+                        нэг удаагийн код илгээж баталгаажуулна.
                     </p>
 
                     <form class="mt-5 space-y-4" @submit.prevent="sendCode">
@@ -206,44 +260,86 @@ const maskedPhone = computed(() => {
                     </form>
                 </template>
 
-                <!-- 2. Код -->
+                <!-- 2. Код — verify.mn бол хэрэглэгч өөрөө SMS илгээнэ -->
                 <template v-else-if="channel === 'phone' && step === 'code'">
-                    <p class="mt-5 text-sm leading-relaxed text-slate-500">
-                        <strong class="text-brand-navy-700">{{ maskedPhone }}</strong> дугаар руу илгээсэн
-                        баталгаажуулах кодыг оруулна уу.
-                    </p>
+                    <template v-if="isMoSms">
+                        <p class="mt-5 text-sm leading-relaxed text-slate-600">
+                            {{ phoneState.instruction || ('Та ' + phoneState.phone + ' дугаараасаа ' + shortcode + ' дугаарт доорх кодыг SMS-ээр илгээнэ үү.') }}
+                        </p>
 
-                    <form class="mt-5 space-y-4" @submit.prevent="confirmCode">
-                        <div>
-                            <label for="code" class="mb-1.5 block text-xs font-medium text-slate-400">
-                                Баталгаажуулах код
-                            </label>
-                            <input
-                                id="code"
-                                v-model="codeForm.code"
-                                type="text"
-                                inputmode="numeric"
-                                autocomplete="one-time-code"
-                                placeholder="000000"
-                                required
-                                autofocus
-                                class="w-full rounded-xl border-2 bg-white px-4 py-3.5 text-center text-2xl font-semibold tracking-[0.4em] text-slate-800 placeholder-slate-200 transition focus:border-brand-navy-600 focus:outline-none focus:ring-4 focus:ring-brand-navy-600/10"
-                                :class="codeForm.errors.code ? 'border-red-400' : 'border-slate-200'"
-                            />
-
-                            <p v-if="codeForm.errors.code" class="mt-1.5 text-sm text-red-600">
-                                {{ codeForm.errors.code }}
+                        <div class="mt-4 rounded-2xl border-2 border-brand-navy-100 bg-brand-navy-50/60 px-4 py-4 text-center">
+                            <p class="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                {{ shortcode }} дугаар руу илгээх код
+                            </p>
+                            <p class="mt-1 text-3xl font-bold tracking-[0.35em] text-brand-navy-800">
+                                {{ sentCode }}
+                            </p>
+                            <p v-if="remaining" class="mt-1 text-xs text-slate-500">
+                                Хугацаа: <b>{{ remaining }}</b>
                             </p>
                         </div>
 
-                        <button
-                            type="submit"
-                            :disabled="codeForm.processing"
-                            class="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-navy-600 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-navy-600/25 transition hover:bg-brand-navy-700 focus:outline-none focus:ring-4 focus:ring-brand-navy-600/30 disabled:cursor-not-allowed disabled:opacity-60"
+                        <a
+                            v-if="phoneState.sms_uri"
+                            :href="phoneState.sms_uri"
+                            class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-navy-600 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-navy-600/25 transition hover:bg-brand-navy-700"
                         >
-                            {{ codeForm.processing ? 'Шалгаж байна…' : 'Баталгаажуулах' }}
-                        </button>
-                    </form>
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
+                            </svg>
+                            SMS илгээх
+                        </a>
+
+                        <div class="mt-3 flex items-center justify-center gap-2 text-xs text-slate-500">
+                            <span class="inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-500"></span>
+                            Илгээсэн эсэхийг автоматаар шалгаж байна…
+                        </div>
+
+                        <ul class="mt-4 space-y-1 rounded-xl bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-500">
+                            <li>• Заавал <b>{{ phoneState.phone }}</b> дугаараасаа илгээнэ. 2 SIM-тэй бол зөв SIM-ээ сонгоно уу.</li>
+                            <li>• Мессежийн төлбөр <b>{{ smsCost }}₮</b> — таны дугаараас хасагдана.</li>
+                            <li>• Баталгаажмагц энэ хуудас өөрөө үргэлжилнэ.</li>
+                        </ul>
+                    </template>
+
+                    <template v-else>
+                        <p class="mt-5 text-sm leading-relaxed text-slate-500">
+                            <strong class="text-brand-navy-700">{{ maskedPhone }}</strong> дугаар руу илгээсэн
+                            баталгаажуулах кодыг оруулна уу.
+                        </p>
+
+                        <form class="mt-5 space-y-4" @submit.prevent="confirmCode">
+                            <div>
+                                <label for="code" class="mb-1.5 block text-xs font-medium text-slate-400">
+                                    Баталгаажуулах код
+                                </label>
+                                <input
+                                    id="code"
+                                    v-model="codeForm.code"
+                                    type="text"
+                                    inputmode="numeric"
+                                    autocomplete="one-time-code"
+                                    placeholder="000000"
+                                    required
+                                    autofocus
+                                    class="w-full rounded-xl border-2 bg-white px-4 py-3.5 text-center text-2xl font-semibold tracking-[0.4em] text-slate-800 placeholder-slate-200 transition focus:border-brand-navy-600 focus:outline-none focus:ring-4 focus:ring-brand-navy-600/10"
+                                    :class="codeForm.errors.code ? 'border-red-400' : 'border-slate-200'"
+                                />
+
+                                <p v-if="codeForm.errors.code" class="mt-1.5 text-sm text-red-600">
+                                    {{ codeForm.errors.code }}
+                                </p>
+                            </div>
+
+                            <button
+                                type="submit"
+                                :disabled="codeForm.processing"
+                                class="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-navy-600 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-navy-600/25 transition hover:bg-brand-navy-700 focus:outline-none focus:ring-4 focus:ring-brand-navy-600/30 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {{ codeForm.processing ? 'Шалгаж байна…' : 'Баталгаажуулах' }}
+                            </button>
+                        </form>
+                    </template>
 
                     <button
                         type="button"

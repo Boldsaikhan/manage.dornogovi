@@ -10,6 +10,7 @@ use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -17,11 +18,16 @@ use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Утасны дугаараар нууц үг сэргээх.
+ * Утасны дугаараар нууц үг сэргээх — verify.mn (MO SMS).
  *
- * 1. Хэрэглэгч утасны дугаараа оруулна → verify.mn-ээр нэг удаагийн код очно.
- * 2. Кодоо хуудсан дээр бичнэ (эсвэл verify.mn callback-аар баталгаажина).
- * 3. Шинэ нууц үгээ өөрөө тавина.
+ * Урсгал:
+ *   1. Хэрэглэгч утасны дугаараа оруулна → verify.mn дээр session үүснэ.
+ *   2. Хэрэглэгч ӨӨРӨӨ 144773 дугаар руу кодоо SMS-ээр илгээнэ.
+ *   3. Хуудас 3 секунд тутам төлвийг асууна (verify.mn callback ч бас сэрээнэ).
+ *   4. VERIFIED болмогц шинэ нууц үгээ тавина.
+ *
+ * verify.mn унтраалттай үед нөөц суваг руу шилжинэ: кодыг бид SMS-ээр илгээж,
+ * хэрэглэгч хуудсан дээр бичнэ.
  *
  * Бүртгэл байгаа эсэхийг хариунаас нь мэдэх боломжгүй — алхмууд ижил явна.
  */
@@ -29,28 +35,41 @@ class PhonePasswordResetController extends Controller
 {
     private const PURPOSE = 'password_reset';
 
-    /** Session-д хадгалах түлхүүрүүд. */
     private const PENDING_KEY = 'password_reset.phone_verification_id';
 
     public function __construct(private VerifyMnClient $verify) {}
 
     /**
-     * Хуудасны одоогийн алхам — сэргээх хуудас үүнийг ашиглана.
+     * Хуудасны одоогийн алхам.
      *
-     * @return array{step: string, phone: ?string, channel: ?string}
+     * @return array<string, mixed>
      */
     public static function state(Request $request): array
     {
         $record = self::pending($request);
 
         if (! $record) {
-            return ['step' => 'phone', 'phone' => null, 'channel' => null];
+            return [
+                'step' => 'phone',
+                'phone' => null,
+                'channel' => null,
+                'sms_uri' => null,
+                'instruction' => null,
+                'expires_at' => null,
+                'shortcode' => (string) config('verify.shortcode', '144773'),
+                'sms_cost' => (int) config('verify.sms_cost', 150),
+            ];
         }
 
         return [
             'step' => $record->isVerified() ? 'password' : 'code',
             'phone' => $record->phone,
-            'channel' => $request->session()->get('password_reset.channel'),
+            'channel' => $record->channel,
+            'sms_uri' => $record->sms_uri,
+            'instruction' => $record->instruction,
+            'expires_at' => optional($record->expires_at)?->toIso8601String(),
+            'shortcode' => (string) config('verify.shortcode', '144773'),
+            'sms_cost' => (int) config('verify.sms_cost', 150),
         ];
     }
 
@@ -73,7 +92,7 @@ class PhonePasswordResetController extends Controller
     }
 
     /**
-     * 1-р алхам — дугаараа өгөх, код илгээх.
+     * 1-р алхам — дугаараа өгөх, session үүсгэх.
      */
     public function send(Request $request): RedirectResponse
     {
@@ -90,42 +109,46 @@ class PhonePasswordResetController extends Controller
         }
 
         $code = $this->verify->generateCode();
-
-        // Бүртгэлгүй дугаар байсан ч алхам ижил үргэлжилнэ — задруулахгүй.
         $user = User::query()->where('phone', $phone)->first();
 
         $record = PhoneVerification::query()->create([
             'phone' => $phone,
             'purpose' => self::PURPOSE,
+            'channel' => 'sms',
             'code_hash' => Hash::make($code),
-            'expires_at' => Carbon::now()->addMinutes((int) config('verify.code_ttl', 10)),
+            'expires_at' => Carbon::now()->addMinutes((int) config('verify.code_ttl', 5)),
             'ip' => $request->ip(),
         ]);
 
-        $channel = null;
-
+        // Бүртгэлгүй дугаарт session үүсгэхгүй — хэрэглэгчид алхам нь ижил харагдана.
         if ($user) {
-            $result = $this->verify->sendCode($phone, $code);
-            $channel = $result['channel'];
+            $result = $this->verify->startVerification($phone, $code);
 
-            if ($result['session_id']) {
-                $record->update(['session_id' => $result['session_id']]);
-            }
+            $record->update(array_filter([
+                'channel' => $result['channel'],
+                'session_id' => $result['session_id'],
+                'sms_uri' => $result['sms_uri'],
+                'instruction' => $result['instruction'],
+                'expires_at' => $result['expires_at']
+                    ? Carbon::parse($result['expires_at'])
+                    : $record->expires_at,
+            ]));
         }
 
         PhoneVerification::prune();
 
         $request->session()->put(self::PENDING_KEY, $record->id);
-        $request->session()->put('password_reset.channel', $channel);
 
-        return back()->with(
-            'status',
-            'Хэрэв энэ дугаар бүртгэлтэй бол баталгаажуулах код илгээлээ.',
-        );
+        return back()->with('status', $record->channel === 'verify.mn'
+            ? 'Доорх зааврын дагуу кодоо илгээнэ үү.'
+            : 'Хэрэв энэ дугаар бүртгэлтэй бол баталгаажуулах код илгээлээ.');
     }
 
     /**
-     * 2-р алхам — кодыг шалгах.
+     * Нөөц сувгийн алхам — кодыг гараар бичих.
+     *
+     * verify.mn сувагт код нь хэрэглэгчийн ИЛГЭЭХ текст тул хуудсан дээр
+     * бичих нь юуг ч нотлохгүй — тэр сувагт энэ арга хаалттай.
      */
     public function confirm(Request $request): RedirectResponse
     {
@@ -143,6 +166,12 @@ class PhonePasswordResetController extends Controller
 
         if ($record->isVerified()) {
             return back();
+        }
+
+        if ($record->channel === 'verify.mn') {
+            throw ValidationException::withMessages([
+                'code' => 'Кодоо '.config('verify.shortcode', '144773').' дугаар руу SMS-ээр илгээнэ үү.',
+            ]);
         }
 
         $max = (int) config('verify.max_attempts', 5);
@@ -167,15 +196,34 @@ class PhonePasswordResetController extends Controller
     }
 
     /**
-     * verify.mn callback-аар баталгаажсан эсэхийг хуудас шалгана.
+     * Хуудас 3 секунд тутам энэ хаягаар төлвийг асууна.
+     *
+     * verify.mn сувагт АЛБАН ЁСНЫ төлвийг нь эх сурвалжаас нь шалгана —
+     * callback ирсэн эсэхээс үл хамааран.
      */
     public function status(Request $request): JsonResponse
     {
         $record = self::pending($request);
 
+        if (! $record) {
+            return response()->json(['verified' => false, 'expired' => true]);
+        }
+
+        if (! $record->isVerified() && $record->channel === 'verify.mn' && $record->session_id) {
+            $status = $this->verify->sessionStatus($record->session_id);
+
+            if ($status === 'VERIFIED') {
+                $record->update(['verified_at' => Carbon::now()]);
+            } elseif ($status === 'EXPIRED') {
+                $record->update(['expires_at' => Carbon::now()->subSecond()]);
+
+                return response()->json(['verified' => false, 'expired' => true]);
+            }
+        }
+
         return response()->json([
-            'verified' => (bool) $record?->isVerified(),
-            'expired' => $record === null,
+            'verified' => $record->isVerified(),
+            'expired' => false,
         ]);
     }
 
@@ -199,7 +247,7 @@ class PhonePasswordResetController extends Controller
         $user = User::query()->where('phone', $record->phone)->first();
 
         $record->update(['consumed_at' => Carbon::now()]);
-        $request->session()->forget([self::PENDING_KEY, 'password_reset.channel']);
+        $request->session()->forget(self::PENDING_KEY);
 
         if ($user) {
             $user->forceFill([
@@ -219,58 +267,39 @@ class PhonePasswordResetController extends Controller
     /** Дахин эхлэх. */
     public function cancel(Request $request): RedirectResponse
     {
-        $request->session()->forget([self::PENDING_KEY, 'password_reset.channel']);
+        $request->session()->forget(self::PENDING_KEY);
 
         return back();
     }
 
     /**
-     * verify.mn-ээс ирэх мэдэгдэл.
+     * verify.mn-ээс ирэх «шалгаарай» дохио.
      *
-     * Session id-гаар, эсвэл дугаар + кодоор нь тааруулж баталгаажуулна.
+     * GET хүсэлт, бие ч, гарын үсэг ч байхгүй. Хурдан 2xx буцаах ёстой тул
+     * зөвхөн хүлээж буй session-уудын төлвийг эх сурвалжаас нь шалгана.
      */
-    public function callback(Request $request, string $secret): JsonResponse
+    public function callback(Request $request, string $secret): Response
     {
         $expected = trim((string) config('verify.callback_secret'));
 
         abort_unless($expected !== '' && hash_equals($expected, $secret), 404);
 
-        $sessionId = (string) ($request->input('id')
-            ?? $request->input('sessionId')
-            ?? $request->input('session_id')
-            ?? '');
-
-        $phone = User::normalizePhone((string) $request->input('phone', ''));
-        $code = preg_replace('/\D+/', '', (string) $request->input('text', $request->input('code', ''))) ?? '';
-
-        $query = PhoneVerification::query()
+        PhoneVerification::query()
             ->where('purpose', self::PURPOSE)
-            ->whereNull('consumed_at')
+            ->where('channel', 'verify.mn')
+            ->whereNotNull('session_id')
             ->whereNull('verified_at')
+            ->whereNull('consumed_at')
             ->where('expires_at', '>', Carbon::now())
-            ->orderByDesc('id');
+            ->orderByDesc('id')
+            ->limit(20)
+            ->get()
+            ->each(function (PhoneVerification $record): void {
+                if ($this->verify->sessionStatus((string) $record->session_id) === 'VERIFIED') {
+                    $record->update(['verified_at' => Carbon::now()]);
+                }
+            });
 
-        if ($sessionId !== '') {
-            $record = (clone $query)->where('session_id', $sessionId)->first();
-        } else {
-            $record = null;
-        }
-
-        if (! $record && $phone !== null) {
-            $record = (clone $query)->where('phone', $phone)->first();
-
-            // Дугаараар олдсон бол кодыг нь бас шалгана.
-            if ($record && $code !== '' && ! Hash::check($code, $record->code_hash)) {
-                $record = null;
-            }
-        }
-
-        if (! $record) {
-            return response()->json(['ok' => false], 404);
-        }
-
-        $record->update(['verified_at' => Carbon::now()]);
-
-        return response()->json(['ok' => true]);
+        return response('OK', 200);
     }
 }

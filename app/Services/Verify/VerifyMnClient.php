@@ -8,17 +8,16 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * verify.mn — нэг удаагийн кодын session үүсгэнэ.
+ * verify.mn — Mobile-Originated (MO) SMS баталгаажуулалт.
  *
- * POST {base_url}/sessions
- *   Authorization: Bearer <API KEY>
- *   { phone, text, callback, responseSms }
+ * Бид хэрэглэгч рүү SMS илгээхгүй. Хэрэглэгч өөрөө 144773 дугаар руу
+ * нэг удаагийн кодоо илгээж, verify.mn түүнийг таниулна.
  *
- * Хэрэглэгч кодоо хуудсан дээр бичиж болно, эсвэл verify.mn нь баталгаажуулаад
- * бидний callback руу мэдэгдэнэ — хоёулаа адилхан ажиллана.
+ *   POST /sessions          → sessionId, smsUri, displayInstruction, expiresAt
+ *   GET  /sessions/{id}     → sessionStatus: PENDING | VERIFIED | EXPIRED
  *
- * verify.mn унтраалттай эсвэл алдаа өгвөл хуучин SMS сувгаар (SmsSender) кодыг
- * илгээж, урсгал тасрахгүй.
+ * Callback нь зөвхөн «одоо шалгаарай» гэсэн дохио (бие, гарын үсэг байхгүй)
+ * тул түүнд дангаар нь итгэхгүй — үргэлж төлвийг нь дахин асууна.
  */
 class VerifyMnClient
 {
@@ -30,31 +29,79 @@ class VerifyMnClient
     }
 
     /**
-     * Session үүсгэж, кодыг хэрэглэгч рүү хүргэнэ.
+     * Баталгаажуулалтын session үүсгэнэ.
      *
      * @param  string  $phone  8 оронтой дугаар.
-     * @return array{sent: bool, session_id: ?string, channel: string}
+     * @return array{
+     *     channel: string,
+     *     sent: bool,
+     *     session_id: ?string,
+     *     sms_uri: ?string,
+     *     instruction: ?string,
+     *     expires_at: ?string
+     * }
      */
-    public function sendCode(string $phone, string $code): array
+    public function startVerification(string $phone, string $code): array
     {
         if ($this->isEnabled()) {
-            $sessionId = $this->createSession($phone, $code);
+            $session = $this->createSession($phone, $code);
 
-            if ($sessionId !== false) {
-                return ['sent' => true, 'session_id' => $sessionId, 'channel' => 'verify.mn'];
+            if ($session !== null) {
+                return [
+                    'channel' => 'verify.mn',
+                    'sent' => true,
+                    'session_id' => $session['sessionId'] ?? null,
+                    'sms_uri' => $session['smsUri'] ?? $this->fallbackSmsUri($code),
+                    'instruction' => $session['displayInstruction'] ?? null,
+                    'expires_at' => $session['expiresAt'] ?? null,
+                ];
             }
         }
 
         // Нөөц суваг — тохируулсан SMS API (хөгжүүлэлтэд log).
+        // Энэ тохиолдолд кодыг хэрэглэгч рүү бид илгээж, тэр гараар бичнэ.
         $sent = $this->sms->send($phone, $this->message($code));
 
-        return ['sent' => $sent, 'session_id' => null, 'channel' => 'sms'];
+        return [
+            'channel' => 'sms',
+            'sent' => $sent,
+            'session_id' => null,
+            'sms_uri' => null,
+            'instruction' => null,
+            'expires_at' => null,
+        ];
     }
 
     /**
-     * @return string|null|false  session id, эсвэл null (буцаагаагүй), false (алдаа).
+     * Session-ы АЛБАН ЁСНЫ төлөв. Зөвхөн энэ VERIFIED бол баталгаажсан.
+     *
+     * @return string|null  PENDING | VERIFIED | EXPIRED, эсвэл асууж чадаагүй бол null.
      */
-    private function createSession(string $phone, string $code): string|null|false
+    public function sessionStatus(string $sessionId): ?string
+    {
+        try {
+            $response = Http::timeout((int) config('verify.timeout', 15))
+                ->acceptJson()
+                ->get(config('verify.base_url').'/sessions/'.rawurlencode($sessionId));
+
+            if (! $response->successful()) {
+                return null;
+            }
+
+            $status = $response->json('sessionStatus');
+
+            return is_string($status) ? strtoupper($status) : null;
+        } catch (Throwable $e) {
+            report($e);
+
+            return null;
+        }
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function createSession(string $phone, string $code): ?array
     {
         try {
             $response = Http::timeout((int) config('verify.timeout', 15))
@@ -67,24 +114,20 @@ class VerifyMnClient
                     'responseSms' => trim((string) config('verify.response_sms')) ?: null,
                 ]));
 
-            if (! $response->successful()) {
-                Log::warning('verify.mn: session үүсгэж чадсангүй.', [
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
-
-                return false;
+            if ($response->successful()) {
+                return (array) $response->json();
             }
 
-            $id = $response->json('id')
-                ?? $response->json('sessionId')
-                ?? $response->json('data.id');
+            Log::warning('verify.mn: session үүсгэж чадсангүй.', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
 
-            return $id === null ? null : (string) $id;
+            return null;
         } catch (Throwable $e) {
             report($e);
 
-            return false;
+            return null;
         }
     }
 
@@ -100,16 +143,29 @@ class VerifyMnClient
         return route('verify.callback', ['secret' => $secret]);
     }
 
+    /** verify.mn-ээс smsUri ирээгүй үед өөрсдөө угсарна. */
+    public function fallbackSmsUri(string $code): string
+    {
+        return 'sms:'.config('verify.shortcode', '144773').'?body='.rawurlencode($code);
+    }
+
+    /** Нөөц сувгаар (бид илгээх) явуулах бичвэр. */
     public function message(string $code): string
     {
-        return str_replace(
-            ['{code}', '{minutes}', '{app}'],
-            [$code, (string) config('verify.code_ttl', 10), (string) config('app.name')],
-            (string) config('verify.code_message'),
+        return sprintf(
+            '%s — нууц үг сэргээх код: %s. Хугацаа %d минут.',
+            (string) config('app.name'),
+            $code,
+            (int) config('verify.code_ttl', 5),
         );
     }
 
-    /** Тохируулсан урттай нэг удаагийн тоон код. */
+    /**
+     * Нэг удаагийн тоон код.
+     *
+     * verify.mn нь ирсэн SMS-ийн текстийг ЯГ таарч байгаа эсэхээр шалгадаг тул
+     * зөвхөн цифр ашиглана — хэрэглэгч андуурч бичих магадлал багасна.
+     */
     public function generateCode(): string
     {
         $length = max(4, min(8, (int) config('verify.code_length', 6)));
