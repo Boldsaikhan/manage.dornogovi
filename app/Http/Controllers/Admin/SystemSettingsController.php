@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\System;
 use App\Models\User;
 use App\Services\Ai\AiSettings;
+use App\Services\Verify\VerifyMnClient;
 use App\Services\Verify\VerifySettings;
 use App\Services\EmbedChecker;
 use App\Support\LoginFormDetector;
@@ -199,6 +200,44 @@ class SystemSettingsController extends Controller
         return redirect()
             ->route('admin.systems.index', ['tab' => 'verify'])
             ->with($verify->isConfigured() ? 'success' : 'info', $message);
+    }
+
+    /**
+     * Тохиргоог шалгах — жинхэнэ session үүсгэж үзнэ.
+     *
+     * Session үүсэхэд төлбөр гарахгүй (хэрэглэгч SMS илгээж байж л 150₮
+     * хасагдана) тул API түлхүүр зөв эсэхийг аюулгүйгээр шалгана.
+     */
+    public function testVerify(Request $request, VerifyMnClient $client): RedirectResponse
+    {
+        $data = $request->validate([
+            'phone' => ['nullable', 'string', 'max:20'],
+        ]);
+
+        $phone = User::normalizePhone($data['phone'] ?? null)
+            ?: User::normalizePhone($request->user()->phone);
+
+        if ($phone === null || strlen($phone) !== 8) {
+            return back()->withErrors([
+                'phone' => 'Шалгах утасны дугаарыг 8 оронгоор оруулна уу.',
+            ]);
+        }
+
+        $result = $client->probe($phone);
+
+        if (! $result['ok']) {
+            return redirect()
+                ->route('admin.systems.index', ['tab' => 'verify'])
+                ->with('warning', 'Холболт амжилтгүй — '.$result['message']);
+        }
+
+        $instruction = $result['session']['displayInstruction'] ?? null;
+
+        return redirect()
+            ->route('admin.systems.index', ['tab' => 'verify'])
+            ->with('success', trim('Холболт амжилттай. '.($instruction
+                ? 'Туршихыг хүсвэл: '.$instruction
+                : $result['message'])));
     }
 
     public function store(Request $request): RedirectResponse

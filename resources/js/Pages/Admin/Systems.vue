@@ -170,6 +170,12 @@ const verifyForm = useForm({
     regenerate_secret: false,
 });
 
+const verifyTestForm = useForm({ phone: '' });
+
+const testVerify = () => {
+    verifyTestForm.post(route('admin.verify-settings.test'), { preserveScroll: true });
+};
+
 const copyCallback = async () => {
     try {
         await navigator.clipboard.writeText(props.verify?.callback_url ?? '');
@@ -833,6 +839,34 @@ const saveAi = () => {
                     {{ verifyForm.processing ? 'Хадгалж байна…' : 'Хадгалах' }}
                 </button>
             </form>
+
+            <div class="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                <p class="text-sm font-semibold text-brand-navy-800">Холболт шалгах</p>
+                <p class="mt-1 text-xs text-slate-500">
+                    verify.mn руу жинхэнэ session үүсгэж, API түлхүүр зөв эсэхийг шалгана.
+                    Зөвхөн шалгалт — SMS илгээхгүй бол ямар ч төлбөр гарахгүй.
+                </p>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                    <input
+                        v-model="verifyTestForm.phone"
+                        type="tel"
+                        inputmode="numeric"
+                        class="ui-input max-w-[12rem]"
+                        placeholder="Өөрийн дугаар"
+                    />
+                    <button
+                        type="button"
+                        class="ui-btn-ghost"
+                        :disabled="verifyTestForm.processing"
+                        @click="testVerify"
+                    >
+                        {{ verifyTestForm.processing ? 'Шалгаж байна…' : 'Шалгах' }}
+                    </button>
+                </div>
+                <p v-if="verifyTestForm.errors.phone" class="mt-1 text-xs text-rose-600">
+                    {{ verifyTestForm.errors.phone }}
+                </p>
+            </div>
         </section>
 
         <section
