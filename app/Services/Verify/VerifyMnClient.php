@@ -21,11 +21,14 @@ use Throwable;
  */
 class VerifyMnClient
 {
-    public function __construct(private SmsSender $sms) {}
+    public function __construct(
+        private SmsSender $sms,
+        private VerifySettings $settings,
+    ) {}
 
     public function isEnabled(): bool
     {
-        return (bool) config('verify.enabled') && trim((string) config('verify.api_key')) !== '';
+        return $this->settings->isConfigured();
     }
 
     /**
@@ -105,13 +108,13 @@ class VerifyMnClient
     {
         try {
             $response = Http::timeout((int) config('verify.timeout', 15))
-                ->withToken(trim((string) config('verify.api_key')))
+                ->withToken((string) $this->settings->apiKey())
                 ->acceptJson()
                 ->post(config('verify.base_url').'/sessions', array_filter([
                     'phone' => $phone,
                     'text' => $code,
                     'callback' => $this->callbackUrl(),
-                    'responseSms' => trim((string) config('verify.response_sms')) ?: null,
+                    'responseSms' => $this->settings->responseSms() ?: null,
                 ]));
 
             if ($response->successful()) {
@@ -132,21 +135,15 @@ class VerifyMnClient
     }
 
     /** verify.mn руу өгөх callback хаяг. Нууц түлхүүр нь хаягтаа шингэсэн. */
-    public function callbackUrl(): ?string
+    public function callbackUrl(): string
     {
-        $secret = trim((string) config('verify.callback_secret'));
-
-        if ($secret === '') {
-            return null;
-        }
-
-        return route('verify.callback', ['secret' => $secret]);
+        return route('verify.callback', ['secret' => $this->settings->callbackSecret()]);
     }
 
     /** verify.mn-ээс smsUri ирээгүй үед өөрсдөө угсарна. */
     public function fallbackSmsUri(string $code): string
     {
-        return 'sms:'.config('verify.shortcode', '144773').'?body='.rawurlencode($code);
+        return 'sms:'.$this->settings->shortcode().'?body='.rawurlencode($code);
     }
 
     /** Нөөц сувгаар (бид илгээх) явуулах бичвэр. */

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\System;
 use App\Models\User;
 use App\Services\Ai\AiSettings;
+use App\Services\Verify\VerifySettings;
 use App\Services\EmbedChecker;
 use App\Support\LoginFormDetector;
 use App\Support\ModuleAccess;
@@ -20,7 +21,7 @@ use Inertia\Response;
 
 class SystemSettingsController extends Controller
 {
-    public function index(AiSettings $aiSettings): Response
+    public function index(AiSettings $aiSettings, VerifySettings $verify): Response
     {
         return Inertia::render('Admin/Systems', [
             'systems' => System::with('viewers:id')->orderBy('sort_order')->orderBy('id')->get()->map(fn (System $system) => [
@@ -55,6 +56,7 @@ class SystemSettingsController extends Controller
                     'department' => $u->department?->name,
                 ]),
             'ai' => $aiSettings->forAdmin(),
+            'verify' => $verify->forAdmin(),
             'menus' => ModuleVisibility::forAdmin(),
             'menuGroups' => ModuleVisibility::groupsForAdmin(),
             // AI аль цэсэд ямар эрхтэйг тохируулах жагсаалт.
@@ -155,6 +157,48 @@ class SystemSettingsController extends Controller
         return redirect()
             ->route('admin.systems.index', ['tab' => 'ai'])
             ->with('success', 'Manage AI тохиргоо хадгалагдлаа.');
+    }
+
+    /**
+     * verify.mn — утсаар нууц үг сэргээх тохиргоо.
+     *
+     * API түлхүүрийг шифрлэж хадгална. Callback хаягийн нууц түлхүүр нь
+     * автоматаар үүсдэг тул админ гараар бодох шаардлагагүй.
+     */
+    public function updateVerify(Request $request, VerifySettings $verify): RedirectResponse
+    {
+        $data = $request->validate([
+            'enabled' => ['boolean'],
+            'api_key' => ['nullable', 'string', 'max:500'],
+            'clear_api_key' => ['boolean'],
+            'shortcode' => ['required', 'string', 'max:12'],
+            'response_sms' => ['nullable', 'string', 'max:160', 'regex:/^[\x20-\x7E]*$/'],
+            'regenerate_secret' => ['boolean'],
+        ], [
+            'response_sms.regex' => 'Хариу SMS зөвхөн англи үсэг, тоо, тэмдэгтээр бичигдэнэ.',
+        ]);
+
+        if (! empty($data['clear_api_key'])) {
+            $verify->setApiKey(null);
+        } elseif (! empty($data['api_key'])) {
+            $verify->setApiKey($data['api_key']);
+        }
+
+        $verify->set(VerifySettings::KEY_ENABLED, ! empty($data['enabled']) ? '1' : '0');
+        $verify->set(VerifySettings::KEY_SHORTCODE, trim($data['shortcode']));
+        $verify->set(VerifySettings::KEY_RESPONSE_SMS, trim((string) ($data['response_sms'] ?? '')));
+
+        if (! empty($data['regenerate_secret'])) {
+            $verify->regenerateCallbackSecret();
+        }
+
+        $message = $verify->isConfigured()
+            ? 'verify.mn тохиргоо хадгалагдлаа. Утсаар нууц үг сэргээх боломжтой боллоо.'
+            : 'Тохиргоо хадгалагдлаа. Идэвхжүүлэх бол API түлхүүрээ оруулаад «Идэвхтэй»-г чагтална уу.';
+
+        return redirect()
+            ->route('admin.systems.index', ['tab' => 'verify'])
+            ->with($verify->isConfigured() ? 'success' : 'info', $message);
     }
 
     public function store(Request $request): RedirectResponse

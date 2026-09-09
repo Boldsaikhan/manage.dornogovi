@@ -14,6 +14,7 @@ const props = defineProps({
     menus: { type: Array, default: () => [] },
     menuGroups: { type: Array, default: () => [] },
     aiModules: { type: Array, default: () => [] },
+    verify: { type: Object, default: () => ({}) },
 });
 
 const page = usePage();
@@ -21,6 +22,7 @@ const page = usePage();
 const SETTINGS_TABS = [
     { id: 'menus', label: 'Цэс нээх / хаах' },
     { id: 'ai', label: 'Manage AI' },
+    { id: 'verify', label: 'Утсаар сэргээх' },
     { id: 'push', label: 'Push мэдэгдэл' },
     { id: 'systems', label: 'Гадны системүүд' },
 ];
@@ -158,6 +160,23 @@ const aiForm = useForm({
     // Цэс бүрд AI ямар эрхтэй байхыг тохируулна.
     module_access: Object.fromEntries((props.aiModules ?? []).map((m) => [m.key, m.level ?? 'read'])),
 });
+
+const verifyForm = useForm({
+    enabled: props.verify?.enabled ?? false,
+    api_key: '',
+    clear_api_key: false,
+    shortcode: props.verify?.shortcode ?? '144773',
+    response_sms: props.verify?.response_sms ?? '',
+    regenerate_secret: false,
+});
+
+const copyCallback = async () => {
+    try {
+        await navigator.clipboard.writeText(props.verify?.callback_url ?? '');
+    } catch {
+        // Хөтөч зөвшөөрөөгүй бол хэрэглэгч гараар хуулна.
+    }
+};
 
 const accessLevels = [
     { value: 'none', label: 'Хаалттай' },
@@ -531,6 +550,17 @@ const noticeClass = computed(() => ({
     info: 'border-sky-200 bg-sky-50 text-sky-800',
 }[notice.value?.type] ?? 'border-slate-200 bg-white text-slate-700'));
 
+const saveVerify = () => {
+    verifyForm.patch(route('admin.verify-settings.update'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            verifyForm.api_key = '';
+            verifyForm.clear_api_key = false;
+            verifyForm.regenerate_secret = false;
+        },
+    });
+};
+
 const saveAi = () => {
     aiForm.patch(route('admin.ai-settings.update'), {
         preserveScroll: true,
@@ -681,6 +711,126 @@ const saveAi = () => {
 
                 <button type="submit" class="ui-btn-primary" :disabled="menuSaving">
                     {{ menuSaving ? 'Хадгалж байна…' : 'Цэсийн тохиргоо хадгалах' }}
+                </button>
+            </form>
+        </section>
+
+        <section
+            v-show="activeTab === 'verify'"
+            class="rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm"
+            role="tabpanel"
+        >
+            <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h2 class="text-base font-semibold text-brand-navy-900">Утсаар нууц үг сэргээх (verify.mn)</h2>
+                    <p class="mt-1 max-w-2xl text-sm text-brand-navy-400">
+                        Нууц үгээ мартсан албан хаагч утасны дугаараа оруулаад,
+                        <b>{{ verify?.shortcode || '144773' }}</b> дугаар руу нэг удаагийн код илгээж
+                        баталгаажуулна. Мессежийн төлбөрийг ({{ verify?.sms_cost || 150 }}₮) хэрэглэгч өөрөө төлнө.
+                    </p>
+                </div>
+                <span
+                    class="rounded-full px-3 py-1 text-xs font-semibold"
+                    :class="verify?.configured
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'bg-amber-50 text-amber-700'"
+                >
+                    {{ verify?.configured ? 'Ажиллаж байна' : 'Тохируулаагүй' }}
+                </span>
+            </div>
+
+            <form class="space-y-4" @submit.prevent="saveVerify">
+                <label class="flex items-center gap-2 text-sm font-medium text-brand-navy-800">
+                    <input
+                        v-model="verifyForm.enabled"
+                        type="checkbox"
+                        class="rounded border-slate-300 text-brand-navy-600 focus:ring-brand-navy-600"
+                    />
+                    Идэвхтэй — нэвтрэх хуудсан дээр «Утсаар» сонголт ажиллана
+                </label>
+
+                <div>
+                    <label class="ui-label">API түлхүүр</label>
+                    <input
+                        v-model="verifyForm.api_key"
+                        type="password"
+                        autocomplete="off"
+                        class="ui-input"
+                        :placeholder="verify?.has_api_key
+                            ? ('Хадгалагдсан: ' + verify.api_key_hint + ' — солих бол шинээр бичнэ үү')
+                            : 'vrf_...'"
+                    />
+                    <p class="mt-1 text-xs text-slate-500">
+                        verify.mn → API KEY хэсгээс авна. Зөвхөн серверт шифрлэгдэж хадгалагдана.
+                    </p>
+                    <label
+                        v-if="verify?.has_api_key"
+                        class="mt-2 flex items-center gap-2 text-xs font-medium text-slate-600"
+                    >
+                        <input
+                            v-model="verifyForm.clear_api_key"
+                            type="checkbox"
+                            class="rounded border-slate-300 text-rose-600 focus:ring-rose-600"
+                        />
+                        Хадгалсан түлхүүрийг устгах
+                    </label>
+                    <p v-if="verifyForm.errors.api_key" class="mt-1 text-xs text-rose-600">
+                        {{ verifyForm.errors.api_key }}
+                    </p>
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label class="ui-label">Богино дугаар</label>
+                        <input v-model="verifyForm.shortcode" type="text" class="ui-input" />
+                        <p class="mt-1 text-xs text-slate-500">Хэрэглэгчийн SMS илгээх дугаар.</p>
+                    </div>
+                    <div>
+                        <label class="ui-label">Хариу SMS (заавал биш)</label>
+                        <input
+                            v-model="verifyForm.response_sms"
+                            type="text"
+                            maxlength="160"
+                            class="ui-input"
+                            placeholder="Dornogovi ZDTG: batalgaajlaa."
+                        />
+                        <p class="mt-1 text-xs text-slate-500">
+                            Зөвхөн англи үсэг, тоо. Оператороос хамаарч очихгүй байж болно.
+                        </p>
+                        <p v-if="verifyForm.errors.response_sms" class="mt-1 text-xs text-rose-600">
+                            {{ verifyForm.errors.response_sms }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Callback хаяг
+                    </p>
+                    <p class="mt-1 break-all font-mono text-xs text-slate-700">
+                        {{ verify?.callback_url }}
+                    </p>
+                    <p class="mt-1 text-xs text-slate-500">
+                        Session бүр дээр автоматаар дамжуулагддаг тул verify.mn дээр гараар бүртгэх
+                        шаардлагагүй. RULE үүсгэх ч хэрэггүй.
+                    </p>
+                    <div class="mt-2 flex flex-wrap items-center gap-3">
+                        <button type="button" class="ui-btn-ghost !py-1 !text-xs" @click="copyCallback">
+                            Хуулах
+                        </button>
+                        <label class="flex items-center gap-2 text-xs font-medium text-slate-600">
+                            <input
+                                v-model="verifyForm.regenerate_secret"
+                                type="checkbox"
+                                class="rounded border-slate-300 text-brand-navy-600 focus:ring-brand-navy-600"
+                            />
+                            Нууц түлхүүрийг шинэчлэх
+                        </label>
+                    </div>
+                </div>
+
+                <button class="ui-btn-primary" :disabled="verifyForm.processing">
+                    {{ verifyForm.processing ? 'Хадгалж байна…' : 'Хадгалах' }}
                 </button>
             </form>
         </section>
