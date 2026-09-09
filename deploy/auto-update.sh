@@ -112,6 +112,10 @@ fix_ownership
 
 cd "${WEB_ROOT}"
 
+# Migration нь шинэ config/*.php файлуудыг уншина — хуучин кэшийг эхлээд хаяна.
+# (Үгүй бол шинэ тохиргооны утгууд migration дотор хоосон ирдэг.)
+php artisan config:clear
+
 php artisan migrate --force
 php artisan config:cache
 php artisan route:cache
