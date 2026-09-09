@@ -12,18 +12,23 @@ use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 /**
- * Утасны дугаараар нууц үг сэргээх — verify.mn-ээр код илгээнэ.
+ * Нууц үгээ утсаараа сэргээх — verify.mn (MO SMS).
+ *
+ * Хэрэглэгч ӨӨРӨӨ 144773 руу кодоо илгээнэ. Бид зөвхөн session үүсгээд,
+ * төлвийг нь эх сурвалжаас нь асууна.
  */
 class PhonePasswordResetTest extends TestCase
 {
     use RefreshDatabase;
+
+    private const SESSION_ID = '4d4c95ff-0fd4-4d9e-900d-6d18fb8ce6a7';
 
     protected function setUp(): void
     {
         parent::setUp();
 
         config()->set('verify.enabled', true);
-        config()->set('verify.api_key', 'test-key');
+        config()->set('verify.api_key', 'vrf_test');
         config()->set('verify.callback_secret', 'secret-token');
     }
 
@@ -35,46 +40,70 @@ class PhonePasswordResetTest extends TestCase
         ]);
     }
 
-    public function test_a_session_is_created_at_verify_mn_and_the_code_unlocks_the_form(): void
+    /** verify.mn-ийн баримтад заасан хариу. */
+    private function sessionResponse(string $code = '482916'): array
     {
-        Http::fake([
-            'api.verify.mn/*' => Http::response(['id' => 'sess_123'], 201),
-        ]);
+        return [
+            'sessionId' => self::SESSION_ID,
+            'phone' => '99112233',
+            'shortcode' => '144773',
+            'text' => $code,
+            'smsUri' => 'sms:144773?body='.$code,
+            'displayInstruction' => 'Та өөрийн 99112233 дугаараас 144773 дугаарт "'.$code.'" гэж SMS илгээнэ үү.',
+            'expiresAt' => Carbon::now()->addMinutes(5)->toIso8601ZuluString(),
+        ];
+    }
 
-        $user = $this->user();
+    public function test_a_session_is_created_and_the_user_is_told_to_send_the_sms(): void
+    {
+        Http::fake(['api.verify.mn/sessions' => Http::response($this->sessionResponse(), 201)]);
 
-        $this->post(route('password.phone.send'), ['phone' => '9911-2233'])
-            ->assertRedirect();
+        $this->user();
+
+        $this->post(route('password.phone.send'), ['phone' => '9911-2233'])->assertRedirect();
 
         Http::assertSent(function ($request) {
             return $request->url() === 'https://api.verify.mn/sessions'
-                && $request->hasHeader('Authorization', 'Bearer test-key')
+                && $request->method() === 'POST'
+                && $request->hasHeader('Authorization', 'Bearer vrf_test')
                 && $request['phone'] === '99112233'
                 && preg_match('/^\d{6}$/', (string) $request['text']) === 1
                 && str_contains((string) $request['callback'], 'secret-token');
         });
 
         $record = PhoneVerification::query()->firstOrFail();
-        $this->assertSame('sess_123', $record->session_id);
-        $this->assertNull($record->verified_at);
+        $this->assertSame(self::SESSION_ID, $record->session_id);
+        $this->assertSame('verify.mn', $record->channel);
+        $this->assertSame('sms:144773?body=482916', $record->sms_uri);
 
-        // Кодыг hash-аар хадгална — задалж уншихгүй.
-        $this->assertNotSame('', $record->code_hash);
-
+        // Хуудсан дээр заавар, sms: холбоос, богино дугаар гарна.
         $this->get(route('password.request'))
-            ->assertInertia(fn (AssertableInertia $page) => $page->where('phoneState.step', 'code'));
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('phoneState.step', 'code')
+                ->where('phoneState.channel', 'verify.mn')
+                ->where('phoneState.sms_uri', 'sms:144773?body=482916')
+                ->where('phoneState.shortcode', '144773')
+                ->where('phoneState.sms_cost', 150)
+                ->where('phoneState.instruction', fn (string $text) => str_contains($text, '144773')));
+    }
 
-        // Буруу код — алхам ахихгүй.
-        $this->post(route('password.phone.confirm'), ['code' => '000000'])
-            ->assertSessionHasErrors('code');
-        $this->assertSame(1, $record->fresh()->attempts);
+    public function test_the_status_check_trusts_only_the_official_session_state(): void
+    {
+        Http::fake([
+            'api.verify.mn/sessions' => Http::response($this->sessionResponse(), 201),
+            'api.verify.mn/sessions/*' => Http::sequence()
+                ->push(['sessionStatus' => 'PENDING'])
+                ->push(['sessionStatus' => 'VERIFIED']),
+        ]);
 
-        $code = $this->codeFor($record);
+        $user = $this->user();
+        $this->post(route('password.phone.send'), ['phone' => '99112233']);
 
-        $this->post(route('password.phone.confirm'), ['code' => $code])
-            ->assertRedirect();
+        // Хэрэглэгч SMS-ээ хараахан илгээгээгүй.
+        $this->get(route('password.phone.status'))->assertOk()->assertJson(['verified' => false]);
 
-        $this->assertNotNull($record->fresh()->verified_at);
+        // Илгээсний дараа verify.mn VERIFIED гэж хариулна.
+        $this->get(route('password.phone.status'))->assertOk()->assertJson(['verified' => true]);
 
         $this->get(route('password.request'))
             ->assertInertia(fn (AssertableInertia $page) => $page->where('phoneState.step', 'password'));
@@ -85,46 +114,69 @@ class PhonePasswordResetTest extends TestCase
         ])->assertRedirect(route('login'));
 
         $this->assertTrue(Hash::check('ShineNuuts1', $user->fresh()->password));
-        $this->assertNotNull($record->fresh()->consumed_at);
     }
 
-    public function test_the_verify_mn_callback_can_confirm_the_code(): void
+    public function test_the_callback_only_wakes_us_up_and_we_re_check_the_status(): void
     {
-        Http::fake(['api.verify.mn/*' => Http::response(['id' => 'sess_777'], 201)]);
+        Http::fake([
+            'api.verify.mn/sessions' => Http::response($this->sessionResponse(), 201),
+            'api.verify.mn/sessions/*' => Http::response(['sessionStatus' => 'VERIFIED']),
+        ]);
 
         $this->user();
         $this->post(route('password.phone.send'), ['phone' => '99112233']);
 
-        $this->get(route('password.phone.status'))
-            ->assertOk()
-            ->assertJson(['verified' => false]);
+        // verify.mn нь GET-ээр, бие агуулгагүй дуудна.
+        $this->get(route('verify.callback', ['secret' => 'secret-token']))->assertOk();
 
-        // verify.mn мэдэгдэл илгээнэ.
-        $this->postJson(route('verify.callback', ['secret' => 'secret-token']), [
-            'id' => 'sess_777',
-            'phone' => '99112233',
-        ])->assertOk()->assertJson(['ok' => true]);
+        $this->assertNotNull(PhoneVerification::query()->firstOrFail()->verified_at);
 
-        $this->get(route('password.phone.status'))
-            ->assertOk()
-            ->assertJson(['verified' => true]);
+        // Төлвийг эх сурвалжаас нь давхар асуусан байх ёстой.
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/sessions/'.self::SESSION_ID)
+            && $request->method() === 'GET');
     }
 
-    public function test_a_wrong_callback_secret_is_not_found(): void
+    public function test_a_callback_is_ignored_when_the_session_is_not_verified(): void
     {
-        Http::fake(['api.verify.mn/*' => Http::response(['id' => 'sess_1'], 201)]);
+        Http::fake([
+            'api.verify.mn/sessions' => Http::response($this->sessionResponse(), 201),
+            'api.verify.mn/sessions/*' => Http::response(['sessionStatus' => 'PENDING']),
+        ]);
 
         $this->user();
         $this->post(route('password.phone.send'), ['phone' => '99112233']);
 
-        $this->postJson(route('verify.callback', ['secret' => 'buruu']), [
-            'id' => 'sess_1',
-        ])->assertNotFound();
+        $this->get(route('verify.callback', ['secret' => 'secret-token']))->assertOk();
 
         $this->assertNull(PhoneVerification::query()->firstOrFail()->verified_at);
     }
 
-    public function test_an_unknown_phone_looks_the_same_but_sends_nothing(): void
+    public function test_a_wrong_callback_secret_is_not_found(): void
+    {
+        Http::fake(['api.verify.mn/sessions' => Http::response($this->sessionResponse(), 201)]);
+
+        $this->user();
+        $this->post(route('password.phone.send'), ['phone' => '99112233']);
+
+        $this->get(route('verify.callback', ['secret' => 'buruu']))->assertNotFound();
+
+        $this->assertNull(PhoneVerification::query()->firstOrFail()->verified_at);
+    }
+
+    public function test_typing_the_code_proves_nothing_in_the_mo_flow(): void
+    {
+        Http::fake(['api.verify.mn/sessions' => Http::response($this->sessionResponse(), 201)]);
+
+        $this->user();
+        $this->post(route('password.phone.send'), ['phone' => '99112233']);
+
+        $this->post(route('password.phone.confirm'), ['code' => '482916'])
+            ->assertSessionHasErrors('code');
+
+        $this->assertNull(PhoneVerification::query()->firstOrFail()->verified_at);
+    }
+
+    public function test_an_unknown_phone_looks_the_same_but_creates_no_session(): void
     {
         Http::fake();
 
@@ -133,33 +185,32 @@ class PhonePasswordResetTest extends TestCase
             ->assertSessionHasNoErrors();
 
         Http::assertNothingSent();
-
-        // Мөр үүссэн ч кодыг нь хэн ч мэдэхгүй тул цаашид ахихгүй.
-        $this->post(route('password.phone.confirm'), ['code' => '123456'])
-            ->assertSessionHasErrors('code');
     }
 
-    public function test_an_expired_code_cannot_be_used(): void
+    public function test_an_expired_session_sends_the_user_back_to_the_start(): void
     {
-        Http::fake(['api.verify.mn/*' => Http::response(['id' => 'sess_9'], 201)]);
+        Http::fake([
+            'api.verify.mn/sessions' => Http::response($this->sessionResponse(), 201),
+            'api.verify.mn/sessions/*' => Http::response(['sessionStatus' => 'EXPIRED']),
+        ]);
 
         $this->user();
         $this->post(route('password.phone.send'), ['phone' => '99112233']);
 
-        $record = PhoneVerification::query()->firstOrFail();
-        $code = $this->codeFor($record);
-        $record->update(['expires_at' => Carbon::now()->subMinute()]);
-
-        $this->post(route('password.phone.confirm'), ['code' => $code])
-            ->assertSessionHasErrors('code');
+        $this->get(route('password.phone.status'))
+            ->assertOk()
+            ->assertJson(['verified' => false, 'expired' => true]);
 
         $this->get(route('password.request'))
             ->assertInertia(fn (AssertableInertia $page) => $page->where('phoneState.step', 'phone'));
     }
 
-    public function test_the_password_cannot_be_changed_before_the_code_is_confirmed(): void
+    public function test_the_password_cannot_be_changed_before_verification(): void
     {
-        Http::fake(['api.verify.mn/*' => Http::response(['id' => 'sess_5'], 201)]);
+        Http::fake([
+            'api.verify.mn/sessions' => Http::response($this->sessionResponse(), 201),
+            'api.verify.mn/sessions/*' => Http::response(['sessionStatus' => 'PENDING']),
+        ]);
 
         $user = $this->user();
         $this->post(route('password.phone.send'), ['phone' => '99112233']);
@@ -172,22 +223,23 @@ class PhonePasswordResetTest extends TestCase
         $this->assertTrue(Hash::check('HuuchinNuuts1', $user->fresh()->password));
     }
 
-    /** Илгээсэн кодыг verify.mn руу явуулсан хүсэлтээс нь уншина. */
-    private function codeFor(PhoneVerification $record): string
+    public function test_the_fallback_channel_still_lets_the_user_type_the_code(): void
     {
-        $code = null;
+        // verify.mn унтраалттай — код бидний зүгээс SMS-ээр очно.
+        config()->set('verify.enabled', false);
+        config()->set('sms.enabled', true);
+        config()->set('sms.driver', 'log');
 
-        Http::assertSent(function ($request) use (&$code) {
-            if (str_contains($request->url(), '/sessions')) {
-                $code = (string) $request['text'];
-            }
+        $user = $this->user();
 
-            return true;
-        });
+        $this->post(route('password.phone.send'), ['phone' => '99112233'])->assertRedirect();
 
-        $this->assertNotNull($code);
-        $this->assertTrue(Hash::check($code, $record->code_hash));
+        $record = PhoneVerification::query()->firstOrFail();
+        $this->assertSame('sms', $record->channel);
 
-        return $code;
+        $this->post(route('password.phone.confirm'), ['code' => '000000'])
+            ->assertSessionHasErrors('code');
+
+        $this->assertSame(1, $record->fresh()->attempts);
     }
 }

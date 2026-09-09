@@ -196,6 +196,7 @@ Route::middleware('auth')->group(function () {
 require __DIR__.'/auth.php';
 
 // verify.mn-ээс ирэх баталгаажуулалтын мэдэгдэл (нууц түлхүүр хаягтаа шингэсэн).
-Route::post('/webhooks/verify-mn/{secret}', [PhonePasswordResetController::class, 'callback'])
-    ->middleware('throttle:120,1')
+// verify.mn нь GET-ээр дуудна (бие, гарын үсэггүй). POST-ыг ч хүлээж авна.
+Route::match(['get', 'post'], '/webhooks/verify-mn/{secret}', [PhonePasswordResetController::class, 'callback'])
+    ->middleware('throttle:300,1')
     ->name('verify.callback');

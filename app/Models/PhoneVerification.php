@@ -16,8 +16,11 @@ class PhoneVerification extends Model
     protected $fillable = [
         'phone',
         'purpose',
+        'channel',
         'code_hash',
         'session_id',
+        'sms_uri',
+        'instruction',
         'attempts',
         'verified_at',
         'consumed_at',
