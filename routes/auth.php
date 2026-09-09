@@ -44,7 +44,7 @@ Route::middleware('guest')->group(function () {
         ->name('password.request');
 
     Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
-        ->middleware('throttle:6,1')
+        ->middleware('throttle:12,1')
         ->name('password.email');
 
     Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
@@ -55,7 +55,7 @@ Route::middleware('guest')->group(function () {
 
     // Утасны дугаараар сэргээх — verify.mn-ээр нэг удаагийн код.
     Route::post('forgot-password/phone', [PhonePasswordResetController::class, 'send'])
-        ->middleware('throttle:6,1')
+        ->middleware('throttle:30,1')
         ->name('password.phone.send');
 
     Route::post('forgot-password/phone/confirm', [PhonePasswordResetController::class, 'confirm'])
@@ -63,7 +63,7 @@ Route::middleware('guest')->group(function () {
         ->name('password.phone.confirm');
 
     Route::get('forgot-password/phone/status', [PhonePasswordResetController::class, 'status'])
-        ->middleware('throttle:240,1')
+        ->middleware('throttle:1200,1')
         ->name('password.phone.status');
 
     Route::post('forgot-password/phone/password', [PhonePasswordResetController::class, 'update'])
