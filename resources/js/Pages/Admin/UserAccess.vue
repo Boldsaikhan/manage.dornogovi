@@ -129,6 +129,9 @@ const loadSelected = () => {
     editState.is_department_head = selected.value.is_department_head;
     editState.is_specialist = selected.value.is_specialist;
     editState.password = '';
+    passwordForm.reset();
+    passwordForm.clearErrors();
+    showPassword.value = false;
     editState.permissions = { ...selected.value.permissions };
     selectedRoleKey.value = detectRoleKey(selected.value);
 };
@@ -364,6 +367,46 @@ const levelOptions = (module) => {
     return options;
 };
 
+/**
+ * Нэвтрэх нууц үг шинэчлэх — ролийн хадгалалтаас тусдаа хүсэлт.
+ *
+ * Ингэснээр эрх хадгалахад нууц үг санамсаргүй солигдохгүй.
+ */
+const passwordForm = useForm({ password: '', notify: true });
+const showPassword = ref(false);
+
+/** Уншихад ойлгомжтой түр нууц үг — андуурч болзошгүй тэмдэгтгүй. */
+const suggestPassword = () => {
+    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lower = 'abcdefghijkmnpqrstuvwxyz';
+    const digits = '23456789';
+    const pool = upper + lower + digits;
+    const pick = (set) => set[Math.floor(Math.random() * set.length)];
+
+    const chars = [pick(upper), pick(lower), pick(digits)];
+    while (chars.length < 10) chars.push(pick(pool));
+
+    for (let i = chars.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [chars[i], chars[j]] = [chars[j], chars[i]];
+    }
+
+    passwordForm.password = chars.join('');
+    showPassword.value = true;
+};
+
+const savePassword = () => {
+    if (! selected.value) return;
+
+    passwordForm.patch(route('admin.users.password', selected.value.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            passwordForm.reset('password');
+            showPassword.value = false;
+        },
+    });
+};
+
 const saveUser = () => {
     if (!selected.value || saving.value) return;
     saving.value = true;
@@ -576,6 +619,71 @@ const pickFromDirectory = (value) => {
                     </div>
 
                     <button class="ui-btn-primary" :disabled="saving">Хадгалах</button>
+
+                    <!-- Нууц үг — ролийн хадгалалтаас тусдаа -->
+                    <div class="space-y-2 rounded-xl border border-amber-200 bg-amber-50/50 p-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <p class="text-sm font-semibold text-brand-navy-800">Нэвтрэх нууц үг</p>
+                            <span class="text-xs text-slate-500">
+                                Нэвтрэх нэр: <b class="text-brand-navy-700">{{ selected.phone || selected.email }}</b>
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500">
+                            Хуучин нууц үгийг харах боломжгүй (шифрлэгдсэн). Мартсан бол шинээр тавьж өгнө.
+                        </p>
+
+                        <div class="flex flex-wrap items-center gap-2">
+                            <div class="relative min-w-[12rem] flex-1">
+                                <input
+                                    v-model="passwordForm.password"
+                                    :type="showPassword ? 'text' : 'password'"
+                                    autocomplete="new-password"
+                                    placeholder="Шинэ нууц үг (8-аас дээш тэмдэгт)"
+                                    class="ui-input pr-10"
+                                />
+                                <button
+                                    type="button"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-brand-navy-700"
+                                    :title="showPassword ? 'Нуух' : 'Харах'"
+                                    :aria-label="showPassword ? 'Нуух' : 'Харах'"
+                                    @click="showPassword = ! showPassword"
+                                >
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+                                        <circle cx="12" cy="12" r="3" />
+                                        <path v-if="! showPassword" stroke-linecap="round" d="M4 20L20 4" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <button type="button" class="ui-btn-ghost" @click="suggestPassword">
+                                Санамсаргүй үүсгэх
+                            </button>
+                            <button
+                                type="button"
+                                class="ui-btn-accent"
+                                :disabled="passwordForm.processing || passwordForm.password.length < 8"
+                                @click="savePassword"
+                            >
+                                {{ passwordForm.processing ? 'Хадгалж байна…' : 'Нууц үг шинэчлэх' }}
+                            </button>
+                        </div>
+
+                        <label
+                            v-if="selected.phone"
+                            class="flex items-center gap-2 text-xs font-medium text-slate-600"
+                        >
+                            <input
+                                v-model="passwordForm.notify"
+                                type="checkbox"
+                                class="rounded border-slate-300 text-brand-navy-600 focus:ring-brand-navy-600"
+                            />
+                            Шинэ нууц үгийг {{ selected.phone }} дугаар руу SMS-ээр илгээх
+                        </label>
+
+                        <p v-if="passwordForm.errors.password" class="text-xs text-rose-600">
+                            {{ passwordForm.errors.password }}
+                        </p>
+                    </div>
                 </form>
                 </template>
 
