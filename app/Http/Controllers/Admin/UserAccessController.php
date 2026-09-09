@@ -34,6 +34,9 @@ class UserAccessController extends Controller
             ])
             ->values();
 
+        $directoryRows = PhoneDirectoryEntry::query()
+            ->orderBy('org_order')->orderBy('sort_order')->get();
+
         $users = User::query()
             ->with(['department:id,name', 'modulePermissions'])
             ->orderBy('name')
@@ -50,6 +53,8 @@ class UserAccessController extends Controller
                 'is_department_head' => (bool) $u->is_department_head,
                 'is_specialist' => (bool) $u->is_specialist,
                 'permissions' => $this->effectivePermissions($u),
+                // Нэвтрэх нэр нь утасны жагсаалтын дугаартай тааруулагдсан эсэх.
+                ...$this->directoryLogin($u),
             ]);
 
         return Inertia::render('Admin/UserAccess', [
@@ -67,6 +72,105 @@ class UserAccessController extends Controller
             'rolePermissions' => RolePermission::map(),
             'heltesCount' => app(HeltesAccountProvisioner::class)->eligibleCount(),
         ]);
+    }
+
+    /**
+     * Утасны жагсаалтад бүртгэлтэй дугаар — нэвтрэх нэр нь энэ байх ёстой.
+     *
+     * @return array{directory_phone: ?string, directory_name: ?string, login_matches_directory: bool}
+     */
+    private function directoryLogin(User $user): array
+    {
+        $entry = PhoneDirectoryEntry::forUser($user);
+        $phone = $entry?->loginPhone();
+
+        return [
+            'directory_phone' => $phone,
+            'directory_name' => $entry?->person_name,
+            'login_matches_directory' => $phone !== null
+                && $phone === User::normalizePhone($user->phone),
+        ];
+    }
+
+    /**
+     * Нэвтрэх нэрийг утасны жагсаалтын дугаараар солино.
+     */
+    public function syncLogin(Request $request, User $user): RedirectResponse
+    {
+        $entry = PhoneDirectoryEntry::forUser($user);
+        $phone = $entry?->loginPhone();
+
+        if ($phone === null) {
+            return back()->withErrors([
+                'phone' => sprintf('«%s» утасны жагсаалтад олдсонгүй. Эхлээд жагсаалтад бүртгэнэ үү.', $user->name),
+            ]);
+        }
+
+        if ($phone === User::normalizePhone($user->phone)) {
+            return back()->with('info', 'Нэвтрэх нэр аль хэдийн жагсаалтын дугаартай таарч байна.');
+        }
+
+        $taken = User::query()
+            ->whereKeyNot($user->id)
+            ->whereNotNull('phone')
+            ->get(['id', 'phone'])
+            ->first(fn (User $u) => User::normalizePhone($u->phone) === $phone);
+
+        if ($taken) {
+            return back()->withErrors([
+                'phone' => sprintf('%s дугаар «%s»-д бүртгэлтэй байна.', $phone, $taken->name),
+            ]);
+        }
+
+        $old = $user->phone;
+        $user->forceFill(['phone' => $phone])->save();
+
+        return back()->with('success', sprintf(
+            '«%s»-ийн нэвтрэх нэр %s → %s болж шинэчлэгдлээ.',
+            $user->name,
+            $old ?: '—',
+            $phone,
+        ));
+    }
+
+    /**
+     * Бүх бүртгэлийн нэвтрэх нэрийг утасны жагсаалттай тулгана.
+     */
+    public function syncAllLogins(): RedirectResponse
+    {
+        $changed = 0;
+        $skipped = 0;
+        $used = User::query()->whereNotNull('phone')->pluck('phone', 'id')
+            ->map(fn (?string $phone) => User::normalizePhone($phone))
+            ->filter()
+            ->all();
+
+        foreach (User::query()->orderBy('name')->get() as $user) {
+            $phone = PhoneDirectoryEntry::forUser($user)?->loginPhone();
+
+            if ($phone === null || $phone === User::normalizePhone($user->phone)) {
+                continue;
+            }
+
+            // Өөр хүнд бүртгэлтэй дугаарыг дарж бичихгүй.
+            if (in_array($phone, array_diff_key($used, [$user->id => true]), true)) {
+                $skipped++;
+
+                continue;
+            }
+
+            $user->forceFill(['phone' => $phone])->save();
+            $used[$user->id] = $phone;
+            $changed++;
+        }
+
+        $message = sprintf('Нэвтрэх нэр %d бүртгэлд шинэчлэгдлээ.', $changed);
+
+        if ($skipped > 0) {
+            $message .= sprintf(' %d бүртгэлийн дугаар өөр хүнд бүртгэлтэй тул алгаслаа.', $skipped);
+        }
+
+        return back()->with($skipped > 0 ? 'warning' : 'success', $message);
     }
 
     /**
