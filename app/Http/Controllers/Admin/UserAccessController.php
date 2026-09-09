@@ -15,6 +15,7 @@ use App\Support\ModuleAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -333,6 +334,46 @@ class UserAccessController extends Controller
         }
 
         return back()->with('success', sprintf('«%s» нэмэгдлээ. Эрхийг дээрээс тохируулна уу.', $data['name']));
+    }
+
+    /**
+     * Албан хаагчийн нэвтрэх нууц үгийг шинэчлэх.
+     *
+     * Ролийн тохиргооноос тусад нь явдаг — эрх хадгалахад нууц үг санамсаргүй
+     * солигдохоос сэргийлнэ. Хүсвэл шинэ нууц үгийг SMS-ээр хүргэнэ.
+     */
+    public function updatePassword(Request $request, User $user): RedirectResponse
+    {
+        $data = $request->validate([
+            'password' => ['required', 'string', 'min:8', 'max:255'],
+            'notify' => ['boolean'],
+        ], [], ['password' => 'нууц үг']);
+
+        // User загварт «hashed» cast байгаа тул ЦЭВЭР нууц үг онооно.
+        $user->forceFill([
+            'password' => $data['password'],
+            'remember_token' => Str::random(60),
+        ])->save();
+
+        $notify = $request->boolean('notify') && filled($user->phone);
+        $sent = $notify && app(SmsSender::class)->sendLoginCredentials($user, $data['password']);
+
+        app(\App\Services\Push\EmployeePushNotifier::class)->notifyUsers([$user], [
+            'title' => 'Нэвтрэх нууц үг шинэчлэгдлээ',
+            'body' => $user->name.' — нууц үг админаар шинэчлэгдсэн байна.',
+            'url' => '/dept-dashboard',
+            'tag' => 'access',
+        ]);
+
+        $message = sprintf('«%s»-ийн нэвтрэх нууц үг шинэчлэгдлээ.', $user->name);
+
+        if ($notify) {
+            $message .= $sent
+                ? sprintf(' %s дугаар руу SMS-ээр илгээлээ.', $user->phone)
+                : ' Гэхдээ SMS илгээгдсэнгүй — нууц үгийг өөрөө дамжуулна уу.';
+        }
+
+        return back()->with($notify && ! $sent ? 'warning' : 'success', $message);
     }
 
     public function update(Request $request, User $user): RedirectResponse

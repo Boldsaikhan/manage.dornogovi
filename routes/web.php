@@ -180,6 +180,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/users', [UserAccessController::class, 'store'])->name('users.store');
         Route::post('/users/provision-heltes', [UserAccessController::class, 'provisionHeltes'])->name('users.provision-heltes');
         Route::patch('/users/{user}', [UserAccessController::class, 'update'])->name('users.update');
+        Route::patch('/users/{user}/password', [UserAccessController::class, 'updatePassword'])->name('users.password');
         Route::post('/roles', [UserAccessController::class, 'storeRole'])->name('roles.store');
         Route::patch('/roles/{role}', [UserAccessController::class, 'updateRole'])->name('roles.update');
         Route::delete('/roles/{role}', [UserAccessController::class, 'destroyRole'])->name('roles.destroy');
