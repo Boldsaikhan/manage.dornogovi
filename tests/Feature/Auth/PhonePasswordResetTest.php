@@ -223,6 +223,24 @@ class PhonePasswordResetTest extends TestCase
         $this->assertTrue(Hash::check('HuuchinNuuts1', $user->fresh()->password));
     }
 
+    public function test_it_refuses_when_no_channel_is_configured(): void
+    {
+        // verify.mn ч, SMS ч тохируулаагүй — код хаашаа ч очихгүй.
+        config()->set('verify.enabled', false);
+        config()->set('sms.enabled', false);
+
+        $this->user();
+
+        $this->post(route('password.phone.send'), ['phone' => '99112233'])
+            ->assertSessionHasErrors('phone');
+
+        // Бүртгэлгүй дугаарт ч ижил хариу — задруулахгүй.
+        $this->post(route('password.phone.send'), ['phone' => '88001122'])
+            ->assertSessionHasErrors('phone');
+
+        $this->assertSame(0, PhoneVerification::query()->count());
+    }
+
     public function test_the_fallback_channel_still_lets_the_user_type_the_code(): void
     {
         // verify.mn унтраалттай — код бидний зүгээс SMS-ээр очно.
