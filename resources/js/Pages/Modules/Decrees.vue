@@ -77,25 +77,44 @@ const canAddRow = computed(() => (props.canEdit || props.canManage) && ! isNiit.
 const canEditRows = computed(() => props.canEdit || props.canManage);
 const canManageRows = computed(() => props.canManage || props.canEdit);
 
+/**
+ * «Боловсруулсан албан тушаалтан» — утасны жагсаалтын БҮХ албан хаагч.
+ *
+ * Бланк авсан хүмүүсийг эхэнд нь, «Бланк авсан» тэмдэглэгээтэй харуулна —
+ * ихэвчлэн тэднийг сонгодог ч, жагсаалтаас хэнийг ч сонгож болно.
+ */
 const officialOptions = computed(() => {
     const pending = props.pendingOfficials ?? [];
-    const seen = new Set(pending.map((p) => p.value));
-    const extras = props.rows
-        .map((row) => row.person_name)
-        .filter((name) => name && ! seen.has(name))
-        .map((name) => {
-            seen.add(name);
+    const pendingHints = new Map(pending.map((p) => [p.value, p.hint || 'Бланк авсан']));
+    const seen = new Set();
+    const options = [];
 
-            return {
-                value: name,
-                label: name,
-                hint: '',
-                org: '',
-                category: 'baiguullaga',
-            };
-        });
+    const push = (option) => {
+        if (! option?.value || seen.has(option.value)) return;
 
-    return [...pending, ...extras];
+        seen.add(option.value);
+        options.push(option);
+    };
+
+    pending.forEach(push);
+
+    (props.people ?? []).forEach((person) => push({
+        ...person,
+        hint: pendingHints.has(person.value)
+            ? [pendingHints.get(person.value), person.hint].filter(Boolean).join(' · ')
+            : person.hint,
+    }));
+
+    // Хүснэгтэд бичигдсэн боловч жагсаалтад байхгүй нэрс.
+    props.rows.forEach((row) => push({
+        value: row.person_name,
+        label: row.person_name,
+        hint: '',
+        org: '',
+        category: 'baiguullaga',
+    }));
+
+    return options;
 });
 
 const canManage = computed(() => canManageRows.value);
