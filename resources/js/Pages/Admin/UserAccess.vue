@@ -595,6 +595,17 @@ const pickFromDirectory = (value) => {
                             <span class="rounded-full bg-brand-navy-50 px-2.5 py-0.5 font-semibold text-brand-navy-700">
                                 {{ selectedRoleLabel }}
                             </span>
+                            <span
+                                v-if="selected.is_root_admin"
+                                class="rounded-full bg-emerald-50 px-2.5 py-0.5 font-semibold text-emerald-700"
+                            >
+                                Үндсэн супер админ
+                            </span>
+                        </p>
+                        <p v-if="selected.is_root_admin" class="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                            Энэ бол системийн үндсэн супер админ. Супер админ эрх нь хасагдахгүй,
+                            нэвтрэх нэр нь өөрчлөгдөхгүй, устгагдахгүй — бүх эрх санамсаргүй
+                            хасагдсан ч системд эргэж орох арга үлдэнэ. Нууц үгийг нь доороос солино.
                         </p>
                     </div>
 

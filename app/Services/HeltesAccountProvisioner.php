@@ -209,6 +209,11 @@ class HeltesAccountProvisioner
         User::query()
             ->orderBy('id')
             ->each(function (User $user) use ($plain, &$updated): void {
+                // Үндсэн супер админ нь сэргээх бүртгэл — бөөнөөр солихоос хасна.
+                if (\App\Support\RootAdmin::is($user)) {
+                    return;
+                }
+
                 $user->password = $plain;
                 $user->setRememberToken(null);
                 $user->save();
@@ -232,6 +237,10 @@ class HeltesAccountProvisioner
             ->where('is_admin', true)
             ->orderBy('id')
             ->each(function (User $user) use ($plain, &$updated, &$ids): void {
+                if (\App\Support\RootAdmin::is($user)) {
+                    return;
+                }
+
                 $user->password = $plain;
                 $user->setRememberToken(null);
                 $user->save();
