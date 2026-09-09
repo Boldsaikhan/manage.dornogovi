@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import { isMobileDevice } from '@/utils/mobileClient';
 import {
@@ -156,6 +156,10 @@ const lockDescription = computed(() => {
         return 'Сүлжээгүй үед апп түгжигдсэн байна. Интернэт холбогдсоны дараа нээнэ үү.';
     }
 
+    if (bioBusy.value) {
+        return 'Хуруу / царайгаа уншуулна уу.';
+    }
+
     if (biometricOnly.value) {
         return 'Хуруу / царайгаараа баталгаажуулаад үргэлжлүүлнэ үү.';
     }
@@ -287,6 +291,10 @@ const onVisibilityChange = () => {
     if (clientLocked.value || lock.value.locked) {
         hiddenAt = 0;
 
+        // Апп руу буцаж ирэхэд хуруу / царайны цонхыг өөрөө нээнэ.
+        autoPrompted.value = false;
+        autoPromptBiometric();
+
         return;
     }
 
@@ -379,6 +387,9 @@ onMounted(async () => {
         }
     }
 
+    // Хуудас нээгдэхэд түгжээтэй байвал шууд биометрик асууна.
+    autoPromptBiometric();
+
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('pageshow', onPageShow);
     window.addEventListener('online', onOnline);
@@ -403,7 +414,13 @@ watch(showLock, (v) => {
         password.value = '';
         error.value = '';
         setupSuccess.value = false;
+        autoPrompted.value = false;
+        autoPromptBiometric();
+
+        return;
     }
+
+    autoPrompted.value = false;
 });
 
 const clearLockLocal = () => {
@@ -514,7 +531,27 @@ const setupBiometric = async () => {
 };
 
 /** Хуруу / царайгаар түгжээ тайлах. Амжилтгүй бол нууц үгийн талбар хэвээр үлдэнэ. */
-const unlockBiometric = async ({ skipSetupCheck = false } = {}) => {
+/**
+ * Түгжээ гарч ирэнгүүт хуруу / царайны цонхыг өөрөө нээнэ.
+ *
+ * Товч дарах шаардлагагүй. iOS Safari зэрэг хөтөч гар үйлдэл шаардвал энэ
+ * оролдлого амжилтгүй болох ба тэр үед доорх товч харагдсаар үлдэнэ.
+ */
+const autoPrompted = ref(false);
+
+const autoPromptBiometric = async () => {
+    if (autoPrompted.value || ! showLock.value || ! canBiometric.value) return;
+    if (bioBusy.value || busy.value || setupBusy.value || offline.value) return;
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+
+    autoPrompted.value = true;
+
+    // Түгжээний дэлгэц зурагдсаны дараа нээнэ.
+    await nextTick();
+    await unlockBiometric({ auto: true });
+};
+
+const unlockBiometric = async ({ skipSetupCheck = false, auto = false } = {}) => {
     if ((! skipSetupCheck && ! canBiometric.value) || bioBusy.value || busy.value) return;
     if (! skipSetupCheck && setupBusy.value) return;
 
@@ -542,7 +579,11 @@ const unlockBiometric = async ({ skipSetupCheck = false } = {}) => {
     } catch (e) {
         const name = e?.name || '';
 
-        if (/NotAllowedError|AbortError/i.test(name)) {
+        if (auto) {
+            // Автоматаар нээх оролдлогыг хөтөч зөвшөөрөөгүй, эсвэл хэрэглэгч
+            // цуцалсан байж болно — бүртгэлийг нь арилгахгүй, товчоор дахин оролдоно.
+            error.value = '';
+        } else if (/NotAllowedError|AbortError/i.test(name)) {
             clearWebAuthnDeviceHint();
             localWebAuthn.value = false;
             error.value = 'Энэ утсанд хуруу/царай бүртгэгдээгүй. «Идэвхжүүлэх» эсвэл нууц үгээр нээнэ үү.';
