@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\PhonePasswordResetController;
 use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\UserAccessController;
 use App\Http\Controllers\AiAssistantController;
@@ -190,3 +191,8 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+// verify.mn-ээс ирэх баталгаажуулалтын мэдэгдэл (нууц түлхүүр хаягтаа шингэсэн).
+Route::post('/webhooks/verify-mn/{secret}', [PhonePasswordResetController::class, 'callback'])
+    ->middleware('throttle:120,1')
+    ->name('verify.callback');

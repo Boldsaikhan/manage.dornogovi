@@ -26,6 +26,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
+        // verify.mn webhook — гадны сервер тул CSRF token байхгүй.
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/verify-mn/*',
+        ]);
+
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
             'module' => \App\Http\Middleware\EnsureModuleAccess::class,
