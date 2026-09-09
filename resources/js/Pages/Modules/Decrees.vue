@@ -45,18 +45,22 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDownload));
 const isBlank = computed(() => props.tab === 'blank');
 const isNiit = computed(() => props.tab === 'niit');
 const isZahiramj = computed(() => props.tab.startsWith('zahiramj'));
+const isDaalgavar = computed(() => props.tab === 'alban_daalgavar');
 const isDoc = computed(() => ! isBlank.value);
 
 const docLabel = computed(() => {
     if (isNiit.value) return 'Захирамж, тушаал';
+    if (isDaalgavar.value) return 'Албан даалгавар';
     return isZahiramj.value ? 'Захирамж' : 'Тушаал';
 });
 const titleLabel = computed(() => {
     if (isNiit.value) return 'Гарчиг / тэргүү';
+    if (isDaalgavar.value) return 'Албан даалгаврын гарчиг';
     return isZahiramj.value ? 'Захирамжийн тэргүү' : 'Тушаалын гарчиг';
 });
 const numberLabel = computed(() => {
     if (isNiit.value) return 'Бүртгэл';
+    if (isDaalgavar.value) return 'Албан даалгаврын дугаар';
     return isZahiramj.value ? 'Захирамжийн дугаар' : 'Тушаалын дугаар';
 });
 
@@ -65,6 +69,7 @@ const kindOptions = [
     { value: 'zahiramj_b', label: 'Захирамж Б' },
     { value: 'tushaal_a', label: 'Тушаал А' },
     { value: 'tushaal_b', label: 'Тушаал Б' },
+    { value: 'alban_daalgavar', label: 'Албан даалгавар' },
 ];
 
 const canAddRow = computed(() => (props.canEdit || props.canManage) && ! isNiit.value);

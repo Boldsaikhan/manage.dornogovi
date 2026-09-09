@@ -11,6 +11,7 @@ class Decree extends Model
         'blank' => 'Бланкны дугаар',
         'zahiramj' => 'Захирамжийн дугаар',
         'tushaal' => 'Тушаалын дугаар',
+        'daalgavar' => 'Албан даалгаврын дугаар',
     ];
 
     public const KINDS = [
@@ -18,6 +19,7 @@ class Decree extends Model
         'zahiramj_b' => 'Захирамж Б',
         'tushaal_a' => 'Тушаал А',
         'tushaal_b' => 'Тушаал Б',
+        'alban_daalgavar' => 'Албан даалгавар',
         'blank' => 'Хэвлэмэл хуудас',
     ];
 

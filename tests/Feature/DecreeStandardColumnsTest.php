@@ -222,8 +222,9 @@ class DecreeStandardColumnsTest extends TestCase
                 ->component('Modules/Decrees')
                 ->where('tab', 'niit')
                 ->has('rows', 2)
-                ->where('tabs.5.value', 'niit')
-                ->where('tabs.5.count', 2));
+                // Албан даалгаврын таб нэмэгдсэн тул «Нийт» нь 6 дахь байрлалд.
+                ->where('tabs.6.value', 'niit')
+                ->where('tabs.6.count', 2));
 
         $this->actingAs($admin)
             ->get(route('decrees.index', ['tab' => 'zahiramj']))
