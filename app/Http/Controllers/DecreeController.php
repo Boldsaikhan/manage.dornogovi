@@ -741,11 +741,13 @@ class DecreeController extends Controller
         abort_unless(ModuleOwnScope::allows($request->user(), 'decrees', $decree), 403);
         abort_if($decree->category === 'blank' || $decree->kind === 'blank', 422);
 
+        // Зөвхөн PDF. Хэтэрсэн файлыг хөтөч дээр нь 2MB хүртэл шахаж илгээдэг.
         $request->validate([
-            'image' => ['required', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
+            'image' => ['required', 'file', 'mimetypes:application/pdf', 'mimes:pdf', 'max:2048'],
         ], [
-            'image.max' => 'Зургийн хэмжээ 2MB-аас хэтрэхгүй байх ёстой.',
-            'image.image' => 'Зөвхөн зураг файл оруулна уу.',
+            'image.max' => 'Файлын хэмжээ 2MB-аас хэтрэхгүй байх ёстой.',
+            'image.mimes' => 'Зөвхөн PDF файл оруулна уу.',
+            'image.mimetypes' => 'Зөвхөн PDF файл оруулна уу.',
         ]);
 
         $this->deleteImageFile($decree);
@@ -753,7 +755,7 @@ class DecreeController extends Controller
         $path = $request->file('image')->store('decrees/'.$decree->id, 'local');
         $decree->update(['file_path' => $path]);
 
-        return back(303)->with('success', 'Зураг хадгаллаа.');
+        return back(303)->with('success', 'PDF хадгаллаа.');
     }
 
     public function showImage(Request $request, Decree $decree): StreamedResponse
@@ -777,7 +779,7 @@ class DecreeController extends Controller
         $this->deleteImageFile($decree);
         $decree->update(['file_path' => null]);
 
-        return back(303)->with('success', 'Зураг устгалаа.');
+        return back(303)->with('success', 'Хавсаргасан файлыг устгалаа.');
     }
 
     private function scopedDecrees(Request $request): Builder
@@ -953,6 +955,10 @@ class DecreeController extends Controller
             'issued_on_display' => optional($d->issued_on)?->format('Y.m.d'),
             'body' => $d->body,
             'has_image' => (bool) $d->file_path,
+            // Хуучин мөрүүдэд зураг байж болно — харуулахдаа ялгана.
+            'image_is_pdf' => $d->file_path
+                ? strtolower((string) pathinfo($d->file_path, PATHINFO_EXTENSION)) === 'pdf'
+                : false,
             'image_url' => $d->file_path
                 ? route('decrees.image.show', $d)
                 : null,

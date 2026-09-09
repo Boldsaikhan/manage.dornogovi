@@ -232,7 +232,7 @@ class DecreeStandardColumnsTest extends TestCase
                 ->where('tab', 'zahiramj_a'));
     }
 
-    public function test_decree_image_can_be_uploaded_viewed_and_removed(): void
+    public function test_decree_pdf_can_be_uploaded_viewed_and_removed(): void
     {
         Storage::fake('local');
         $admin = User::factory()->create(['is_admin' => true]);
@@ -241,11 +241,11 @@ class DecreeStandardColumnsTest extends TestCase
             'category' => 'zahiramj',
             'kind' => 'zahiramj_a',
             'number' => '01',
-            'title' => 'Зурагтай',
+            'title' => 'Хавсралттай',
             'created_by' => $admin->id,
         ]);
 
-        $file = UploadedFile::fake()->image('decree.jpg', 800, 600);
+        $file = UploadedFile::fake()->create('decree.pdf', 120, 'application/pdf');
 
         $this->actingAs($admin)
             ->post(route('decrees.image.upload', $decree), ['image' => $file])
@@ -262,7 +262,8 @@ class DecreeStandardColumnsTest extends TestCase
         $this->actingAs($admin)
             ->get(route('decrees.index', ['tab' => 'zahiramj_a']))
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('rows.0.has_image', true));
+                ->where('rows.0.has_image', true)
+                ->where('rows.0.image_is_pdf', true));
 
         $path = $decree->file_path;
 
@@ -273,5 +274,34 @@ class DecreeStandardColumnsTest extends TestCase
         $decree->refresh();
         $this->assertNull($decree->file_path);
         Storage::disk('local')->assertMissing($path);
+    }
+
+    public function test_only_pdf_files_are_accepted(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $decree = Decree::query()->create([
+            'category' => 'zahiramj',
+            'kind' => 'zahiramj_a',
+            'number' => '02',
+            'title' => 'Зөвхөн PDF',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('decrees.image.upload', $decree), [
+                'image' => UploadedFile::fake()->image('decree.jpg', 800, 600),
+            ])
+            ->assertSessionHasErrors('image');
+
+        // 2MB-аас хэтэрсэн PDF-ийг хөтөч дээр нь шахах ёстой — сервер хүлээж авахгүй.
+        $this->actingAs($admin)
+            ->post(route('decrees.image.upload', $decree), [
+                'image' => UploadedFile::fake()->create('том.pdf', 3000, 'application/pdf'),
+            ])
+            ->assertSessionHasErrors('image');
+
+        $this->assertNull($decree->fresh()->file_path);
     }
 }

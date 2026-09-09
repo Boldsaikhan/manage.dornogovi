@@ -276,78 +276,10 @@ const destroyRow = (id) => {
     router.delete(route('decrees.destroy', id), { preserveScroll: true });
 };
 
-const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+const MAX_FILE_BYTES = 2 * 1024 * 1024;
 
-const loadImage = (file) => new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-        URL.revokeObjectURL(url);
-        resolve(img);
-    };
-    img.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject(new Error('Зураг уншигдсангүй.'));
-    };
-    img.src = url;
-});
-
-const canvasToBlob = (canvas, quality) => new Promise((resolve) => {
-    canvas.toBlob((blob) => resolve(blob), 'image/jpeg', quality);
-});
-
-/** 2MB-аас их бол JPEG-р шахаж 2MB дотор оруулна. */
-const compressImageToLimit = async (file) => {
-    if (file.size <= MAX_IMAGE_BYTES) {
-        return file;
-    }
-
-    const img = await loadImage(file);
-    let width = img.width;
-    let height = img.height;
-    const maxSide = 2400;
-
-    if (width > maxSide || height > maxSide) {
-        const scale = Math.min(maxSide / width, maxSide / height);
-        width = Math.round(width * scale);
-        height = Math.round(height * scale);
-    }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, width, height);
-    ctx.drawImage(img, 0, 0, width, height);
-
-    let quality = 0.85;
-    let blob = await canvasToBlob(canvas, quality);
-
-    while (blob && blob.size > MAX_IMAGE_BYTES && quality > 0.35) {
-        quality -= 0.1;
-        blob = await canvasToBlob(canvas, quality);
-    }
-
-    while (blob && blob.size > MAX_IMAGE_BYTES && (canvas.width > 800 || canvas.height > 800)) {
-        canvas.width = Math.round(canvas.width * 0.8);
-        canvas.height = Math.round(canvas.height * 0.8);
-        const c = canvas.getContext('2d');
-        c.fillStyle = '#ffffff';
-        c.fillRect(0, 0, canvas.width, canvas.height);
-        c.drawImage(img, 0, 0, canvas.width, canvas.height);
-        blob = await canvasToBlob(canvas, Math.max(quality, 0.5));
-    }
-
-    if (! blob || blob.size > MAX_IMAGE_BYTES) {
-        throw new Error('Зургийг 2MB хүртэл шахаж чадсангүй. Өөр зураг сонгоно уу.');
-    }
-
-    return new File([blob], (file.name.replace(/\.[^.]+$/, '') || 'decree') + '.jpg', {
-        type: 'image/jpeg',
-        lastModified: Date.now(),
-    });
-};
+/** PDF-ийг оруулж байгаа мөр — товч дээр «Боловсруулж байна» гэж харуулна. */
+const compressingId = ref(null);
 
 const pickImage = (id) => {
     uploadingId.value = id;
@@ -361,20 +293,32 @@ const onImagePicked = async (event) => {
 
     if (! file || ! id) return;
 
-    if (! file.type.startsWith('image/')) {
-        alert('Зөвхөн зураг файл оруулна уу.');
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+
+    if (! isPdf) {
+        alert('Зөвхөн PDF файл оруулна уу.');
+        uploadingId.value = null;
         return;
     }
 
     try {
-        const ready = await compressImageToLimit(file);
+        let ready = file;
+
+        // 2MB-аас хэтэрсэн бол хөтөч дээр нь шахаж багтаана.
+        if (file.size > MAX_FILE_BYTES) {
+            compressingId.value = id;
+            const { compressPdfToLimit } = await import('@/Support/pdfCompress.js');
+            ready = await compressPdfToLimit(file, MAX_FILE_BYTES);
+        }
+
         useForm({ image: ready }).post(route('decrees.image.upload', id), {
             forceFormData: true,
             preserveScroll: true,
         });
     } catch (err) {
-        alert(err?.message || 'Зураг оруулахад алдаа гарлаа.');
+        alert(err?.message || 'Файл оруулахад алдаа гарлаа.');
     } finally {
+        compressingId.value = null;
         uploadingId.value = null;
     }
 };
@@ -383,7 +327,8 @@ const openPreview = (row) => {
     if (! row.image_url) return;
     preview.value = {
         url: row.image_url,
-        title: [row.number, row.title].filter(Boolean).join(' — ') || 'Захирамжийн зураг',
+        is_pdf: row.image_is_pdf !== false,
+        title: [row.number, row.title].filter(Boolean).join(' — ') || 'Хавсаргасан PDF',
     };
 };
 
@@ -392,7 +337,7 @@ const closePreview = () => {
 };
 
 const removeImage = (id) => {
-    if (!confirm('Зургийг устгах уу?')) return;
+    if (!confirm('Хавсаргасан файлыг устгах уу?')) return;
     router.delete(route('decrees.image.destroy', id), { preserveScroll: true });
 };
 
@@ -790,7 +735,7 @@ const docColumnCount = computed(() => {
                                 Боловсруулсан<br>албан тушаалтан
                             </th>
                             <th v-if="isNiit" rowspan="2" class="w-24">Төрөл</th>
-                            <th rowspan="2" class="w-24">Зураг</th>
+                            <th rowspan="2" class="w-24">PDF</th>
                         </tr>
                         <tr>
                             <th class="w-24">Батлагдсан<br>огноо</th>
@@ -961,8 +906,9 @@ const docColumnCount = computed(() => {
                                         v-if="canManage"
                                         type="button"
                                         class="inline-flex h-7 w-7 items-center justify-center rounded text-slate-500 transition hover:bg-brand-navy-50 hover:text-brand-navy-700"
-                                        title="Зураг оруулах"
-                                        aria-label="Зураг оруулах"
+                                        :title="compressingId === row.id ? 'Шахаж байна…' : 'PDF оруулах (2MB хүртэл автоматаар шахна)'"
+                                        :aria-label="compressingId === row.id ? 'Шахаж байна' : 'PDF оруулах'"
+                                        :disabled="compressingId === row.id"
                                         @click="pickImage(row.id)"
                                     >
                                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
@@ -977,8 +923,8 @@ const docColumnCount = computed(() => {
                                             ? 'text-brand-navy-600 hover:bg-brand-navy-50'
                                             : 'cursor-not-allowed text-slate-300'"
                                         :disabled="! row.has_image"
-                                        title="Зураг харах"
-                                        aria-label="Зураг харах"
+                                        title="Хавсаргасан PDF харах"
+                                        aria-label="Хавсаргасан PDF харах"
                                         @click="openPreview(row)"
                                     >
                                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
@@ -990,8 +936,8 @@ const docColumnCount = computed(() => {
                                         v-if="canManage && row.has_image"
                                         type="button"
                                         class="inline-flex h-7 w-7 items-center justify-center rounded text-slate-400 transition hover:bg-amber-50 hover:text-amber-700"
-                                        title="Зураг устгах"
-                                        aria-label="Зураг устгах"
+                                        title="Хавсаргасан файлыг устгах"
+                                        aria-label="Хавсаргасан файлыг устгах"
                                         @click="removeImage(row.id)"
                                     >
                                         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
@@ -1027,7 +973,7 @@ const docColumnCount = computed(() => {
         <input
             ref="imageInput"
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/jpg"
+            accept="application/pdf,.pdf"
             class="hidden"
             @change="onImagePicked"
         />
@@ -1039,10 +985,16 @@ const docColumnCount = computed(() => {
                     <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" @click="closePreview">✕</button>
                 </div>
                 <div class="max-h-[75vh] overflow-auto rounded-lg bg-slate-100">
-                    <img
-                        v-if="preview?.url"
+                    <iframe
+                        v-if="preview?.url && preview.is_pdf"
                         :src="preview.url"
-                        alt="Захирамжийн зураг"
+                        title="Хавсаргасан PDF"
+                        class="h-[75vh] w-full rounded-lg border-0 bg-white"
+                    />
+                    <img
+                        v-else-if="preview?.url"
+                        :src="preview.url"
+                        alt="Хавсаргасан файл"
                         class="mx-auto max-h-[75vh] w-auto max-w-full object-contain"
                     />
                 </div>
