@@ -67,6 +67,59 @@ class DecreeRegisterColumnsTest extends TestCase
         $this->assertSame('02-11', $decree->file_index);
     }
 
+    public function test_official_assignments_have_their_own_tab(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->post(route('decrees.store'), [
+            'tab' => 'alban_daalgavar',
+            'title' => 'Өвөлжилтийн бэлтгэл хангах тухай',
+            'issued_on' => '2026-09-08',
+            'page_count' => 1,
+            'person_name' => 'Б.Болд',
+        ])->assertRedirect();
+
+        $row = Decree::query()->where('kind', 'alban_daalgavar')->firstOrFail();
+        $this->assertSame('daalgavar', $row->category);
+        // Албан даалгаварт А/Б угтвар байхгүй — дугаар нь дангаараа харагдана.
+        $this->assertNull($row->numberPrefix());
+        $this->assertSame('01', $row->numberDisplay());
+
+        $this->actingAs($admin)
+            ->get(route('decrees.index', ['tab' => 'alban_daalgavar']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('rows', 1)
+                ->where('rows.0.title', 'Өвөлжилтийн бэлтгэл хангах тухай')
+                ->where('tabs.5.value', 'alban_daalgavar')
+                ->where('tabs.5.label', 'Албан даалгавар')
+                ->where('tabs.5.count', 1)
+            );
+
+        // Нийт табд бусад баримттай хамт орно.
+        $this->actingAs($admin)
+            ->get(route('decrees.index', ['tab' => 'niit']))
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('rows', 1));
+    }
+
+    public function test_the_official_assignment_register_prints(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        Decree::create([
+            'category' => 'daalgavar',
+            'kind' => 'alban_daalgavar',
+            'number' => '01',
+            'title' => 'Өвөлжилтийн бэлтгэл хангах тухай',
+            'issued_on' => '2026-09-08',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('decrees.print', ['tab' => 'alban_daalgavar']))
+            ->assertOk()
+            ->assertSee('Албан даалгаврын бүртгэл')
+            ->assertSee('Албан даалгаврын гарчиг');
+    }
+
     public function test_the_number_is_shown_with_the_kind_prefix(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

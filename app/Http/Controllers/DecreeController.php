@@ -32,6 +32,7 @@ class DecreeController extends Controller
         'zahiramj_b' => 'Захирамж Б',
         'tushaal_a' => 'Тушаал А',
         'tushaal_b' => 'Тушаал Б',
+        'alban_daalgavar' => 'Албан даалгавар',
         'niit' => 'Нийт',
     ];
 
@@ -40,9 +41,10 @@ class DecreeController extends Controller
         'zahiramj_b' => ['category' => 'zahiramj', 'kind' => 'zahiramj_b'],
         'tushaal_a' => ['category' => 'tushaal', 'kind' => 'tushaal_a'],
         'tushaal_b' => ['category' => 'tushaal', 'kind' => 'tushaal_b'],
+        'alban_daalgavar' => ['category' => 'daalgavar', 'kind' => 'alban_daalgavar'],
     ];
 
-    private const DOC_KINDS = ['zahiramj_a', 'zahiramj_b', 'tushaal_a', 'tushaal_b'];
+    private const DOC_KINDS = ['zahiramj_a', 'zahiramj_b', 'tushaal_a', 'tushaal_b', 'alban_daalgavar'];
 
     public function index(Request $request): Response
     {
@@ -56,6 +58,7 @@ class DecreeController extends Controller
             'zahiramj_b' => $this->scopedDecrees($request)->where('kind', 'zahiramj_b')->count(),
             'tushaal_a' => $this->scopedDecrees($request)->where('kind', 'tushaal_a')->count(),
             'tushaal_b' => $this->scopedDecrees($request)->where('kind', 'tushaal_b')->count(),
+            'alban_daalgavar' => $this->scopedDecrees($request)->where('kind', 'alban_daalgavar')->count(),
             'niit' => $this->scopedDecrees($request)->whereIn('kind', self::DOC_KINDS)->count(),
         ];
 
@@ -120,6 +123,7 @@ class DecreeController extends Controller
             'title' => $this->printTitle($tab),
             'titleLabel' => match (true) {
                 $tab === 'niit' => 'Гарчиг / тэргүү',
+                $tab === 'alban_daalgavar' => 'Албан даалгаврын гарчиг',
                 str_starts_with($tab, 'zahiramj') => 'Захирамжийн тэргүү',
                 default => 'Тушаалын гарчиг',
             },
@@ -135,6 +139,7 @@ class DecreeController extends Controller
             'zahiramj_b' => 'Аймгийн Засаг даргын Захирамжийн бүртгэл (Б)',
             'tushaal_a' => 'Тамгын газрын даргын Тушаалын бүртгэл (А)',
             'tushaal_b' => 'Тамгын газрын даргын Тушаалын бүртгэл (Б)',
+            'alban_daalgavar' => 'Албан даалгаврын бүртгэл',
             default => 'Захирамж, тушаалын нэгдсэн бүртгэл',
         };
     }
@@ -277,6 +282,7 @@ class DecreeController extends Controller
 
         $titleCol = match (true) {
             $tab === 'niit' => 'Гарчиг / тэргүү',
+            $tab === 'alban_daalgavar' => 'Албан даалгаврын гарчиг',
             str_starts_with($tab, 'zahiramj') => 'Захирамжийн тэргүү',
             default => 'Тушаалын гарчиг',
         };
@@ -857,6 +863,11 @@ class DecreeController extends Controller
                     ->orWhere(function ($q) {
                         $q->whereNotNull('num_zahiramj')->where('num_zahiramj', '!=', '');
                     });
+            });
+        } elseif ($tab === 'alban_daalgavar') {
+            $blankQuery->where(function ($query) {
+                $query->where('qty_assignment', '>', 0)
+                    ->orWhere('qty_assignment_mn', '>', 0);
             });
         } elseif (str_starts_with($tab, 'tushaal')) {
             $blankQuery->where(function ($query) {
