@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\PhoneVerification;
 use App\Models\User;
+use App\Services\Sms\SmsSender;
 use App\Services\Verify\VerifyMnClient;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
@@ -108,6 +109,17 @@ class PhonePasswordResetController extends Controller
             ]);
         }
 
+        /*
+         * Суваг огт тохируулаагүй бол хэн ч ирсэн ижил алдаа — бүртгэлтэй
+         * эсэхийг задруулахгүй.
+         */
+        if (! $this->verify->isEnabled() && ! app(SmsSender::class)->isEnabled()) {
+            throw ValidationException::withMessages([
+                'phone' => 'Одоогоор утсаар сэргээх боломжгүй байна. И-мэйлээр сэргээх, '
+                    .'эсвэл системийн админд хандана уу.',
+            ]);
+        }
+
         $code = $this->verify->generateCode();
         $user = User::query()->where('phone', $phone)->first();
 
@@ -123,6 +135,19 @@ class PhonePasswordResetController extends Controller
         // Бүртгэлгүй дугаарт session үүсгэхгүй — хэрэглэгчид алхам нь ижил харагдана.
         if ($user) {
             $result = $this->verify->startVerification($phone, $code);
+
+            /*
+             * Код хаашаа ч очоогүй бол оруулах нүд харуулах нь утгагүй.
+             * (verify.mn тохируулаагүй, нөөц SMS суваг ч унтраалттай.)
+             */
+            if (! $result['sent']) {
+                $record->delete();
+
+                throw ValidationException::withMessages([
+                    'phone' => 'Одоогоор утсаар сэргээх боломжгүй байна. И-мэйлээр сэргээх, '
+                        .'эсвэл системийн админд хандана уу.',
+                ]);
+            }
 
             $record->update(array_filter([
                 'channel' => $result['channel'],
