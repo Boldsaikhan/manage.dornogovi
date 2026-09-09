@@ -26,6 +26,15 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::prefetch(concurrency: 3);
 
+        // Нэг нэвтэрсэн бол «Гарах» дартал нэвтэрсэн хэвээр байна. Сесс богино
+        // байвал гар утсан дээр байн байн нэвтрэх шаардлагатай болдог тул доод
+        // хязгаарыг энд тавина (.env-ийн SESSION_LIFETIME үүнээс бага байсан ч).
+        $minimum = max(1, (int) config('session.min_days', 30)) * 24 * 60;
+
+        if ((int) config('session.lifetime') < $minimum) {
+            config(['session.lifetime' => $minimum]);
+        }
+
         // Нэвтэрмэгц нэвтрэх мэдээллийн санг нээнэ — цэснээс холбосон систем дээр
         // дарахад нэмэлт нууц үг асуухгүй шууд орно.
         Event::listen(Login::class, static fn () => Vault::unlockCurrentSession());

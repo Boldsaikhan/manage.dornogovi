@@ -86,6 +86,21 @@ const canBiometric = computed(() => bioSupported.value && localWebAuthn.value);
 
 const canSetupBiometric = computed(() => bioSupported.value && ! localWebAuthn.value && ! offline.value);
 
+/**
+ * Зөвхөн биометрээр тайлах горим.
+ *
+ * Сесс дуусаад «намайг сана»-гаар эргэж нэвтэрсэн үед сервер энэ горимыг
+ * тавина — нууц үг дахин асуухгүй, хуруу / царайгаар баталгаажуулна.
+ */
+const biometricOnly = computed(() => lock.value.mode === 'biometric' && canBiometric.value);
+
+/** Нууц үгийн хэсгийг харуулах эсэх — биометрик боломжтой үед нуугдана. */
+const showPasswordForm = ref(false);
+
+const passwordVisible = computed(
+    () => showPasswordForm.value || (! canBiometric.value && ! biometricOnly.value),
+);
+
 const userId = computed(() => page.props.auth?.user?.id ?? null);
 
 const storageKey = () => `${LOCK_KEY}:${userId.value || 0}`;
@@ -139,6 +154,10 @@ const showLock = computed(() => {
 const lockDescription = computed(() => {
     if (offline.value) {
         return 'Сүлжээгүй үед апп түгжигдсэн байна. Интернэт холбогдсоны дараа нээнэ үү.';
+    }
+
+    if (biometricOnly.value) {
+        return 'Хуруу / царайгаараа баталгаажуулаад үргэлжлүүлнэ үү.';
     }
 
     if (relaunchLocked.value) {
@@ -608,13 +627,25 @@ const unlockBiometric = async ({ skipSetupCheck = false } = {}) => {
                 {{ setupBusy ? 'Passkey үүсгэж байна…' : 'Хуруу / цараай идэвхжүүлэх' }}
             </button>
 
-            <div v-if="(canBiometric || canSetupBiometric) && !offline" class="mt-5 flex items-center gap-3">
+            <button
+                v-if="! passwordVisible && ! offline"
+                type="button"
+                class="mt-5 w-full text-center text-xs font-medium text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline"
+                @click="showPasswordForm = true"
+            >
+                Хуруу / царай ажиллахгүй байна уу? Нууц үгээр нэвтрэх
+            </button>
+
+            <div
+                v-if="passwordVisible && (canBiometric || canSetupBiometric) && !offline"
+                class="mt-5 flex items-center gap-3"
+            >
                 <span class="h-px flex-1 bg-slate-200"></span>
                 <span class="text-xs text-slate-400">эсвэл нэвтрэх нэр, нууц үгээр</span>
                 <span class="h-px flex-1 bg-slate-200"></span>
             </div>
 
-            <form class="mt-5 space-y-4" @submit.prevent="unlock">
+            <form v-if="passwordVisible || offline" class="mt-5 space-y-4" @submit.prevent="unlock">
                 <div v-if="!offline">
                     <label class="mb-1 block text-xs font-medium text-slate-600">Нууц үг</label>
                     <input

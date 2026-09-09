@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Auth;
 
 use App\Models\User;
+use App\Support\MobileClient;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -84,7 +85,10 @@ class LoginRequest extends FormRequest
             'password' => $this->input('password'),
         ];
 
-        if ($value === '' || ! Auth::attempt($credentials, $this->boolean('remember'))) {
+        // Гар утсан дээр үргэлж сана — «Гарах» дартал дахин нэвтрэх шаардлагагүй.
+        $remember = $this->boolean('remember') || MobileClient::isMobileRequest($this);
+
+        if ($value === '' || ! Auth::attempt($credentials, $remember)) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
