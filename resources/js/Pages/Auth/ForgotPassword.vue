@@ -1,6 +1,8 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import QRCode from 'qrcode';
+import { isMobileDevice } from '@/utils/mobileClient';
 import axios from 'axios';
 import StateEmblem from '@/Components/StateEmblem.vue';
 import OrnamentMark from '@/Components/OrnamentMark.vue';
@@ -124,6 +126,45 @@ const sentCode = computed(() => {
 
     return match ? decodeURIComponent(match[1]) : '';
 });
+
+/**
+ * Компьютерээс орсон бол SMS илгээх товч ажиллахгүй — QR код харуулна.
+ *
+ * QR-ын агуулга нь SMSTO: стандарт тул утасны камер уншуулахад мессеж апп
+ * хүлээн авагч, бичвэрийн хамт бэлэн нээгдэнэ.
+ */
+const onPhone = ref(true);
+const qrImage = ref('');
+
+const smsToPayload = computed(
+    () => (sentCode.value ? `SMSTO:${shortcode.value}:${sentCode.value}` : ''),
+);
+
+const drawQr = async () => {
+    if (! smsToPayload.value) {
+        qrImage.value = '';
+
+        return;
+    }
+
+    try {
+        qrImage.value = await QRCode.toDataURL(smsToPayload.value, {
+            width: 512,
+            margin: 1,
+            errorCorrectionLevel: 'M',
+            color: { dark: '#1e3a5f', light: '#ffffff' },
+        });
+    } catch {
+        qrImage.value = '';
+    }
+};
+
+onMounted(() => {
+    onPhone.value = isMobileDevice();
+    drawQr();
+});
+
+watch(smsToPayload, () => drawQr());
 
 const remaining = ref('');
 let ticker = null;
@@ -279,8 +320,9 @@ onBeforeUnmount(() => clearInterval(ticker));
                             </p>
                         </div>
 
+<!-- Гар утаснаас: нэг товшилтоор мессеж апп нээгдэнэ -->
                         <a
-                            v-if="phoneState.sms_uri"
+                            v-if="onPhone && phoneState.sms_uri"
                             :href="phoneState.sms_uri"
                             class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-navy-600 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-navy-600/25 transition hover:bg-brand-navy-700"
                         >
@@ -290,6 +332,23 @@ onBeforeUnmount(() => clearInterval(ticker));
                             SMS илгээх
                         </a>
 
+                        <!-- Компьютерээс: утасны камераар уншуулна -->
+                        <div v-else-if="qrImage" class="mt-4 text-center">
+                            <p class="text-sm font-semibold text-brand-navy-800">
+                                Утасныхаа камерыг энэ QR код руу чиглүүлнэ үү
+                            </p>
+                            <img
+                                :src="qrImage"
+                                alt="SMS илгээх QR код"
+                                class="mx-auto mt-3 h-44 w-44 rounded-xl border border-slate-200 bg-white p-2"
+                            />
+                            <p class="mt-2 text-xs leading-relaxed text-slate-500">
+                                Уншуулахад мессеж бичих цонх <b>{{ shortcode }}</b> хүлээн авагч,
+                                <b>{{ sentCode }}</b> бичвэртэйгээр бэлэн нээгдэнэ — та зөвхөн
+                                «Илгээх» дарна.
+                            </p>
+                        </div>
+
                         <div class="mt-3 flex items-center justify-center gap-2 text-xs text-slate-500">
                             <span class="inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-500"></span>
                             Илгээсэн эсэхийг автоматаар шалгаж байна…
@@ -298,6 +357,7 @@ onBeforeUnmount(() => clearInterval(ticker));
                         <ul class="mt-4 space-y-1 rounded-xl bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-500">
                             <li>• Заавал <b>{{ phoneState.phone }}</b> дугаараасаа илгээнэ. 2 SIM-тэй бол зөв SIM-ээ сонгоно уу.</li>
                             <li>• Мессежийн төлбөр <b>{{ smsCost }}₮</b> — таны дугаараас хасагдана.</li>
+                            <li v-if="! onPhone">• QR ажиллахгүй бол утаснаасаа <b>{{ shortcode }}</b> дугаарт <b>{{ sentCode }}</b> гэж бичиж илгээнэ үү.</li>
                             <li>• Баталгаажмагц энэ хуудас өөрөө үргэлжилнэ.</li>
                         </ul>
                     </template>
