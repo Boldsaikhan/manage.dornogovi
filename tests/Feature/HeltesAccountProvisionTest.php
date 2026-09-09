@@ -132,7 +132,11 @@ class HeltesAccountProvisionTest extends TestCase
 
         $this->assertSame(1, $result['created']);
         $this->assertCount(1, $result['skipped']);
-        $this->assertSame(1, User::query()->whereNotNull('phone')->count());
+        // Үндсэн супер админ нь migration-оор үүсдэг тул тооллогоос хасна.
+        $this->assertSame(1, User::query()
+            ->whereNotNull('phone')
+            ->where('phone', '!=', \App\Support\RootAdmin::phone())
+            ->count());
         $this->assertNull(User::query()->where('phone', '99112233')->first());
     }
 

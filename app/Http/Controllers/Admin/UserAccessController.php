@@ -12,6 +12,7 @@ use App\Models\UserModulePermission;
 use App\Services\HeltesAccountProvisioner;
 use App\Services\Sms\SmsSender;
 use App\Support\ModuleAccess;
+use App\Support\RootAdmin;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -55,6 +56,7 @@ class UserAccessController extends Controller
                 'permissions' => $this->effectivePermissions($u),
                 // Нэвтрэх нэр нь утасны жагсаалтын дугаартай тааруулагдсан эсэх.
                 ...$this->directoryLogin($u),
+                'is_root_admin' => RootAdmin::is($u),
             ]);
 
         return Inertia::render('Admin/UserAccess', [
@@ -81,6 +83,15 @@ class UserAccessController extends Controller
      */
     private function directoryLogin(User $user): array
     {
+        if (RootAdmin::is($user)) {
+            // Үндсэн админ нь албан хаагч биш — утасны жагсаалттай тулгахгүй.
+            return [
+                'directory_phone' => null,
+                'directory_name' => null,
+                'login_matches_directory' => true,
+            ];
+        }
+
         $entry = PhoneDirectoryEntry::forUser($user);
         $phone = $entry?->loginPhone();
 
@@ -97,6 +108,12 @@ class UserAccessController extends Controller
      */
     public function syncLogin(Request $request, User $user): RedirectResponse
     {
+        if (RootAdmin::is($user)) {
+            return back()->withErrors([
+                'phone' => 'Үндсэн супер админы нэвтрэх нэр өөрчлөгддөггүй.',
+            ]);
+        }
+
         $entry = PhoneDirectoryEntry::forUser($user);
         $phone = $entry?->loginPhone();
 
@@ -146,6 +163,10 @@ class UserAccessController extends Controller
             ->all();
 
         foreach (User::query()->orderBy('name')->get() as $user) {
+            if (RootAdmin::is($user)) {
+                continue;
+            }
+
             $phone = PhoneDirectoryEntry::forUser($user)?->loginPhone();
 
             if ($phone === null || $phone === User::normalizePhone($user->phone)) {
@@ -520,13 +541,16 @@ class UserAccessController extends Controller
 
         $passwordChanged = ! empty($data['password']);
 
+        // Үндсэн супер админ: эрх нь хасагдахгүй, нэвтрэх нэр нь өөрчлөгдөхгүй.
+        $isRoot = RootAdmin::is($user);
+
         $user->fill([
             'name' => $data['name'],
             'email' => $data['email'],
-            'phone' => $data['phone'] ?? null,
+            'phone' => $isRoot ? RootAdmin::phone() : ($data['phone'] ?? null),
             'department_id' => $data['department_id'] ?? null,
             'position' => $data['position'] ?? null,
-            'is_admin' => $request->boolean('is_admin'),
+            'is_admin' => $isRoot || $request->boolean('is_admin'),
             'is_department_head' => $request->boolean('is_department_head'),
             'is_specialist' => $request->boolean('is_specialist'),
         ]);
