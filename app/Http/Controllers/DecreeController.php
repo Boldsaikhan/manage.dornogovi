@@ -743,7 +743,7 @@ class DecreeController extends Controller
                 'created_by' => $request->user()->id,
             ]);
 
-            $this->log($created, 'created', 'Бланкны мөр «Шинэ мөр» товчоор нэмэгдлээ.');
+            $this->log($created, 'created', 'Бланкны мөр «Мөр нэмэх» товчоор нэмэгдлээ.');
 
             if ($person !== '') {
                 app(\App\Services\Push\EmployeePushNotifier::class)->notifyNamed($person, [
@@ -789,7 +789,7 @@ class DecreeController extends Controller
                 'created_by' => $request->user()->id,
             ]);
 
-            $this->log($created, 'created', '«Шинэ мөр» товчоор нэмэгдлээ.');
+            $this->log($created, 'created', '«Мөр нэмэх» товчоор нэмэгдлээ.');
         }
 
         return redirect()
