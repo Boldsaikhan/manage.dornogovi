@@ -26,6 +26,8 @@ class AssignmentRegisterColumnsTest extends TestCase
                 $labels = collect($props['columns'])->pluck('label')->all();
 
                 $this->assertSame('Д/д', $props['rowNumberLabel']);
+                // Овог нэр нь хоёр мөр болж хуваагдахгүй.
+                $this->assertTrue($props['columns'][0]['single_line']);
                 $this->assertSame(
                     ['Овог нэр', 'Албан тушаал', 'Баталсан', 'Хаана', 'Ямар ажлаар', 'Хэзээнээс', 'Хэд хоног'],
                     array_slice($labels, 0, 7),

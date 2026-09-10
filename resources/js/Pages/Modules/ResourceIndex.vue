@@ -621,7 +621,11 @@ const destroyRow = (id) => {
                                 />
                             </th>
                             <th v-if="rowNumberLabel" class="w-12 text-center">{{ rowNumberLabel }}</th>
-                            <th v-for="col in columns" :key="col.key">{{ col.label }}</th>
+                            <th
+                                v-for="col in columns"
+                                :key="col.key"
+                                :class="col.single_line ? 'whitespace-nowrap' : ''"
+                            >{{ col.label }}</th>
                             <th v-if="canManage || rowActions.length" />
                         </tr>
                     </thead>
@@ -646,7 +650,11 @@ const destroyRow = (id) => {
                             <td v-if="rowNumberLabel" class="text-center text-sm font-semibold text-slate-500">
                                 {{ rowNumber(index) }}
                             </td>
-                            <td v-for="col in columns" :key="col.key">
+                            <td
+                                v-for="col in columns"
+                                :key="col.key"
+                                :class="col.single_line ? 'whitespace-nowrap' : ''"
+                            >
                                 <template v-if="isFileColumn(col)">
                                     <button
                                         v-if="row.file_url && row.file_is_pdf"
@@ -677,7 +685,7 @@ const destroyRow = (id) => {
                                 </template>
                                 <span
                                     v-else
-                                    class="ui-clamp-2"
+                                    :class="col.single_line ? 'ui-clamp-1' : 'ui-clamp-2'"
                                     :title="row[col.key] != null && row[col.key] !== '' ? String(row[col.key]) : ''"
                                 >{{ row[col.key] != null && row[col.key] !== '' ? row[col.key] : '—' }}</span>
                             </td>
