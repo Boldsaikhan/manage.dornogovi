@@ -199,9 +199,12 @@ const syncStickyHead = () => {
     let top = 0;
 
     Array.from(head.rows).forEach((row, index) => {
+        // 1 пикселээр давхарлана — хүрээ хуваалцсанаас үүсэх завсрыг арилгана.
+        const offset = index === 0 ? 0 : Math.max(0, Math.round(top) - index);
+
         Array.from(row.cells).forEach((cell) => {
             cell.style.position = 'sticky';
-            cell.style.top = `${top}px`;
+            cell.style.top = `${offset}px`;
             cell.style.zIndex = String(30 - index);
         });
 
