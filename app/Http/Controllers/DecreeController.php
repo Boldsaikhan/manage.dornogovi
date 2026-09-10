@@ -72,11 +72,10 @@ class DecreeController extends Controller
             $query->where('kind', $tab);
         }
 
-        $rows = $query
-            ->limit(300)
-            ->get()
-            ->values()
-            ->map(fn (Decree $d, int $i) => $this->serialize($d, $i + 1));
+        $rows = $tab === 'blank'
+            ? $query->limit(300)->get()->values()
+                ->map(fn (Decree $d, int $i) => $this->serialize($d, $i + 1))
+            : $this->registerRows($query->limit(300)->get());
 
         return Inertia::render('Modules/Decrees', [
             'tab' => $tab,
@@ -93,6 +92,34 @@ class DecreeController extends Controller
             'canEdit' => ModuleAccess::canEdit($request->user(), 'decrees'),
             'undoCount' => EditUndo::query()->where('user_id', $request->user()->id)->count(),
         ]);
+    }
+
+    /**
+     * Бүртгэлийн мөрүүдийг дугаараар нь эрэмбэлнэ.
+     *
+     * Д/д нь дугаарын дарааллаар (А/01 → 1) өгөгдөх бөгөөд дэлгэцэнд
+     * ихээс бага руу харагдана — шинэ мөр үргэлж дээд талд гарна.
+     *
+     * @param  \Illuminate\Support\Collection<int, Decree>  $rows
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    private function registerRows($rows, bool $newestFirst = true)
+    {
+        $ordered = $rows
+            ->sortBy(fn (Decree $d) => [$this->numberSortKey($d), $d->id])
+            ->values()
+            ->map(fn (Decree $d, int $i) => $this->serialize($d, $i + 1));
+
+        // Хэвлэх, татахад албан ёсны маягтын дагуу багаас их рүү.
+        return $newestFirst ? $ordered->reverse()->values() : $ordered;
+    }
+
+    /** «А/07» → 7. Дугааргүй мөр хамгийн сүүлд. */
+    private function numberSortKey(Decree $decree): int
+    {
+        $digits = preg_replace('/\D+/', '', (string) $decree->number) ?? '';
+
+        return $digits === '' ? PHP_INT_MAX : (int) $digits;
     }
 
     /**
@@ -114,8 +141,10 @@ class DecreeController extends Controller
             $query->where('kind', $tab);
         }
 
-        $rows = $query->limit(1000)->get()->values()
-            ->map(fn (Decree $d, int $i) => $this->serialize($d, $i + 1));
+        $rows = $tab === 'blank'
+            ? $query->limit(1000)->get()->values()
+                ->map(fn (Decree $d, int $i) => $this->serialize($d, $i + 1))
+            : $this->registerRows($query->limit(1000)->get(), newestFirst: false);
 
         return view('decrees.print', [
             'tab' => $tab,
@@ -170,8 +199,10 @@ class DecreeController extends Controller
             $query->where('kind', $tab);
         }
 
-        $rows = $query->limit(1000)->get()->values()
-            ->map(fn (Decree $d, int $i) => $this->serialize($d, $i + 1));
+        $rows = $tab === 'blank'
+            ? $query->limit(1000)->get()->values()
+                ->map(fn (Decree $d, int $i) => $this->serialize($d, $i + 1))
+            : $this->registerRows($query->limit(1000)->get(), newestFirst: false);
 
         $payload = $this->exportTable($tab, $rows);
         $title = $payload['title'];
