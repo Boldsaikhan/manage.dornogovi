@@ -412,14 +412,22 @@ const today = () => {
     return `${y}-${m}-${day}`;
 };
 
+const addingRow = ref(false);
+
 const addRow = () => {
-    if (isNiit.value || ! canAddRow.value) return;
+    // Хариу ирэхээс өмнө дахин дарвал хоосон мөр давхарлан үүсдэг байсан.
+    if (isNiit.value || ! canAddRow.value || addingRow.value) return;
+
+    addingRow.value = true;
 
     const payload = isBlank.value
         ? { tab: 'blank', person_name: '', issued_on: today() }
         : { tab: props.tab, title: '', issued_on: today() };
 
-    router.post(route('decrees.store'), payload, { preserveScroll: true });
+    router.post(route('decrees.store'), payload, {
+        preserveScroll: true,
+        onFinish: () => { addingRow.value = false; },
+    });
 };
 
 /**
@@ -631,6 +639,37 @@ const confirmImport = () => {
     });
 };
 
+/**
+ * Өөрчлөлтийн лог.
+ *
+ * «Энэ мөр хаанаас гарч ирэв?» гэсэн асуултад хариулна — хэн, хэзээ, ямар
+ * замаар (гараар эсвэл файлаас) нэмсэн, өөрчилсөн, устгасныг харуулна.
+ */
+const logOpen = ref(false);
+const logBusy = ref(false);
+const logRows = ref([]);
+
+const openLog = async () => {
+    logOpen.value = true;
+    logBusy.value = true;
+
+    try {
+        const { data } = await window.axios.get(route('decrees.logs', { tab: props.tab }));
+        logRows.value = data.rows ?? [];
+    } catch {
+        logRows.value = [];
+    } finally {
+        logBusy.value = false;
+    }
+};
+
+const logTone = (action) => ({
+    created: 'bg-emerald-50 text-emerald-700',
+    imported: 'bg-sky-50 text-sky-700',
+    updated: 'bg-amber-50 text-amber-700',
+    deleted: 'bg-rose-50 text-rose-700',
+}[action] ?? 'bg-slate-100 text-slate-600');
+
 const blankColCount = computed(() => 16 + (props.canManage ? 1 : 0));
 const docColumnCount = computed(() => {
     let n = 9; // always include actions (зураг/харах/устгах)
@@ -664,6 +703,14 @@ const docColumnCount = computed(() => {
                             <path d="M4 9h10a6 6 0 010 12h-3" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                         Буцаах<span v-if="undoCount"> ({{ undoCount }})</span>
+                    </button>
+                    <button
+                        type="button"
+                        class="ui-btn-ghost"
+                        title="Хэн, хэзээ, юу өөрчилснийг харах"
+                        @click="openLog"
+                    >
+                        Түүх
                     </button>
                     <a
                         v-if="canPrint"
@@ -728,9 +775,10 @@ const docColumnCount = computed(() => {
                         v-if="canAddRow"
                         type="button"
                         class="ui-btn-accent"
+                        :disabled="addingRow"
                         @click="addRow"
                     >
-                        Шинэ мөр
+                        {{ addingRow ? 'Нэмж байна…' : '' }}Шинэ мөр
                     </button>
                 </div>
             </div>
@@ -1390,6 +1438,52 @@ const docColumnCount = computed(() => {
             class="hidden"
             @change="onImportFile"
         />
+
+        <!-- Өөрчлөлтийн лог -->
+        <Modal :show="logOpen" max-width="4xl" @close="logOpen = false">
+            <div class="p-5">
+                <div class="mb-4 flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-semibold text-brand-navy-900">Өөрчлөлтийн түүх</h3>
+                        <p class="mt-0.5 text-sm text-slate-500">
+                            {{ tabs.find((t) => t.value === tab)?.label }} — сүүлийн 200 бичлэг.
+                        </p>
+                    </div>
+                    <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" @click="logOpen = false">✕</button>
+                </div>
+
+                <p v-if="logBusy" class="py-8 text-center text-sm text-slate-400">Уншиж байна…</p>
+                <p v-else-if="! logRows.length" class="py-8 text-center text-sm text-slate-400">
+                    Одоогоор бичлэг алга. Энэ түүх нь шинэчлэлт хийгдсэнээс хойших өөрчлөлтийг харуулна.
+                </p>
+                <div v-else class="max-h-[65vh] overflow-y-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="sticky top-0 bg-slate-50 text-slate-500">
+                            <tr>
+                                <th class="px-2 py-1.5 font-semibold">Огноо</th>
+                                <th class="px-2 py-1.5 font-semibold">Үйлдэл</th>
+                                <th class="px-2 py-1.5 font-semibold">Мөр</th>
+                                <th class="px-2 py-1.5 font-semibold">Юу өөрчлөгдсөн</th>
+                                <th class="px-2 py-1.5 font-semibold">Хэн</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in logRows" :key="item.id" class="border-t border-slate-100 align-top">
+                                <td class="whitespace-nowrap px-2 py-1.5 tabular-nums text-slate-500">{{ item.at }}</td>
+                                <td class="px-2 py-1.5">
+                                    <span class="rounded-full px-2 py-0.5 font-semibold" :class="logTone(item.action)">
+                                        {{ item.action_label }}
+                                    </span>
+                                </td>
+                                <td class="px-2 py-1.5 text-slate-700">{{ item.label || '—' }}</td>
+                                <td class="px-2 py-1.5 text-slate-600">{{ item.summary || '—' }}</td>
+                                <td class="whitespace-nowrap px-2 py-1.5 text-slate-700">{{ item.user }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </Modal>
 
         <!-- Файлаас оруулах — багана тааруулж, урьдчилан харна -->
         <Modal :show="!! importData" max-width="7xl" @close="closeImport">
