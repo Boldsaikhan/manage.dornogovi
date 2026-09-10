@@ -296,7 +296,7 @@ onBeforeUnmount(() => clearInterval(ticker));
                             :disabled="phoneForm.processing"
                             class="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-navy-600 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-brand-navy-600/25 transition hover:bg-brand-navy-700 focus:outline-none focus:ring-4 focus:ring-brand-navy-600/30 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                            {{ phoneForm.processing ? 'Илгээж байна…' : 'Код илгээх' }}
+                            {{ phoneForm.processing ? 'Түр хүлээнэ үү…' : 'Нууц үг сэргээх' }}
                         </button>
                     </form>
                 </template>
