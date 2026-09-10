@@ -25,14 +25,29 @@ class UserAccessController extends Controller
 {
     public function index(Request $request): Response
     {
+        // Дэд хэсэгтэй модулийн ард нь дэд мөрүүдийг нь шууд байрлуулна.
+        $subModules = collect(ModuleAccess::subDefinitions())->groupBy('parent');
+
         $modules = ModuleAccess::definitions()
             ->reject(fn ($m) => $m['key'] === 'systems')
-            ->map(fn (array $m) => [
-                'key' => $m['key'],
-                'label' => $m['label'],
-                'own_scope' => ModuleAccess::supportsOwnScope($m['key']),
-                'own_levels' => $m['own_levels'] ?? null,
-            ])
+            ->flatMap(fn (array $m) => array_merge(
+                [[
+                    'key' => $m['key'],
+                    'label' => $m['label'],
+                    'own_scope' => ModuleAccess::supportsOwnScope($m['key']),
+                    'own_levels' => $m['own_levels'] ?? null,
+                    'parent' => null,
+                ]],
+                $subModules->get($m['key'], collect())
+                    ->map(fn (array $sub) => [
+                        'key' => $sub['key'],
+                        'label' => $sub['label'],
+                        'own_scope' => $sub['own_scope'],
+                        'own_levels' => $sub['own_levels'],
+                        'parent' => $sub['parent'],
+                    ])
+                    ->all(),
+            ))
             ->values();
 
         $directoryRows = PhoneDirectoryEntry::query()
