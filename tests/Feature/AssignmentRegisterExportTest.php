@@ -46,6 +46,29 @@ class AssignmentRegisterExportTest extends TestCase
             );
     }
 
+    public function test_the_table_shows_who_approved_the_assignment(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'Б.Ганбат',
+            'position' => 'ЗДТГ-ын дарга',
+            'org_name' => 'ЗДТГ',
+        ]);
+
+        $this->assignment('Томилолттой хүн');
+
+        $this->actingAs($admin)
+            ->get(route('assignments.index', ['scope' => 'chief']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('rows.0.approved_by', 'Б.Ганбат')
+                // «Албан тушаал»-ын баруун талд байрлана.
+                ->where('columns.1.key', 'user_position')
+                ->where('columns.2.key', 'approved_by')
+                ->where('columns.2.label', 'Баталсан')
+            );
+    }
+
     public function test_only_the_selected_rows_are_downloaded(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

@@ -27,8 +27,8 @@ class AssignmentRegisterColumnsTest extends TestCase
 
                 $this->assertSame('Д/д', $props['rowNumberLabel']);
                 $this->assertSame(
-                    ['Овог нэр', 'Албан тушаал', 'Хаана', 'Ямар ажлаар', 'Хэзээнээс', 'Хэд хоног'],
-                    array_slice($labels, 0, 6),
+                    ['Овог нэр', 'Албан тушаал', 'Баталсан', 'Хаана', 'Ямар ажлаар', 'Хэзээнээс', 'Хэд хоног'],
+                    array_slice($labels, 0, 7),
                 );
             });
     }
