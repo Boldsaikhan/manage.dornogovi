@@ -36,6 +36,10 @@ class ModuleAccess
             'tushaal_a' => 'Тушаал А',
             'tushaal_b' => 'Тушаал Б',
             'alban_daalgavar' => 'Албан даалгавар',
+            // Табаас гадна тусад нь зөвшөөрөх үйлдлүүд.
+            'export' => 'Татах (Word/Excel/PDF)',
+            'import' => 'Файлаас оруулах',
+            'print' => 'Хэвлэх',
         ],
     ];
 

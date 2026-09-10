@@ -143,6 +143,12 @@ class DecreeController extends Controller
             'nextNumber' => isset(self::KIND_TABS[$tab]) ? $this->nextDocumentNumber($tab) : null,
             'canManage' => ModuleAccess::canManage($request->user(), $this->tabKey($tab)),
             'canEdit' => ModuleAccess::canEdit($request->user(), $this->tabKey($tab)),
+            // Татах, оруулах, хэвлэхийг ролийн эрхээр тусад нь зөвшөөрнө.
+            'canExport' => ModuleAccess::canView($request->user(), 'decrees:export'),
+            'canPrint' => ModuleAccess::canView($request->user(), 'decrees:print'),
+            'canImportFile' => isset(self::KIND_TABS[$tab])
+                && ModuleAccess::canEdit($request->user(), $this->tabKey($tab))
+                && ModuleAccess::canEdit($request->user(), 'decrees:import'),
             'undoCount' => EditUndo::query()->where('user_id', $request->user()->id)->count(),
         ]);
     }
@@ -183,6 +189,7 @@ class DecreeController extends Controller
         $tab = $this->normalizeTab((string) $request->query('tab', 'zahiramj_a'));
 
         abort_unless($this->canViewTab($request, $tab), 403);
+        abort_unless(ModuleAccess::canView($request->user(), 'decrees:print'), 403);
 
         $query = $this->scopedDecrees($request)->orderBy('id');
 
@@ -241,6 +248,7 @@ class DecreeController extends Controller
         abort_unless($this->canViewTab($request, $tab), 403);
 
         abort_unless(in_array($format, ['docx', 'xlsx', 'pdf'], true), 404);
+        abort_unless(ModuleAccess::canView($request->user(), 'decrees:export'), 403);
 
         $query = $this->scopedDecrees($request)->orderBy('id');
 
@@ -562,6 +570,7 @@ class DecreeController extends Controller
         $tab = $this->normalizeTab((string) $request->input('tab', 'zahiramj_a'));
 
         abort_unless(ModuleAccess::canEdit($request->user(), $this->tabKey($tab)), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), 'decrees:import'), 403);
         abort_if($tab === 'niit' || $tab === 'blank', 422, 'Энэ табд файлаар оруулах боломжгүй.');
 
         $request->validate([
@@ -592,6 +601,7 @@ class DecreeController extends Controller
         $tab = $this->normalizeTab((string) $request->input('tab', 'zahiramj_a'));
 
         abort_unless(ModuleAccess::canEdit($request->user(), $this->tabKey($tab)), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), 'decrees:import'), 403);
         abort_if(! isset(self::KIND_TABS[$tab]), 422, 'Энэ табд файлаар оруулах боломжгүй.');
 
         $data = $request->validate([
