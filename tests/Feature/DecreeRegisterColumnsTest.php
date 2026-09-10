@@ -182,8 +182,9 @@ class DecreeRegisterColumnsTest extends TestCase
         $this->actingAs($admin)
             ->get(route('decrees.index', ['tab' => 'zahiramj_a']))
             ->assertInertia(fn (AssertableInertia $page) => $page
-                // Санд хоосон, харагдахдаа батлагдсан огноогоо дагана.
-                ->where('rows.0.effective_on', null)
+                // Санд хоосон тул талбар нь огт илгээгдэхгүй,
+                // харагдахдаа батлагдсан огноогоо дагана.
+                ->missing('rows.0.effective_on')
                 ->where('rows.0.effective_on_display', '2026-09-10')
             );
     }

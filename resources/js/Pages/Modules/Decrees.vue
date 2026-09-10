@@ -343,26 +343,49 @@ const docFields = [
     'person_name',
 ];
 
+/**
+ * Нүдний утгыг зөвхөн зурагдаж байгаа мөрд бэлдэнэ.
+ *
+ * 500 мөрд урьдчилан бэлдэх нь таб солих бүрд 5000 гаруй реактив утга
+ * үүсгэдэг байсан — доош гүйлгэхэд шинэ мөрүүд нь өөрсдөө нэмэгдэнэ.
+ */
+const buildDraft = (row) => {
+    if (isBlank.value) {
+        return Object.fromEntries(blankFields.map((f) => [f, row[f] ?? '']));
+    }
+
+    const draft = Object.fromEntries(docFields.map((f) => [f, row[f] ?? '']));
+
+    // «Дагаж мөрдөх» огноог тусад нь заагаагүй бол батлагдсан огноогоор
+    // урьдчилан харуулна. Хэрэглэгч засвал өөрийнх нь утга хадгалагдана.
+    if (! draft.effective_on) {
+        draft.effective_on = row.issued_on ?? '';
+    }
+
+    return draft;
+};
+
 const syncDrafts = () => {
     Object.keys(drafts).forEach((key) => delete drafts[key]);
-    props.rows.forEach((row) => {
-        if (isBlank.value) {
-            drafts[row.id] = Object.fromEntries(blankFields.map((f) => [f, row[f] ?? '']));
-        } else {
-            drafts[row.id] = Object.fromEntries(docFields.map((f) => [f, row[f] ?? '']));
+    ensureDrafts();
+};
 
-            // «Дагаж мөрдөх» огноог тусад нь заагаагүй бол батлагдсан огноогоор
-            // урьдчилан харуулна. Хэрэглэгч засвал өөрийнх нь утга хадгалагдана.
-            if (! drafts[row.id].effective_on) {
-                drafts[row.id].effective_on = row.issued_on ?? '';
-            }
+/** Зурагдах мөрүүдэд нүдний утга бэлэн эсэхийг хангана. */
+const ensureDrafts = () => {
+    renderedRows.value.forEach((row) => {
+        if (! drafts[row.id]) {
+            drafts[row.id] = buildDraft(row);
         }
     });
 };
 
-// Мөрүүд бүхэлдээ солигддог тул гүн ажиглах шаардлагагүй — 500 мөрийг
-// давтан шалгах нь таб солиход удаашруулдаг.
+// Мөрүүд бүхэлдээ солигддог тул гүн ажиглах шаардлагагүй.
 watch(() => [props.rows, props.tab], syncDrafts, { immediate: true });
+
+// Доош гүйлгэх, хайх үед шинээр гарч ирсэн мөрүүдэд бэлдэнэ.
+// flush: 'sync' — зурагдахаас өмнө бэлэн болно, эс бөгөөс нүд хоромхон
+// зуур хоосон харагдана.
+watch(renderedRows, ensureDrafts, { flush: 'sync' });
 
 /**
  * Таб солих.
