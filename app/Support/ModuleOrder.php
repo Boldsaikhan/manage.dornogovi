@@ -106,19 +106,35 @@ class ModuleOrder
     /**
      * @return list<string>
      */
+    /**
+     * Нэг хүсэлтийн доторх түр санах ой — цэс зурах бүрд дахин уншихгүй.
+     *
+     * @var array<string, array<int, string>>
+     */
+    private static array $memo = [];
+
+    public static function forget(): void
+    {
+        self::$memo = [];
+    }
+
     private static function loadJson(string $key): array
     {
+        if (array_key_exists($key, self::$memo)) {
+            return self::$memo[$key];
+        }
+
         $raw = Cache::remember('app_setting:'.$key, 60, function () use ($key) {
             return AppSetting::query()->where('key', $key)->value('value');
         });
 
         if (! filled($raw)) {
-            return [];
+            return self::$memo[$key] = [];
         }
 
         $decoded = json_decode($raw, true);
 
-        return is_array($decoded)
+        return self::$memo[$key] = is_array($decoded)
             ? array_values(array_filter($decoded, fn ($value) => is_string($value) && $value !== ''))
             : [];
     }
@@ -133,6 +149,7 @@ class ModuleOrder
             ['value' => json_encode(array_values($values), JSON_UNESCAPED_UNICODE)]
         );
 
+        self::forget();
         Cache::forget('app_setting:'.$key);
     }
 }

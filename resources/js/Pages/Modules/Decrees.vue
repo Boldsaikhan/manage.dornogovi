@@ -317,8 +317,20 @@ const syncDrafts = () => {
 
 watch(() => [props.rows, props.tab], syncDrafts, { immediate: true, deep: true });
 
+/**
+ * Таб солих.
+ *
+ * Зөвхөн өөрчлөгдөх өгөгдлийг сервэрээс авна — утасны жагсаалт зэрэг бүх
+ * табд ижил зүйлийг дахин дахин илгээхгүй тул мэдэгдэхүйц хурдан болно.
+ */
 const switchTab = (value) => {
-    router.get(route('decrees.index'), { tab: value }, { preserveState: false, preserveScroll: true });
+    router.get(route('decrees.index'), { tab: value }, {
+        preserveScroll: true,
+        only: [
+            'tab', 'tabs', 'rows', 'pendingOfficials', 'nextNumber',
+            'canManage', 'canEdit', 'canExport', 'canPrint', 'canImportFile', 'undoCount',
+        ],
+    });
 };
 
 const today = () => {

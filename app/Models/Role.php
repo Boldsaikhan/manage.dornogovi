@@ -29,7 +29,32 @@ class Role extends Model
     /** @return Collection<int, Role> */
     public static function ordered(): Collection
     {
-        return static::query()->orderBy('sort_order')->orderBy('id')->get();
+        return static::$orderedCache ??= static::query()->orderBy('sort_order')->orderBy('id')->get();
+    }
+
+    /**
+     * Нэг хүсэлтийн доторх түр санах ой — эрх шалгах бүрд дахин уншихгүй.
+     *
+     * @var \Illuminate\Database\Eloquent\Collection<int, static>|null
+     */
+    private static ?Collection $orderedCache = null;
+
+    public static function forgetOrdered(): void
+    {
+        static::$orderedCache = null;
+        RolePermission::forgetMap();
+    }
+
+    /** Бүртгэлтэй ролийн түлхүүрүүд. */
+    public static function keys(): array
+    {
+        return static::ordered()->pluck('key')->all();
+    }
+
+    protected static function booted(): void
+    {
+        static::saved(fn () => static::forgetOrdered());
+        static::deleted(fn () => static::forgetOrdered());
     }
 
     public function permissions()

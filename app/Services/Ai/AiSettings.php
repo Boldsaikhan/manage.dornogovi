@@ -53,6 +53,8 @@ class AiSettings
 
     public function set(string $key, ?string $value): void
     {
+        self::$displayNameCache = null;
+
         AppSetting::query()->updateOrCreate(
             ['key' => $key],
             ['value' => $value]
@@ -61,11 +63,28 @@ class AiSettings
         Cache::forget("app_setting:{$key}");
     }
 
+    /**
+     * Нэг хүсэлтийн доторх түр санах ой.
+     *
+     * Модулийн жагсаалт эрх шалгах бүрд бүтдэг тул энэ нэрийг олон арван
+     * удаа уншдаг байв.
+     */
+    private static ?string $displayNameCache = null;
+
+    public static function forgetDisplayName(): void
+    {
+        self::$displayNameCache = null;
+    }
+
     public function displayName(): string
     {
+        if (self::$displayNameCache !== null) {
+            return self::$displayNameCache;
+        }
+
         $name = trim((string) ($this->get(self::KEY_DISPLAY_NAME, self::DEFAULT_DISPLAY_NAME) ?? ''));
 
-        return $name !== '' ? $name : self::DEFAULT_DISPLAY_NAME;
+        return self::$displayNameCache = ($name !== '' ? $name : self::DEFAULT_DISPLAY_NAME);
     }
 
     public function enabled(): bool

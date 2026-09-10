@@ -138,7 +138,8 @@ class DecreeController extends Controller
                     'count' => $counts[$value] ?? 0,
                 ])->values()->all(),
             'rows' => $rows,
-            'people' => PhoneDirectoryEntry::peopleOptions(),
+            // Таб солиход дахин илгээхгүй — бүх табд ижил жагсаалт.
+            'people' => fn () => PhoneDirectoryEntry::peopleOptions(),
             'pendingOfficials' => $this->pendingOfficialsForTab($tab),
             'nextNumber' => isset(self::KIND_TABS[$tab]) ? $this->nextDocumentNumber($tab) : null,
             'canManage' => ModuleAccess::canManage($request->user(), $this->tabKey($tab)),
