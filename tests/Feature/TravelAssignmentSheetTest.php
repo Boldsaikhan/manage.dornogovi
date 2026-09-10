@@ -55,10 +55,6 @@ class TravelAssignmentSheetTest extends TestCase
             ->assertSee('ДОРНОГОВЬ АЙМГИЙН ЗАСАГ ДАРГА');
 
         $this->actingAs($admin)
-            ->get(route('assignments.sheet', $this->assignment('deputy')))
-            ->assertSee('ДАРГЫН ОРЛОГЧ');
-
-        $this->actingAs($admin)
             ->get(route('assignments.sheet', $this->assignment('chief')))
             ->assertSee('ДОРНОГОВЬ АЙМГИЙН ЗДТГ-ЫН');
     }
@@ -68,13 +64,13 @@ class TravelAssignmentSheetTest extends TestCase
         $admin = User::factory()->create(['is_admin' => true]);
 
         $this->assignment('governor');
-        $this->assignment('deputy');
+        $this->assignment('chief');
 
         $this->actingAs($admin)
-            ->get(route('assignments.index', ['scope' => 'deputy']))
+            ->get(route('assignments.index', ['scope' => 'chief']))
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->has('rows', 1)
-                ->where('activeScope', 'deputy')
+                ->where('activeScope', 'chief')
             );
 
         $this->actingAs($admin)
