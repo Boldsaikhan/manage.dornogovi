@@ -222,9 +222,29 @@ class AssignmentRegisterImporter
             return null;
         }
 
-        // Excel-ийн серийн дугаар.
-        if (preg_match('/^\d{5}(\.\d+)?$/', $raw)) {
-            return Carbon::create(1899, 12, 30)->addDays((int) $raw)->format('Y-m-d');
+        $numeric = str_replace(',', '.', $raw);
+
+        if (is_numeric($numeric)) {
+            $number = (float) $numeric;
+
+            // Excel-ийн серийн дугаар (жинхэнэ огноо).
+            if ($number >= 20000) {
+                return Carbon::create(1899, 12, 30)->addDays((int) $number)->format('Y-m-d');
+            }
+
+            /*
+             * «1.13» гэж бичсэн нүд Excel дээр бутархай тоо болж хадгалагддаг
+             * бөгөөд 1.1299999999999999 гэж уншигддаг. Тиймээс бутархай хэсгийг
+             * зуугаар үржүүлж бүхэлчилнэ: 1.13 → 1 сарын 13.
+             */
+            if ($number >= 1 && $number < 13) {
+                $month = (int) floor($number);
+                $day = (int) round(($number - $month) * 100);
+
+                if ($day >= 1 && $day <= 31) {
+                    return sprintf('%04d-%02d-%02d', $this->year, $month, $day);
+                }
+            }
         }
 
         // Бүтэн огноо.
