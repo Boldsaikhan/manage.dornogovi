@@ -46,11 +46,57 @@ class DecreeController extends Controller
 
     private const DOC_KINDS = ['zahiramj_a', 'zahiramj_b', 'tushaal_a', 'tushaal_b', 'alban_daalgavar'];
 
+    /**
+     * Таб бүрийн эрхийн түлхүүр.
+     *
+     * «Нийт» нь бүх төрлийн нэгдсэн харагдац тул модулийн ерөнхий эрхийг дагана.
+     */
+    private function tabKey(string $tab): string
+    {
+        return $tab === 'niit' ? 'decrees' : 'decrees:'.$tab;
+    }
+
+    private function canViewTab(Request $request, string $tab): bool
+    {
+        return ModuleAccess::canView($request->user(), $this->tabKey($tab));
+    }
+
+    /** Тухайн мөрийн харьяалагдах табын эрхийн түлхүүр. */
+    private function decreeKey(Decree $decree): string
+    {
+        return $this->tabKey($this->tabForDecree($decree));
+    }
+
+    /** Хэрэглэгчийн харах эрхтэй эхний таб. */
+    private function firstVisibleTab(Request $request): ?string
+    {
+        foreach (array_keys(self::TABS) as $tab) {
+            if ($this->canViewTab($request, $tab)) {
+                return $tab;
+            }
+        }
+
+        return null;
+    }
+
     public function index(Request $request): Response
     {
         abort_unless(ModuleAccess::canView($request->user(), 'decrees'), 403);
 
         $tab = $this->normalizeTab((string) $request->query('tab', 'zahiramj_a'));
+
+        // Хаалттай таб руу орох гэвэл эрхтэй эхний таб руу нь шилжүүлнэ.
+        if (! $this->canViewTab($request, $tab)) {
+            $tab = $this->firstVisibleTab($request);
+
+            abort_if($tab === null, 403);
+        }
+
+        // «Нийт» табд зөвхөн харах эрхтэй төрлүүд нь орно.
+        $visibleKinds = array_values(array_filter(
+            self::DOC_KINDS,
+            fn (string $kind) => $this->canViewTab($request, $kind),
+        ));
 
         $counts = [
             'blank' => $this->scopedDecrees($request)->where('category', 'blank')->count(),
@@ -59,7 +105,9 @@ class DecreeController extends Controller
             'tushaal_a' => $this->scopedDecrees($request)->where('kind', 'tushaal_a')->count(),
             'tushaal_b' => $this->scopedDecrees($request)->where('kind', 'tushaal_b')->count(),
             'alban_daalgavar' => $this->scopedDecrees($request)->where('kind', 'alban_daalgavar')->count(),
-            'niit' => $this->scopedDecrees($request)->whereIn('kind', self::DOC_KINDS)->count(),
+            'niit' => $visibleKinds === []
+                ? 0
+                : $this->scopedDecrees($request)->whereIn('kind', $visibleKinds)->count(),
         ];
 
         $query = $this->scopedDecrees($request)->orderBy('id');
@@ -67,7 +115,7 @@ class DecreeController extends Controller
         if ($tab === 'blank') {
             $query->where('category', 'blank');
         } elseif ($tab === 'niit') {
-            $query->whereIn('kind', self::DOC_KINDS);
+            $query->whereIn('kind', $visibleKinds ?: ['__none__']);
         } else {
             $query->where('kind', $tab);
         }
@@ -79,17 +127,19 @@ class DecreeController extends Controller
 
         return Inertia::render('Modules/Decrees', [
             'tab' => $tab,
-            'tabs' => collect(self::TABS)->map(fn ($label, $value) => [
-                'value' => $value,
-                'label' => $label,
-                'count' => $counts[$value] ?? 0,
-            ])->values()->all(),
+            'tabs' => collect(self::TABS)
+                ->filter(fn ($label, $value) => $this->canViewTab($request, $value))
+                ->map(fn ($label, $value) => [
+                    'value' => $value,
+                    'label' => $label,
+                    'count' => $counts[$value] ?? 0,
+                ])->values()->all(),
             'rows' => $rows,
             'people' => PhoneDirectoryEntry::peopleOptions(),
             'pendingOfficials' => $this->pendingOfficialsForTab($tab),
             'nextNumber' => isset(self::KIND_TABS[$tab]) ? $this->nextDocumentNumber($tab) : null,
-            'canManage' => ModuleAccess::canManage($request->user(), 'decrees'),
-            'canEdit' => ModuleAccess::canEdit($request->user(), 'decrees'),
+            'canManage' => ModuleAccess::canManage($request->user(), $this->tabKey($tab)),
+            'canEdit' => ModuleAccess::canEdit($request->user(), $this->tabKey($tab)),
             'undoCount' => EditUndo::query()->where('user_id', $request->user()->id)->count(),
         ]);
     }
@@ -127,9 +177,9 @@ class DecreeController extends Controller
      */
     public function print(Request $request): View
     {
-        abort_unless(ModuleAccess::canView($request->user(), 'decrees'), 403);
-
         $tab = $this->normalizeTab((string) $request->query('tab', 'zahiramj_a'));
+
+        abort_unless($this->canViewTab($request, $tab), 403);
 
         $query = $this->scopedDecrees($request)->orderBy('id');
 
@@ -182,10 +232,10 @@ class DecreeController extends Controller
         XlsxTableWriter $xlsx,
         PdfTableWriter $pdf,
     ): HttpResponse {
-        abort_unless(ModuleAccess::canView($request->user(), 'decrees'), 403);
-
         $tab = $this->normalizeTab((string) $request->query('tab', 'zahiramj_a'));
         $format = strtolower((string) $request->query('format', 'docx'));
+
+        abort_unless($this->canViewTab($request, $tab), 403);
 
         abort_unless(in_array($format, ['docx', 'xlsx', 'pdf'], true), 404);
 
@@ -501,10 +551,10 @@ class DecreeController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        abort_unless(ModuleAccess::canEdit($request->user(), 'decrees'), 403);
-        ModuleOwnScope::assertCanCreate($request->user(), 'decrees');
-
         $tab = $this->normalizeTab((string) $request->input('tab', 'zahiramj_a'));
+
+        abort_unless(ModuleAccess::canEdit($request->user(), $this->tabKey($tab)), 403);
+        ModuleOwnScope::assertCanCreate($request->user(), 'decrees');
 
         if ($tab === 'niit') {
             return redirect()
@@ -599,7 +649,7 @@ class DecreeController extends Controller
 
     public function update(Request $request, Decree $decree): RedirectResponse
     {
-        abort_unless(ModuleAccess::canEdit($request->user(), 'decrees'), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), $this->decreeKey($decree)), 403);
         abort_unless(ModuleOwnScope::allows($request->user(), 'decrees', $decree), 403);
 
         if ($decree->category === 'blank' || $decree->kind === 'blank') {
@@ -754,7 +804,7 @@ class DecreeController extends Controller
 
     public function destroy(Request $request, Decree $decree): RedirectResponse
     {
-        abort_unless(ModuleAccess::canEdit($request->user(), 'decrees'), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), $this->decreeKey($decree)), 403);
         abort_unless(ModuleOwnScope::allows($request->user(), 'decrees', $decree), 403);
 
         $tab = $this->tabForDecree($decree);
@@ -768,7 +818,7 @@ class DecreeController extends Controller
 
     public function uploadImage(Request $request, Decree $decree): RedirectResponse
     {
-        abort_unless(ModuleAccess::canEdit($request->user(), 'decrees'), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), $this->decreeKey($decree)), 403);
         abort_unless(ModuleOwnScope::allows($request->user(), 'decrees', $decree), 403);
         abort_if($decree->category === 'blank' || $decree->kind === 'blank', 422);
 
@@ -791,7 +841,7 @@ class DecreeController extends Controller
 
     public function showImage(Request $request, Decree $decree): StreamedResponse
     {
-        abort_unless(ModuleAccess::canView($request->user(), 'decrees'), 403);
+        abort_unless(ModuleAccess::canView($request->user(), $this->decreeKey($decree)), 403);
         abort_unless(ModuleOwnScope::allows($request->user(), 'decrees', $decree), 403);
         abort_unless($decree->file_path && Storage::disk('local')->exists($decree->file_path), 404);
 
@@ -804,7 +854,7 @@ class DecreeController extends Controller
 
     public function destroyImage(Request $request, Decree $decree): RedirectResponse
     {
-        abort_unless(ModuleAccess::canEdit($request->user(), 'decrees'), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), $this->decreeKey($decree)), 403);
         abort_unless(ModuleOwnScope::allows($request->user(), 'decrees', $decree), 403);
 
         $this->deleteImageFile($decree);

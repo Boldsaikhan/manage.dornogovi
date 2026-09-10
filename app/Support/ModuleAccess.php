@@ -17,7 +17,76 @@ class ModuleAccess
      *
      * @var list<string>
      */
-    public const LEVELS = ['view', 'edit', 'manage', 'view_own', 'edit_own', 'manage_own'];
+    public const LEVELS = ['view', 'edit', 'manage', 'view_own', 'edit_own', 'manage_own', 'closed'];
+
+    /** Дэд хэсгийг эх модулиасаа үл хамааран хаах утга. */
+    public const LEVEL_CLOSED = 'closed';
+
+    /**
+     * Модуль доторх дэд хэсгүүд — эрхийг тус тусад нь тохируулна.
+     *
+     * Түлхүүр нь «модуль:дэд» хэлбэртэй (жнь decrees:zahiramj_a). Дэд хэсэгт
+     * тусгайлан эрх өгөөгүй бол эх модулийн эрхийг дагана.
+     */
+    public const SUB_MODULES = [
+        'decrees' => [
+            'blank' => 'Бланкны дугаар',
+            'zahiramj_a' => 'Захирамж А',
+            'zahiramj_b' => 'Захирамж Б',
+            'tushaal_a' => 'Тушаал А',
+            'tushaal_b' => 'Тушаал Б',
+            'alban_daalgavar' => 'Албан даалгавар',
+        ],
+    ];
+
+    /** «decrees:tushaal_a» → ['decrees', 'tushaal_a'] */
+    public static function splitKey(string $moduleKey): array
+    {
+        if (! str_contains($moduleKey, ':')) {
+            return [$moduleKey, null];
+        }
+
+        [$parent, $sub] = explode(':', $moduleKey, 2);
+
+        return [$parent, $sub];
+    }
+
+    public static function isSubKey(string $moduleKey): bool
+    {
+        [$parent, $sub] = self::splitKey($moduleKey);
+
+        return $sub !== null && isset(self::SUB_MODULES[$parent][$sub]);
+    }
+
+    /**
+     * Эрхийн хүснэгтэд харагдах дэд мөрүүд.
+     *
+     * @return list<array{key: string, label: string, parent: string, own_scope: bool, own_levels: mixed}>
+     */
+    public static function subDefinitions(): array
+    {
+        $rows = [];
+
+        foreach (self::SUB_MODULES as $parent => $subs) {
+            $definition = self::definitions()->firstWhere('key', $parent);
+
+            if (! $definition) {
+                continue;
+            }
+
+            foreach ($subs as $sub => $label) {
+                $rows[] = [
+                    'key' => $parent.':'.$sub,
+                    'label' => $label,
+                    'parent' => $parent,
+                    'own_scope' => filled($definition['own_scope'] ?? null),
+                    'own_levels' => $definition['own_levels'] ?? null,
+                ];
+            }
+        }
+
+        return $rows;
+    }
 
     public static function definitions(): Collection
     {
@@ -32,7 +101,24 @@ class ModuleAccess
 
     public static function find(string $key): ?array
     {
-        return self::definitions()->firstWhere('key', $key);
+        $definition = self::definitions()->firstWhere('key', $key);
+
+        if ($definition) {
+            return $definition;
+        }
+
+        // Дэд түлхүүр (decrees:tushaal_a) — эх модулийнхоо тодорхойлолтыг дагана.
+        [$parent, $sub] = self::splitKey($key);
+
+        if ($sub !== null && isset(self::SUB_MODULES[$parent][$sub])) {
+            $parentDefinition = self::definitions()->firstWhere('key', $parent);
+
+            if ($parentDefinition) {
+                return ['key' => $key, 'label' => self::SUB_MODULES[$parent][$sub]] + $parentDefinition;
+            }
+        }
+
+        return null;
     }
 
     public static function canView(?User $user, string $moduleKey): bool
@@ -110,10 +196,32 @@ class ModuleAccess
             return null;
         }
 
+        // Дэд хэсэгт тусгай эрх өгөөгүй бол эх модулийн эрхээр шийднэ.
+        if (self::isSubKey($moduleKey)) {
+            $own = self::exactLevel($user, $moduleKey);
+
+            // Тусгайлан хаасан бол эх модулийн эрх ч нээхгүй.
+            if ($own === self::LEVEL_CLOSED) {
+                return null;
+            }
+
+            if ($own !== null) {
+                return $own;
+            }
+
+            [$parent] = self::splitKey($moduleKey);
+
+            return self::level($user, $parent);
+        }
+
         $userLevel = $user->modulePermissions
             ->firstWhere('module_key', $moduleKey)
             ?->level;
         $userLevel = in_array($userLevel, self::LEVELS, true) ? $userLevel : null;
+
+        if ($userLevel === self::LEVEL_CLOSED) {
+            return null;
+        }
 
         // Системийн роль: загварт байхгүй модуль хаалттай хэвээр.
         // Загварт байгаа модулийн түвшинг Хандах эрх дээрх хэрэглэгчийн тохиргоо дарж болно
@@ -123,8 +231,34 @@ class ModuleAccess
             $roleLevel = RolePermission::map()[$roleKey][$moduleKey] ?? null;
             $roleLevel = in_array($roleLevel, self::LEVELS, true) ? $roleLevel : null;
 
-            if ($roleLevel === null) {
+            if ($roleLevel === null || $roleLevel === self::LEVEL_CLOSED) {
                 return null;
+            }
+
+            return $userLevel ?? $roleLevel;
+        }
+
+        return $userLevel;
+    }
+
+    /**
+     * Зөвхөн тухайн түлхүүрт шууд өгсөн эрх (эх модуль руу буцахгүй).
+     */
+    private static function exactLevel(User $user, string $moduleKey): ?string
+    {
+        $userLevel = $user->modulePermissions
+            ->firstWhere('module_key', $moduleKey)
+            ?->level;
+        $userLevel = in_array($userLevel, self::LEVELS, true) ? $userLevel : null;
+
+        $roleKey = self::systemRoleKey($user);
+
+        if ($roleKey) {
+            $roleLevel = RolePermission::map()[$roleKey][$moduleKey] ?? null;
+            $roleLevel = in_array($roleLevel, self::LEVELS, true) ? $roleLevel : null;
+
+            if ($roleLevel === null) {
+                return $userLevel;
             }
 
             return $userLevel ?? $roleLevel;
@@ -236,6 +370,7 @@ class ModuleAccess
     public static function levelLabel(?string $level): string
     {
         return match ($level) {
+            self::LEVEL_CLOSED => 'Хаалттай',
             'manage' => 'Удирдах (бүгд)',
             'manage_own' => 'Удирдах (хамааралтай)',
             'edit' => 'Оруулах (бүгд)',

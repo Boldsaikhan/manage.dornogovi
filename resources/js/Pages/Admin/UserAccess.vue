@@ -158,10 +158,13 @@ const roleState = reactive({});
 const rolesDirty = ref(false);
 
 const loadRoles = (force = false) => {
-    if (rolesDirty.value && ! force) {
-        return;
-    }
     props.roles?.forEach((r) => {
+        // Хэрэглэгчийн засварлаж байгаа ролийг дарж бичихгүй, харин
+        // шинээр нэмэгдсэн ролийг заавал бэлдэнэ (үгүй бол хоосон хадгалагдана).
+        if (! force && rolesDirty.value && roleState[r.key]) {
+            return;
+        }
+
         const next = { ...(props.rolePermissions?.[r.key] ?? {}) };
         props.modules?.forEach((m) => {
             if (! Object.prototype.hasOwnProperty.call(next, m.key)) {
@@ -211,15 +214,25 @@ const newRole = reactive({ open: false, label: '', copy_from: '' });
 const addRole = () => {
     if (!newRole.label.trim()) return;
 
+    const known = new Set((props.roles ?? []).map((r) => r.key));
+
     router.post(route('admin.roles.store'), {
         label: newRole.label.trim(),
         copy_from: newRole.copy_from || null,
     }, {
         preserveScroll: true,
-        onSuccess: () => {
+        onSuccess: (page) => {
             newRole.open = false;
             newRole.label = '';
             newRole.copy_from = '';
+
+            // Шинэ роль руу шууд шилжинэ — эрхээ тэр дор нь тохируулна.
+            const added = (page.props.roles ?? []).find((r) => ! known.has(r.key));
+
+            if (added) {
+                rolesDirty.value = false;
+                roleTab.value = added.key;
+            }
         },
     });
 };
@@ -339,7 +352,13 @@ const roleSummary = (roleKey) => {
 };
 
 const levelOptions = (module) => {
-    const options = [{ value: '', label: 'Хаалттай' }];
+    // Дэд мөр: хоосон = дээд мөрийг дагана, «closed» = үл хамааран хаана.
+    const options = module.parent
+        ? [
+            { value: '', label: 'Дээд мөрийг дагах' },
+            { value: 'closed', label: 'Хаалттай' },
+        ]
+        : [{ value: '', label: 'Хаалттай' }];
 
     if (module.own_scope) {
         const labels = {
@@ -873,8 +892,13 @@ const pickFromDirectory = (value) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="m in modules" :key="'role-' + m.key">
-                                    <td>{{ m.label }}</td>
+                                <tr v-for="m in modules" :key="'role-' + m.key" :class="m.parent ? 'bg-slate-50/60' : ''">
+                                    <td :class="m.parent ? 'pl-8 text-sm text-slate-600' : ''">
+                                        <span v-if="m.parent" class="mr-1 text-slate-300">└</span>{{ m.label }}
+                                        <span v-if="m.parent" class="ml-1 text-[10px] text-slate-400">
+                                            (тохируулаагүй бол дээд мөрийг дагана)
+                                        </span>
+                                    </td>
                                     <td>
                                         <select
                                             class="ui-input !py-1.5"
