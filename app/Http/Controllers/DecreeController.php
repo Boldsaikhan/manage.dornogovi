@@ -123,9 +123,12 @@ class DecreeController extends Controller
             $query->where('kind', $tab);
         }
 
+        // Бланк ч мөн шинэ мөр дээд талдаа — Д/д нь бүртгэлийн дарааллаар.
         $rows = $tab === 'blank'
             ? $query->limit(1200)->get()->values()
                 ->map(fn (Decree $d, int $i) => $this->serialize($d, $i + 1))
+                ->reverse()
+                ->values()
             : $this->registerRows($query->limit(1200)->get());
 
         return Inertia::render('Modules/Decrees', [

@@ -67,6 +67,29 @@ class DecreeRegisterOrderTest extends TestCase
                 ->where('rows.0.title', 'Шинэ мөр'));
     }
 
+    public function test_the_blank_tab_also_shows_the_newest_first(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        foreach (['Нэгдүгээр', 'Хоёрдугаар', 'Гуравдугаар'] as $name) {
+            Decree::create([
+                'category' => 'blank',
+                'kind' => 'blank',
+                'person_name' => $name,
+                'title' => $name,
+            ]);
+        }
+
+        $this->actingAs($admin)
+            ->get(route('decrees.index', ['tab' => 'blank']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('rows.0.person_name', 'Гуравдугаар')
+                ->where('rows.2.person_name', 'Нэгдүгээр')
+                // Д/д нь бүртгэлийн дарааллаар үлдэнэ.
+                ->where('rows.0.no', 3)
+                ->where('rows.2.no', 1));
+    }
+
     public function test_the_printed_register_stays_in_ascending_order(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
