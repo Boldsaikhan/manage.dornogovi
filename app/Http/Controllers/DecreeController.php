@@ -126,10 +126,11 @@ class DecreeController extends Controller
         // Бланк ч мөн шинэ мөр дээд талдаа — Д/д нь бүртгэлийн дарааллаар.
         $rows = $tab === 'blank'
             ? $query->limit(1200)->get()->values()
-                ->map(fn (Decree $d, int $i) => $this->serialize($d, $i + 1))
+                ->map(fn (Decree $d, int $i) => $this->compact($this->serialize($d, $i + 1)))
                 ->reverse()
                 ->values()
-            : $this->registerRows($query->limit(1200)->get());
+            : $this->registerRows($query->limit(1200)->get())
+                ->map(fn (array $row) => $this->compact($row));
 
         return Inertia::render('Modules/Decrees', [
             'tab' => $tab,
@@ -1045,6 +1046,7 @@ class DecreeController extends Controller
         }
 
         $blankNames = $blankQuery
+            ->distinct()
             ->pluck('person_name')
             ->map(fn (?string $name) => PersonName::short(trim((string) $name)))
             ->filter(fn (string $name) => $name !== '')
@@ -1059,6 +1061,7 @@ class DecreeController extends Controller
             ->whereIn('kind', $usedKinds)
             ->whereNotNull('person_name')
             ->where('person_name', '!=', '')
+            ->distinct()
             ->pluck('person_name')
             ->map(fn (?string $name) => PersonName::short(trim((string) $name)))
             ->filter(fn (string $name) => $name !== '')
@@ -1141,5 +1144,27 @@ class DecreeController extends Controller
             'original_form' => $d->original_form,
             'file_index' => $d->file_index,
         ];
+    }
+
+    /**
+     * Хоосон талбаруудыг хасна — 500 мөрийн үед дамжуулах хэмжээ мэдэгдэхүйц
+     * багасна. Хуудсан дээр байхгүй талбарыг хоосон гэж үзнэ.
+     *
+     * @param  array<string, mixed>  $row
+     * @return array<string, mixed>
+     */
+    private function compact(array $row): array
+    {
+        // Зурагтай мөрд image_is_pdf нь false байсан ч хэрэгтэй (хуучин зураг).
+        $keep = filled($row['image_url'] ?? null)
+            ? ['id', 'no', 'image_is_pdf']
+            : ['id', 'no'];
+
+        return array_filter(
+            $row,
+            fn ($value, $key) => in_array($key, $keep, true)
+                || ($value !== null && $value !== '' && $value !== false),
+            ARRAY_FILTER_USE_BOTH,
+        );
     }
 }
