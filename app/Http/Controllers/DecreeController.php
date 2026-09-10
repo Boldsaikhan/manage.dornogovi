@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Decree;
 use App\Models\EditUndo;
 use App\Models\DocumentFormat;
@@ -62,6 +63,20 @@ class DecreeController extends Controller
     private function canViewTab(Request $request, string $tab): bool
     {
         return ModuleAccess::canView($request->user(), $this->tabKey($tab));
+    }
+
+    /** Өөрчлөлтийн лог бичнэ. */
+    private function log(Decree $decree, string $action, ?string $summary = null, ?array $changes = null): void
+    {
+        AuditLog::record(
+            modelType: 'decree',
+            modelId: $decree->id,
+            action: $action,
+            scope: $this->decreeKey($decree),
+            label: trim($decree->numberDisplay().' '.(string) $decree->title) ?: null,
+            summary: $summary,
+            changes: $changes,
+        );
     }
 
     /** Тухайн мөрийн харьяалагдах табын эрхийн түлхүүр. */
@@ -566,6 +581,40 @@ class DecreeController extends Controller
     }
 
     /**
+     * Тухайн табын өөрчлөлтийн лог.
+     *
+     * Мөр хэзээ, хэнээр, ямар замаар (гараар, файлаас) үүссэн, өөрчлөгдсөн,
+     * устсаныг харуулна.
+     */
+    public function logs(Request $request): JsonResponse
+    {
+        $tab = $this->normalizeTab((string) $request->query('tab', 'zahiramj_a'));
+
+        abort_unless($this->canViewTab($request, $tab), 403);
+
+        $rows = AuditLog::query()
+            ->with('user:id,name')
+            ->where('model_type', 'decree')
+            ->when($tab !== 'niit', fn ($query) => $query->where('scope', $this->tabKey($tab)))
+            ->when($request->filled('decree'), fn ($query) => $query->where('model_id', (int) $request->query('decree')))
+            ->orderByDesc('id')
+            ->limit(200)
+            ->get()
+            ->map(fn (AuditLog $log) => [
+                'id' => $log->id,
+                'action' => $log->action,
+                'action_label' => $log->actionLabel(),
+                'label' => $log->label,
+                'summary' => $log->summary,
+                'user' => $log->user?->name ?? 'Систем',
+                'source' => $log->source,
+                'at' => optional($log->created_at)?->format('Y-m-d H:i'),
+            ]);
+
+        return response()->json(['rows' => $rows]);
+    }
+
+    /**
      * Excel/Word файлыг уншиж, оруулахын өмнө урьдчилан харуулна.
      *
      * Хадгалахгүй — зөвхөн багануудыг тааруулж, эхний мөрүүдийг буцаана.
@@ -616,6 +665,20 @@ class DecreeController extends Controller
 
         $meta = self::KIND_TABS[$tab];
         $result = $importer->store($meta['kind'], $meta['category'], $data['entries']);
+
+        AuditLog::record(
+            modelType: 'decree',
+            modelId: null,
+            action: 'imported',
+            scope: $this->tabKey($tab),
+            label: self::TABS[$tab] ?? $tab,
+            summary: sprintf(
+                'Файлаас %d мөр нэмэгдэж, %d мөр давхардсан тул алгаслаа.',
+                $result['created'],
+                $result['skipped'],
+            ),
+            changes: $result,
+        );
 
         $message = sprintf('%d мөр нэмэгдлээ.', $result['created']);
 
@@ -669,7 +732,7 @@ class DecreeController extends Controller
             // Тоо ширхэгээс хамааруулж хэвлэмэл хуудасны дугаарыг бодно.
             $data = $this->applyBlankNumbering($data);
 
-            Decree::query()->create([
+            $created = Decree::query()->create([
                 ...$data,
                 'person_name' => $person !== '' ? $person : null,
                 'issued_on' => $data['issued_on'] ?? null,
@@ -679,6 +742,8 @@ class DecreeController extends Controller
                 'number' => null,
                 'created_by' => $request->user()->id,
             ]);
+
+            $this->log($created, 'created', 'Бланкны мөр «Шинэ мөр» товчоор нэмэгдлээ.');
 
             if ($person !== '') {
                 app(\App\Services\Push\EmployeePushNotifier::class)->notifyNamed($person, [
@@ -707,7 +772,7 @@ class DecreeController extends Controller
 
             $person = PersonName::short(trim((string) ($data['person_name'] ?? '')));
 
-            Decree::query()->create([
+            $created = Decree::query()->create([
                 'category' => $meta['category'],
                 'kind' => $meta['kind'],
                 'number' => ($data['number'] ?? null) ?: $this->nextDocumentNumber($tab),
@@ -723,6 +788,8 @@ class DecreeController extends Controller
                 'body' => $data['body'] ?? null,
                 'created_by' => $request->user()->id,
             ]);
+
+            $this->log($created, 'created', '«Шинэ мөр» товчоор нэмэгдлээ.');
         }
 
         return redirect()
@@ -857,6 +924,17 @@ class DecreeController extends Controller
         );
 
         $decree->save();
+
+        $this->log(
+            $decree,
+            'updated',
+            $this->undoSummary($decree, $dirty),
+            // Юуг юу болгосныг хадгална.
+            collect($dirty)->mapWithKeys(fn ($value, $field) => [$field => [
+                'from' => $original[$field] ?? null,
+                'to' => is_scalar($value) || $value === null ? $value : (string) $value,
+            ]])->all(),
+        );
     }
 
     /**
@@ -891,6 +969,7 @@ class DecreeController extends Controller
         abort_unless(ModuleOwnScope::allows($request->user(), 'decrees', $decree), 403);
 
         $tab = $this->tabForDecree($decree);
+        $this->log($decree, 'deleted', 'Мөр устгагдлаа.');
         $this->deleteImageFile($decree);
         $decree->delete();
 
@@ -918,6 +997,7 @@ class DecreeController extends Controller
 
         $path = $request->file('image')->store('decrees/'.$decree->id, 'local');
         $decree->update(['file_path' => $path]);
+        $this->log($decree, 'file_added', basename($path));
 
         return back(303)->with('success', 'PDF хадгаллаа.');
     }
@@ -941,6 +1021,7 @@ class DecreeController extends Controller
         abort_unless(ModuleOwnScope::allows($request->user(), 'decrees', $decree), 403);
 
         $this->deleteImageFile($decree);
+        $this->log($decree, 'file_removed');
         $decree->update(['file_path' => null]);
 
         return back(303)->with('success', 'Хавсаргасан файлыг устгалаа.');
