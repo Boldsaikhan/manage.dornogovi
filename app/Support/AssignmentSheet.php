@@ -17,10 +17,6 @@ class AssignmentSheet
         'governor' => [
             'ДОРНОГОВЬ АЙМГИЙН ЗАСАГ ДАРГА',
         ],
-        'deputy' => [
-            'ДОРНОГОВЬ АЙМГИЙН ЗАСАГ',
-            'ДАРГЫН ОРЛОГЧ',
-        ],
         'chief' => [
             'ДОРНОГОВЬ АЙМГИЙН ЗДТГ-ЫН',
             'ДАРГЫН АЛБАН ҮҮРГИЙГ ТҮР ОРЛОН',
@@ -48,7 +44,6 @@ class AssignmentSheet
     public static function signerName(?string $approver): string
     {
         $needle = match (self::approver($approver)) {
-            'deputy' => 'засаг даргын орлогч',
             'chief' => 'здтг-ын дарга',
             default => 'засаг дарга',
         };

@@ -10,7 +10,6 @@ class TravelAssignment extends Model
     /** «БАТЛАВ» хэсэгт гарын үсэг зурах албан тушаалтан. */
     public const APPROVERS = [
         'governor' => 'Засаг дарга',
-        'deputy' => 'Засаг даргын орлогч',
         'chief' => 'Тамгын газрын дарга',
     ];
 
