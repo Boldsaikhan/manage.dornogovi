@@ -119,6 +119,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/undo', [UndoController::class, 'store'])->name('undo.store');
 
     Route::get('/modules/decrees', [DecreeController::class, 'index'])->name('decrees.index');
+    Route::post('/modules/decrees/import/preview', [DecreeController::class, 'importPreview'])->name('decrees.import.preview');
+    Route::post('/modules/decrees/import', [DecreeController::class, 'importStore'])->name('decrees.import.store');
     Route::get('/modules/decrees/print', [DecreeController::class, 'print'])->name('decrees.print');
     Route::get('/modules/decrees/export', [DecreeController::class, 'export'])->name('decrees.export');
     Route::post('/modules/decrees', [DecreeController::class, 'store'])->name('decrees.store');
