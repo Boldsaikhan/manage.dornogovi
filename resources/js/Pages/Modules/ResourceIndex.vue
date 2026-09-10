@@ -13,7 +13,11 @@ const props = defineProps({
     columns: Array,
     // Хоосон биш бол зүүн талд дугаарласан багана гарна.
     rowNumberLabel: { type: String, default: null },
+    // Д/д ихээсээ бага руу — эхний мөрийн дугаар.
+    rowNumberStart: { type: Number, default: 0 },
     canImportFile: { type: Boolean, default: false },
+    canExportFile: { type: Boolean, default: false },
+    exportUrl: { type: String, default: null },
     fields: Array,
     rows: Array,
     canManage: Boolean,
@@ -31,6 +35,62 @@ const props = defineProps({
 });
 
 const isSheetForm = computed(() => props.formLayout === 'assignment_sheet');
+
+/* ── Мөр сонгож татах ───────────────────────────────────────────────── */
+
+const selectedIds = ref([]);
+
+const isSelected = (id) => selectedIds.value.includes(id);
+
+const toggleRow = (id) => {
+    selectedIds.value = isSelected(id)
+        ? selectedIds.value.filter((value) => value !== id)
+        : [...selectedIds.value, id];
+};
+
+const allSelected = computed(
+    () => props.rows.length > 0 && selectedIds.value.length === props.rows.length,
+);
+
+const toggleAll = () => {
+    selectedIds.value = allSelected.value ? [] : props.rows.map((row) => row.id);
+};
+
+// Таб солигдоход сонголт хоосорно.
+watch(() => props.activeScope, () => { selectedIds.value = []; });
+watch(() => props.rows, () => {
+    const ids = new Set(props.rows.map((row) => row.id));
+    selectedIds.value = selectedIds.value.filter((id) => ids.has(id));
+});
+
+const downloadOpen = ref(false);
+
+const downloadFormats = [
+    { format: 'xlsx', label: 'Excel (.xlsx)' },
+    { format: 'docx', label: 'Word (.docx)' },
+    { format: 'pdf', label: 'PDF' },
+];
+
+const download = (format) => {
+    if (! props.exportUrl) {
+        return;
+    }
+
+    const url = new URL(props.exportUrl, window.location.origin);
+    url.searchParams.set('format', format);
+    url.searchParams.set('scope', props.activeScope);
+
+    // Сонгоогүй бол идэвхтэй табын бүх мөрийг татна.
+    if (selectedIds.value.length) {
+        url.searchParams.set('ids', selectedIds.value.join(','));
+    }
+
+    downloadOpen.value = false;
+    window.location.href = url.toString();
+};
+
+// Д/д — хамгийн шинэ мөр хамгийн том дугаартай.
+const rowNumber = (index) => Math.max(1, (props.rowNumberStart || props.rows.length) - index);
 
 const showScopePanel = ref(false);
 const showNewScope = ref(false);
@@ -397,6 +457,35 @@ const destroyRow = (id) => {
                 >
                     {{ importBusy && ! importData ? 'Уншиж байна…' : 'Файлаас оруулах' }}
                 </button>
+                <div v-if="canExportFile" class="relative">
+                    <button
+                        type="button"
+                        class="ui-btn-ghost whitespace-nowrap"
+                        :title="selectedIds.length ? 'Сонгосон мөрийг татах' : 'Энэ табын бүх бүртгэлийг татах'"
+                        @click="downloadOpen = ! downloadOpen"
+                    >
+                        {{ selectedIds.length ? `Татах (${selectedIds.length})` : 'Татах' }}
+                    </button>
+                    <!-- Гадна дарахад цэс хаагдана. -->
+                    <div v-if="downloadOpen" class="fixed inset-0 z-10" @click="downloadOpen = false" />
+                    <div
+                        v-if="downloadOpen"
+                        class="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                    >
+                        <p class="px-3 py-1.5 text-[11px] text-slate-400">
+                            {{ selectedIds.length ? `${selectedIds.length} сонгосон мөр` : 'Бүх бүртгэл' }}
+                        </p>
+                        <button
+                            v-for="option in downloadFormats"
+                            :key="option.format"
+                            type="button"
+                            class="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                            @click="download(option.format)"
+                        >
+                            {{ option.label }}
+                        </button>
+                    </div>
+                </div>
                 <button
                     v-if="canManage"
                     type="button"
@@ -522,6 +611,15 @@ const destroyRow = (id) => {
                 <table class="ui-table min-w-full">
                     <thead>
                         <tr>
+                            <th v-if="canExportFile" class="w-10 text-center">
+                                <input
+                                    type="checkbox"
+                                    class="h-4 w-4 rounded border-slate-300 text-brand-navy-600 focus:ring-brand-navy-500"
+                                    :checked="allSelected"
+                                    title="Бүгдийг сонгох"
+                                    @change="toggleAll"
+                                />
+                            </th>
                             <th v-if="rowNumberLabel" class="w-12 text-center">{{ rowNumberLabel }}</th>
                             <th v-for="col in columns" :key="col.key">{{ col.label }}</th>
                             <th v-if="canManage || rowActions.length" />
@@ -537,8 +635,16 @@ const destroyRow = (id) => {
                             ]"
                             @click="openPreview(row)"
                         >
+                            <td v-if="canExportFile" class="text-center" @click.stop>
+                                <input
+                                    type="checkbox"
+                                    class="h-4 w-4 rounded border-slate-300 text-brand-navy-600 focus:ring-brand-navy-500"
+                                    :checked="isSelected(row.id)"
+                                    @change="toggleRow(row.id)"
+                                />
+                            </td>
                             <td v-if="rowNumberLabel" class="text-center text-sm font-semibold text-slate-500">
-                                {{ index + 1 }}
+                                {{ rowNumber(index) }}
                             </td>
                             <td v-for="col in columns" :key="col.key">
                                 <template v-if="isFileColumn(col)">
@@ -596,7 +702,7 @@ const destroyRow = (id) => {
                             </td>
                         </tr>
                         <tr v-if="!rows.length">
-                            <td :colspan="columns.length + (canManage || rowActions.length ? 1 : 0)" class="!py-12 text-center text-slate-400">
+                            <td :colspan="columns.length + (canExportFile ? 1 : 0) + (rowNumberLabel ? 1 : 0) + (canManage || rowActions.length ? 1 : 0)" class="!py-12 text-center text-slate-400">
                                 {{ activeScopeLabel && activeScope !== 'all' ? activeScopeLabel + ' — бүртгэл алга.' : 'Одоогоор бүртгэл алга.' }}
                             </td>
                         </tr>

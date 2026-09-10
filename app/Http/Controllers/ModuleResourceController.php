@@ -6,7 +6,10 @@ use App\Models\PhoneDirectoryEntry;
 use App\Models\RegulationCategory;
 use App\Support\AssignmentSheet;
 use App\Support\AssignmentRegisterImporter;
+use App\Support\DocxTableWriter;
 use App\Support\ModuleAccess;
+use App\Support\PdfTableWriter;
+use App\Support\XlsxTableWriter;
 use App\Support\TabularFileReader;
 use App\Support\ModuleOwnScope;
 use Illuminate\Database\Eloquent\Model;
@@ -18,6 +21,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ModuleResourceController extends Controller
@@ -79,7 +83,14 @@ class ModuleResourceController extends Controller
             }
         }
 
-        $rows = $query->limit(200)->get()->map(fn (Model $row) => $this->serialize($row, $config, $module));
+        /*
+         * Д/д нь ихээсээ бага руу дугаарлагдана: хамгийн шинэ мөр хамгийн том
+         * дугаартай. Тиймээс жагсаалтад ороогүй мөрийг ч тоолж эхлэл дугаарыг
+         * гаргана.
+         */
+        $totalInScope = (clone $query)->toBase()->getCountForPagination();
+
+        $rows = $query->limit(1000)->get()->map(fn (Model $row) => $this->serialize($row, $config, $module));
 
         $canManageScopes = $module === 'regulations' && ModuleAccess::canManage($request->user(), $module);
 
@@ -96,8 +107,11 @@ class ModuleResourceController extends Controller
             'description' => $config['description'] ?? '',
             'columns' => $config['columns'],
             'rowNumberLabel' => $config['row_number'] ?? null,
+            'rowNumberStart' => $totalInScope,
             'canImportFile' => ($config['file_import'] ?? false)
                 && ModuleAccess::canEdit($request->user(), $module),
+            'canExportFile' => (bool) ($config['file_export'] ?? false),
+            'exportUrl' => ($config['file_export'] ?? false) ? route('modules.export', $module) : null,
             'fields' => $config['fields'],
             'directory' => $this->directoryFor($config),
             'rows' => $rows,
@@ -129,6 +143,105 @@ class ModuleResourceController extends Controller
             'year' => now()->format('Y'),
             'budget_kinds' => AssignmentSheet::BUDGET_KINDS,
         ];
+    }
+
+    /**
+     * Сонгосон мөрүүдийг Excel / Word / PDF файлаар татна.
+     *
+     * Мөр сонгоогүй бол идэвхтэй табын бүх бүртгэлийг татна.
+     */
+    public function export(
+        Request $request,
+        string $module,
+        XlsxTableWriter $xlsx,
+        DocxTableWriter $docx,
+        PdfTableWriter $pdf,
+    ): BinaryFileResponse {
+        $config = $this->configFor($module);
+        $this->authorizeModule($request, $module);
+
+        abort_unless((bool) ($config['file_export'] ?? false), 404);
+
+        $format = strtolower((string) $request->query('format', 'xlsx'));
+        abort_unless(in_array($format, ['xlsx', 'docx', 'pdf'], true), 404);
+
+        $modelClass = $config['model'];
+        /** @var Model $modelClass */
+        $query = $modelClass::query()->latest('id');
+
+        if (method_exists($modelClass, 'user')) {
+            $query->with('user:id,name,position');
+        }
+
+        $scopes = $config['scopes'] ?? [];
+        $scopeColumn = $config['scope_column'] ?? 'scope';
+        $scope = (string) $request->query('scope', 'all');
+
+        if ($scopes && $scope !== 'all' && array_key_exists($scope, $scopes)) {
+            $query->where($scopeColumn, $scope);
+            $config = $this->applyScopeViewConfig($config, $scope);
+        } else {
+            $scope = 'all';
+        }
+
+        ModuleOwnScope::apply($query, $request->user(), $module);
+
+        // Сонгосон мөр байвал зөвхөн түүнийг татна.
+        $ids = collect(explode(',', (string) $request->query('ids', '')))
+            ->map(fn ($id) => (int) trim($id))
+            ->filter()
+            ->values();
+
+        if ($ids->isNotEmpty()) {
+            $query->whereIn('id', $ids->all());
+        }
+
+        $columns = $config['columns'];
+        $numberLabel = $config['row_number'] ?? null;
+        $records = $query->limit(2000)->get();
+
+        // Д/д нь ихээсээ бага руу — хүснэгтэд харагдаж байгаатай ижил.
+        $total = $records->count();
+
+        $headings = array_merge(
+            $numberLabel ? [$numberLabel] : [],
+            array_map(fn (array $col) => (string) $col['label'], $columns),
+        );
+
+        $rows = $records->values()->map(function (Model $record, int $index) use ($columns, $config, $module, $numberLabel, $total) {
+            $serialized = $this->serialize($record, $config, $module);
+
+            $cells = array_map(
+                fn (array $col) => (string) ($serialized[$col['key']] ?? '—'),
+                $columns,
+            );
+
+            return $numberLabel ? array_merge([(string) ($total - $index)], $cells) : $cells;
+        })->all();
+
+        $title = $config['title'].($scope !== 'all' && isset($scopes[$scope]) ? ' — '.$scopes[$scope] : '');
+        $tmp = tempnam(sys_get_temp_dir(), 'module_export_');
+
+        if ($format === 'xlsx') {
+            $path = $tmp.'.xlsx';
+            $xlsx->write($path, $title, $headings, $rows);
+            $mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        } elseif ($format === 'docx') {
+            $path = $tmp.'.docx';
+            $widths = array_fill(0, count($headings), (int) floor(100 / max(1, count($headings))));
+            $docx->write($path, $title, $headings, $widths, $rows, [], landscape: true);
+            $mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        } else {
+            $path = $tmp.'.pdf';
+            $pdf->write($path, $title, $headings, $rows, landscape: true);
+            $mime = 'application/pdf';
+        }
+
+        @unlink($tmp);
+
+        return response()
+            ->download($path, $module.'.'.$format, ['Content-Type' => $mime])
+            ->deleteFileAfterSend();
     }
 
     /**
@@ -398,6 +511,19 @@ class ModuleResourceController extends Controller
         }
 
         return $data;
+    }
+
+    /** Тухайн табд тусгайлан тохируулсан багана/талбарыг хэрэглэнэ. */
+    private function applyScopeViewConfig(array $config, string $scope): array
+    {
+        $view = $config['scope_views'][$scope] ?? null;
+
+        if ($view) {
+            $config['columns'] = $view['columns'] ?? $config['columns'];
+            $config['fields'] = $view['fields'] ?? $config['fields'];
+        }
+
+        return $config;
     }
 
     private function applyActiveScopeView(Request $request, array $config): array

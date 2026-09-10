@@ -145,6 +145,8 @@ Route::middleware('auth')->group(function () {
     Route::patch('/modules/reports/{report}/rows/{index}', [ReportCatalogController::class, 'updateRow'])->name('reports.rows.update');
     Route::get('/modules/onboarding', [ModuleResourceController::class, 'index'])->name('onboarding.index');
 
+    Route::get('/modules/{module}/export', [ModuleResourceController::class, 'export'])
+        ->name('modules.export');
     Route::post('/modules/{module}/import/preview', [ModuleResourceController::class, 'importPreview'])
         ->name('modules.import.preview');
     Route::post('/modules/{module}/import', [ModuleResourceController::class, 'importStore'])

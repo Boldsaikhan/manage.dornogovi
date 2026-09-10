@@ -100,6 +100,8 @@ return [
         'form_layout' => 'assignment_sheet',
         // Цаасан бүртгэлийг Excel/Word файлаас оруулна.
         'file_import' => true,
+        // Сонгосон мөрүүдийг Excel/Word/PDF-ээр татна.
+        'file_export' => true,
         'defaults' => ['status' => 'pending'],
         'on_create' => 'attach_user_department',
     ],
