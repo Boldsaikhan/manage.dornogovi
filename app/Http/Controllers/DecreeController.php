@@ -6,12 +6,15 @@ use App\Models\Decree;
 use App\Models\EditUndo;
 use App\Models\DocumentFormat;
 use App\Models\PhoneDirectoryEntry;
+use App\Support\DecreeRegisterImporter;
 use App\Support\DocxTableWriter;
 use App\Support\ModuleAccess;
 use App\Support\ModuleOwnScope;
 use App\Support\PdfTableWriter;
 use App\Support\PersonName;
+use App\Support\TabularFileReader;
 use App\Support\XlsxTableWriter;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -547,6 +550,71 @@ class DecreeController extends Controller
         $data['blank_number'] = $data['num_zahiramj'] ?: $data['num_tushaal'] ?: null;
 
         return $data;
+    }
+
+    /**
+     * Excel/Word файлыг уншиж, оруулахын өмнө урьдчилан харуулна.
+     *
+     * Хадгалахгүй — зөвхөн багануудыг тааруулж, эхний мөрүүдийг буцаана.
+     */
+    public function importPreview(Request $request, TabularFileReader $reader, DecreeRegisterImporter $importer): JsonResponse
+    {
+        $tab = $this->normalizeTab((string) $request->input('tab', 'zahiramj_a'));
+
+        abort_unless(ModuleAccess::canEdit($request->user(), $this->tabKey($tab)), 403);
+        abort_if($tab === 'niit' || $tab === 'blank', 422, 'Энэ табд файлаар оруулах боломжгүй.');
+
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:'.implode(',', TabularFileReader::EXTENSIONS), 'max:20480'],
+        ], [], ['file' => 'файл']);
+
+        $file = $request->file('file');
+        $rows = $reader->rows($file->getRealPath(), $file->getClientOriginalExtension());
+
+        $analysed = $importer->analyse($rows);
+        $entries = $importer->build($analysed['rows'], $analysed['mapping']);
+
+        return response()->json([
+            'headers' => $analysed['headers'],
+            'mapping' => $analysed['mapping'],
+            'fields' => DecreeRegisterImporter::FIELDS,
+            'rows' => array_slice($analysed['rows'], 0, 300),
+            'entries' => $entries,
+            'total' => count($entries),
+        ]);
+    }
+
+    /**
+     * Урьдчилан харсан мөрүүдийг хадгална.
+     */
+    public function importStore(Request $request, DecreeRegisterImporter $importer): RedirectResponse
+    {
+        $tab = $this->normalizeTab((string) $request->input('tab', 'zahiramj_a'));
+
+        abort_unless(ModuleAccess::canEdit($request->user(), $this->tabKey($tab)), 403);
+        abort_if(! isset(self::KIND_TABS[$tab]), 422, 'Энэ табд файлаар оруулах боломжгүй.');
+
+        $data = $request->validate([
+            'entries' => ['required', 'array', 'min:1'],
+            'entries.*' => ['array'],
+        ]);
+
+        $meta = self::KIND_TABS[$tab];
+        $result = $importer->store($meta['kind'], $meta['category'], $data['entries']);
+
+        $message = sprintf('%d мөр нэмэгдлээ.', $result['created']);
+
+        if ($result['skipped'] > 0) {
+            $message .= sprintf(' %d мөрийн дугаар аль хэдийн бүртгэлтэй тул алгаслаа.', $result['skipped']);
+        }
+
+        if ($result['missing_number'] > 0) {
+            $message .= sprintf(' %d мөр дугааргүй тул орсонгүй.', $result['missing_number']);
+        }
+
+        return redirect()
+            ->route('decrees.index', ['tab' => $tab])
+            ->with($result['created'] > 0 ? 'success' : 'warning', $message);
     }
 
     public function store(Request $request): RedirectResponse
