@@ -157,6 +157,30 @@ const roleLabel = ref('');
 const roleState = reactive({});
 const rolesDirty = ref(false);
 
+/**
+ * Ролийн эрхийн төлөвийг бэлдэнэ.
+ *
+ * Төлөв нь бэлдэгдээгүй байхад хүснэгт зурагдвал алдаа өгч, тухайн роль
+ * сонгогдохгүй болдог тул хаанаас ч дуудаж болохоор тусад нь гаргав.
+ */
+const ensureRoleState = (key) => {
+    if (! key) return null;
+
+    if (! roleState[key]) {
+        roleState[key] = {};
+    }
+
+    const next = roleState[key];
+
+    props.modules?.forEach((m) => {
+        if (! Object.prototype.hasOwnProperty.call(next, m.key)) {
+            next[m.key] = '';
+        }
+    });
+
+    return next;
+};
+
 const loadRoles = (force = false) => {
     props.roles?.forEach((r) => {
         // Хэрэглэгчийн засварлаж байгаа ролийг дарж бичихгүй, харин
@@ -179,10 +203,15 @@ loadRoles(true);
 
 watch(() => props.rolePermissions, () => loadRoles(), { deep: true });
 
+// Шинэ роль нэмэгдмэгц түүний төлөвийг бэлдэнэ (эрх нь хоосон байсан ч).
+watch(() => props.roles, (roles) => (roles ?? []).forEach((r) => ensureRoleState(r.key)), { deep: true });
+
 const activeRole = computed(() => props.roles?.find((r) => r.key === roleTab.value) ?? null);
 
 watch(activeRole, (role) => {
     roleLabel.value = role?.label ?? '';
+    // Шинээр үүсгэсэн ролийн төлөв дутуу байвал энд бэлдэгдэнэ.
+    ensureRoleState(role?.key);
 }, { immediate: true });
 
 const cleanPermissions = (raw = {}) => Object.fromEntries(
@@ -892,7 +921,11 @@ const pickFromDirectory = (value) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="m in modules" :key="'role-' + m.key" :class="m.parent ? 'bg-slate-50/60' : ''">
+                                <tr
+                                    v-for="m in (roleState[activeRole.key] ? modules : [])"
+                                    :key="'role-' + m.key"
+                                    :class="m.parent ? 'bg-slate-50/60' : ''"
+                                >
                                     <td :class="m.parent ? 'pl-8 text-sm text-slate-600' : ''">
                                         <span v-if="m.parent" class="mr-1 text-slate-300">└</span>{{ m.label }}
                                         <span v-if="m.parent" class="ml-1 text-[10px] text-slate-400">
