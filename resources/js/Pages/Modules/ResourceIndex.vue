@@ -13,6 +13,7 @@ const props = defineProps({
     columns: Array,
     // Хоосон биш бол зүүн талд дугаарласан багана гарна.
     rowNumberLabel: { type: String, default: null },
+    canImportFile: { type: Boolean, default: false },
     fields: Array,
     rows: Array,
     canManage: Boolean,
@@ -268,6 +269,90 @@ const switchScope = (value) => {
     );
 };
 
+/**
+ * Excel/Word файлаас бүртгэл оруулах.
+ *
+ * Эхлээд файлыг уншиж, багануудыг таньж урьдчилан харуулна. «Оруулах»
+ * дарсны дараа л хадгална.
+ */
+const importInput = ref(null);
+const importBusy = ref(false);
+const importData = ref(null);
+
+const pickImportFile = () => importInput.value?.click();
+
+const onImportFile = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (! file) return;
+
+    importBusy.value = true;
+
+    try {
+        const form = new FormData();
+        form.append('file', file);
+
+        const { data } = await window.axios.post(
+            route('modules.import.preview', { module: props.module }),
+            form,
+        );
+
+        importData.value = { ...data, file_name: file.name };
+    } catch (err) {
+        alert(
+            err?.response?.data?.errors?.file?.[0]
+            || err?.response?.data?.message
+            || 'Файлыг уншиж чадсангүй.',
+        );
+    } finally {
+        importBusy.value = false;
+    }
+};
+
+/** Багана дахин тааруулахад мөрүүд шинэчлэгдэнэ. */
+const remapImport = () => {
+    if (! importData.value) return;
+
+    const { rows, mapping } = importData.value;
+
+    importData.value.entries = rows
+        .map((row) => {
+            const entry = {};
+
+            Object.keys(importData.value.fields).forEach((field) => {
+                const index = mapping[field];
+                entry[field] = index === null || index === undefined ? null : (row[index] ?? null);
+            });
+
+            return entry;
+        })
+        .filter((entry) => String(entry.person_name ?? '').trim() !== '');
+};
+
+const importSample = computed(() => (importData.value?.entries ?? []).slice(0, 8));
+
+const closeImport = () => (importData.value = null);
+
+const confirmImport = () => {
+    if (! importData.value || importBusy.value) return;
+
+    importBusy.value = true;
+
+    router.post(route('modules.import.store', { module: props.module }), {
+        scope: props.activeScope,
+        entries: importData.value.entries,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => closeImport(),
+        onFinish: () => { importBusy.value = false; },
+    });
+};
+
+const canImport = computed(
+    () => props.canImportFile && props.activeScope && props.activeScope !== 'all',
+);
+
 const submit = () => {
     form.transform(() => {
         const data = { ...form.data() };
@@ -302,6 +387,16 @@ const destroyRow = (id) => {
                     <h2 class="ui-title">{{ title }}</h2>
                     <p class="ui-subtitle">{{ description }}</p>
                 </div>
+                <button
+                    v-if="canImport"
+                    type="button"
+                    class="ui-btn-ghost"
+                    :disabled="importBusy"
+                    title="Excel эсвэл Word файлаас бүртгэл оруулах"
+                    @click="pickImportFile"
+                >
+                    {{ importBusy && ! importData ? 'Уншиж байна…' : 'Файлаас оруулах' }}
+                </button>
                 <button
                     v-if="canManage"
                     type="button"
@@ -547,6 +642,88 @@ const destroyRow = (id) => {
                 </div>
             </Teleport>
         </div>
+
+        <input
+            ref="importInput"
+            type="file"
+            accept=".xlsx,.xlsm,.docx,.docm,.pdf"
+            class="hidden"
+            @change="onImportFile"
+        />
+
+        <Modal :show="!! importData" max-width="7xl" @close="closeImport">
+            <div v-if="importData" class="p-5">
+                <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-semibold text-brand-navy-900">Файлаас оруулах</h3>
+                        <p class="mt-0.5 text-sm text-slate-500">
+                            <b>{{ importData.file_name }}</b> — {{ importData.total }} мөр олдлоо.
+                            «{{ activeScopeLabel }}» хэсэгт орно. Багана зөв тааарсан эсэхийг шалгана уу.
+                        </p>
+                    </div>
+                    <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" @click="closeImport">✕</button>
+                </div>
+
+                <div class="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div v-for="(label, field) in importData.fields" :key="'map-' + field">
+                        <label class="ui-label">{{ label }}</label>
+                        <select
+                            v-model="importData.mapping[field]"
+                            class="ui-input !py-1.5 text-sm"
+                            @change="remapImport"
+                        >
+                            <option :value="null">— оруулахгүй —</option>
+                            <option
+                                v-for="(header, index) in importData.headers"
+                                :key="'h-' + field + '-' + index"
+                                :value="index"
+                            >
+                                {{ index + 1 }}. {{ header || '(нэргүй багана)' }}
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto rounded-xl border border-slate-200">
+                    <table class="w-full min-w-[900px] text-left text-xs">
+                        <thead class="bg-slate-50 text-slate-500">
+                            <tr>
+                                <th v-for="(label, field) in importData.fields" :key="'ph-' + field" class="px-2 py-1.5 font-semibold">
+                                    {{ label }}
+                                </th>
+                                <th class="px-2 py-1.5 font-semibold">Дуусах</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(entry, i) in importSample" :key="'pr-' + i" class="border-t border-slate-100">
+                                <td v-for="(label, field) in importData.fields" :key="'pc-' + field + i" class="px-2 py-1.5 text-slate-700">
+                                    {{ entry[field] ?? '' }}
+                                </td>
+                                <td class="px-2 py-1.5 text-slate-500">{{ entry.end_date ?? '' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p class="mt-2 text-xs text-slate-500">
+                    Эхний {{ importSample.length }} мөрийг үзүүлэв. Огноог «5.21» гэх мэт сар.өдөр
+                    хэлбэрээр таньж, хоногоор нь дуусах огноог бодно. Ижил хүн, ижил огноо, ижил
+                    газартай мөр аль хэдийн байвал алгасна.
+                </p>
+
+                <div class="mt-5 flex justify-end gap-2 border-t border-slate-100 pt-4">
+                    <button type="button" class="ui-btn-ghost" @click="closeImport">Болих</button>
+                    <button
+                        type="button"
+                        class="ui-btn-primary"
+                        :disabled="importBusy || ! importData.total"
+                        @click="confirmImport"
+                    >
+                        {{ importBusy ? 'Оруулж байна…' : `Оруулах (${importData.total})` }}
+                    </button>
+                </div>
+            </div>
+        </Modal>
 
         <Modal :show="showForm && canManage" :max-width="isSheetForm ? '4xl' : '2xl'" @close="closeForm">
             <form :class="isSheetForm ? 'p-4 sm:p-6' : 'p-6'" @submit.prevent="submit">
