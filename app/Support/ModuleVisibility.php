@@ -14,21 +14,42 @@ class ModuleVisibility
     public const SETTING_KEY = 'modules.disabled';
 
     /**
+     * Нэг хүсэлтийн доторх түр санах ой.
+     *
+     * Cache::remember нь null утгыг хадгалдаггүй тул тохиргоо хоосон үед
+     * эрх шалгах бүрд өгөгдлийн сан руу дахин ханддаг байв (нэг хуудсанд
+     * 50 гаруй асуулга).
+     *
+     * @var list<string>|null
+     */
+    private static ?array $memo = null;
+
+    public static function forget(): void
+    {
+        self::$memo = null;
+        Cache::forget('app_setting:'.self::SETTING_KEY);
+    }
+
+    /**
      * @return list<string>
      */
     public static function disabledKeys(): array
     {
+        if (self::$memo !== null) {
+            return self::$memo;
+        }
+
         $raw = Cache::remember('app_setting:'.self::SETTING_KEY, 60, function () {
-            return AppSetting::query()->where('key', self::SETTING_KEY)->value('value');
+            return (string) AppSetting::query()->where('key', self::SETTING_KEY)->value('value');
         });
 
         if (! filled($raw)) {
-            return [];
+            return self::$memo = [];
         }
 
         $decoded = json_decode($raw, true);
 
-        return is_array($decoded)
+        return self::$memo = is_array($decoded)
             ? array_values(array_filter($decoded, fn ($k) => is_string($k) && $k !== ''))
             : [];
     }
@@ -54,7 +75,7 @@ class ModuleVisibility
             ['value' => json_encode($disabled, JSON_UNESCAPED_UNICODE)]
         );
 
-        Cache::forget('app_setting:'.self::SETTING_KEY);
+        self::forget();
     }
 
     /**

@@ -283,7 +283,7 @@ class ModuleAccess
         // Хэрэглэгчид шууд оноосон роль (өөрсдийн үүсгэсэн роль ч мөн) тэргүүнд.
         $assigned = trim((string) ($user->role_key ?? ''));
 
-        if ($assigned !== '' && Role::query()->where('key', $assigned)->exists()) {
+        if ($assigned !== '' && in_array($assigned, Role::keys(), true)) {
             return $assigned;
         }
 

@@ -62,12 +62,38 @@ class RolePermission extends Model
     protected $fillable = ['role', 'module_key', 'level'];
 
     /**
+     * Нэг хүсэлтийн доторх түр санах ой.
+     *
+     * Эрх шалгах бүрд (цэс, таб, товч бүрд) энэ хүснэгтийг дахин уншдаг
+     * байсан тул нэг хуудсанд олон арван асуулга үүсдэг байв.
+     *
+     * @var array<string, array<string, string>>|null
+     */
+    private static ?array $mapCache = null;
+
+    public static function forgetMap(): void
+    {
+        self::$mapCache = null;
+    }
+
+    protected static function booted(): void
+    {
+        // Загвар өөрчлөгдвөл түр санах ойг хаяна.
+        static::saved(fn () => self::forgetMap());
+        static::deleted(fn () => self::forgetMap());
+    }
+
+    /**
      * Бүх ролийн загварыг {роль: {модуль: түвшин}} хэлбэрээр.
      *
      * @return array<string, array<string, string>>
      */
     public static function map(): array
     {
+        if (self::$mapCache !== null) {
+            return self::$mapCache;
+        }
+
         $stored = array_fill_keys(array_keys(self::roles()), []);
         $configured = [];
 
@@ -87,7 +113,7 @@ class RolePermission extends Model
             }
         }
 
-        return $stored;
+        return self::$mapCache = $stored;
     }
 
     /**
@@ -97,6 +123,8 @@ class RolePermission extends Model
      */
     public static function replaceFor(string $role, array $permissions): void
     {
+        self::forgetMap();
+
         static::query()->where('role', $role)->delete();
 
         // Бүх модулийг хаасан бол «тохируулсан» гэдгийг тэмдэглэх мөр үлдээнэ.
