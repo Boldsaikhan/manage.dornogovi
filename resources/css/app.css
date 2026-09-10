@@ -401,29 +401,31 @@
         box-shadow: 0 1px 0 rgb(226 232 240);
     }
 
+    /* Наалдах байрлалыг JS бодит өндрөөр нь тавина (Decrees.vue → syncStickyHead). */
     .decree-sheet thead tr:nth-child(2) th {
         position: sticky;
         top: 2.65rem;
         z-index: 19;
-        @apply bg-brand-navy-50/95 py-1.5 text-[10px] font-medium normal-case tracking-normal text-slate-500;
+        @apply bg-brand-navy-50 py-1.5 text-[10px] font-medium normal-case tracking-normal text-slate-500;
         box-shadow: 0 1px 0 rgb(226 232 240);
     }
 
     .decree-sheet thead tr:nth-child(3) th {
-        @apply bg-slate-100/90 py-0.5 text-[10px] font-normal normal-case text-slate-400;
+        position: sticky;
+        z-index: 18;
+        @apply bg-brand-navy-50 py-0.5 text-[10px] font-normal normal-case text-slate-400;
     }
 
     .decree-sheet__head-group--issued {
         @apply bg-sky-50 text-sky-900;
     }
 
-    /* Багана тус бүрийн хайлтын мөр — толгойн доор наалдаж байрлана. */
+    /* Багана тус бүрийн хайлтын мөр — толгойн доор наалдаж, өнгөөрөө ялгарна. */
     .decree-sheet thead tr.decree-sheet__filters th {
         position: sticky;
-        top: 4.6rem;
-        z-index: 18;
-        @apply bg-white/95 px-1 py-1 align-middle;
-        box-shadow: 0 1px 0 rgb(226 232 240);
+        z-index: 17;
+        @apply bg-brand-navy-100/70 px-1 py-1 align-middle;
+        box-shadow: inset 0 1px 0 rgb(226 232 240), 0 2px 3px -2px rgb(15 23 42 / 0.18);
     }
 
     .decree-sheet__filters input {
