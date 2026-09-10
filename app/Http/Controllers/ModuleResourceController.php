@@ -714,6 +714,8 @@ class ModuleResourceController extends Controller
             // Цаасан бүртгэлээс орсон мөрд системд эрхгүй хүн ч байж болно.
             'user_name' => ($row->person_name ?? null) ?: ($row->user->name ?? '—'),
             'user_position' => ($row->position ?? null) ?: ($row->user->position ?? '—'),
+            // Томилолтыг батласан албан тушаалтны нэр.
+            'approved_by' => AssignmentSheet::signerName($row->approver ?? null) ?: '—',
             // Эхлэх, дуусах огноогоор хоногийг бодно (хоёулаа оруулсан үед).
             'day_count' => $this->dayCount($row),
             'person_label' => $row->person_name ?: ($row->user->name ?? '—'),

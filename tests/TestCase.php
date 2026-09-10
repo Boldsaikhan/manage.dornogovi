@@ -3,6 +3,7 @@
 namespace Tests;
 
 use App\Models\Role;
+use App\Support\AssignmentSheet;
 use App\Services\Ai\AiSettings;
 use App\Support\ModuleOrder;
 use App\Support\ModuleVisibility;
@@ -19,6 +20,7 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
+        AssignmentSheet::forgetSigners();
         Role::forgetOrdered();
         AiSettings::forgetDisplayName();
         ModuleVisibility::forget();

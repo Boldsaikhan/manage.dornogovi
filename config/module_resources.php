@@ -72,6 +72,7 @@ return [
         'columns' => [
             ['key' => 'user_name', 'label' => 'Овог нэр'],
             ['key' => 'user_position', 'label' => 'Албан тушаал'],
+            ['key' => 'approved_by', 'label' => 'Баталсан'],
             ['key' => 'destination', 'label' => 'Хаана'],
             ['key' => 'purpose', 'label' => 'Ямар ажлаар'],
             ['key' => 'start_date', 'label' => 'Хэзээнээс'],
