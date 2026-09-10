@@ -70,11 +70,11 @@ class TushaalAFillMissingTest extends TestCase
 
     public function test_the_console_command_reports_what_it_added(): void
     {
-        $this->artisan('decrees:fill-tushaal-a')
+        $this->artisan('decrees:fill-tushaal a')
             ->expectsOutputToContain('А/71')
             ->assertSuccessful();
 
-        $this->artisan('decrees:fill-tushaal-a')
+        $this->artisan('decrees:fill-tushaal a')
             ->expectsOutputToContain('Дутуу мөр алга')
             ->assertSuccessful();
     }
