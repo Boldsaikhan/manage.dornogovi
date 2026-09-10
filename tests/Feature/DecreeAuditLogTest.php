@@ -35,7 +35,7 @@ class DecreeAuditLogTest extends TestCase
         $this->assertSame('created', $log->action);
         $this->assertSame('decrees:zahiramj_a', $log->scope);
         $this->assertSame($admin->id, $log->user_id);
-        $this->assertStringContainsString('Шинэ мөр', (string) $log->summary);
+        $this->assertStringContainsString('Мөр нэмэх', (string) $log->summary);
     }
 
     public function test_importing_from_a_file_is_logged(): void

@@ -778,7 +778,7 @@ const docColumnCount = computed(() => {
                         :disabled="addingRow"
                         @click="addRow"
                     >
-                        {{ addingRow ? 'Нэмж байна…' : '' }}Шинэ мөр
+                        {{ addingRow ? 'Нэмж байна…' : 'Мөр нэмэх' }}
                     </button>
                 </div>
             </div>
@@ -1066,7 +1066,7 @@ const docColumnCount = computed(() => {
                         </tr>
                         <tr v-if="!rows.length">
                             <td :colspan="blankColCount" class="decree-sheet__empty">
-                                Бүртгэл алга. «Шинэ мөр» дарж нүдэн дээр бөглөнө үү.
+                                Бүртгэл алга. «Мөр нэмэх» дарж нүдэн дээр бөглөнө үү.
                             </td>
                         </tr>
                         <tr v-else-if="!visibleRows.length">
@@ -1394,7 +1394,7 @@ const docColumnCount = computed(() => {
                         </tr>
 <tr v-if="!rows.length">
                             <td :colspan="docColumnCount" class="decree-sheet__empty">
-                                {{ isNiit ? 'Бүртгэл алга.' : `${numberLabel}ын бүртгэл алга. «Шинэ мөр» дарж бөглөнө үү.` }}
+                                {{ isNiit ? 'Бүртгэл алга.' : `${numberLabel}ын бүртгэл алга. «Мөр нэмэх» дарж бөглөнө үү.` }}
                             </td>
                         </tr>
                         <tr v-else-if="!visibleRows.length">
