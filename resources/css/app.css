@@ -278,6 +278,13 @@
     }
 
     /* Урт бичвэрийг 2 мөрөнд багтаана — бүтэн утга title-аар */
+    /* Нэг мөрөнд багтаана — хуваагдаж хоёр мөр болохгүй. */
+    .ui-clamp-1 {
+        display: block;
+        white-space: nowrap;
+        @apply leading-snug;
+    }
+
     .ui-clamp-2 {
         display: -webkit-box;
         -webkit-line-clamp: 2;
