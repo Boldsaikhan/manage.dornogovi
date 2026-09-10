@@ -117,6 +117,55 @@ const officialOptions = computed(() => {
     return options;
 });
 
+/**
+ * Багана тус бүрийн хайлт.
+ *
+ * Хүснэгтийн толгойн доор жижиг талбар гарч, бичсэн үгээр нь мөрүүдийг
+ * шүүнэ. Хэд хэдэн баганад зэрэг бичвэл бүгдэд нь тохирсон мөр л үлдэнэ.
+ */
+const filters = reactive({
+    issued_on: '',
+    number: '',
+    title: '',
+    page_count: '',
+    effective_on: '',
+    attachment_name: '',
+    attachment_pages: '',
+    original_form: '',
+    file_index: '',
+    person_name: '',
+    kind_label: '',
+});
+
+const hasFilters = computed(() => Object.values(filters).some((v) => String(v).trim() !== ''));
+
+const clearFilters = () => {
+    Object.keys(filters).forEach((key) => (filters[key] = ''));
+};
+
+// Таб солигдоход хайлт цэвэрлэгдэнэ.
+watch(() => props.tab, () => clearFilters());
+
+/** Хайхдаа том/жижиг үсэг, ө/о, ү/у зэргийн зөрүүг үл тооно. */
+const searchKey = (value) => String(value ?? '')
+    .toLowerCase()
+    .replace(/ө/g, 'о')
+    .replace(/ү/g, 'у')
+    .replace(/ё/g, 'е')
+    .replace(/й/g, 'и');
+
+const matchesFilters = (row) => Object.entries(filters).every(([field, needle]) => {
+    const text = String(needle).trim();
+
+    if (text === '') return true;
+
+    const value = field === 'number' ? (row.number_display ?? row.number) : row[field];
+
+    return searchKey(value).includes(searchKey(text));
+});
+
+const visibleRows = computed(() => (hasFilters.value ? props.rows.filter(matchesFilters) : props.rows));
+
 const canManage = computed(() => canManageRows.value);
 
 const cellClass = 'decree-sheet__cell';
@@ -519,8 +568,8 @@ const docColumnCount = computed(() => {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr
-                            v-for="row in rows"
+<tr
+                            v-for="row in visibleRows"
                             :key="row.id"
                         >
                             <td class="decree-sheet__cell--no">{{ row.no }}</td>
@@ -764,7 +813,7 @@ const docColumnCount = computed(() => {
                             <th>Баримт бичгийн нэр</th>
                             <th class="w-20">Хуудасны тоо</th>
                         </tr>
-                        <tr>
+<tr>
                             <th>1</th>
                             <th>2</th>
                             <th>3</th>
@@ -778,6 +827,32 @@ const docColumnCount = computed(() => {
                             <th>—</th>
                             <th v-if="isNiit">—</th>
                             <th>—</th>
+                        </tr>
+                        <tr class="decree-sheet__filters">
+                            <th>
+                                <button
+                                    v-if="hasFilters"
+                                    type="button"
+                                    class="w-full text-[10px] font-semibold text-brand-orange-600 hover:underline"
+                                    title="Хайлтыг цэвэрлэх"
+                                    @click="clearFilters"
+                                >
+                                    Цэвэрлэх
+                                </button>
+                                <span v-else class="text-[10px] text-slate-300">Хайх</span>
+                            </th>
+                            <th><input v-model="filters.issued_on" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.number" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.title" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.page_count" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.effective_on" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.attachment_name" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.attachment_pages" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.original_form" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.file_index" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.person_name" type="search" placeholder="Хайх" /></th>
+                            <th v-if="isNiit"><input v-model="filters.kind_label" type="search" placeholder="Хайх" /></th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -978,9 +1053,17 @@ const docColumnCount = computed(() => {
                                 </div>
                             </td>
                         </tr>
-                        <tr v-if="!rows.length">
+<tr v-if="!rows.length">
                             <td :colspan="docColumnCount" class="decree-sheet__empty">
                                 {{ isNiit ? 'Бүртгэл алга.' : `${numberLabel}ын бүртгэл алга. «Шинэ мөр» дарж бөглөнө үү.` }}
+                            </td>
+                        </tr>
+                        <tr v-else-if="!visibleRows.length">
+                            <td :colspan="docColumnCount" class="decree-sheet__empty">
+                                Хайлтад тохирох мөр алга.
+                                <button type="button" class="font-semibold text-brand-navy-600 hover:underline" @click="clearFilters">
+                                    Хайлтыг цэвэрлэх
+                                </button>
                             </td>
                         </tr>
                     </tbody>

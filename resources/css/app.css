@@ -417,6 +417,28 @@
         @apply bg-sky-50 text-sky-900;
     }
 
+    /* Багана тус бүрийн хайлтын мөр — толгойн доор наалдаж байрлана. */
+    .decree-sheet thead tr.decree-sheet__filters th {
+        position: sticky;
+        top: 4.6rem;
+        z-index: 18;
+        @apply bg-white/95 px-1 py-1 align-middle;
+        box-shadow: 0 1px 0 rgb(226 232 240);
+    }
+
+    .decree-sheet__filters input {
+        @apply w-full rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[11px] font-normal
+            normal-case text-slate-700 placeholder-slate-300 outline-none transition;
+    }
+
+    .decree-sheet__filters input:focus {
+        @apply border-brand-navy-400 ring-2 ring-brand-navy-500/15;
+    }
+
+    .decree-sheet__filters input::-webkit-search-cancel-button {
+        @apply cursor-pointer;
+    }
+
     .decree-sheet__head-group--numbers {
         @apply bg-emerald-50 text-emerald-900;
     }
