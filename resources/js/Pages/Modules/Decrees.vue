@@ -127,6 +127,22 @@ const officialOptions = computed(() => {
  * шүүнэ. Хэд хэдэн баганад зэрэг бичвэл бүгдэд нь тохирсон мөр л үлдэнэ.
  */
 const filters = reactive({
+    // Бланкны хүснэгтийн багана.
+    blank_person: '',
+    blank_issued_on: '',
+    qty_zahiramj: '',
+    qty_zahiramj_mn: '',
+    qty_tushaal: '',
+    qty_tushaal_mn: '',
+    qty_assignment: '',
+    qty_assignment_mn: '',
+    qty_council: '',
+    qty_council_mn: '',
+    num_zahiramj: '',
+    num_tushaal: '',
+    void_zahiramj: '',
+    void_tushaal: '',
+    // Захирамж, тушаалын хүснэгтийн багана.
     issued_on: '',
     number: '',
     title: '',
@@ -158,7 +174,7 @@ const searchKey = (value) => String(value ?? '')
     .replace(/й/g, 'и');
 
 /** Огноог зөвхөн цифрээр нь харьцуулна: «2026.09.03», «09/03», «0903» бүгд таарна. */
-const DATE_FIELDS = ['issued_on', 'effective_on'];
+const DATE_FIELDS = ['issued_on', 'effective_on', 'blank_issued_on'];
 
 const digitsOnly = (value) => String(value ?? '').replace(/\D+/g, '');
 
@@ -168,19 +184,47 @@ const matchesFilters = (row) => Object.entries(filters).every(([field, needle]) 
     if (text === '') return true;
 
     if (DATE_FIELDS.includes(field)) {
-        const value = field === 'issued_on'
-            ? (row.issued_on ?? '')
-            : (row.effective_on_display ?? row.effective_on ?? '');
+        const value = field === 'effective_on'
+            ? (row.effective_on_display ?? row.effective_on ?? '')
+            : (row.issued_on ?? '');
 
         return digitsOnly(value).includes(digitsOnly(text));
     }
 
-    const value = field === 'number' ? (row.number_display ?? row.number) : row[field];
+    const value = field === 'number'
+        ? (row.number_display ?? row.number)
+        : (field === 'blank_person' ? row.person_name : row[field]);
 
     return searchKey(value).includes(searchKey(text));
 });
 
 const visibleRows = computed(() => (hasFilters.value ? props.rows.filter(matchesFilters) : props.rows));
+
+/**
+ * Нэг дор бүх мөрийг зурахгүй.
+ *
+ * Мөр бүр 10 орчим засварлагдах нүдтэй тул 500 мөр = 5000 бүрэлдэхүүн болж
+ * таб солиход мэдэгдэхүйц удаашруулна. Эхлээд эхний хэсгийг зураад, доош
+ * гүйлгэхэд нэмж зурна.
+ */
+const RENDER_STEP = 60;
+
+const renderLimit = ref(RENDER_STEP);
+
+const renderedRows = computed(() => visibleRows.value.slice(0, renderLimit.value));
+
+const hasMoreRows = computed(() => visibleRows.value.length > renderedRows.value.length);
+
+const growRenderLimit = () => {
+    if (hasMoreRows.value) {
+        renderLimit.value += RENDER_STEP;
+    }
+};
+
+// Таб солих, хайлт өөрчлөгдөхөд эхнээс нь эхэлнэ.
+watch(() => [props.tab, hasFilters.value, visibleRows.value.length], () => {
+    renderLimit.value = RENDER_STEP;
+});
 
 /**
  * Толгойн мөрүүдийг наалдуулах.
@@ -190,9 +234,10 @@ const visibleRows = computed(() => (hasFilters.value ? props.rows.filter(matches
  * дараалуулна. Үгүй бол мөрүүдийн хооронд завсар үүсч, өгөгдөл цухуйна.
  */
 const sheetEl = ref(null);
+const blankSheetEl = ref(null);
 
 const syncStickyHead = () => {
-    const head = sheetEl.value?.querySelector('thead');
+    const head = (sheetEl.value ?? blankSheetEl.value)?.querySelector('thead');
 
     if (! head) return;
 
@@ -224,7 +269,7 @@ onMounted(() => {
 onBeforeUnmount(() => window.removeEventListener('resize', syncStickyHead));
 
 // Мөр нэмэгдэх, таб солигдох, хайлт шүүхэд толгойн өндөр өөрчлөгдөж болно.
-watch(() => [props.rows, props.tab, filters], scheduleStickySync, { deep: true });
+watch(() => [props.rows.length, props.tab, hasFilters.value], scheduleStickySync);
 
 const canManage = computed(() => canManageRows.value);
 
@@ -295,7 +340,7 @@ const blankFields = [
 const docFields = [
     'kind', 'number', 'issued_on', 'title', 'page_count', 'effective_on',
     'attachment_name', 'attachment_pages', 'original_form', 'file_index',
-    'person_name', 'body',
+    'person_name',
 ];
 
 const syncDrafts = () => {
@@ -315,7 +360,9 @@ const syncDrafts = () => {
     });
 };
 
-watch(() => [props.rows, props.tab], syncDrafts, { immediate: true, deep: true });
+// Мөрүүд бүхэлдээ солигддог тул гүн ажиглах шаардлагагүй — 500 мөрийг
+// давтан шалгах нь таб солиход удаашруулдаг.
+watch(() => [props.rows, props.tab], syncDrafts, { immediate: true });
 
 /**
  * Таб солих.
@@ -561,7 +608,7 @@ const confirmImport = () => {
     });
 };
 
-const blankColCount = computed(() => 15 + (props.canManage ? 1 : 0));
+const blankColCount = computed(() => 16 + (props.canManage ? 1 : 0));
 const docColumnCount = computed(() => {
     let n = 9; // always include actions (зураг/харах/устгах)
     if (isNiit.value) n += 1;
@@ -682,8 +729,12 @@ const docColumnCount = computed(() => {
             </nav>
 
             <!-- Бланкны дугаар -->
-            <TableScrollViewport v-if="isBlank" max-height="min(72vh, calc(100dvh - 11rem))">
-                <div class="decree-sheet">
+            <TableScrollViewport
+                v-if="isBlank"
+                max-height="min(72vh, calc(100dvh - 11rem))"
+                @near-bottom="growRenderLimit"
+            >
+                <div ref="blankSheetEl" class="decree-sheet">
                     <table class="decree-sheet__table min-w-[1180px]">
                     <colgroup>
                         <col style="width: 2.75rem" />
@@ -729,10 +780,40 @@ const docColumnCount = computed(() => {
                             <th>Захирамж</th>
                             <th>Тушаал</th>
                         </tr>
+                        <tr class="decree-sheet__filters">
+                            <th>
+                                <button
+                                    v-if="hasFilters"
+                                    type="button"
+                                    class="w-full text-[10px] font-semibold text-brand-orange-600 hover:underline"
+                                    title="Хайлтыг цэвэрлэх"
+                                    @click="clearFilters"
+                                >
+                                    Цэвэрлэх
+                                </button>
+                                <span v-else class="text-[10px] text-slate-300">Хайх</span>
+                            </th>
+                            <th><input v-model="filters.blank_person" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.blank_issued_on" type="search" placeholder="2026.09" /></th>
+                            <th><input v-model="filters.qty_zahiramj" type="search" placeholder="—" /></th>
+                            <th><input v-model="filters.qty_zahiramj_mn" type="search" placeholder="—" /></th>
+                            <th><input v-model="filters.qty_tushaal" type="search" placeholder="—" /></th>
+                            <th><input v-model="filters.qty_tushaal_mn" type="search" placeholder="—" /></th>
+                            <th><input v-model="filters.qty_assignment" type="search" placeholder="—" /></th>
+                            <th><input v-model="filters.qty_assignment_mn" type="search" placeholder="—" /></th>
+                            <th><input v-model="filters.qty_council" type="search" placeholder="—" /></th>
+                            <th><input v-model="filters.qty_council_mn" type="search" placeholder="—" /></th>
+                            <th><input v-model="filters.num_zahiramj" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.num_tushaal" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.void_zahiramj" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.void_tushaal" type="search" placeholder="Хайх" /></th>
+                            <th></th>
+                            <th v-if="canManage"></th>
+                        </tr>
                     </thead>
                     <tbody>
                         <tr
-                            v-for="row in rows"
+                            v-for="row in renderedRows"
                             :key="row.id"
                         >
                             <td class="decree-sheet__cell--no">{{ row.no }}</td>
@@ -917,13 +998,37 @@ const docColumnCount = computed(() => {
                                 Бүртгэл алга. «Шинэ мөр» дарж нүдэн дээр бөглөнө үү.
                             </td>
                         </tr>
+                        <tr v-else-if="!visibleRows.length">
+                            <td :colspan="blankColCount" class="decree-sheet__empty">
+                                Хайлтад тохирох мөр алга.
+                                <button type="button" class="font-semibold text-brand-navy-600 hover:underline" @click="clearFilters">
+                                    Хайлтыг цэвэрлэх
+                                </button>
+                            </td>
+                        </tr>
+                        <tr v-else-if="hasMoreRows">
+                            <td :colspan="blankColCount" class="px-4 py-3 text-center text-xs text-slate-500">
+                                {{ renderedRows.length }} / {{ visibleRows.length }} мөр харагдаж байна —
+                                <button
+                                    type="button"
+                                    class="font-semibold text-brand-navy-600 hover:underline"
+                                    @click="growRenderLimit"
+                                >
+                                    цааш үзэх
+                                </button>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
                 </div>
             </TableScrollViewport>
 
             <!-- Захирамж / Тушаалын дугаар -->
-            <TableScrollViewport v-else-if="isDoc" max-height="min(72vh, calc(100dvh - 11rem))">
+            <TableScrollViewport
+                v-else-if="isDoc"
+                max-height="min(72vh, calc(100dvh - 11rem))"
+                @near-bottom="growRenderLimit"
+            >
                 <div ref="sheetEl" class="decree-sheet">
                 <div class="decree-sheet__banner">
                     Аймгийн Засаг даргын {{ docLabel }}ийн бүртгэл
@@ -1020,7 +1125,7 @@ const docColumnCount = computed(() => {
                     </thead>
                     <tbody>
                         <tr
-                            v-for="row in visibleRows"
+                            v-for="row in renderedRows"
                             :key="row.id"
                         >
                             <td class="decree-sheet__cell--no">{{ row.no }}</td>
@@ -1226,6 +1331,18 @@ const docColumnCount = computed(() => {
                                 Хайлтад тохирох мөр алга.
                                 <button type="button" class="font-semibold text-brand-navy-600 hover:underline" @click="clearFilters">
                                     Хайлтыг цэвэрлэх
+                                </button>
+                            </td>
+                        </tr>
+                        <tr v-else-if="hasMoreRows">
+                            <td :colspan="docColumnCount" class="px-4 py-3 text-center text-xs text-slate-500">
+                                {{ renderedRows.length }} / {{ visibleRows.length }} мөр харагдаж байна —
+                                <button
+                                    type="button"
+                                    class="font-semibold text-brand-navy-600 hover:underline"
+                                    @click="growRenderLimit"
+                                >
+                                    цааш үзэх
                                 </button>
                             </td>
                         </tr>

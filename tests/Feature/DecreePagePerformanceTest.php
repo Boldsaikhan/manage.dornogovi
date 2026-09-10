@@ -53,4 +53,30 @@ class DecreePagePerformanceTest extends TestCase
             "Хуудас {$queries} асуулга үүсгэлээ — эрхийн шалгалт дахин сан руу ханддаг болсон байж магадгүй.",
         );
     }
+
+    public function test_document_rows_do_not_carry_blank_register_fields(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        Decree::create([
+            'category' => 'zahiramj',
+            'kind' => 'zahiramj_a',
+            'number' => '01',
+            'title' => 'Туршилт',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('decrees.index', ['tab' => 'zahiramj_a']))
+            ->assertInertia(function (\Inertia\Testing\AssertableInertia $page) {
+                $row = $page->toArray()['props']['rows'][0];
+
+                // Баримтын мөрд хэрэггүй бланкны талбарууд илгээгдэхгүй.
+                foreach (['qty_zahiramj', 'num_tushaal', 'void_tushaal', 'blank_number', 'body'] as $field) {
+                    $this->assertArrayNotHasKey($field, $row);
+                }
+
+                $this->assertArrayHasKey('number_display', $row);
+                $this->assertArrayHasKey('title', $row);
+            });
+    }
 }
