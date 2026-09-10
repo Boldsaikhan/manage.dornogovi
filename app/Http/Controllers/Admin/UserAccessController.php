@@ -752,14 +752,19 @@ class UserAccessController extends Controller
             return $stored;
         }
 
+        $keys = ModuleAccess::definitions()
+            ->pluck('key')
+            ->merge(collect(ModuleAccess::subDefinitions())->pluck('key'));
+
         $out = [];
-        foreach (ModuleAccess::definitions() as $item) {
-            $key = $item['key'] ?? null;
+
+        foreach ($keys as $key) {
             if (! is_string($key) || $key === 'systems') {
                 continue;
             }
 
             $level = ModuleAccess::level($user, $key);
+
             if (is_string($level) && $level !== '') {
                 $out[$key] = $level;
             }
