@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\PhoneDirectoryEntry;
 use App\Models\RegulationCategory;
 use App\Support\AssignmentSheet;
+use App\Support\AssignmentRegisterImporter;
 use App\Support\ModuleAccess;
+use App\Support\TabularFileReader;
 use App\Support\ModuleOwnScope;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -93,6 +96,8 @@ class ModuleResourceController extends Controller
             'description' => $config['description'] ?? '',
             'columns' => $config['columns'],
             'rowNumberLabel' => $config['row_number'] ?? null,
+            'canImportFile' => ($config['file_import'] ?? false)
+                && ModuleAccess::canEdit($request->user(), $module),
             'fields' => $config['fields'],
             'directory' => $this->directoryFor($config),
             'rows' => $rows,
@@ -124,6 +129,76 @@ class ModuleResourceController extends Controller
             'year' => now()->format('Y'),
             'budget_kinds' => AssignmentSheet::BUDGET_KINDS,
         ];
+    }
+
+    /**
+     * Excel/Word файлыг уншиж, оруулахын өмнө урьдчилан харуулна.
+     */
+    public function importPreview(
+        Request $request,
+        string $module,
+        TabularFileReader $reader,
+        AssignmentRegisterImporter $importer,
+    ): JsonResponse {
+        $config = $this->configFor($module);
+
+        abort_unless($module === 'assignments', 404);
+        abort_unless(ModuleAccess::canEdit($request->user(), $module), 403);
+
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:'.implode(',', TabularFileReader::EXTENSIONS), 'max:20480'],
+        ], [], ['file' => 'файл']);
+
+        $file = $request->file('file');
+        $rows = $reader->rows($file->getRealPath(), $file->getClientOriginalExtension());
+
+        $analysed = $importer->analyse($rows);
+        $entries = $importer->build($analysed['rows'], $analysed['mapping']);
+
+        return response()->json([
+            'headers' => $analysed['headers'],
+            'mapping' => $analysed['mapping'],
+            'fields' => AssignmentRegisterImporter::FIELDS,
+            'rows' => array_slice($analysed['rows'], 0, 400),
+            'entries' => $entries,
+            'total' => count($entries),
+        ]);
+    }
+
+    /**
+     * Урьдчилан харсан мөрүүдийг идэвхтэй табд хадгална.
+     */
+    public function importStore(
+        Request $request,
+        string $module,
+        AssignmentRegisterImporter $importer,
+    ): RedirectResponse {
+        $config = $this->configFor($module);
+
+        abort_unless($module === 'assignments', 404);
+        abort_unless(ModuleAccess::canEdit($request->user(), $module), 403);
+
+        $data = $request->validate([
+            'scope' => ['required', 'string'],
+            'entries' => ['required', 'array', 'min:1'],
+            'entries.*' => ['array'],
+        ]);
+
+        $scopes = $config['scopes'] ?? [];
+
+        abort_unless(array_key_exists($data['scope'], $scopes), 422, 'Ийм хэсэг алга.');
+
+        $result = $importer->store($data['scope'], $data['entries']);
+
+        $message = sprintf('%d мөр нэмэгдлээ.', $result['created']);
+
+        if ($result['skipped'] > 0) {
+            $message .= sprintf(' %d мөр давхардсан тул алгаслаа.', $result['skipped']);
+        }
+
+        return redirect()
+            ->route('assignments.index', ['scope' => $data['scope']])
+            ->with($result['created'] > 0 ? 'success' : 'warning', $message);
     }
 
     public function store(Request $request, string $module): RedirectResponse
@@ -505,8 +580,9 @@ class ModuleResourceController extends Controller
     private function serializeValue(Model $row, string $key): string
     {
         return match ($key) {
-            'user_name' => $row->user->name ?? '—',
-            'user_position' => $row->user->position ?? '—',
+            // Цаасан бүртгэлээс орсон мөрд системд эрхгүй хүн ч байж болно.
+            'user_name' => ($row->person_name ?? null) ?: ($row->user->name ?? '—'),
+            'user_position' => ($row->position ?? null) ?: ($row->user->position ?? '—'),
             // Эхлэх, дуусах огноогоор хоногийг бодно (хоёулаа оруулсан үед).
             'day_count' => $this->dayCount($row),
             'person_label' => $row->person_name ?: ($row->user->name ?? '—'),

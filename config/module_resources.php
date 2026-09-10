@@ -99,6 +99,8 @@ return [
         ],
         // Шинэ бүртгэлийг A4 маягтын хэлбэрээр бөглөнө.
         'form_layout' => 'assignment_sheet',
+        // Цаасан бүртгэлийг Excel/Word файлаас оруулна.
+        'file_import' => true,
         'defaults' => ['status' => 'pending'],
         'on_create' => 'attach_user_department',
     ],
