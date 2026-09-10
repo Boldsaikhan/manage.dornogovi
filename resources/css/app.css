@@ -394,6 +394,24 @@
         vertical-align: middle;
     }
 
+    /*
+     * Наалдсан (position: sticky) нүдний хүрээг хөтөч зурдаггүй —
+     * border-collapse: collapse үед хүрээг хүснэгт өөрөө зурдаг бөгөөд
+     * гүйлгэхэд алга болдог. Тиймээс толгойн нүднүүдийн хүрээг дотоод
+     * сүүдрээр (inset box-shadow) зурна.
+     */
+    .decree-sheet thead th {
+        border-right-color: transparent;
+        border-bottom-color: transparent;
+        box-shadow:
+            inset -1px 0 0 rgb(226 232 240),
+            inset 0 -1px 0 rgb(226 232 240);
+    }
+
+    .decree-sheet thead th:last-child {
+        box-shadow: inset 0 -1px 0 rgb(226 232 240);
+    }
+
     .decree-sheet thead tr:first-child th {
         position: sticky;
         top: 0;
@@ -423,7 +441,16 @@
         position: sticky;
         z-index: 17;
         @apply bg-brand-navy-100 px-1 py-1 align-middle;
-        box-shadow: inset 0 1px 0 rgb(226 232 240), 0 2px 3px -2px rgb(15 23 42 / 0.18);
+        box-shadow:
+            inset -1px 0 0 rgb(226 232 240),
+            inset 0 -1px 0 rgb(203 213 225),
+            0 2px 3px -2px rgb(15 23 42 / 0.18);
+    }
+
+    .decree-sheet thead tr.decree-sheet__filters th:last-child {
+        box-shadow:
+            inset 0 -1px 0 rgb(203 213 225),
+            0 2px 3px -2px rgb(15 23 42 / 0.18);
     }
 
     .decree-sheet__filters input {
