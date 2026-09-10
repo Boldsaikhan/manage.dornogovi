@@ -124,9 +124,9 @@ class DecreeController extends Controller
         }
 
         $rows = $tab === 'blank'
-            ? $query->limit(300)->get()->values()
+            ? $query->limit(1200)->get()->values()
                 ->map(fn (Decree $d, int $i) => $this->serialize($d, $i + 1))
-            : $this->registerRows($query->limit(300)->get());
+            : $this->registerRows($query->limit(1200)->get());
 
         return Inertia::render('Modules/Decrees', [
             'tab' => $tab,
@@ -1077,15 +1077,54 @@ class DecreeController extends Controller
     /**
      * @return array<string, mixed>
      */
+    /**
+     * Мөрийг хуудсанд илгээх хэлбэр.
+     *
+     * Бланк болон баримтын мөрүүд огт өөр багануудтай тул зөвхөн хэрэгтэйг
+     * нь илгээнэ — 500 мөрийн үед энэ нь дамжуулах өгөгдлийг хоёр дахин
+     * багасгаж, таб солих хурдад мэдэгдэхүйц нөлөөлнө.
+     */
     private function serialize(Decree $d, int $no): array
     {
-        return [
+        $common = [
             'id' => $d->id,
             'no' => $no,
             'category' => $d->category,
             'kind' => $d->kind,
             'kind_label' => $d->kindLabel(),
-            'blank_number' => $d->blank_number,
+            'person_name' => $d->person_name,
+            'issued_on' => optional($d->issued_on)?->format('Y-m-d'),
+            'issued_on_display' => optional($d->issued_on)?->format('Y.m.d'),
+            'has_image' => (bool) $d->file_path,
+            // Хуучин мөрүүдэд зураг байж болно — харуулахдаа ялгана.
+            'image_is_pdf' => $d->file_path
+                ? strtolower((string) pathinfo($d->file_path, PATHINFO_EXTENSION)) === 'pdf'
+                : false,
+            'image_url' => $d->file_path
+                ? route('decrees.image.show', $d)
+                : null,
+        ];
+
+        if ($d->category === 'blank' || $d->kind === 'blank') {
+            return $common + [
+                'blank_number' => $d->blank_number,
+                'qty_zahiramj' => $d->qty_zahiramj ?: '',
+                'qty_zahiramj_mn' => $d->qty_zahiramj_mn ?: '',
+                'qty_tushaal' => $d->qty_tushaal ?: '',
+                'qty_tushaal_mn' => $d->qty_tushaal_mn ?: '',
+                'qty_assignment' => $d->qty_assignment ?: '',
+                'qty_assignment_mn' => $d->qty_assignment_mn ?: '',
+                'qty_council' => $d->qty_council ?: '',
+                'qty_council_mn' => $d->qty_council_mn ?: '',
+                'num_zahiramj' => $d->num_zahiramj,
+                'num_tushaal' => $d->num_tushaal,
+                'void_zahiramj' => $d->void_zahiramj,
+                'void_tushaal' => $d->void_tushaal,
+                'body' => $d->body,
+            ];
+        }
+
+        return $common + [
             'number' => $d->number,
             'number_prefix' => $d->numberPrefix(),
             'number_display' => $d->numberDisplay(),
@@ -1098,30 +1137,6 @@ class DecreeController extends Controller
             'attachment_pages' => $d->attachment_pages,
             'original_form' => $d->original_form,
             'file_index' => $d->file_index,
-            'person_name' => $d->person_name,
-            'qty_zahiramj' => $d->qty_zahiramj ?: '',
-            'qty_zahiramj_mn' => $d->qty_zahiramj_mn ?: '',
-            'qty_tushaal' => $d->qty_tushaal ?: '',
-            'qty_tushaal_mn' => $d->qty_tushaal_mn ?: '',
-            'qty_assignment' => $d->qty_assignment ?: '',
-            'qty_assignment_mn' => $d->qty_assignment_mn ?: '',
-            'qty_council' => $d->qty_council ?: '',
-            'qty_council_mn' => $d->qty_council_mn ?: '',
-            'num_zahiramj' => $d->num_zahiramj,
-            'num_tushaal' => $d->num_tushaal,
-            'void_zahiramj' => $d->void_zahiramj,
-            'void_tushaal' => $d->void_tushaal,
-            'issued_on' => optional($d->issued_on)?->format('Y-m-d'),
-            'issued_on_display' => optional($d->issued_on)?->format('Y.m.d'),
-            'body' => $d->body,
-            'has_image' => (bool) $d->file_path,
-            // Хуучин мөрүүдэд зураг байж болно — харуулахдаа ялгана.
-            'image_is_pdf' => $d->file_path
-                ? strtolower((string) pathinfo($d->file_path, PATHINFO_EXTENSION)) === 'pdf'
-                : false,
-            'image_url' => $d->file_path
-                ? route('decrees.image.show', $d)
-                : null,
         ];
     }
 }

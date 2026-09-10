@@ -183,6 +183,32 @@ const matchesFilters = (row) => Object.entries(filters).every(([field, needle]) 
 const visibleRows = computed(() => (hasFilters.value ? props.rows.filter(matchesFilters) : props.rows));
 
 /**
+ * Нэг дор бүх мөрийг зурахгүй.
+ *
+ * Мөр бүр 10 орчим засварлагдах нүдтэй тул 500 мөр = 5000 бүрэлдэхүүн болж
+ * таб солиход мэдэгдэхүйц удаашруулна. Эхлээд эхний хэсгийг зураад, доош
+ * гүйлгэхэд нэмж зурна.
+ */
+const RENDER_STEP = 60;
+
+const renderLimit = ref(RENDER_STEP);
+
+const renderedRows = computed(() => visibleRows.value.slice(0, renderLimit.value));
+
+const hasMoreRows = computed(() => visibleRows.value.length > renderedRows.value.length);
+
+const growRenderLimit = () => {
+    if (hasMoreRows.value) {
+        renderLimit.value += RENDER_STEP;
+    }
+};
+
+// Таб солих, хайлт өөрчлөгдөхөд эхнээс нь эхэлнэ.
+watch(() => [props.tab, hasFilters.value, visibleRows.value.length], () => {
+    renderLimit.value = RENDER_STEP;
+});
+
+/**
  * Толгойн мөрүүдийг наалдуулах.
  *
  * Мөрийн өндөр нь бичвэрийн урт, дэлгэцийн өргөнөөс хамаарч өөрчлөгддөг тул
@@ -224,7 +250,7 @@ onMounted(() => {
 onBeforeUnmount(() => window.removeEventListener('resize', syncStickyHead));
 
 // Мөр нэмэгдэх, таб солигдох, хайлт шүүхэд толгойн өндөр өөрчлөгдөж болно.
-watch(() => [props.rows, props.tab, filters], scheduleStickySync, { deep: true });
+watch(() => [props.rows.length, props.tab, hasFilters.value], scheduleStickySync);
 
 const canManage = computed(() => canManageRows.value);
 
@@ -295,7 +321,7 @@ const blankFields = [
 const docFields = [
     'kind', 'number', 'issued_on', 'title', 'page_count', 'effective_on',
     'attachment_name', 'attachment_pages', 'original_form', 'file_index',
-    'person_name', 'body',
+    'person_name',
 ];
 
 const syncDrafts = () => {
@@ -315,7 +341,9 @@ const syncDrafts = () => {
     });
 };
 
-watch(() => [props.rows, props.tab], syncDrafts, { immediate: true, deep: true });
+// Мөрүүд бүхэлдээ солигддог тул гүн ажиглах шаардлагагүй — 500 мөрийг
+// давтан шалгах нь таб солиход удаашруулдаг.
+watch(() => [props.rows, props.tab], syncDrafts, { immediate: true });
 
 /**
  * Таб солих.
@@ -923,7 +951,11 @@ const docColumnCount = computed(() => {
             </TableScrollViewport>
 
             <!-- Захирамж / Тушаалын дугаар -->
-            <TableScrollViewport v-else-if="isDoc" max-height="min(72vh, calc(100dvh - 11rem))">
+            <TableScrollViewport
+                v-else-if="isDoc"
+                max-height="min(72vh, calc(100dvh - 11rem))"
+                @near-bottom="growRenderLimit"
+            >
                 <div ref="sheetEl" class="decree-sheet">
                 <div class="decree-sheet__banner">
                     Аймгийн Засаг даргын {{ docLabel }}ийн бүртгэл
@@ -1020,7 +1052,7 @@ const docColumnCount = computed(() => {
                     </thead>
                     <tbody>
                         <tr
-                            v-for="row in visibleRows"
+                            v-for="row in renderedRows"
                             :key="row.id"
                         >
                             <td class="decree-sheet__cell--no">{{ row.no }}</td>
@@ -1226,6 +1258,18 @@ const docColumnCount = computed(() => {
                                 Хайлтад тохирох мөр алга.
                                 <button type="button" class="font-semibold text-brand-navy-600 hover:underline" @click="clearFilters">
                                     Хайлтыг цэвэрлэх
+                                </button>
+                            </td>
+                        </tr>
+                        <tr v-else-if="hasMoreRows">
+                            <td :colspan="docColumnCount" class="px-4 py-3 text-center text-xs text-slate-500">
+                                {{ renderedRows.length }} / {{ visibleRows.length }} мөр харагдаж байна —
+                                <button
+                                    type="button"
+                                    class="font-semibold text-brand-navy-600 hover:underline"
+                                    @click="growRenderLimit"
+                                >
+                                    цааш үзэх
                                 </button>
                             </td>
                         </tr>
