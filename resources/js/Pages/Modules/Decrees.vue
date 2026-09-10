@@ -486,7 +486,7 @@ const docColumnCount = computed(() => {
                         :class="editMode ? '!border-brand-navy-500 !bg-brand-navy-50 !text-brand-navy-800' : ''"
                         :title="editMode
                             ? 'Засварыг дуусгаад хүснэгтийг түгжинэ'
-                            : 'Нүднүүдийг засварлах боломжтой болгоно'"
+                            : 'Нүд засварлах, PDF оруулах / устгах боломжтой болгоно'"
                         @click="toggleEditMode"
                     >
                         {{ editMode ? 'Засварыг дуусгах' : 'Засварлах' }}
@@ -997,7 +997,7 @@ const docColumnCount = computed(() => {
                             <td class="px-1 py-1">
                                 <div class="flex items-center justify-center gap-0.5">
                                     <button
-                                        v-if="canManage"
+                                        v-if="canManage && editMode"
                                         type="button"
                                         class="inline-flex h-7 w-7 items-center justify-center rounded text-slate-500 transition hover:bg-brand-navy-50 hover:text-brand-navy-700"
                                         :title="compressingId === row.id ? 'Шахаж байна…' : 'PDF оруулах (2MB хүртэл автоматаар шахна)'"
@@ -1027,7 +1027,7 @@ const docColumnCount = computed(() => {
                                         </svg>
                                     </button>
                                     <button
-                                        v-if="canManage && row.has_image"
+                                        v-if="canManage && editMode && row.has_image"
                                         type="button"
                                         class="inline-flex h-7 w-7 items-center justify-center rounded text-slate-400 transition hover:bg-amber-50 hover:text-amber-700"
                                         title="Хавсаргасан файлыг устгах"
