@@ -100,6 +100,42 @@ class UserRoleAssignmentTest extends TestCase
         $this->assertTrue(ModuleAccess::canEdit($staff->fresh(), 'contracts'));
     }
 
+    public function test_the_effective_permissions_show_the_role_settings(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $staff = User::factory()->create(['name' => 'Б.Зоригтбаатар']);
+
+        // Эхлээд хоосон роль оноож, ДАРАА нь загварыг тохируулна
+        // (хэрэглэгчийн хийсэн дараалал яг ийм байсан).
+        $role = $this->role('Хүний нөөц');
+        $this->saveUser($admin, $staff, ['role_key' => $role->key, 'permissions' => []])->assertRedirect();
+
+        $this->actingAs($admin)
+            ->patch(route('admin.roles.update', ['role' => $role->key]), [
+                'label' => 'Хүний нөөц',
+                'permissions' => [
+                    'leaves' => 'manage',
+                    'decrees' => 'view',
+                    'decrees:tushaal_a' => 'manage',
+                    'decrees:zahiramj_a' => 'closed',
+                ],
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->get(route('admin.users.index'))
+            ->assertInertia(function (AssertableInertia $page) {
+                $row = collect($page->toArray()['props']['users'])->firstWhere('name', 'Б.Зоригтбаатар');
+
+                $this->assertSame('manage', $row['permissions']['leaves'] ?? null);
+                $this->assertSame('view', $row['permissions']['decrees'] ?? null);
+                // Дэд хэсгийн эрх ч жагсаалтад орно.
+                $this->assertSame('manage', $row['permissions']['decrees:tushaal_a'] ?? null);
+                // Хаалттай таб огт харагдахгүй.
+                $this->assertArrayNotHasKey('decrees:zahiramj_a', $row['permissions']);
+            });
+    }
+
     public function test_clearing_the_role_is_saved_too(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

@@ -338,6 +338,35 @@ const applyRoleToSelectedAndSave = () => {
 };
 
 /** Сонгосон албан хаагчийн одоогийн роль — хадгалагдсан төлөв. */
+/**
+ * Сонгосон албан хаагчид одоо хүчинтэй байгаа эрхүүд.
+ *
+ * Роль болон хэрэглэгч дээр тусад нь өгсөн эрхийг нэгтгэсэн бодит хандалт —
+ * ролийн загварт юу тохируулсныг энд шалгаж болно.
+ */
+const levelText = (level) => ({
+    view: 'Харах (бүгд)',
+    edit: 'Оруулах (бүгд)',
+    manage: 'Удирдах (бүгд)',
+    view_own: 'Харах (хамааралтай)',
+    edit_own: 'Оруулах (хамааралтай)',
+    manage_own: 'Удирдах (хамааралтай)',
+    closed: 'Хаалттай',
+}[level] ?? level);
+
+const effectiveList = computed(() => {
+    const permissions = selected.value?.permissions ?? {};
+
+    return (props.modules ?? [])
+        .filter((m) => permissions[m.key])
+        .map((m) => ({
+            key: m.key,
+            label: m.label,
+            parent: m.parent,
+            level: levelText(permissions[m.key]),
+        }));
+});
+
 const selectedRoleLabel = computed(() => {
     if (! selected.value) {
         return '';
@@ -718,6 +747,33 @@ const pickFromDirectory = (value) => {
                             Сонгосон: <b>{{ roles.find((r) => r.key === selectedRoleKey)?.label }}</b>
                             — {{ roleSummary(selectedRoleKey) }}
                         </p>
+                    </div>
+
+                    <!-- Одоо хүчинтэй эрх — ролиос болон хувь хүнээс нийлсэн дүн -->
+                    <div class="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
+                        <p class="text-sm font-semibold text-brand-navy-800">
+                            Одоо хүчинтэй эрх
+                            <span class="ml-1 text-xs font-normal text-slate-400">
+                                ({{ effectiveList.length }} модуль)
+                            </span>
+                        </p>
+                        <p v-if="! effectiveList.length" class="text-xs text-slate-500">
+                            Эрх алга. Роль сонгоод «Хадгалах» дарна уу, эсвэл «Ролийн загвар» табаас
+                            тухайн ролийн эрхийг тохируулна уу.
+                        </p>
+                        <ul v-else class="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+                            <li
+                                v-for="item in effectiveList"
+                                :key="'eff-' + item.key"
+                                class="flex items-center justify-between gap-2 text-xs"
+                                :class="item.parent ? 'pl-3 text-slate-500' : 'text-slate-700'"
+                            >
+                                <span class="truncate">
+                                    <span v-if="item.parent" class="mr-1 text-slate-300">└</span>{{ item.label }}
+                                </span>
+                                <span class="shrink-0 font-medium text-brand-navy-700">{{ item.level }}</span>
+                            </li>
+                        </ul>
                     </div>
 
                     <button class="ui-btn-primary" :disabled="saving">Хадгалах</button>
