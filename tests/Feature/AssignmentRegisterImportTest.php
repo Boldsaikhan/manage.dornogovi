@@ -157,5 +157,31 @@ class AssignmentRegisterImportTest extends TestCase
         $this->assertSame('2026-09-07', $importer->date('9.07'));
         $this->assertSame('2026-04-01', $importer->date('04.01.'));
         $this->assertNull($importer->date(''));
+
+        // Excel дээр «1.13» нь бутархай тоо болж хадгалагддаг.
+        $this->assertSame('2026-01-13', $importer->date('1.1299999999999999'));
+        $this->assertSame('2026-01-09', $importer->date('1.09'));
+        $this->assertSame('2026-05-21', $importer->date('5.2100000000000002'));
+        // Жинхэнэ огнооны нүд — серийн дугаар.
+        $this->assertSame('2026-01-13', $importer->date('46035'));
+    }
+
+    public function test_a_row_without_a_date_is_still_imported(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->post(route('modules.import.store', ['module' => 'assignments']), [
+                'scope' => 'chief',
+                'entries' => [
+                    ['person_name' => 'Огноогүй хүн', 'destination' => 'Улаанбаатар'],
+                ],
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $row = TravelAssignment::query()->where('person_name', 'Огноогүй хүн')->firstOrFail();
+
+        $this->assertNull($row->start_date);
     }
 }
