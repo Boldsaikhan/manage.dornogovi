@@ -295,6 +295,11 @@ const detectRoleKey = (user) => {
         return '';
     }
 
+    // Хадгалсан роль байвал түүнийг шууд авна (эрхгүй роль ч танигдана).
+    if (user.role_key && (props.roles ?? []).some((r) => r.key === user.role_key)) {
+        return user.role_key;
+    }
+
     for (const role of props.roles ?? []) {
         if (role.field && user[role.field]) {
             return role.key;
@@ -313,7 +318,7 @@ const detectRoleKey = (user) => {
 // Тухайн ролийн загварыг сонгосон албан хаагчид хэрэглэнэ.
 const applyRoleToUser = (roleKey) => {
     selectedRoleKey.value = roleKey;
-    editState.permissions = { ...cleanPermissions(roleState[roleKey]) };
+    editState.permissions = { ...cleanPermissions(ensureRoleState(roleKey) ?? {}) };
 
     editState.is_admin = false;
     editState.is_department_head = false;
@@ -491,6 +496,7 @@ const saveUser = () => {
         is_admin: editState.is_admin,
         is_department_head: editState.is_department_head,
         is_specialist: editState.is_specialist,
+        role_key: selectedRoleKey.value || null,
         permissions: cleanPermissions(editState.permissions),
     }, {
         preserveScroll: true,

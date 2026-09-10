@@ -63,6 +63,7 @@ class UserAccessController extends Controller
                 'email' => $u->email,
                 'phone' => $u->phone,
                 'is_admin' => (bool) $u->is_admin,
+                'role_key' => $u->role_key,
                 'department_id' => $u->department_id,
                 'department' => $u->department?->name,
                 'position' => $u->position,
@@ -534,6 +535,7 @@ class UserAccessController extends Controller
             'is_admin' => ['boolean'],
             'is_department_head' => ['boolean'],
             'is_specialist' => ['boolean'],
+            'role_key' => ['nullable', 'string', 'exists:roles,key'],
             'password' => ['nullable', 'string', 'min:8'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['in:'.implode(',', ModuleAccess::LEVELS)],
@@ -542,6 +544,8 @@ class UserAccessController extends Controller
         $beforePermissions = $user->modulePermissions
             ->mapWithKeys(fn (UserModulePermission $p) => [$p->module_key => $p->level])
             ->all();
+
+        $beforeRole = $user->role_key;
 
         $beforeProfile = [
             'name' => $user->name,
@@ -569,6 +573,11 @@ class UserAccessController extends Controller
             'is_department_head' => $request->boolean('is_department_head'),
             'is_specialist' => $request->boolean('is_specialist'),
         ]);
+
+        // Сонгосон роль — эрхгүй (хоосон) роль ч тэмдэглэгдэнэ.
+        if ($request->has('role_key')) {
+            $user->role_key = filled($data['role_key'] ?? null) ? $data['role_key'] : null;
+        }
 
         if ($passwordChanged) {
             $user->password = $data['password'];
@@ -609,6 +618,10 @@ class UserAccessController extends Controller
         ], $passwordChanged);
 
         $permissionChanges = $this->permissionChangeLines($beforePermissions, $permissions);
+
+        if ($beforeRole !== $user->role_key) {
+            $profileChanges[] = 'роль: '.(Role::query()->where('key', $user->role_key)->value('label') ?: '—');
+        }
 
         if ($profileChanges === [] && $permissionChanges === []) {
             return back()->with('info', 'Өөрчлөлт оруулаагүй байна.');

@@ -25,6 +25,7 @@ class User extends Authenticatable
         'phone',
         'password',
         'is_admin',
+        'role_key',
         'department_id',
         'position',
         'is_department_head',
