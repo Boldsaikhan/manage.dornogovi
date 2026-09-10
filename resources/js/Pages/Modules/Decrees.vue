@@ -15,6 +15,9 @@ const props = defineProps({
     nextNumber: { type: String, default: null },
     canManage: { type: Boolean, default: false },
     canEdit: { type: Boolean, default: false },
+    canExport: { type: Boolean, default: true },
+    canPrint: { type: Boolean, default: true },
+    canImportFile: { type: Boolean, default: false },
     undoCount: { type: Number, default: 0 },
 });
 
@@ -474,7 +477,7 @@ const importBusy = ref(false);
 const importData = ref(null);
 
 const canImport = computed(
-    () => (props.canEdit || props.canManage) && ! isNiit.value && ! isBlank.value,
+    () => props.canImportFile && ! isNiit.value && ! isBlank.value,
 );
 
 const pickImportFile = () => importInput.value?.click();
@@ -578,6 +581,7 @@ const docColumnCount = computed(() => {
                         Буцаах<span v-if="undoCount"> ({{ undoCount }})</span>
                     </button>
                     <a
+                        v-if="canPrint"
                         :href="route('decrees.print', { tab })"
                         target="_blank"
                         class="ui-btn-ghost"
@@ -585,7 +589,7 @@ const docColumnCount = computed(() => {
                     >
                         Хэвлэх
                     </a>
-                    <div ref="downloadRoot" class="relative">
+                    <div v-if="canExport" ref="downloadRoot" class="relative">
                         <button
                             type="button"
                             class="ui-btn-ghost"
