@@ -154,10 +154,23 @@ const searchKey = (value) => String(value ?? '')
     .replace(/ё/g, 'е')
     .replace(/й/g, 'и');
 
+/** Огноог зөвхөн цифрээр нь харьцуулна: «2026.09.03», «09/03», «0903» бүгд таарна. */
+const DATE_FIELDS = ['issued_on', 'effective_on'];
+
+const digitsOnly = (value) => String(value ?? '').replace(/\D+/g, '');
+
 const matchesFilters = (row) => Object.entries(filters).every(([field, needle]) => {
     const text = String(needle).trim();
 
     if (text === '') return true;
+
+    if (DATE_FIELDS.includes(field)) {
+        const value = field === 'issued_on'
+            ? (row.issued_on ?? '')
+            : (row.effective_on_display ?? row.effective_on ?? '');
+
+        return digitsOnly(value).includes(digitsOnly(text));
+    }
 
     const value = field === 'number' ? (row.number_display ?? row.number) : row[field];
 
@@ -568,8 +581,8 @@ const docColumnCount = computed(() => {
                         </tr>
                     </thead>
                     <tbody>
-<tr
-                            v-for="row in visibleRows"
+                        <tr
+                            v-for="row in rows"
                             :key="row.id"
                         >
                             <td class="decree-sheet__cell--no">{{ row.no }}</td>
@@ -841,11 +854,11 @@ const docColumnCount = computed(() => {
                                 </button>
                                 <span v-else class="text-[10px] text-slate-300">Хайх</span>
                             </th>
-                            <th><input v-model="filters.issued_on" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.issued_on" type="search" placeholder="2026.09" /></th>
                             <th><input v-model="filters.number" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.title" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.page_count" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.effective_on" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.effective_on" type="search" placeholder="2026.09" /></th>
                             <th><input v-model="filters.attachment_name" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.attachment_pages" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.original_form" type="search" placeholder="Хайх" /></th>
@@ -857,7 +870,7 @@ const docColumnCount = computed(() => {
                     </thead>
                     <tbody>
                         <tr
-                            v-for="row in rows"
+                            v-for="row in visibleRows"
                             :key="row.id"
                         >
                             <td class="decree-sheet__cell--no">{{ row.no }}</td>
