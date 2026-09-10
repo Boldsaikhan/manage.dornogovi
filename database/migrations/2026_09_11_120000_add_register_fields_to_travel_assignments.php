@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -10,20 +11,36 @@ use Illuminate\Support\Facades\Schema;
  * Бүртгэлд системд эрхгүй хүн, гэрээт ажилтан, жолооч нар ч ордог тул
  * нэр, албан тушаалыг мөр дээрээ хадгална. Хугацаа нь заагаагүй мөр ч
  * байдаг тул дуусах огноог заавал биш болгов.
+ *
+ * Багана өөрчлөх алхмууд MySQL дээр (гадаад түлхүүр, давхар ажиллалт)
+ * бүтэлгүйтвэл дараагийн бүх migration зогсох тул алхам бүрийг тусад нь
+ * хамгаална. Эцсийн засварыг 2026_09_11_190000 migration гүйцээнэ.
  */
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('travel_assignments', function (Blueprint $table) {
-            $table->string('person_name')->nullable()->after('user_id');
-            $table->string('position')->nullable()->after('person_name');
+        foreach (['person_name', 'position'] as $column) {
+            if (Schema::hasColumn('travel_assignments', $column)) {
+                continue;
+            }
+
+            Schema::table('travel_assignments', function (Blueprint $table) use ($column) {
+                $table->string($column)->nullable();
+            });
+        }
+
+        $this->attempt(function () {
+            Schema::table('travel_assignments', function (Blueprint $table) {
+                $table->foreignId('user_id')->nullable()->change();
+            });
         });
 
-        Schema::table('travel_assignments', function (Blueprint $table) {
-            $table->foreignId('user_id')->nullable()->change();
-            $table->date('end_date')->nullable()->change();
-            $table->string('destination')->nullable()->change();
+        $this->attempt(function () {
+            Schema::table('travel_assignments', function (Blueprint $table) {
+                $table->date('end_date')->nullable()->change();
+                $table->string('destination')->nullable()->change();
+            });
         });
     }
 
@@ -32,5 +49,14 @@ return new class extends Migration
         Schema::table('travel_assignments', function (Blueprint $table) {
             $table->dropColumn(['person_name', 'position']);
         });
+    }
+
+    private function attempt(callable $callback): void
+    {
+        try {
+            $callback();
+        } catch (\Throwable $e) {
+            Log::info('travel_assignments багана өөрчлөх алхам алгаслаа: '.$e->getMessage());
+        }
     }
 };

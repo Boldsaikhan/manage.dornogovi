@@ -196,6 +196,11 @@ class ModuleResourceController extends Controller
             $message .= sprintf(' %d мөр давхардсан тул алгаслаа.', $result['skipped']);
         }
 
+        // Алдаатай мөрийг нуухгүй — юу нь болоогүйг шууд харуулна.
+        if (($result['failed'] ?? 0) > 0) {
+            $message .= sprintf(' %d мөр алдаатай: %s', $result['failed'], implode(' | ', $result['errors']));
+        }
+
         return redirect()
             ->route('assignments.index', ['scope' => $data['scope']])
             ->with($result['created'] > 0 ? 'success' : 'warning', $message);

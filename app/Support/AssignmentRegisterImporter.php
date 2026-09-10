@@ -150,7 +150,7 @@ class AssignmentRegisterImporter
      * Бэлтгэсэн мөрүүдийг хадгална.
      *
      * @param  list<array<string, mixed>>  $entries
-     * @return array{created: int, skipped: int}
+     * @return array{created: int, skipped: int, failed: int, errors: list<string>}
      */
     public function store(string $approver, array $entries): array
     {
@@ -160,10 +160,28 @@ class AssignmentRegisterImporter
             ->mapWithKeys(fn (User $u) => [DirectoryNameResolver::key((string) $u->name) => $u->id])
             ->all();
 
+        /*
+         * Давхардлыг мөр тус бүрээр асуувал 287 удаа мэдээллийн сан руу
+         * хандана. Тиймээс тухайн хэсгийн бүртгэлийг нэг удаа уншиж авч,
+         * санах ойд харьцуулна.
+         */
+        $existing = TravelAssignment::query()
+            ->where('approver', $approver)
+            ->get(['person_name', 'start_date', 'destination'])
+            ->map(fn (TravelAssignment $row) => $this->fingerprint(
+                (string) $row->person_name,
+                $row->start_date?->format('Y-m-d'),
+                $row->destination,
+            ))
+            ->flip()
+            ->all();
+
         $created = 0;
         $skipped = 0;
+        $failed = 0;
+        $errors = [];
 
-        foreach ($entries as $entry) {
+        foreach ($entries as $index => $entry) {
             $person = trim((string) ($entry['person_name'] ?? ''));
 
             if ($person === '') {
@@ -172,41 +190,57 @@ class AssignmentRegisterImporter
                 continue;
             }
 
-            // Ижил хүн, ижил огноо, ижил газар давхардвал дахин оруулахгүй.
             $start = $entry['start_date'] ?? null;
+            $key = $this->fingerprint($person, $start, $entry['destination'] ?? null);
 
-            $exists = TravelAssignment::query()
-                ->where('approver', $approver)
-                ->where('person_name', $person)
-                // Огноо нь цаг хамт хадгалагддаг тул зөвхөн өдрөөр нь харьцуулна.
-                ->when($start, fn ($query) => $query->whereDate('start_date', $start))
-                ->when(! $start, fn ($query) => $query->whereNull('start_date'))
-                ->where('destination', $entry['destination'] ?? null)
-                ->exists();
-
-            if ($exists) {
+            // Ижил хүн, ижил огноо, ижил газар давхардвал дахин оруулахгүй.
+            if (isset($existing[$key])) {
                 $skipped++;
 
                 continue;
             }
 
-            TravelAssignment::query()->create([
-                'approver' => $approver,
-                'user_id' => $users[DirectoryNameResolver::key($person)] ?? null,
-                'person_name' => $person,
-                'position' => $entry['position'] ?? null,
-                'destination' => $entry['destination'] ?? null,
-                'purpose' => $entry['purpose'] ?? null,
-                'start_date' => $entry['start_date'] ?? null,
-                'end_date' => $entry['end_date'] ?? null,
-                'order_number' => $entry['order_number'] ?? null,
-                'status' => 'approved',
-            ]);
+            try {
+                TravelAssignment::query()->create([
+                    'approver' => $approver,
+                    'user_id' => $users[DirectoryNameResolver::key($person)] ?? null,
+                    'person_name' => $person,
+                    'position' => $entry['position'] ?? null,
+                    'destination' => $entry['destination'] ?? null,
+                    'purpose' => $entry['purpose'] ?? null,
+                    'start_date' => $start,
+                    'end_date' => $entry['end_date'] ?? null,
+                    'order_number' => $entry['order_number'] ?? null,
+                    'status' => 'approved',
+                ]);
+            } catch (\Throwable $e) {
+                // Нэг мөрийн алдаанаас болж бүх оруулалт зогсохгүй.
+                $failed++;
 
+                if (count($errors) < 3) {
+                    $errors[] = ($index + 1).'-р мөр ('.$person.'): '.$e->getMessage();
+                }
+
+                continue;
+            }
+
+            $existing[$key] = true;
             $created++;
         }
 
-        return ['created' => $created, 'skipped' => $skipped];
+        return ['created' => $created, 'skipped' => $skipped, 'failed' => $failed, 'errors' => $errors];
+    }
+
+    /**
+     * Давхардал шалгах түлхүүр.
+     */
+    private function fingerprint(string $person, ?string $start, ?string $destination): string
+    {
+        return implode('|', [
+            mb_strtolower(trim($person)),
+            $start ? substr($start, 0, 10) : '',
+            mb_strtolower(trim((string) $destination)),
+        ]);
     }
 
     /**
