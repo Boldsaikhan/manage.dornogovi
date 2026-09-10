@@ -30,7 +30,8 @@ class ModuleResourceController extends Controller
         $query = $modelClass::query()->latest('id');
 
         if (method_exists($modelClass, 'user')) {
-            $query->with('user:id,name');
+            // Албан тушаал нь хүснэгтийн баганад хэрэгтэй.
+            $query->with('user:id,name,position');
         }
 
         // Хамрах хүрээгээр (агентлаг/сумд/байгууллага) тусад нь бүртгэх — 'all' үед бүгд.
@@ -91,6 +92,7 @@ class ModuleResourceController extends Controller
             'title' => $config['title'],
             'description' => $config['description'] ?? '',
             'columns' => $config['columns'],
+            'rowNumberLabel' => $config['row_number'] ?? null,
             'fields' => $config['fields'],
             'directory' => $this->directoryFor($config),
             'rows' => $rows,
@@ -504,6 +506,9 @@ class ModuleResourceController extends Controller
     {
         return match ($key) {
             'user_name' => $row->user->name ?? '—',
+            'user_position' => $row->user->position ?? '—',
+            // Эхлэх, дуусах огноогоор хоногийг бодно (хоёулаа оруулсан үед).
+            'day_count' => $this->dayCount($row),
             'person_label' => $row->person_name ?: ($row->user->name ?? '—'),
             'kind_label' => method_exists($row, 'kindLabel') ? $row->kindLabel() : ($row->kind ?? '—'),
             'for_new_hires' => $row->for_new_hires ? 'Тийм' : 'Үгүй',
@@ -512,6 +517,19 @@ class ModuleResourceController extends Controller
             ) ?? '—',
             default => (string) ($row->{$key} ?? '—'),
         };
+    }
+
+    /** «Хэд хоног» — эхлэх ба дуусах өдрийг оролцуулж тоолно. */
+    private function dayCount(Model $row): string
+    {
+        $start = $row->start_date ?? null;
+        $end = $row->end_date ?? null;
+
+        if (! $start || ! $end) {
+            return '—';
+        }
+
+        return (string) ($start->diffInDays($end) + 1);
     }
 
     /**

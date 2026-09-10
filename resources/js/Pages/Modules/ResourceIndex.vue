@@ -11,6 +11,8 @@ const props = defineProps({
     title: String,
     description: String,
     columns: Array,
+    // Хоосон биш бол зүүн талд дугаарласан багана гарна.
+    rowNumberLabel: { type: String, default: null },
     fields: Array,
     rows: Array,
     canManage: Boolean,
@@ -425,13 +427,14 @@ const destroyRow = (id) => {
                 <table class="ui-table min-w-full">
                     <thead>
                         <tr>
+                            <th v-if="rowNumberLabel" class="w-12 text-center">{{ rowNumberLabel }}</th>
                             <th v-for="col in columns" :key="col.key">{{ col.label }}</th>
                             <th v-if="canManage || rowActions.length" />
                         </tr>
                     </thead>
                     <tbody>
                         <tr
-                            v-for="row in rows"
+                            v-for="(row, index) in rows"
                             :key="row.id"
                             :class="[
                                 row.file_url ? 'cursor-pointer hover:bg-slate-50' : '',
@@ -439,6 +442,9 @@ const destroyRow = (id) => {
                             ]"
                             @click="openPreview(row)"
                         >
+                            <td v-if="rowNumberLabel" class="text-center text-sm font-semibold text-slate-500">
+                                {{ index + 1 }}
+                            </td>
                             <td v-for="col in columns" :key="col.key">
                                 <template v-if="isFileColumn(col)">
                                     <button
