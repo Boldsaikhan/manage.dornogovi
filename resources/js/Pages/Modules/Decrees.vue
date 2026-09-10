@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import SheetCell from '@/Components/SheetCell.vue';
@@ -178,6 +178,47 @@ const matchesFilters = (row) => Object.entries(filters).every(([field, needle]) 
 });
 
 const visibleRows = computed(() => (hasFilters.value ? props.rows.filter(matchesFilters) : props.rows));
+
+/**
+ * Толгойн мөрүүдийг наалдуулах.
+ *
+ * Мөрийн өндөр нь бичвэрийн урт, дэлгэцийн өргөнөөс хамаарч өөрчлөгддөг тул
+ * байрлалыг CSS-д тогтмолоор бичих боломжгүй — бодит өндрийг нь хэмжиж
+ * дараалуулна. Үгүй бол мөрүүдийн хооронд завсар үүсч, өгөгдөл цухуйна.
+ */
+const sheetEl = ref(null);
+
+const syncStickyHead = () => {
+    const head = sheetEl.value?.querySelector('thead');
+
+    if (! head) return;
+
+    let top = 0;
+
+    Array.from(head.rows).forEach((row, index) => {
+        Array.from(row.cells).forEach((cell) => {
+            cell.style.position = 'sticky';
+            cell.style.top = `${top}px`;
+            cell.style.zIndex = String(30 - index);
+        });
+
+        top += row.getBoundingClientRect().height;
+    });
+};
+
+const scheduleStickySync = () => nextTick(() => requestAnimationFrame(syncStickyHead));
+
+onMounted(() => {
+    scheduleStickySync();
+    // Фонт хожуу ачаалагдвал толгойн өндөр өөрчлөгддөг тул дахин нэг хэмжинэ.
+    setTimeout(syncStickyHead, 400);
+    window.addEventListener('resize', syncStickyHead);
+});
+
+onBeforeUnmount(() => window.removeEventListener('resize', syncStickyHead));
+
+// Мөр нэмэгдэх, таб солигдох, хайлт шүүхэд толгойн өндөр өөрчлөгдөж болно.
+watch(() => [props.rows, props.tab, filters], scheduleStickySync, { deep: true });
 
 const canManage = computed(() => canManageRows.value);
 
@@ -774,7 +815,7 @@ const docColumnCount = computed(() => {
 
             <!-- Захирамж / Тушаалын дугаар -->
             <TableScrollViewport v-else-if="isDoc" max-height="min(72vh, calc(100dvh - 11rem))">
-                <div class="decree-sheet">
+                <div ref="sheetEl" class="decree-sheet">
                 <div class="decree-sheet__banner">
                     Аймгийн Засаг даргын {{ docLabel }}ийн бүртгэл
                 </div>
