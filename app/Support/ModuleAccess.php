@@ -276,6 +276,13 @@ class ModuleAccess
             return null;
         }
 
+        // Хэрэглэгчид шууд оноосон роль (өөрсдийн үүсгэсэн роль ч мөн) тэргүүнд.
+        $assigned = trim((string) ($user->role_key ?? ''));
+
+        if ($assigned !== '' && Role::query()->where('key', $assigned)->exists()) {
+            return $assigned;
+        }
+
         if ($user->is_department_head) {
             return 'department_head';
         }
@@ -293,7 +300,11 @@ class ModuleAccess
     public static function syncUsersToRole(string $roleKey): int
     {
         $field = Role::SYSTEM_FIELDS[$roleKey] ?? null;
-        if (! $field) {
+
+        // Суурь роль биш бол шууд оноосон хэрэглэгчид нь дээр хэрэгжинэ.
+        $hasAssigned = User::query()->where('role_key', $roleKey)->exists();
+
+        if (! $field && ! $hasAssigned) {
             return 0;
         }
 
@@ -311,7 +322,21 @@ class ModuleAccess
             $desired[$module] = $level;
         }
 
-        $query = User::query()->where($field, true)->where('is_admin', false);
+        $query = User::query()
+            ->where('is_admin', false)
+            ->where(function ($builder) use ($field, $roleKey) {
+                if ($field) {
+                    $builder->where(function ($inner) use ($field, $roleKey) {
+                        $inner->where($field, true)
+                            ->where(function ($q) use ($roleKey) {
+                                // Өөр роль оноосон хүнийг суурь ролиор дарж бичихгүй.
+                                $q->whereNull('role_key')->orWhere('role_key', '')->orWhere('role_key', $roleKey);
+                            });
+                    });
+                }
+
+                $builder->orWhere('role_key', $roleKey);
+            });
 
         // Мэргэжилтэн загвар — дарга нарт бүү хүр.
         if ($roleKey === 'specialist') {
