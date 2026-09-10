@@ -73,7 +73,7 @@ class TushaalBRegisterImportTest extends TestCase
 
     public function test_the_console_command_fills_the_b_register(): void
     {
-        $this->artisan('decrees:fill-tushaal b')
+        $this->artisan('decrees:fill tushaal-b')
             ->expectsOutputToContain('Б/125')
             ->assertSuccessful();
 
