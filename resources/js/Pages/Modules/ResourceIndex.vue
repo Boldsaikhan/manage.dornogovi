@@ -17,6 +17,7 @@ const props = defineProps({
     rowNumberStart: { type: Number, default: 0 },
     canImportFile: { type: Boolean, default: false },
     canExportFile: { type: Boolean, default: false },
+    hasAuditLog: { type: Boolean, default: false },
     // Хүснэгтийн нүдэн дээр шууд солих талбарууд: { нэр: { утга: шошго } }
     inlineFields: { type: Object, default: () => ({}) },
     exportUrl: { type: String, default: null },
@@ -64,6 +65,31 @@ watch(() => props.rows, () => {
     const ids = new Set(props.rows.map((row) => row.id));
     selectedIds.value = selectedIds.value.filter((id) => ids.has(id));
 });
+
+/*
+ * Өөрчлөлтийн түүх — хэн, хэзээ, юуг сольсныг харуулна.
+ */
+const showLogs = ref(false);
+const logsBusy = ref(false);
+const logRows = ref([]);
+
+const openLogs = async () => {
+    showLogs.value = true;
+    logsBusy.value = true;
+
+    try {
+        const { data } = await window.axios.get(
+            route('modules.logs', { module: props.module, scope: props.activeScope }),
+        );
+        logRows.value = data.rows ?? [];
+    } catch (error) {
+        logRows.value = [];
+    } finally {
+        logsBusy.value = false;
+    }
+};
+
+const changeList = (changes) => Object.entries(changes ?? {});
 
 const downloadOpen = ref(false);
 
@@ -518,6 +544,15 @@ const destroyRow = (id) => {
                 >
                     {{ importBusy && ! importData ? 'Уншиж байна…' : 'Файлаас оруулах' }}
                 </button>
+                <button
+                    v-if="hasAuditLog"
+                    type="button"
+                    class="ui-btn-ghost whitespace-nowrap"
+                    title="Хэн, хэзээ, юуг өөрчилснийг харах"
+                    @click="openLogs"
+                >
+                    Түүх
+                </button>
                 <div v-if="canExportFile" class="relative">
                     <button
                         type="button"
@@ -946,6 +981,66 @@ const destroyRow = (id) => {
                     >
                         {{ importBusy ? 'Оруулж байна…' : `Оруулах (${importData.total})` }}
                     </button>
+                </div>
+            </div>
+        </Modal>
+
+        <!-- Өөрчлөлтийн түүх -->
+        <Modal :show="showLogs" max-width="3xl" @close="showLogs = false">
+            <div class="p-5 sm:p-6">
+                <div class="mb-4 flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-semibold text-brand-navy-900">Өөрчлөлтийн түүх</h3>
+                        <p class="mt-0.5 text-sm text-slate-500">
+                            {{ activeScopeLabel && activeScope !== 'all' ? activeScopeLabel : title }}
+                            — сүүлийн 200 бичлэг.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="rounded-lg px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100"
+                        @click="showLogs = false"
+                    >
+                        Хаах
+                    </button>
+                </div>
+
+                <p v-if="logsBusy" class="py-8 text-center text-sm text-slate-400">Уншиж байна…</p>
+                <p v-else-if="!logRows.length" class="py-8 text-center text-sm text-slate-400">
+                    Одоогоор бүртгэгдсэн өөрчлөлт алга.
+                </p>
+                <div v-else class="max-h-[60vh] overflow-y-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="sticky top-0 bg-slate-50 text-slate-500">
+                            <tr>
+                                <th class="px-2 py-2 font-semibold">Огноо</th>
+                                <th class="px-2 py-2 font-semibold">Хэн</th>
+                                <th class="px-2 py-2 font-semibold">Үйлдэл</th>
+                                <th class="px-2 py-2 font-semibold">Бүртгэл</th>
+                                <th class="px-2 py-2 font-semibold">Тайлбар</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr v-for="log in logRows" :key="log.id" class="align-top">
+                                <td class="whitespace-nowrap px-2 py-2 text-slate-500">{{ log.at }}</td>
+                                <td class="whitespace-nowrap px-2 py-2 font-medium text-slate-700">{{ log.user }}</td>
+                                <td class="whitespace-nowrap px-2 py-2 text-slate-600">{{ log.action_label }}</td>
+                                <td class="px-2 py-2 text-slate-600">{{ log.label || '—' }}</td>
+                                <td class="px-2 py-2 text-slate-600">
+                                    <span v-if="log.summary">{{ log.summary }}</span>
+                                    <ul v-if="changeList(log.changes).length" class="space-y-0.5">
+                                        <li v-for="[field, change] in changeList(log.changes)" :key="field">
+                                            <span class="font-medium text-slate-700">{{ field }}:</span>
+                                            <span class="text-slate-400 line-through">{{ change.from || '—' }}</span>
+                                            →
+                                            <span class="text-brand-navy-700">{{ change.to || '—' }}</span>
+                                        </li>
+                                    </ul>
+                                    <span v-if="!log.summary && !changeList(log.changes).length" class="text-slate-400">—</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </Modal>
