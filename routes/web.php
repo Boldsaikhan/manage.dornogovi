@@ -194,7 +194,6 @@ Route::middleware('auth')->group(function () {
         Route::patch('/menu-settings', [SystemSettingsController::class, 'updateMenus'])->name('menu-settings.update');
 
         Route::get('/users', [UserAccessController::class, 'index'])->name('users.index');
-        Route::post('/users', [UserAccessController::class, 'store'])->name('users.store');
         Route::post('/users/provision-heltes', [UserAccessController::class, 'provisionHeltes'])->name('users.provision-heltes');
         Route::patch('/users/{user}', [UserAccessController::class, 'update'])->name('users.update');
         Route::patch('/users/{user}/password', [UserAccessController::class, 'updatePassword'])->name('users.password');

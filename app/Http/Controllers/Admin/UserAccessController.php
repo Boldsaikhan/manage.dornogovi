@@ -95,7 +95,7 @@ class UserAccessController extends Controller
     /**
      * Утасны жагсаалтад бүртгэлтэй дугаар — нэвтрэх нэр нь энэ байх ёстой.
      *
-     * @return array{directory_phone: ?string, directory_name: ?string, login_matches_directory: bool}
+     * @return array{directory_phone: ?string, directory_name: ?string, directory_org: ?string, login_matches_directory: bool}
      */
     private function directoryLogin(User $user): array
     {
@@ -104,6 +104,7 @@ class UserAccessController extends Controller
             return [
                 'directory_phone' => null,
                 'directory_name' => null,
+                'directory_org' => null,
                 'login_matches_directory' => true,
             ];
         }
@@ -114,6 +115,8 @@ class UserAccessController extends Controller
         return [
             'directory_phone' => $phone,
             'directory_name' => $entry?->person_name,
+            // Байгууллагаар нь шүүхэд хэрэглэнэ.
+            'directory_org' => $entry?->org_name,
             'login_matches_directory' => $phone !== null
                 && $phone === User::normalizePhone($user->phone),
         ];
@@ -445,36 +448,6 @@ class UserAccessController extends Controller
         $model->delete();
 
         return back()->with('success', sprintf('«%s» роль устгагдлаа.', $label));
-    }
-
-    public function store(Request $request): RedirectResponse
-    {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'phone' => ['nullable', 'string', 'max:20', 'unique:users,phone'],
-            'password' => ['required', 'string', 'min:8'],
-            'department_id' => ['nullable', 'exists:departments,id'],
-            'position' => ['nullable', 'string', 'max:255'],
-            'is_admin' => ['boolean'],
-            'is_department_head' => ['boolean'],
-            'is_specialist' => ['boolean'],
-        ]);
-
-        $created = User::create([
-            ...$data,
-            'password' => Hash::make($data['password']),
-            'email_verified_at' => now(),
-            'is_admin' => $request->boolean('is_admin'),
-            'is_department_head' => $request->boolean('is_department_head'),
-            'is_specialist' => $request->boolean('is_specialist'),
-        ]);
-
-        if (! $created->is_admin && config('sms.send_on_admin_create')) {
-            app(SmsSender::class)->sendLoginCredentials($created, $data['password']);
-        }
-
-        return back()->with('success', sprintf('«%s» нэмэгдлээ. Эрхийг дээрээс тохируулна уу.', $data['name']));
     }
 
     /**

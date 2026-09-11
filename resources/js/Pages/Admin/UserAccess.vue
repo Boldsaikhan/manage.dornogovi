@@ -61,7 +61,7 @@ const queryParam = (name) => {
 
 const initialTab = queryParam('tab');
 /** employee | templates | create */
-const panelMode = ref(['employee', 'templates', 'create'].includes(initialTab) ? initialTab : 'employee');
+const panelMode = ref(['employee', 'templates'].includes(initialTab) ? initialTab : 'employee');
 /** Албан хаагчид оноож буй ролийн түлхүүр */
 const selectedRoleKey = ref('');
 
@@ -73,15 +73,47 @@ const departmentName = (id) => {
     return props.departments.find((d) => d.id === id)?.name || 'Хэлтэсгүй';
 };
 
+/** Байгууллагаар шүүх — утасны жагсаалтын бүлгүүд. */
+const orgFilter = ref('');
+
+const orgOptions = computed(() => {
+    const names = new Set();
+
+    props.users.forEach((u) => {
+        if (u.directory_org) names.add(u.directory_org);
+    });
+
+    return [...names].sort((a, b) => a.localeCompare(b, 'mn'));
+});
+
+/** Рольгүй эсэх — роль ч, өөрийн тусгай эрх ч байхгүй. */
+const hasNoRole = (user) => ! user.is_admin
+    && ! user.role_key
+    && ! user.is_department_head
+    && ! user.is_specialist;
+
+const roleless = computed(() => props.users.filter(hasNoRole));
+
+const onlyRoleless = ref(false);
+
 const filteredUsers = computed(() => {
     const q = userSearch.value.trim().toLocaleLowerCase('mn');
-
-    if (! q) {
-        return props.users;
-    }
+    const org = orgFilter.value;
 
     return props.users.filter((u) => {
-        const haystack = [u.name, u.email, u.phone, u.position, u.department]
+        if (onlyRoleless.value && ! hasNoRole(u)) {
+            return false;
+        }
+
+        if (org && u.directory_org !== org) {
+            return false;
+        }
+
+        if (! q) {
+            return true;
+        }
+
+        const haystack = [u.name, u.email, u.phone, u.position, u.department, u.directory_org]
             .filter(Boolean)
             .join(' ')
             .toLocaleLowerCase('mn');
@@ -90,17 +122,15 @@ const filteredUsers = computed(() => {
     });
 });
 
-const createForm = useForm({
-    name: '',
-    email: '',
-    phone: '',
-    password: '',
-    department_id: '',
-    position: '',
-    is_admin: false,
-    is_department_head: false,
-    is_specialist: false,
-});
+const hasUserFilter = computed(
+    () => !! userSearch.value.trim() || !! orgFilter.value || onlyRoleless.value,
+);
+
+const clearUserFilters = () => {
+    userSearch.value = '';
+    orgFilter.value = '';
+    onlyRoleless.value = false;
+};
 
 const editState = reactive({
     name: '',
@@ -529,37 +559,6 @@ const saveUser = () => {
     });
 };
 
-const createUser = () => {
-    createForm.post(route('admin.users.store'), {
-        preserveScroll: true,
-        onSuccess: () => {
-            createForm.reset();
-            panelMode.value = 'employee';
-        },
-    });
-};
-
-/** Утасны жагсаалтаас сонгоход нэр, утас, албан тушаал, хэлтэс бөглөнө. */
-const pickFromDirectory = (value) => {
-    const person = props.people.find((p) => p.value === value);
-    if (! person) {
-        createForm.name = value || '';
-        return;
-    }
-
-    createForm.name = person.full_name || person.label || value;
-    createForm.phone = person.phone || '';
-    createForm.position = person.position || '';
-
-    const org = String(person.org || '').toLowerCase();
-    if (org) {
-        const dept = props.departments.find((d) => {
-            const name = String(d.name || '').toLowerCase();
-            return name && (org === name || org.includes(name) || name.includes(org));
-        });
-        createForm.department_id = dept?.id ?? '';
-    }
-};
 </script>
 
 <template>
@@ -575,7 +574,7 @@ const pickFromDirectory = (value) => {
                     <div class="px-1 text-sm font-bold text-brand-navy-800">
                         Албан хаагчид
                         <span class="ml-1 font-medium text-slate-400">
-                            {{ userSearch.trim() ? `${filteredUsers.length}/${users.length}` : users.length }}
+                            {{ hasUserFilter ? `${filteredUsers.length}/${users.length}` : users.length }}
                         </span>
                     </div>
                     <div
@@ -591,6 +590,22 @@ const pickFromDirectory = (value) => {
                             Бүгдийг жагсаалтаар тулгах →
                         </button>
                     </div>
+                    <!-- Рольгүй байгаа албан хаагчид -->
+                    <button
+                        v-if="roleless.length"
+                        type="button"
+                        class="flex w-full items-center justify-between gap-2 rounded-lg border px-2.5 py-2 text-[11px] font-semibold transition"
+                        :class="onlyRoleless
+                            ? 'border-brand-orange-300 bg-brand-orange-50 text-brand-orange-700'
+                            : 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'"
+                        @click="onlyRoleless = ! onlyRoleless"
+                    >
+                        <span>{{ roleless.length }} албан хаагч рольгүй байна</span>
+                        <span class="shrink-0 underline underline-offset-2">
+                            {{ onlyRoleless ? 'бүгдийг' : 'харах →' }}
+                        </span>
+                    </button>
+
                     <input
                         v-model="userSearch"
                         type="search"
@@ -598,6 +613,20 @@ const pickFromDirectory = (value) => {
                         placeholder="Нэр, и-мэйл, утсаар хайх…"
                         autocomplete="off"
                     />
+
+                    <select v-model="orgFilter" class="ui-input !py-2 text-sm">
+                        <option value="">Бүх байгууллага</option>
+                        <option v-for="org in orgOptions" :key="org" :value="org">{{ org }}</option>
+                    </select>
+
+                    <button
+                        v-if="hasUserFilter"
+                        type="button"
+                        class="w-full text-center text-[11px] font-semibold text-brand-orange-600 hover:underline"
+                        @click="clearUserFilters"
+                    >
+                        Шүүлтийг цэвэрлэх
+                    </button>
                 </div>
                 <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
                     <p v-if="!filteredUsers.length" class="px-4 py-8 text-center text-sm text-slate-400">
@@ -613,7 +642,14 @@ const pickFromDirectory = (value) => {
                     >
                         <span class="font-semibold text-brand-navy-800">{{ u.name }}</span>
                         <span class="text-xs text-slate-400">{{ u.email }} · {{ u.phone || 'утасгүй' }}</span>
+                        <span v-if="u.directory_org" class="text-[11px] text-slate-400">{{ u.directory_org }}</span>
                         <span class="mt-1 flex flex-wrap gap-1">
+                            <span
+                                v-if="hasNoRole(u)"
+                                class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800"
+                            >
+                                Рольгүй
+                            </span>
                             <span
                                 v-for="label in userRoleLabels(u)"
                                 :key="u.id + '-' + label"
@@ -643,14 +679,6 @@ const pickFromDirectory = (value) => {
                         @click="panelMode = 'templates'"
                     >
                         Ролийн загвар
-                    </button>
-                    <button
-                        type="button"
-                        class="rounded-full px-4 py-2 text-sm font-semibold transition"
-                        :class="panelMode === 'create' ? 'bg-brand-navy-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
-                        @click="panelMode = 'create'"
-                    >
-                        Шинэ албан хаагч
                     </button>
                 </div>
 
@@ -870,47 +898,6 @@ const pickFromDirectory = (value) => {
                     </div>
                 </form>
                 </template>
-
-                <form
-                    v-else-if="panelMode === 'create'"
-                    class="ui-card-pad space-y-4"
-                    @submit.prevent="createUser"
-                >
-                    <div>
-                        <h3 class="ui-title text-base">Шинэ албан хаагч</h3>
-                        <p class="mt-0.5 text-xs text-slate-500">
-                            Утасны жагсаалтад бүртгэлтэй албан хаагчийг сонгоод нэвтрэх эрх өгнө.
-                        </p>
-                    </div>
-                    <div class="grid gap-3 md:grid-cols-2">
-                        <div class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50/60 p-2">
-                            <label class="mb-1 block text-xs font-medium text-slate-600">Албан хаагч (утасны жагсаалт)</label>
-                            <SheetCell
-                                v-model="createForm.name"
-                                :editable="true"
-                                :options="people"
-                                placeholder="Нэрээр хайж сонгох…"
-                                @commit="pickFromDirectory"
-                            />
-                        </div>
-                        <input
-                            v-model="createForm.phone"
-                            placeholder="Утас (жагсаалтаас автоматаар)"
-                            class="ui-input"
-                        />
-                        <input v-model="createForm.position" placeholder="Албан тушаал" class="ui-input" />
-                        <input v-model="createForm.email" type="email" required placeholder="И-мэйл" class="ui-input" />
-                        <input v-model="createForm.password" type="password" required placeholder="Нууц үг" class="ui-input" />
-                        <select v-model="createForm.department_id" class="ui-input md:col-span-2">
-                            <option value="">Хэлтэсгүй</option>
-                            <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
-                        </select>
-                    </div>
-                    <p v-if="createForm.errors.name" class="text-xs text-rose-600">{{ createForm.errors.name }}</p>
-                    <p v-if="createForm.errors.phone" class="text-xs text-rose-600">{{ createForm.errors.phone }}</p>
-                    <p v-if="createForm.errors.email" class="text-xs text-rose-600">{{ createForm.errors.email }}</p>
-                    <button class="ui-btn-accent" :disabled="createForm.processing || !createForm.name">Нэмэх</button>
-                </form>
 
                 <section v-else class="ui-card-pad space-y-3">
                     <div class="flex flex-wrap items-center justify-between gap-3">
