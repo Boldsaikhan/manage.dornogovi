@@ -17,6 +17,8 @@ const props = defineProps({
     rowNumberStart: { type: Number, default: 0 },
     canImportFile: { type: Boolean, default: false },
     canExportFile: { type: Boolean, default: false },
+    // Хүснэгтийн нүдэн дээр шууд солих талбарууд: { нэр: { утга: шошго } }
+    inlineFields: { type: Object, default: () => ({}) },
     exportUrl: { type: String, default: null },
     fields: Array,
     rows: Array,
@@ -325,6 +327,23 @@ const openForm = () => {
 const editMode = ref(false);
 const editingId = ref(null);
 const editBusy = ref(false);
+
+/*
+ * Хүснэгтийн нүдэн дээр шууд солих — засах горим асаалттай үед л.
+ */
+const inlineOptions = (key) => Object.entries(props.inlineFields[key] ?? {});
+
+const canEditInline = computed(() => props.canManage && editMode.value);
+
+const isInlineCell = (key) => canEditInline.value && inlineOptions(key).length > 0;
+
+const saveInline = (row, key, value) => {
+    router.post(
+        route('modules.field', { module: props.module, id: row.id }),
+        { field: key, value },
+        { preserveScroll: true, preserveState: false },
+    );
+};
 
 const startEdit = async (row) => {
     if (editBusy.value) return;
@@ -739,6 +758,18 @@ const destroyRow = (id) => {
                                     </a>
                                     <span v-else class="text-slate-400">—</span>
                                 </template>
+                                <select
+                                    v-else-if="isInlineCell(col.key)"
+                                    class="ui-input !py-1 !text-xs"
+                                    :value="row[col.key] === '—' ? '' : row[col.key]"
+                                    @click.stop
+                                    @change="saveInline(row, col.key, $event.target.value)"
+                                >
+                                    <option value="">— сонгох —</option>
+                                    <option v-for="[value, label] in inlineOptions(col.key)" :key="value" :value="value">
+                                        {{ label }}
+                                    </option>
+                                </select>
                                 <span
                                     v-else
                                     :class="col.single_line ? 'ui-clamp-1' : 'ui-clamp-2'"

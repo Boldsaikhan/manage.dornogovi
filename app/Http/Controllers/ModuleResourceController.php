@@ -111,6 +111,12 @@ class ModuleResourceController extends Controller
             'canImportFile' => ($config['file_import'] ?? false)
                 && ModuleAccess::canEdit($request->user(), $module),
             'canExportFile' => (bool) ($config['file_export'] ?? false),
+            // Хүснэгтийн нүдэн дээр шууд солих боломжтой талбарууд.
+            'inlineFields' => collect($config['inline_fields'] ?? [])
+                ->mapWithKeys(fn (string $name) => [
+                    $name => collect($config['fields'])->firstWhere('name', $name)['options'] ?? [],
+                ])
+                ->all(),
             'exportUrl' => ($config['file_export'] ?? false) ? route('modules.export', $module) : null,
             'fields' => $config['fields'],
             'directory' => $this->directoryFor($config),
@@ -345,6 +351,43 @@ class ModuleResourceController extends Controller
         $this->notifyRelatedEmployees($module, $row, $data);
 
         return back()->with('success', 'Амжилттай хадгаллаа.');
+    }
+
+    /**
+     * Хүснэгтийн нүдэн дээр нэг талбарыг шууд солино.
+     *
+     * Бүтэн маягт нээхгүйгээр «Баталсан» гэх мэт нэг талбарыг сольж
+     * болно. Зөвхөн тохиргоонд зөвшөөрсөн талбарыг хүлээн авна.
+     */
+    public function updateField(Request $request, string $module, int $id): RedirectResponse
+    {
+        $config = $this->configFor($module);
+        abort_unless(ModuleAccess::canEdit($request->user(), $module), 403);
+
+        $row = $config['model']::query()->whereKey($id)->firstOrFail();
+        abort_unless(ModuleOwnScope::allows($request->user(), $module, $row), 403);
+
+        $allowed = (array) ($config['inline_fields'] ?? []);
+        $name = (string) $request->input('field');
+
+        abort_unless(in_array($name, $allowed, true), 422, 'Энэ талбарыг шууд засах боломжгүй.');
+
+        $field = collect($config['fields'])->firstWhere('name', $name);
+        abort_unless($field !== null, 404);
+
+        $rules = ['nullable'];
+
+        if (($field['type'] ?? '') === 'select') {
+            $rules[] = Rule::in(array_keys($field['options'] ?? []));
+        } else {
+            $rules[] = 'string';
+        }
+
+        $data = $request->validate(['value' => $rules], [], ['value' => mb_strtolower($field['label'] ?? $name)]);
+
+        $row->update([$name => $data['value'] ?? null]);
+
+        return back()->with('success', 'Хадгаллаа.');
     }
 
     /**

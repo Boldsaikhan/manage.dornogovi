@@ -106,6 +106,8 @@ return [
         'file_import' => true,
         // Сонгосон мөрүүдийг Excel/Word/PDF-ээр татна.
         'file_export' => true,
+        // Хүснэгтийн нүдэн дээр шууд солино.
+        'inline_fields' => ['approved_by'],
         'defaults' => ['status' => 'pending'],
         'on_create' => 'attach_user_department',
     ],
