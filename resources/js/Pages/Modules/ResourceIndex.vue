@@ -490,6 +490,9 @@ const inlineFor = (key) => props.inlineFields[key] ?? null;
 
 const inlineOptions = (key) => Object.entries(inlineFor(key)?.options ?? {});
 
+/** Засах нүдэнд харуулах түүхий утга (орчуулагдсан шошго биш). */
+const editValue = (row, key) => row.edit_values?.[key] ?? '';
+
 const canEditInline = computed(() => props.canManage && editMode.value);
 
 const isInlineCell = (key) => canEditInline.value && !! inlineFor(key);
@@ -502,7 +505,8 @@ const saveInline = (row, key, value) => {
     router.post(
         route('modules.field', { module: props.module, id: row.id }),
         { field, value },
-        { preserveScroll: true, preserveState: false },
+        // preserveState — засах горим, шүүлт зэрэг унтрахаас сэргийлнэ.
+        { preserveScroll: true, preserveState: true },
     );
 };
 
@@ -1008,7 +1012,7 @@ const destroyRow = (id) => {
                                     <select
                                         v-if="inlineFor(col.key).type === 'select'"
                                         class="ui-input !py-1 !text-xs"
-                                        :value="row[col.key] === '—' ? '' : row[col.key]"
+                                        :value="editValue(row, col.key)"
                                         @click.stop
                                         @change="saveInline(row, col.key, $event.target.value)"
                                     >
@@ -1019,7 +1023,7 @@ const destroyRow = (id) => {
                                     </select>
                                     <SheetCell
                                         v-else
-                                        :model-value="row[col.key] === '—' ? '' : row[col.key]"
+                                        :model-value="editValue(row, col.key)"
                                         :type="inlineFor(col.key).type === 'date' ? 'date' : 'text'"
                                         :options="inlineFor(col.key).people ? (formMeta.people ?? null) : null"
                                         :align="col.align === 'left' ? 'left' : 'center'"

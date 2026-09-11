@@ -245,6 +245,26 @@ class AssignmentRegisterExportTest extends TestCase
         $this->assertSame('А/12', $row->order_number);
     }
 
+    public function test_rows_carry_raw_values_for_editing(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->assignment('Томилолттой хүн');
+
+        $this->actingAs($admin)
+            ->get(route('assignments.index', ['scope' => 'chief']))
+            ->assertInertia(function (AssertableInertia $page) {
+                $row = $page->toArray()['props']['rows'][0];
+
+                // Харагдах утга нь орчуулагдсан…
+                $this->assertSame('Зөвшөөрсөн', $row['status']);
+                // …засах нүдэнд түүхий утга хэрэгтэй.
+                $this->assertSame('approved', $row['edit_values']['status']);
+                $this->assertSame('2026-02-04', $row['edit_values']['start_date']);
+                $this->assertSame('Томилолттой хүн', $row['edit_values']['user_name']);
+            });
+    }
+
     public function test_choosing_a_name_fills_the_position(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
