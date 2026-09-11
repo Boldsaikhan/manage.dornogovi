@@ -32,13 +32,18 @@ const signerName = () => props.form.approved_by || props.meta.signer || '.......
 
 const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-transparent p-0 '
     + 'font-serif text-[13px] leading-relaxed focus:border-brand-navy-600 focus:ring-0';
+
+// «БАТЛАВ» доторх сонголт — хэвлэгдэх нэртэй ижил харагдана.
+const pickerClass = 'w-auto border-0 border-b border-dotted border-black bg-transparent p-0 pr-5 '
+    + 'font-serif text-[12px] font-bold uppercase focus:border-brand-navy-600 focus:ring-0';
 </script>
 
 <template>
-    <div class="mx-auto w-full max-w-[190mm] space-y-6">
+    <!-- Хэвлэхтэй ижил: ар тал, урд тал зэрэгцэж харагдана. -->
+    <div class="grid w-full gap-5 xl:grid-cols-2">
 
     <!-- ══ АР ТАЛ — Албан томилолтын үнэмлэх ══ -->
-    <div class="bg-white p-6 font-serif text-[13px] leading-relaxed text-black sm:p-10">
+    <div class="rounded-lg border border-slate-200 bg-white p-6 font-serif text-[13px] leading-relaxed text-black shadow-sm sm:p-8">
         <p class="mb-4 text-center font-sans text-[11px] font-semibold uppercase tracking-wide text-slate-400">
             Ар тал — албан томилолтын үнэмлэх
         </p>
@@ -133,7 +138,7 @@ const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-
     </div>
 
     <!-- ══ УРД ТАЛ — Томилолтын удирдамж ══ -->
-    <div class="bg-white p-6 font-serif text-[13px] leading-relaxed text-black sm:p-10">
+    <div class="rounded-lg border border-slate-200 bg-white p-6 font-serif text-[13px] leading-relaxed text-black shadow-sm sm:p-8">
         <p class="mb-4 text-center font-sans text-[11px] font-semibold uppercase tracking-wide text-slate-400">
             Урд тал — томилолтын удирдамж
         </p>
@@ -145,11 +150,22 @@ const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-
             <template v-for="(line, i) in headLines()" :key="i">
                 <span class="whitespace-nowrap">{{ line }}</span><br />
             </template>
-            <div v-if="sideBySide()" class="flex justify-between gap-10">
+            <div v-if="sideBySide()" class="flex items-end justify-between gap-10">
                 <span class="whitespace-nowrap">{{ lastLine() }}</span>
-                <span class="whitespace-nowrap">{{ signerName() }}</span>
+                <select v-if="leaders().length" v-model="form.approved_by" :class="pickerClass">
+                    <option value="">— сонгох —</option>
+                    <option v-for="[name] in leaders()" :key="name" :value="name">{{ name }}</option>
+                </select>
+                <span v-else class="whitespace-nowrap">{{ signerName() }}</span>
             </div>
-            <div v-else class="mt-3 whitespace-nowrap text-right">{{ signerName() }}</div>
+            <div v-else class="mt-3 text-right">
+                <select v-if="leaders().length" v-model="form.approved_by" :class="pickerClass">
+                    <option value="">— сонгох —</option>
+                    <option v-for="[name] in leaders()" :key="name" :value="name">{{ name }}</option>
+                </select>
+                <span v-else class="whitespace-nowrap">{{ signerName() }}</span>
+            </div>
+            <InputError :message="form.errors.approved_by" class="font-sans normal-case" />
         </div>
 
         <h3 class="mt-8 text-center text-[13px] font-bold uppercase">Томилолтын удирдамж</h3>
@@ -280,16 +296,6 @@ const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-
                 Бүртгэлийн мэдээлэл — маягт дээр хэвлэгдэхгүй
             </p>
             <div class="grid gap-3 sm:grid-cols-3">
-                <div v-if="leaders().length">
-                    <label class="ui-label">Баталсан</label>
-                    <select v-model="form.approved_by" class="ui-input">
-                        <option value="">— сонгох —</option>
-                        <option v-for="[name, label] in leaders()" :key="name" :value="name">
-                            {{ label }}
-                        </option>
-                    </select>
-                    <InputError :message="form.errors.approved_by" />
-                </div>
                 <div>
                     <label class="ui-label">Тушаалын дугаар</label>
                     <input v-model="form.order_number" type="text" class="ui-input" />
