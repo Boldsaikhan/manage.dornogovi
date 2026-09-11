@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\UserNotification;
 use App\Support\PersonName;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Албан хаагчид холбоотой мэдээллийг in-app + push-ээр мэдэгдэнэ.
@@ -83,7 +84,15 @@ class EmployeePushNotifier
             ]);
         }
 
-        $this->push->sendToUsers($resolved, $payload);
+        /*
+         * Мэдэгдэл илгээх нь гадаад үйлчилгээнээс хамаардаг тул алдаа
+         * гарсан ч гол үйлдэл (хадгалалт) амжилттай үлдэнэ.
+         */
+        try {
+            $this->push->sendToUsers($resolved, $payload);
+        } catch (\Throwable $e) {
+            Log::warning('Push мэдэгдэл илгээгдсэнгүй: '.$e->getMessage());
+        }
     }
 
     /**
