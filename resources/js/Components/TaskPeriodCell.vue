@@ -37,7 +37,11 @@ const updateMenuPosition = () => {
     }
 
     const rect = el.getBoundingClientRect();
-    const width = Math.min(Math.max(rect.width, 280), window.innerWidth - 16);
+    /*
+     * Хоёр огнооны талбар зэрэгцэж багтах өргөн. Нүд нарийн байсан ч цэс
+     * нь хумигдахгүй — эс бөгөөс «Дуусах» талбар таслагдана.
+     */
+    const width = Math.min(Math.max(rect.width, 380), window.innerWidth - 16);
     let left = rect.left;
     if (left + width > window.innerWidth - 8) {
         left = Math.max(8, window.innerWidth - width - 8);
@@ -206,22 +210,22 @@ onBeforeUnmount(() => {
             >
                 <p class="mb-2 text-xs font-semibold text-slate-600">Хугацаа сонгох</p>
                 <div class="grid gap-2 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
-                    <label class="block">
+                    <label class="block min-w-0">
                         <span class="mb-1 block text-[10px] font-medium uppercase tracking-wide text-slate-400">Эхлэх</span>
                         <input
                             v-model="startDate"
                             type="date"
-                            class="ui-input w-full text-sm"
+                            class="ui-input w-full min-w-0 !px-2 text-sm"
                             @change="onStartChange"
                         />
                     </label>
                     <span class="hidden text-center text-slate-400 sm:block">—</span>
-                    <label class="block">
+                    <label class="block min-w-0">
                         <span class="mb-1 block text-[10px] font-medium uppercase tracking-wide text-slate-400">Дуусах</span>
                         <input
                             v-model="endDate"
                             type="date"
-                            class="ui-input w-full text-sm"
+                            class="ui-input w-full min-w-0 !px-2 text-sm"
                             :min="startDate || undefined"
                         />
                     </label>
