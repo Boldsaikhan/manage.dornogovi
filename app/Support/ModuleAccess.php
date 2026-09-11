@@ -41,6 +41,11 @@ class ModuleAccess
             'import' => 'Файлаас оруулах',
             'print' => 'Хэвлэх',
         ],
+        'tasks' => [
+            'edit' => 'Мөр засварлах',
+            'export' => 'Татах (Word/Excel/PDF)',
+            'import' => 'Word файлаас оруулах',
+        ],
     ];
 
     /** «decrees:tushaal_a» → ['decrees', 'tushaal_a'] */
@@ -430,9 +435,13 @@ class ModuleAccess
         $progressOnly = self::tasksProgressOnly($user);
 
         return [
-            'canEdit' => self::canEdit($user, 'tasks') && ! $progressOnly,
+            // Тохируулаагүй дэд эрх нь эцэг модулийнхоо түвшнийг өвлөнө.
+            'canEdit' => self::canEdit($user, 'tasks:edit') && ! $progressOnly,
             'canEditProgress' => self::canEdit($user, 'tasks'),
             'canManage' => self::canManage($user, 'tasks'),
+            'canExport' => self::canView($user, 'tasks:export'),
+            'canImport' => self::canEdit($user, 'tasks:import')
+                && (self::canManage($user, 'tasks') || ($user?->is_admin ?? false)),
         ];
     }
 
