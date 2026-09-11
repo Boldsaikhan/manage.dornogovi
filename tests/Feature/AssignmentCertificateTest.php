@@ -168,6 +168,29 @@ class AssignmentCertificateTest extends TestCase
                 .'албан ажлаар 2026 оны 9 дүгээр сарын 8-ны өдрөөс 2 хоног ажиллуулахаар томилов.');
     }
 
+    public function test_the_organisation_takes_the_right_suffix(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'Аюушийн Номин',
+            'position' => 'Гадаад харилцааны мэргэжилтэн',
+            'org_name' => 'Төрийн захиргааны удирдлагын хэлтэс',
+        ]);
+
+        $row = $this->assignment([
+            'person_name' => 'А.Номин',
+            'certificate_text' => null,
+        ]);
+
+        // «хэлтэс-ын» биш «хэлтсийн».
+        $this->actingAs($admin)
+            ->get(route('assignments.sheet', $row))
+            ->assertOk()
+            ->assertSee('Төрийн захиргааны удирдлагын хэлтсийн')
+            ->assertDontSee('хэлтэс-ын');
+    }
+
     public function test_the_purpose_reads_as_ajlaar(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
