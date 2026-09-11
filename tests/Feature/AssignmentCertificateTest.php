@@ -45,6 +45,21 @@ class AssignmentCertificateTest extends TestCase
             ->assertSee('Албан томилолтоор ажиллах төсөв');
     }
 
+    public function test_each_side_can_be_printed_on_its_own(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->get(route('assignments.sheet', $this->assignment()))
+            ->assertOk()
+            ->assertSee('Ар тал хэвлэх')
+            ->assertSee('Урд тал хэвлэх')
+            ->assertSee('Хоёуланг хэвлэх')
+            // Нөгөө талыг нуух хэв маяг.
+            ->assertSee('body.print-back .page--front', false)
+            ->assertSee('body.print-front .page--back', false);
+    }
+
     public function test_the_number_follows_the_register_row_number(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
