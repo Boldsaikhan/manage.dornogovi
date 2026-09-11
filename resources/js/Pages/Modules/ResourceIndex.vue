@@ -471,7 +471,6 @@ const resetFormDefaults = () => {
 
 const openForm = () => {
     resetFormDefaults();
-    editingId.value = null;
     showForm.value = true;
 };
 
@@ -480,8 +479,6 @@ const openForm = () => {
  * Ингэснээр өдөр тутмын харалт дээр санамсаргүй дарахаас сэргийлнэ.
  */
 const editMode = ref(false);
-const editingId = ref(null);
-const editBusy = ref(false);
 
 /*
  * Хүснэгтийн нүдэн дээр шууд солих — засах горим асаалттай үед л.
@@ -535,33 +532,6 @@ const addBlankRow = () => {
             onFinish: () => (addingRow.value = false),
         },
     );
-};
-
-const startEdit = async (row) => {
-    if (editBusy.value) return;
-
-    editBusy.value = true;
-
-    try {
-        const { data } = await window.axios.get(
-            route('modules.edit', { module: props.module, id: row.id }),
-        );
-
-        resetFormDefaults();
-
-        Object.entries(data.values ?? {}).forEach(([name, value]) => {
-            if (name in form) {
-                form[name] = value;
-            }
-        });
-
-        editingId.value = row.id;
-        showForm.value = true;
-    } catch (error) {
-        alert('Мэдээллийг уншиж чадсангүй.');
-    } finally {
-        editBusy.value = false;
-    }
 };
 
 const closeForm = () => {
@@ -667,20 +637,14 @@ const submit = () => {
             data[props.scopeField] = props.activeScope;
         }
         return data;
-    }).post(
-        editingId.value
-            ? route('modules.update', { module: props.module, id: editingId.value })
-            : props.storeUrl,
-        {
-            preserveScroll: true,
-            forceFormData: hasFileField.value,
-            onSuccess: () => {
-                closeForm();
-                resetFormDefaults();
-                editingId.value = null;
-            },
+    }).post(props.storeUrl, {
+        preserveScroll: true,
+        forceFormData: hasFileField.value,
+        onSuccess: () => {
+            closeForm();
+            resetFormDefaults();
         },
-    );
+    });
 };
 
 // Мөр бүрийн нэмэлт үйлдэл (жишээ нь чөлөөний хуудас хэвлэх).
@@ -1057,18 +1021,6 @@ const destroyRow = (id) => {
                                     <template v-if="canManage && editMode">
                                         <button
                                             type="button"
-                                            class="ui-icon-btn"
-                                            title="Засах"
-                                            aria-label="Засах"
-                                            :disabled="editBusy"
-                                            @click="startEdit(row)"
-                                        >
-                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
-                                            </svg>
-                                        </button>
-                                        <button
-                                            type="button"
                                             class="ui-icon-btn ui-icon-btn--danger"
                                             title="Устгах"
                                             aria-label="Устгах"
@@ -1293,7 +1245,7 @@ const destroyRow = (id) => {
                 <div class="mb-5 flex items-start justify-between gap-3">
                     <div>
                         <h3 class="text-base font-semibold text-brand-navy-900">
-                            {{ isSheetForm ? 'Томилолтын удирдамж' : (editingId ? 'Бүртгэл засах' : 'Шинэ бүртгэл') }}
+                            {{ isSheetForm ? 'Томилолтын удирдамж' : 'Шинэ бүртгэл' }}
                         </h3>
                         <p class="mt-0.5 text-sm text-slate-500">
                             <template v-if="isSheetForm">
@@ -1428,7 +1380,7 @@ const destroyRow = (id) => {
                 <div class="mt-6 flex justify-end gap-2 border-t border-slate-100 pt-4">
                     <button type="button" class="ui-btn-ghost" @click="closeForm">Болих</button>
                     <button type="submit" class="ui-btn-primary" :disabled="form.processing">
-                        {{ form.processing ? 'Хадгалж байна…' : (editingId ? 'Засварыг хадгалах' : 'Хадгалах') }}
+                        {{ form.processing ? 'Хадгалж байна…' : 'Хадгалах' }}
                     </button>
                 </div>
             </form>
