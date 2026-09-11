@@ -14,8 +14,13 @@ const props = defineProps({
 
 const lines = () => props.meta.lines ?? [];
 
-// Сүүлийн мөрийг нэртэй нь зэрэгцүүлнэ — голд нь гарын үсгийн зай үлдэнэ.
-const headLines = () => lines().slice(0, -1);
+/*
+ * Албан тушаалын мөр олон бол (ЗДТГ-ын дарга) сүүлийн мөрийн хажууд нэр
+ * нь орж, голд нь гарын үсгийн зай үлдэнэ. Нэг мөр бол (Засаг дарга) нэр
+ * нь доороо байрлана — цаасан маягт хоёулаа ийм байдаг.
+ */
+const sideBySide = () => lines().length > 1;
+const headLines = () => (sideBySide() ? lines().slice(0, -1) : lines());
 const lastLine = () => lines()[lines().length - 1] ?? '';
 const budgetKinds = () => props.meta.budget_kinds ?? [];
 
@@ -75,10 +80,11 @@ const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-
 
                 <div class="mt-6 w-fit text-[12px] font-bold uppercase leading-snug">
                     <template v-for="(line, i) in headLines()" :key="'c1-' + i">{{ line }}<br /></template>
-                    <div class="flex justify-between gap-6">
-                        <span>{{ lastLine() }}</span>
+                    <div v-if="sideBySide()" class="flex justify-between gap-6">
+                        <span class="whitespace-nowrap">{{ lastLine() }}</span>
                         <span class="whitespace-nowrap">{{ signerName() }}</span>
                     </div>
+                    <div v-else class="mt-3 whitespace-nowrap text-right">{{ signerName() }}</div>
                 </div>
 
                 <p class="mt-6 text-center text-[12px]">………. оны …… сар …… өдөр</p>
@@ -103,10 +109,11 @@ const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-
 
                 <div class="mt-6 w-fit text-[12px] font-bold uppercase leading-snug">
                     <template v-for="(line, i) in headLines()" :key="'c2-' + i">{{ line }}<br /></template>
-                    <div class="flex justify-between gap-6">
-                        <span>{{ lastLine() }}</span>
+                    <div v-if="sideBySide()" class="flex justify-between gap-6">
+                        <span class="whitespace-nowrap">{{ lastLine() }}</span>
                         <span class="whitespace-nowrap">{{ signerName() }}</span>
                     </div>
+                    <div v-else class="mt-3 whitespace-nowrap text-right">{{ signerName() }}</div>
                 </div>
 
                 <p class="mt-6 text-center text-[12px]">………. оны …… сар …… өдөр</p>
@@ -138,10 +145,11 @@ const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-
             <template v-for="(line, i) in headLines()" :key="i">
                 <span class="whitespace-nowrap">{{ line }}</span><br />
             </template>
-            <div class="flex justify-between gap-10">
-                <span>{{ lastLine() }}</span>
+            <div v-if="sideBySide()" class="flex justify-between gap-10">
+                <span class="whitespace-nowrap">{{ lastLine() }}</span>
                 <span class="whitespace-nowrap">{{ signerName() }}</span>
             </div>
+            <div v-else class="mt-3 whitespace-nowrap text-right">{{ signerName() }}</div>
         </div>
 
         <h3 class="mt-8 text-center text-[13px] font-bold uppercase">Томилолтын удирдамж</h3>

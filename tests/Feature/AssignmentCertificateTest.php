@@ -116,6 +116,31 @@ class AssignmentCertificateTest extends TestCase
         );
     }
 
+    public function test_a_single_line_position_puts_the_name_underneath(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        // Засаг даргын маягтад албан тушаал нь нэг мөр.
+        $row = $this->assignment([
+            'approver' => 'governor',
+            'approved_by' => 'О.Батжаргал',
+        ]);
+
+        $html = $this->actingAs($admin)
+            ->get(route('assignments.sheet', $row))
+            ->assertOk()
+            ->getContent();
+
+        // Нэр нь албан тушаалын доор, дангаараа мөрөнд байна.
+        $this->assertStringContainsString('signunder', $html);
+        // Хэв маягийн тодорхойлолт үлдэнэ, харин зурагдахгүй.
+        $this->assertStringNotContainsString('class="signrow"', $html);
+        $this->assertMatchesRegularExpression(
+            '/ДОРНОГОВЬ АЙМГИЙН ЗАСАГ ДАРГА.*?signunder.*?О\.Батжаргал/su',
+            $html,
+        );
+    }
+
     public function test_the_certificate_text_is_saved_from_the_form(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
