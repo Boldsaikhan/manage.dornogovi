@@ -243,7 +243,12 @@ class AssignmentSheet
         $purpose = trim((string) $assignment->purpose);
 
         if ($purpose !== '') {
-            $parts[] = $purpose.'-аар';
+            // «… сургалтын ажлаар» гэж уншигдана. Давхардуулахгүй.
+            $lower = mb_strtolower($purpose);
+
+            $parts[] = str_ends_with($lower, 'ажлаар') || str_ends_with($lower, 'ажил')
+                ? preg_replace('/ажил$/u', 'ажлаар', $purpose)
+                : $purpose.' ажлаар';
         }
 
         $start = $assignment->start_date;
