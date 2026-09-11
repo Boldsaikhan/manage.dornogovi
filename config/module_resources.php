@@ -73,13 +73,13 @@ return [
             // Нэр нь хоёр мөр болж хуваагдахгүй — нэг мөрөнд багтана.
             ['key' => 'user_name', 'label' => 'Овог нэр', 'single_line' => true],
             ['key' => 'user_position', 'label' => 'Албан тушаал'],
-            ['key' => 'approved_by', 'label' => 'Баталсан', 'single_line' => true],
             ['key' => 'destination', 'label' => 'Хаана'],
             ['key' => 'purpose', 'label' => 'Ямар ажлаар'],
             ['key' => 'start_date', 'label' => 'Хэзээнээс'],
             ['key' => 'day_count', 'label' => 'Хэд хоног'],
             ['key' => 'order_number', 'label' => 'Тушаалын дугаар'],
             ['key' => 'status', 'label' => 'Төлөв'],
+            ['key' => 'approved_by', 'label' => 'Баталсан', 'single_line' => true],
         ],
         'fields' => [
             // Сонголт нь утасны жагсаалтын «Удирдлага» ангиллаас бүрдэнэ.
