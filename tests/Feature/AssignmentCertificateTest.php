@@ -1,0 +1,98 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\TravelAssignment;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+/**
+ * Томилолтын маягтын ар тал — албан томилолтын үнэмлэх.
+ */
+class AssignmentCertificateTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function assignment(array $extra = []): TravelAssignment
+    {
+        return TravelAssignment::create(array_merge([
+            'approver' => 'chief',
+            'person_name' => 'Н.Гарамжав',
+            'destination' => 'Эрдэнэ сум',
+            'start_date' => '2026-09-08',
+            'end_date' => '2026-09-09',
+            'status' => 'approved',
+        ], $extra));
+    }
+
+    public function test_both_sides_are_printed(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = $this->assignment(['certificate_text' => 'Эрдэнэ суманд 2 хоног ажиллуулахаар томилов.']);
+
+        $this->actingAs($admin)
+            ->get(route('assignments.sheet', $row))
+            ->assertOk()
+            // Ар тал.
+            ->assertSee('Албан томилолтын', false)
+            ->assertSee('Томилолтоор ажилласан тухай тэмдэглэл')
+            ->assertSee('Эрдэнэ суманд 2 хоног ажиллуулахаар томилов.')
+            ->assertSee('Тусгай тэмдэглэл')
+            // Урд тал.
+            ->assertSee('Томилолтын удирдамж')
+            ->assertSee('Албан томилолтоор ажиллах төсөв');
+    }
+
+    public function test_the_number_follows_the_register_row_number(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $first = $this->assignment();
+        $second = $this->assignment();
+        // Өөр хэсгийн мөр тоологдохгүй.
+        $this->assignment(['approver' => 'governor']);
+        $third = $this->assignment();
+
+        foreach ([[$first, 1], [$second, 2], [$third, 3]] as [$row, $expected]) {
+            $this->actingAs($admin)
+                ->get(route('assignments.sheet', $row))
+                ->assertOk()
+                ->assertSee('Дугаар '.$expected);
+        }
+    }
+
+    public function test_the_chosen_approver_signs_both_sides(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = $this->assignment(['approved_by' => 'М.Мөнхбат']);
+
+        $response = $this->actingAs($admin)->get(route('assignments.sheet', $row))->assertOk();
+
+        // Хоёр талд нь гарын үсэг зурах хүний нэр гарна.
+        $this->assertSame(3, substr_count($response->getContent(), 'М.Мөнхбат'));
+    }
+
+    public function test_the_certificate_text_is_saved_from_the_form(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->from(route('assignments.index', ['scope' => 'chief']))
+            ->post(route('modules.store', ['module' => 'assignments']), [
+                'approver' => 'chief',
+                'destination' => 'Замын-Үүд',
+                'start_date' => '2026-09-10',
+                'end_date' => '2026-09-11',
+                'certificate_text' => 'Замын-Үүд суманд 2 хоног ажиллуулахаар томилов.',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(
+            'Замын-Үүд суманд 2 хоног ажиллуулахаар томилов.',
+            TravelAssignment::query()->latest('id')->first()->certificate_text,
+        );
+    }
+}

@@ -93,6 +93,8 @@ return [
             ['name' => 'scope_of_work', 'label' => '4. Томилолтын хүрээнд /ажлын чиглэл/', 'type' => 'textarea'],
             ['name' => 'order_number', 'label' => 'Тушаалын дугаар', 'type' => 'text'],
             ['name' => 'report', 'label' => 'Томилолтын тайлан', 'type' => 'textarea'],
+            // Үнэмлэхийн (ар талын) догол мөр — гараар бичнэ.
+            ['name' => 'certificate_text', 'label' => 'Үнэмлэхийн бичвэр', 'type' => 'textarea'],
             ['name' => 'note', 'label' => 'Тэмдэглэл', 'type' => 'textarea'],
             ['name' => 'status', 'label' => 'Төлөв', 'type' => 'select', 'options' => [
                 'pending' => 'Хүлээгдэж буй', 'approved' => 'Зөвшөөрсөн', 'done' => 'Дууссан',

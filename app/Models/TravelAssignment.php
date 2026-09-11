@@ -18,7 +18,7 @@ class TravelAssignment extends Model
         'person_name',
         'position', 'department_id', 'approver', 'approved_by', 'destination', 'purpose',
         'composition', 'scope_of_work', 'start_date', 'end_date',
-        'order_number', 'status', 'note', 'report',
+        'order_number', 'status', 'note', 'report', 'certificate_text',
     ];
 
     public function approverLabel(): string

@@ -94,6 +94,46 @@
         }
         .toolbar button.ghost { background: #fff; color: #1e3a5f; }
 
+        /* ── Албан томилолтын үнэмлэх (ар тал) ───────────────────── */
+
+        .cert { display: flex; gap: 10mm; }
+        .cert__col { width: 50%; }
+
+        .cert__number { text-align: center; font-weight: bold; margin-bottom: 5mm; }
+
+        .cert__body { text-align: justify; text-indent: 8mm; }
+
+        .cert__title {
+            margin-top: 28mm;
+            text-align: center;
+            font-size: 14pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            line-height: 1.3;
+        }
+
+        .cert__year { margin-top: 20mm; text-align: center; font-weight: bold; }
+
+        .cert__signer { margin-top: 8mm; font-weight: bold; text-transform: uppercase; line-height: 1.35; }
+        .cert__signer .name { display: inline-block; margin-left: 12mm; }
+
+        .cert__date { margin-top: 10mm; text-align: center; }
+
+        .cert__mark-title { margin-top: 20mm; }
+
+        .cert table.cert__marks { margin-top: 2mm; }
+        .cert table.cert__marks th,
+        .cert table.cert__marks td { font-size: 10pt; padding: 1mm; }
+        .cert table.cert__marks tbody tr { height: 7mm; }
+
+        .cert__special { margin-top: 28mm; text-align: center; font-weight: bold; text-transform: uppercase; }
+        .cert__special-sub { margin-top: 6mm; text-align: center; }
+
+        .cert__note { margin-top: 6mm; }
+        .cert__note .line { height: 7mm; }
+
+        .page-break { page-break-after: always; break-after: page; }
+
         @media print {
             body { background: #fff; }
             .page { margin: 0; padding: 0; width: auto; min-height: 0; }
@@ -108,6 +148,86 @@
     <button type="button" class="ghost" onclick="window.close()">Хаах</button>
 </div>
 
+{{-- Ар тал — албан томилолтын үнэмлэх --}}
+<div class="page page-break">
+    <div class="cert">
+        <div class="cert__col">
+            <div class="cert__title">Албан томилолтын<br>үнэмлэх</div>
+            <div class="cert__year">{{ $year }} он</div>
+
+            <div class="cert__mark-title">Томилолтоор ажилласан тухай тэмдэглэл</div>
+
+            <table class="cert__marks">
+                <thead>
+                    <tr>
+                        <th rowspan="2" style="width:34%">Хаана</th>
+                        <th colspan="2">Сар, өдөр</th>
+                        <th rowspan="2" style="width:26%">Гарын үсэг</th>
+                    </tr>
+                    <tr>
+                        <th style="width:20%">Ирсэн</th>
+                        <th style="width:20%">Буцсан</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for ($i = 0; $i < 6; $i++)
+                        <tr><td></td><td></td><td></td><td></td></tr>
+                    @endfor
+                </tbody>
+            </table>
+
+            <div class="cert__note">
+                Албан томилолтын ажлын дүнг эх зардлыг ………хувиар тооцоо хийхийг зөвшөөрсөн.
+            </div>
+
+            <div class="cert__signer">
+                @foreach ($lines as $line)
+                    {{ $line }}@if (! $loop->last)<br>@endif
+                @endforeach
+                <span class="name">{{ $signerName ?: '.....................' }}</span>
+            </div>
+
+            <div class="cert__date">………. оны …… сар …… өдөр</div>
+        </div>
+
+        <div class="cert__col">
+            <div class="cert__number">Дугаар {{ $number }}</div>
+
+            <div class="cert__body">
+                @if (trim((string) $assignment->certificate_text) !== '')
+                    {{ $assignment->certificate_text }}
+                @else
+                    @for ($i = 0; $i < 6; $i++)
+                        <span class="line"></span>
+                    @endfor
+                @endif
+            </div>
+
+            <div class="cert__signer">
+                @foreach ($lines as $line)
+                    {{ $line }}@if (! $loop->last)<br>@endif
+                @endforeach
+                <span class="name">{{ $signerName ?: '.....................' }}</span>
+            </div>
+
+            <div class="cert__date">………. оны …… сар …… өдөр</div>
+
+            <div class="cert__special">Тусгай тэмдэглэл</div>
+            <div class="cert__special-sub">Хугацаа сунгах тухай</div>
+
+            <div class="cert__note">
+                <span class="line"></span>газар, байгууллагын
+                <span class="line"></span>тодорхойлолт, хүсэлт
+                <span class="line"></span>ажил гүйцэтгэх шаардлагын дагуу томилолтын хугацааг
+                ……. хоногоор сунгав.
+            </div>
+
+            <div style="margin-top:10mm">Зөвшөөрсөн дарга &nbsp;..................................</div>
+        </div>
+    </div>
+</div>
+
+{{-- Урд тал — томилолтын удирдамж --}}
 <div class="page">
     <div class="approve">
         БАТЛАВ<br>
