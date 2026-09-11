@@ -108,6 +108,8 @@ return [
         'file_export' => true,
         // Хүснэгтийн нүдэн дээр шууд солино.
         'inline_fields' => ['approved_by'],
+        // Өөрчлөлтийн түүх хөтөлнө.
+        'audit_log' => true,
         'defaults' => ['status' => 'pending'],
         'on_create' => 'attach_user_department',
     ],

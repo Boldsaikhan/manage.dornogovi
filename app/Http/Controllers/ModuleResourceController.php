@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\PhoneDirectoryEntry;
 use App\Models\RegulationCategory;
 use App\Support\AssignmentSheet;
@@ -111,6 +112,7 @@ class ModuleResourceController extends Controller
             'canImportFile' => ($config['file_import'] ?? false)
                 && ModuleAccess::canEdit($request->user(), $module),
             'canExportFile' => (bool) ($config['file_export'] ?? false),
+            'hasAuditLog' => (bool) ($config['audit_log'] ?? false),
             // Хүснэгтийн нүдэн дээр шууд солих боломжтой талбарууд.
             'inlineFields' => collect($config['inline_fields'] ?? [])
                 ->mapWithKeys(fn (string $name) => [
@@ -310,6 +312,22 @@ class ModuleResourceController extends Controller
 
         $result = $importer->store($data['scope'], $data['entries']);
 
+        // Импортыг нэг бичлэгээр тэмдэглэнэ — мөр бүрээр биш.
+        if ($result['created'] > 0) {
+            AuditLog::record(
+                modelType: $module,
+                modelId: null,
+                action: 'imported',
+                scope: $data['scope'],
+                label: $scopes[$data['scope']] ?? $data['scope'],
+                summary: sprintf(
+                    '%d мөр нэмэгдэж, %d мөр давхардсан тул алгасав.',
+                    $result['created'],
+                    $result['skipped'],
+                ),
+            );
+        }
+
         $message = sprintf('%d мөр нэмэгдлээ.', $result['created']);
 
         if ($result['skipped'] > 0) {
@@ -348,9 +366,110 @@ class ModuleResourceController extends Controller
 
         $row = $config['model']::create($data);
 
+        $this->log($module, $row, 'created', $config);
+
         $this->notifyRelatedEmployees($module, $row, $data);
 
         return back()->with('success', 'Амжилттай хадгаллаа.');
+    }
+
+    /**
+     * Өөрчлөлтийн лог үлдээнэ.
+     *
+     * @param  array<string, mixed>|null  $changes
+     */
+    private function log(
+        string $module,
+        Model $row,
+        string $action,
+        array $config,
+        ?string $summary = null,
+        ?array $changes = null,
+    ): void {
+        AuditLog::record(
+            modelType: $module,
+            modelId: $row->getKey(),
+            action: $action,
+            scope: (string) ($row->{$config['scope_column'] ?? 'scope'} ?? '') ?: null,
+            label: $this->rowLabel($row),
+            summary: $summary,
+            changes: $changes,
+        );
+    }
+
+    /** Логт харагдах богино нэр. */
+    private function rowLabel(Model $row): string
+    {
+        foreach (['person_name', 'title', 'name', 'destination'] as $key) {
+            $value = trim((string) ($row->{$key} ?? ''));
+
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return '#'.$row->getKey();
+    }
+
+    /**
+     * Өөрчлөгдсөн талбаруудыг хуучин/шинэ утгаар нь тэмдэглэнэ.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, array{from: string, to: string}>
+     */
+    private function changedFields(Model $row, array $data, array $config): array
+    {
+        $labels = collect($config['fields'] ?? [])->pluck('label', 'name');
+        $changes = [];
+
+        foreach ($data as $name => $new) {
+            $old = $row->getOriginal($name);
+
+            $oldText = $old instanceof \DateTimeInterface ? $old->format('Y-m-d') : (string) ($old ?? '');
+            $newText = $new instanceof \DateTimeInterface ? $new->format('Y-m-d') : (string) ($new ?? '');
+
+            if ($oldText === $newText) {
+                continue;
+            }
+
+            $changes[(string) ($labels[$name] ?? $name)] = ['from' => $oldText, 'to' => $newText];
+        }
+
+        return $changes;
+    }
+
+    /**
+     * Тухайн модулийн өөрчлөлтийн түүх.
+     */
+    public function logs(Request $request, string $module): JsonResponse
+    {
+        $config = $this->configFor($module);
+        $this->authorizeModule($request, $module);
+
+        $scope = (string) $request->query('scope', 'all');
+
+        $rows = AuditLog::query()
+            ->with('user:id,name')
+            ->where('model_type', $module)
+            ->when(
+                $scope !== 'all' && array_key_exists($scope, $config['scopes'] ?? []),
+                fn ($query) => $query->where('scope', $scope),
+            )
+            ->orderByDesc('id')
+            ->limit(200)
+            ->get()
+            ->map(fn (AuditLog $log) => [
+                'id' => $log->id,
+                'action_label' => $log->actionLabel(),
+                'label' => $log->label,
+                'summary' => $log->summary,
+                'changes' => $log->changes,
+                'scope' => $config['scopes'][$log->scope] ?? $log->scope,
+                'user' => $log->user?->name ?? 'Систем',
+                'at' => optional($log->created_at)?->format('Y-m-d H:i'),
+            ]);
+
+        return response()->json(['rows' => $rows]);
     }
 
     /**
@@ -385,7 +504,13 @@ class ModuleResourceController extends Controller
 
         $data = $request->validate(['value' => $rules], [], ['value' => mb_strtolower($field['label'] ?? $name)]);
 
+        $changes = $this->changedFields($row, [$name => $data['value'] ?? null], $config);
+
         $row->update([$name => $data['value'] ?? null]);
+
+        if ($changes !== []) {
+            $this->log($module, $row, 'updated', $config, changes: $changes);
+        }
 
         return back()->with('success', 'Хадгаллаа.');
     }
@@ -449,7 +574,13 @@ class ModuleResourceController extends Controller
         $data = $this->normalizeDecreeData($config, $data);
         $data = $this->storeUploadedFiles($request, $config, $data);
 
+        $changes = $this->changedFields($row, $data, $config);
+
         $row->update($data);
+
+        if ($changes !== []) {
+            $this->log($module, $row, 'updated', $config, changes: $changes);
+        }
 
         return back()->with('success', 'Хадгаллаа.');
     }
@@ -502,6 +633,8 @@ class ModuleResourceController extends Controller
 
         $row = $config['model']::query()->whereKey($id)->firstOrFail();
         abort_unless(ModuleOwnScope::allows($request->user(), $module, $row), 403);
+
+        $this->log($module, $row, 'deleted', $config);
 
         $this->deleteStoredFile($row);
         $row->delete();
