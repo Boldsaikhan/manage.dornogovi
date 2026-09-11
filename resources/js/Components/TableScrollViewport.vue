@@ -151,9 +151,11 @@ watch(() => props.fill, () => nextTick(measure));
         :class="fill ? 'min-h-0 flex-1 basis-0' : ''"
         :style="fill ? undefined : { height: maxHeight, maxHeight }"
     >
+        <!-- overflow-x нь .ui-table-scroll-body-д тодорхойлогдоно: хулгана дээр
+             хаалттай (доод зурвасаар), мэдрэгчтэй дээр нээлттэй (хуруугаар). -->
         <div
             ref="bodyRef"
-            class="ui-table-scroll-body min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain"
+            class="ui-table-scroll-body min-h-0 flex-1 overflow-y-auto overscroll-contain"
             @scroll="onBodyScroll"
             @wheel="onBodyWheel"
         >
