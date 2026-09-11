@@ -62,10 +62,10 @@ class AssignmentRegisterExportTest extends TestCase
             ->get(route('assignments.index', ['scope' => 'chief']))
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('rows.0.approved_by', 'Б.Ганбат')
-                // «Албан тушаал»-ын баруун талд байрлана.
-                ->where('columns.1.key', 'user_position')
-                ->where('columns.2.key', 'approved_by')
-                ->where('columns.2.label', 'Баталсан')
+                // «Төлөв»-ийн баруун талд, хамгийн сүүлд байрлана.
+                ->where('columns.7.key', 'status')
+                ->where('columns.8.key', 'approved_by')
+                ->where('columns.8.label', 'Баталсан')
             );
     }
 

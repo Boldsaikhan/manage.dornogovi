@@ -29,8 +29,8 @@ class AssignmentRegisterColumnsTest extends TestCase
                 // Овог нэр нь хоёр мөр болж хуваагдахгүй.
                 $this->assertTrue($props['columns'][0]['single_line']);
                 $this->assertSame(
-                    ['Овог нэр', 'Албан тушаал', 'Баталсан', 'Хаана', 'Ямар ажлаар', 'Хэзээнээс', 'Хэд хоног'],
-                    array_slice($labels, 0, 7),
+                    ['Овог нэр', 'Албан тушаал', 'Хаана', 'Ямар ажлаар', 'Хэзээнээс', 'Хэд хоног'],
+                    array_slice($labels, 0, 6),
                 );
             });
     }
