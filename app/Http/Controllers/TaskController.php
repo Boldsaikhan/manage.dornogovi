@@ -135,6 +135,8 @@ class TaskController extends Controller
         $source = $this->resolveSource($request->string('kind')->toString());
         $kind = $source->key;
 
+        $this->authorizeKind($request->user(), $kind);
+
         $format = strtolower((string) $request->query('format', 'docx'));
         abort_unless(in_array($format, ['docx', 'xlsx', 'pdf'], true), 404);
 
@@ -377,6 +379,10 @@ class TaskController extends Controller
         abort_unless(ModuleAccess::canView($request->user(), 'tasks'), 403);
 
         $kind = (string) $request->query('kind', '');
+
+        if ($kind !== '') {
+            $this->authorizeKind($request->user(), $kind);
+        }
 
         $rows = AuditLog::query()
             ->with('user:id,name')
@@ -935,6 +941,24 @@ class TaskController extends Controller
     /**
      * @return list<array{key: string, label: string, layout: string, is_system: bool}>
      */
+    /**
+     * Тухайн хэрэглэгч энэ хэсгийг харах эрхтэй эсэх.
+     *
+     * Хамааралтай эрхтэй хэрэглэгч зөвхөн өөрт нь хамаатай хэсгүүдийг
+     * хардаг тул бусад хэсгийн өгөгдлийг татах, түүхийг нь харахыг
+     * зөвшөөрөхгүй.
+     */
+    private function authorizeKind(\App\Models\User $user, string $kind): void
+    {
+        if ($user->is_admin) {
+            return;
+        }
+
+        $allowed = collect($this->kindTabs($user))->pluck('key');
+
+        abort_unless($allowed->contains($kind), 403);
+    }
+
     private function kindTabs(\App\Models\User $user): array
     {
         $query = TaskSource::query()
