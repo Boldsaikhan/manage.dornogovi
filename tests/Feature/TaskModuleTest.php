@@ -292,11 +292,7 @@ class TaskModuleTest extends TestCase
     {
         $source = TaskSource::where('key', TaskSource::KEY_DIRECTIVE)->first();
         $user = User::factory()->create(['name' => 'Б.Дөлгөөн']);
-        UserModulePermission::create([
-            'user_id' => $user->id,
-            'module_key' => 'tasks',
-            'level' => 'edit_own',
-        ]);
+        $this->grantModule($user, 'tasks', 'edit_own');
 
         $task = Task::create([
             'task_source_id' => $source->id,

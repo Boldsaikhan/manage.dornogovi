@@ -205,22 +205,17 @@ class ModuleAccess
             return null;
         }
 
-        // Дэд хэсэгт тусгай эрх өгөөгүй бол эх модулийн эрхээр шийднэ.
+        /*
+         * Дэд хэсэг (Захирамж А, Татах гэх мэт) нь тусдаа тохируулагдана.
+         *
+         * Тохируулаагүй бол ХААЛТТАЙ. Урьд нь эцэг модулийнхоо эрхийг
+         * дагадаг байсныг болиулав — шинэ роль үүсгэхэд бүх зүйл хаалттай
+         * эхэлж, зөвхөн санаатай нээснийг л нээнэ.
+         */
         if (self::isSubKey($moduleKey)) {
             $own = self::exactLevel($user, $moduleKey);
 
-            // Тусгайлан хаасан бол эх модулийн эрх ч нээхгүй.
-            if ($own === self::LEVEL_CLOSED) {
-                return null;
-            }
-
-            if ($own !== null) {
-                return $own;
-            }
-
-            [$parent] = self::splitKey($moduleKey);
-
-            return self::level($user, $parent);
+            return ($own === null || $own === self::LEVEL_CLOSED) ? null : $own;
         }
 
         $userLevel = $user->modulePermissions

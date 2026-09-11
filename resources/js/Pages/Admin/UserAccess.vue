@@ -415,13 +415,8 @@ const roleSummary = (roleKey) => {
 };
 
 const levelOptions = (module) => {
-    // Дэд мөр: хоосон = дээд мөрийг дагана, «closed» = үл хамааран хаана.
-    const options = module.parent
-        ? [
-            { value: '', label: 'Дээд мөрийг дагах' },
-            { value: 'closed', label: 'Хаалттай' },
-        ]
-        : [{ value: '', label: 'Хаалттай' }];
+    // Дэд мөр ч эцэг мөртэй ижил — тохируулаагүй бол хаалттай.
+    const options = [{ value: '', label: 'Хаалттай' }];
 
     if (module.own_scope) {
         const labels = {
@@ -991,7 +986,7 @@ const pickFromDirectory = (value) => {
                                     <td :class="m.parent ? 'pl-8 text-sm text-slate-600' : ''">
                                         <span v-if="m.parent" class="mr-1 text-slate-300">└</span>{{ m.label }}
                                         <span v-if="m.parent" class="ml-1 text-[10px] text-slate-400">
-                                            (тохируулаагүй бол дээд мөрийг дагана)
+                                            (тусад нь нээнэ)
                                         </span>
                                     </td>
                                     <td>

@@ -20,6 +20,7 @@ class TaskSectionVisibilityTest extends TestCase
     {
         RolePermission::replaceFor('specialist', [
             'tasks' => 'manage_own',
+            'tasks:edit' => 'manage_own',
         ]);
 
         $user = User::factory()->create([
@@ -95,6 +96,7 @@ class TaskSectionVisibilityTest extends TestCase
     {
         RolePermission::replaceFor('specialist', [
             'tasks' => 'manage_own',
+            'tasks:edit' => 'manage_own',
         ]);
 
         $user = User::factory()->create([
@@ -153,6 +155,7 @@ class TaskSectionVisibilityTest extends TestCase
     {
         RolePermission::replaceFor('specialist', [
             'tasks' => 'manage_own',
+            'tasks:edit' => 'manage_own',
         ]);
 
         $user = User::factory()->create([
@@ -160,11 +163,7 @@ class TaskSectionVisibilityTest extends TestCase
             'is_admin' => false,
             'is_specialist' => true,
         ]);
-        UserModulePermission::create([
-            'user_id' => $user->id,
-            'module_key' => 'tasks',
-            'level' => 'view',
-        ]);
+        $this->grantModule($user, 'tasks', 'view');
 
         $source = TaskSource::where('key', TaskSource::KEY_DIRECTIVE)->firstOrFail();
         Task::create([

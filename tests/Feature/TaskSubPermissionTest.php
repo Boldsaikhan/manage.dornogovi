@@ -48,22 +48,29 @@ class TaskSubPermissionTest extends TestCase
         );
     }
 
-    public function test_an_unset_sub_permission_follows_the_parent(): void
+    public function test_an_unset_sub_permission_is_closed(): void
     {
         $this->source();
 
         $user = $this->userWithLevels(['tasks' => 'edit']);
 
-        // Дэд эрх тохируулаагүй тул эцгийнхээ түвшнийг өвлөнө.
-        $this->assertTrue(ModuleAccess::canEdit($user, 'tasks:edit'));
-        $this->assertTrue(ModuleAccess::canView($user, 'tasks:export'));
+        // Дэд эрхийг тусад нь нээх ёстой — эцгийнхээ эрхийг өвлөхгүй.
+        $this->assertFalse(ModuleAccess::canEdit($user, 'tasks:edit'));
+        $this->assertFalse(ModuleAccess::canView($user, 'tasks:export'));
+
+        // Эцэг модуль нь өөрөө нээлттэй хэвээр.
+        $this->assertTrue(ModuleAccess::canEdit($user, 'tasks'));
     }
 
     public function test_downloading_can_be_closed_on_its_own(): void
     {
         $this->source();
 
-        $user = $this->userWithLevels(['tasks' => 'edit', 'tasks:export' => 'closed']);
+        $user = $this->userWithLevels([
+            'tasks' => 'edit',
+            'tasks:edit' => 'edit',
+            'tasks:export' => 'closed',
+        ]);
 
         $this->actingAs($user)
             ->get(route('tasks.index', ['kind' => 'directive']))
@@ -82,7 +89,11 @@ class TaskSubPermissionTest extends TestCase
     {
         $source = $this->source();
 
-        $user = $this->userWithLevels(['tasks' => 'edit', 'tasks:edit' => 'view']);
+        $user = $this->userWithLevels([
+            'tasks' => 'edit',
+            'tasks:edit' => 'view',
+            'tasks:export' => 'view',
+        ]);
 
         $this->actingAs($user)
             ->get(route('tasks.index', ['kind' => 'directive']))
@@ -102,7 +113,11 @@ class TaskSubPermissionTest extends TestCase
         $this->source();
 
         // Удирдах эрхтэй ч оруулахыг нь хаасан.
-        $user = $this->userWithLevels(['tasks' => 'manage', 'tasks:import' => 'closed']);
+        $user = $this->userWithLevels([
+            'tasks' => 'manage',
+            'tasks:edit' => 'manage',
+            'tasks:import' => 'closed',
+        ]);
 
         $this->actingAs($user)
             ->get(route('tasks.index', ['kind' => 'directive']))

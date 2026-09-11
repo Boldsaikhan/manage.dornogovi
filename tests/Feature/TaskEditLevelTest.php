@@ -18,6 +18,7 @@ class TaskEditLevelTest extends TestCase
     {
         RolePermission::replaceFor('specialist', [
             'tasks' => 'edit',
+            'tasks:edit' => 'edit',
         ]);
 
         $user = User::factory()->create([
