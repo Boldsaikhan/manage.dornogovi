@@ -202,6 +202,82 @@ class AssignmentSheet
         return str_contains($upper, 'ДОРНОГОВЬ') ? $upper : 'ДОРНОГОВЬ АЙМГИЙН '.$upper;
     }
 
+    /**
+     * Үнэмлэхийн догол мөрийг бүртгэлийн мэдээллээс бүрдүүлнэ.
+     *
+     * Гараар бичсэн бичвэр байвал түүнийг хэвээр нь авна.
+     */
+    public static function certificateText(\App\Models\TravelAssignment $assignment): string
+    {
+        $typed = trim((string) $assignment->certificate_text);
+
+        if ($typed !== '') {
+            return $typed;
+        }
+
+        $name = trim((string) $assignment->person_name) ?: trim((string) ($assignment->user->name ?? ''));
+
+        if ($name === '') {
+            return '';
+        }
+
+        $position = trim((string) $assignment->position)
+            ?: (string) (PhoneDirectoryEntry::positionFor($name) ?? '');
+
+        $org = trim((string) (PhoneDirectoryEntry::orgFor($name) ?? '')) ?: 'Дорноговь аймгийн ЗДТГ';
+
+        $parts = [$org.'-ын'];
+
+        if ($position !== '') {
+            $parts[] = $position;
+        }
+
+        $parts[] = $name;
+
+        $where = trim((string) $assignment->destination);
+
+        if ($where !== '') {
+            $parts[] = $where;
+        }
+
+        $purpose = trim((string) $assignment->purpose);
+
+        if ($purpose !== '') {
+            $parts[] = $purpose.'-аар';
+        }
+
+        $start = $assignment->start_date;
+
+        if ($start) {
+            $parts[] = sprintf(
+                '%s оны %d дүгээр сарын %d-ны өдрөөс',
+                $start->format('Y'),
+                (int) $start->format('m'),
+                (int) $start->format('d'),
+            );
+        }
+
+        $days = self::dayCount($assignment);
+
+        if ($days !== null) {
+            $parts[] = $days.' хоног';
+        }
+
+        $parts[] = 'ажиллуулахаар томилов.';
+
+        return implode(' ', $parts);
+    }
+
+    /** Эхлэх, дуусах огнооноос хоногийг бодно (эхлэх өдрийг оролцуулна). */
+    private static function dayCount(\App\Models\TravelAssignment $assignment): ?int
+    {
+        if (! $assignment->start_date || ! $assignment->end_date) {
+            return null;
+        }
+
+        return (int) $assignment->start_date->diffInDays($assignment->end_date) + 1;
+    }
+
     /** Сонгосон батлагчийн толгойн мөрүүд. */
     public static function linesFor(?string $approver, ?string $chosenName): array
     {

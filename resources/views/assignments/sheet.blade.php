@@ -312,8 +312,8 @@
             <div class="cert__number">Дугаар {{ $number }}</div>
 
             <div class="cert__body">
-                @if (trim((string) $assignment->certificate_text) !== '')
-                    {{ $assignment->certificate_text }}
+                @if (trim((string) $certificateText) !== '')
+                    {{ $certificateText }}
                 @else
                     @for ($i = 0; $i < 6; $i++)
                         <span class="line"></span>

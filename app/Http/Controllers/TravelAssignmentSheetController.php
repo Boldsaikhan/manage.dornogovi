@@ -32,6 +32,8 @@ class TravelAssignmentSheetController extends Controller
             'year' => optional($assignment->start_date)?->format('Y') ?? now()->format('Y'),
             'period' => $this->period($assignment),
             'number' => $this->rowNumber($assignment),
+            // Гараар бичээгүй бол бүртгэлээс өгүүлбэрийг нь бүрдүүлнэ.
+            'certificateText' => AssignmentSheet::certificateText($assignment),
         ]);
     }
 
