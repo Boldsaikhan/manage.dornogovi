@@ -71,15 +71,16 @@ return [
         'row_number' => 'Д/д',
         'columns' => [
             // Нэр нь хоёр мөр болж хуваагдахгүй — нэг мөрөнд багтана.
-            ['key' => 'user_name', 'label' => 'Овог нэр', 'single_line' => true],
-            ['key' => 'user_position', 'label' => 'Албан тушаал'],
-            ['key' => 'destination', 'label' => 'Хаана'],
-            ['key' => 'purpose', 'label' => 'Ямар ажлаар'],
-            ['key' => 'start_date', 'label' => 'Хэзээнээс'],
-            ['key' => 'day_count', 'label' => 'Хэд хоног'],
-            ['key' => 'order_number', 'label' => 'Тушаалын дугаар'],
-            ['key' => 'status', 'label' => 'Төлөв'],
-            ['key' => 'approved_by', 'label' => 'Баталсан', 'single_line' => true],
+            ['key' => 'user_name', 'label' => 'Овог нэр', 'single_line' => true, 'width' => '9rem'],
+            ['key' => 'user_position', 'label' => 'Албан тушаал', 'width' => '12rem'],
+            ['key' => 'destination', 'label' => 'Хаана', 'width' => '8rem'],
+            ['key' => 'purpose', 'label' => 'Ямар ажлаар', 'width' => '18rem', 'align' => 'left'],
+            // Огноог зөвхөн цифрээр нь харьцуулж хайна.
+            ['key' => 'start_date', 'label' => 'Хэзээнээс', 'width' => '6.5rem', 'date' => true],
+            ['key' => 'day_count', 'label' => 'Хэд хоног', 'width' => '4.5rem'],
+            ['key' => 'order_number', 'label' => 'Тушаалын дугаар', 'width' => '6.5rem'],
+            ['key' => 'status', 'label' => 'Төлөв', 'from_options' => true, 'width' => '6rem'],
+            ['key' => 'approved_by', 'label' => 'Баталсан', 'single_line' => true, 'width' => '9rem'],
         ],
         'fields' => [
             // Сонголт нь утасны жагсаалтын «Удирдлага» ангиллаас бүрдэнэ.

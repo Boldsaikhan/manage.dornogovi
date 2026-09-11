@@ -1,10 +1,11 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
 import AssignmentSheetForm from '@/Components/AssignmentSheetForm.vue';
+import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 
 const props = defineProps({
     module: String,
@@ -38,6 +39,111 @@ const props = defineProps({
 });
 
 const isSheetForm = computed(() => props.formLayout === 'assignment_sheet');
+
+/* ── Багана тус бүрийн хайлт ─────────────────────────────────────────
+ *
+ * Захирамж, тушаалын хүснэгттэй ижил — толгойн доор багана бүрд хайх
+ * нүд байрлана.
+ */
+
+const filters = reactive({});
+
+props.columns.forEach((col) => (filters[col.key] = ''));
+
+const hasFilters = computed(() => Object.values(filters).some((v) => String(v).trim() !== ''));
+
+const clearFilters = () => Object.keys(filters).forEach((key) => (filters[key] = ''));
+
+// Таб солигдоход хайлт цэвэрлэгдэнэ.
+watch(() => props.activeScope, () => clearFilters());
+
+/** Том/жижиг үсэг, ө/о, ү/у зэргийн зөрүүг үл тооно. */
+const searchKey = (value) => String(value ?? '')
+    .toLowerCase()
+    .replace(/ө/g, 'о')
+    .replace(/ү/g, 'у')
+    .replace(/ё/g, 'е')
+    .replace(/й/g, 'и');
+
+/** Огноог зөвхөн цифрээр нь харьцуулна: «2026.09.03», «09/03», «0903» бүгд таарна. */
+const digitsOnly = (value) => String(value ?? '').replace(/\D+/g, '');
+
+const dateColumns = computed(() => props.columns.filter((c) => c.date).map((c) => c.key));
+
+const matchesFilters = (row) => Object.entries(filters).every(([key, needle]) => {
+    const text = String(needle).trim();
+
+    if (text === '') return true;
+
+    if (dateColumns.value.includes(key)) {
+        return digitsOnly(row[key]).includes(digitsOnly(text));
+    }
+
+    return searchKey(row[key]).includes(searchKey(text));
+});
+
+const visibleRows = computed(() => (hasFilters.value ? props.rows.filter(matchesFilters) : props.rows));
+
+/*
+ * Нэг дор бүх мөрийг зурахгүй — доош гүйлгэхэд нэмж зурна.
+ */
+const RENDER_STEP = 60;
+
+const renderLimit = ref(RENDER_STEP);
+
+const renderedRows = computed(() => visibleRows.value.slice(0, renderLimit.value));
+
+const hasMoreRows = computed(() => visibleRows.value.length > renderedRows.value.length);
+
+const sheetColumnCount = computed(
+    () => props.columns.length
+        + (props.canExportFile ? 1 : 0)
+        + (props.rowNumberLabel ? 1 : 0)
+        + (props.canManage || props.rowActions.length ? 1 : 0),
+);
+
+const growRenderLimit = () => {
+    if (hasMoreRows.value) {
+        renderLimit.value += RENDER_STEP;
+    }
+};
+
+watch(() => [props.activeScope, hasFilters.value, visibleRows.value.length], () => {
+    renderLimit.value = RENDER_STEP;
+});
+
+/**
+ * Толгойн мөрүүдийг наалдуулах.
+ *
+ * Мөрийн өндөр нь дэлгэцийн өргөнөөс хамаарч өөрчлөгддөг тул байрлалыг
+ * CSS-д тогтмолоор бичихгүй — бодит өндрийг нь хэмжиж дараалуулна.
+ */
+const sheetEl = ref(null);
+
+const syncStickyHead = () => {
+    const head = sheetEl.value?.querySelector('thead');
+
+    if (! head) return;
+
+    let top = 0;
+
+    Array.from(head.rows).forEach((row, index) => {
+        // 1 пикселээр давхарлана — хүрээ хуваалцсанаас үүсэх завсрыг арилгана.
+        const offset = index === 0 ? 0 : Math.max(0, Math.round(top) - index);
+
+        Array.from(row.cells).forEach((cell) => {
+            cell.style.position = 'sticky';
+            cell.style.top = `${offset}px`;
+            cell.style.zIndex = String(30 - index);
+        });
+
+        top += row.getBoundingClientRect().height;
+    });
+};
+
+const scheduleStickySync = () => nextTick(() => requestAnimationFrame(syncStickyHead));
+
+watch(() => [props.rows.length, props.activeScope, hasFilters.value], scheduleStickySync);
 
 /* ── Мөр сонгож татах ───────────────────────────────────────────────── */
 
@@ -118,7 +224,11 @@ const download = (format) => {
 };
 
 // Д/д — хамгийн шинэ мөр хамгийн том дугаартай.
-const rowNumber = (index) => Math.max(1, (props.rowNumberStart || props.rows.length) - index);
+const rowNumber = (row) => {
+    const position = props.rows.indexOf(row);
+
+    return Math.max(1, (props.rowNumberStart || props.rows.length) - Math.max(0, position));
+};
 
 const showScopePanel = ref(false);
 const showNewScope = ref(false);
@@ -217,9 +327,18 @@ const onPreviewKey = (event) => {
     }
 };
 
-onMounted(() => document.addEventListener('keydown', onPreviewKey));
+onMounted(() => {
+    document.addEventListener('keydown', onPreviewKey);
+
+    scheduleStickySync();
+    // Фонт хожуу ачаалагдвал толгойн өндөр өөрчлөгддөг тул дахин нэг хэмжинэ.
+    setTimeout(syncStickyHead, 400);
+    window.addEventListener('resize', syncStickyHead);
+});
+
 onBeforeUnmount(() => {
     document.removeEventListener('keydown', onPreviewKey);
+    window.removeEventListener('resize', syncStickyHead);
     document.body.style.overflow = '';
 });
 
@@ -717,31 +836,59 @@ const destroyRow = (id) => {
                 </div>
             </section>
 
-            <div class="ui-table-wrap overflow-x-auto">
-                <table class="ui-table min-w-full">
+            <TableScrollViewport @near-bottom="growRenderLimit">
+                <div ref="sheetEl" class="decree-sheet">
+                <table class="decree-sheet__table min-w-[1180px]">
+                    <colgroup>
+                        <col v-if="canExportFile" style="width: 2.5rem" />
+                        <col v-if="rowNumberLabel" style="width: 3.25rem" />
+                        <col v-for="col in columns" :key="col.key" :style="col.width ? { width: col.width } : {}" />
+                        <col v-if="canManage || rowActions.length" style="width: 7.5rem" />
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th v-if="canExportFile" class="w-10 text-center">
+                            <th v-if="canExportFile">
                                 <input
                                     type="checkbox"
-                                    class="h-4 w-4 rounded border-slate-300 text-brand-navy-600 focus:ring-brand-navy-500"
+                                    class="h-3.5 w-3.5 rounded border-slate-300 text-brand-navy-600 focus:ring-brand-navy-500"
                                     :checked="allSelected"
                                     title="Бүгдийг сонгох"
                                     @change="toggleAll"
                                 />
                             </th>
-                            <th v-if="rowNumberLabel" class="w-12 text-center">{{ rowNumberLabel }}</th>
-                            <th
-                                v-for="col in columns"
-                                :key="col.key"
-                                :class="col.single_line ? 'whitespace-nowrap' : ''"
-                            >{{ col.label }}</th>
+                            <th v-if="rowNumberLabel">{{ rowNumberLabel }}</th>
+                            <th v-for="col in columns" :key="col.key">{{ col.label }}</th>
+                            <th v-if="canManage || rowActions.length" />
+                        </tr>
+                        <!-- Багана тус бүрд хайх мөр -->
+                        <tr class="decree-sheet__filters">
+                            <th v-if="canExportFile" />
+                            <th v-if="rowNumberLabel">
+                                <button
+                                    v-if="hasFilters"
+                                    type="button"
+                                    class="w-full text-[10px] font-semibold text-brand-orange-600 hover:underline"
+                                    title="Хайлтыг цэвэрлэх"
+                                    @click="clearFilters"
+                                >
+                                    Цэвэрлэх
+                                </button>
+                                <span v-else class="text-[10px] text-slate-300">Хайх</span>
+                            </th>
+                            <th v-for="col in columns" :key="col.key">
+                                <input
+                                    v-model="filters[col.key]"
+                                    type="search"
+                                    :placeholder="col.date ? '2026.09' : 'Хайх'"
+                                    :aria-label="col.label + ' хайх'"
+                                />
+                            </th>
                             <th v-if="canManage || rowActions.length" />
                         </tr>
                     </thead>
                     <tbody>
                         <tr
-                            v-for="(row, index) in rows"
+                            v-for="row in renderedRows"
                             :key="row.id"
                             :class="[
                                 row.file_url ? 'cursor-pointer hover:bg-slate-50' : '',
@@ -757,13 +904,16 @@ const destroyRow = (id) => {
                                     @change="toggleRow(row.id)"
                                 />
                             </td>
-                            <td v-if="rowNumberLabel" class="text-center text-sm font-semibold text-slate-500">
-                                {{ rowNumber(index) }}
+                            <td v-if="rowNumberLabel" class="decree-sheet__cell--no">
+                                {{ rowNumber(row) }}
                             </td>
                             <td
                                 v-for="col in columns"
                                 :key="col.key"
-                                :class="col.single_line ? 'whitespace-nowrap' : ''"
+                                :class="[
+                                    col.single_line ? 'whitespace-nowrap' : '',
+                                    col.align === 'left' ? 'text-left' : '',
+                                ]"
                             >
                                 <template v-if="isFileColumn(col)">
                                     <button
@@ -855,14 +1005,32 @@ const destroyRow = (id) => {
                                 </div>
                             </td>
                         </tr>
-                        <tr v-if="!rows.length">
-                            <td :colspan="columns.length + (canExportFile ? 1 : 0) + (rowNumberLabel ? 1 : 0) + (canManage || rowActions.length ? 1 : 0)" class="!py-12 text-center text-slate-400">
-                                {{ activeScopeLabel && activeScope !== 'all' ? activeScopeLabel + ' — бүртгэл алга.' : 'Одоогоор бүртгэл алга.' }}
+                        <tr v-if="!visibleRows.length">
+                            <td :colspan="sheetColumnCount" class="decree-sheet__empty">
+                                <template v-if="hasFilters">Хайлтад тохирох бүртгэл олдсонгүй.</template>
+                                <template v-else>
+                                    {{ activeScopeLabel && activeScope !== 'all' ? activeScopeLabel + ' — бүртгэл алга.' : 'Одоогоор бүртгэл алга.' }}
+                                </template>
+                            </td>
+                        </tr>
+                        <tr v-else-if="hasMoreRows">
+                            <td :colspan="sheetColumnCount" class="decree-sheet__empty">
+                                <button type="button" class="text-brand-navy-600 hover:underline" @click="growRenderLimit">
+                                    Үлдсэн {{ visibleRows.length - renderedRows.length }} мөрийг харах
+                                </button>
                             </td>
                         </tr>
                     </tbody>
                 </table>
-            </div>
+                </div>
+            </TableScrollViewport>
+
+            <p v-if="rows.length" class="text-xs text-slate-500">
+                <template v-if="hasFilters">
+                    Хайлтад {{ visibleRows.length }} мөр тохирлоо ({{ rows.length }} мөрөөс).
+                </template>
+                <template v-else>Нийт {{ rows.length }} мөр.</template>
+            </p>
 
             <Teleport to="body">
                 <div

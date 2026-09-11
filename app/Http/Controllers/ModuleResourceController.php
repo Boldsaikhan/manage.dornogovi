@@ -971,11 +971,26 @@ class ModuleResourceController extends Controller
                 $key === 'file_label', $key === 'file' => $row->file_name ?: (filled($row->file_path ?? null) ? basename($row->file_path) : '—'),
                 $key === ($config['scope_column'] ?? 'scope') && ! empty($config['scopes'])
                     => $config['scopes'][$row->{$key}] ?? ($row->{$key} ?? '—'),
+                // Сонгох талбарын түлхүүрийг монгол нэрээр нь харуулна.
+                ! empty($col['from_options'])
+                    => $this->selectOptions($config, $key)[$row->{$key} ?? ''] ?? ($row->{$key} ?? '—'),
                 default => $this->serializeValue($row, $key),
             };
         }
 
         return $this->appendFileMeta($out, $row, $module);
+    }
+
+    /**
+     * Тухайн нэртэй талбарын сонголтууд.
+     *
+     * @return array<string, string>
+     */
+    private function selectOptions(array $config, string $key): array
+    {
+        $field = collect($config['fields'] ?? [])->firstWhere('name', $key);
+
+        return $field['options'] ?? [];
     }
 
     private function serializeValue(Model $row, string $key): string

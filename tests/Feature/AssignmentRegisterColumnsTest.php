@@ -26,6 +26,8 @@ class AssignmentRegisterColumnsTest extends TestCase
                 $labels = collect($props['columns'])->pluck('label')->all();
 
                 $this->assertSame('Д/д', $props['rowNumberLabel']);
+                // «Хэзээнээс» багана нь огноогоор хайгдана.
+                $this->assertTrue(collect($props['columns'])->firstWhere('key', 'start_date')['date']);
                 // Овог нэр нь хоёр мөр болж хуваагдахгүй.
                 $this->assertTrue($props['columns'][0]['single_line']);
                 $this->assertSame(

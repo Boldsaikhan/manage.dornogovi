@@ -246,6 +246,18 @@ class AssignmentRegisterExportTest extends TestCase
             });
     }
 
+    public function test_the_status_is_shown_in_mongolian(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $this->assignment('Томилолттой хүн');
+
+        $this->actingAs($admin)
+            ->get(route('assignments.index', ['scope' => 'chief']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                // «approved» биш, «Зөвшөөрсөн».
+                ->where('rows.0.status', 'Зөвшөөрсөн'));
+    }
+
     public function test_only_the_selected_rows_are_downloaded(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
