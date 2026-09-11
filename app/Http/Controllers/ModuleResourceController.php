@@ -1041,6 +1041,28 @@ class ModuleResourceController extends Controller
             };
         }
 
+        /*
+         * Засах горимд бөглөх түүхий утгууд.
+         *
+         * Хүснэгтэд харагдах утга нь орчуулагдсан байдаг (жишээ нь
+         * «Зөвшөөрсөн») тул сонголт, огнооны нүдэнд түүхий утга хэрэгтэй.
+         */
+        $edit = [];
+
+        foreach ($config['columns'] as $col) {
+            if (! empty($col['edit'])) {
+                $value = $row->{$col['edit']} ?? null;
+
+                $edit[$col['key']] = $value instanceof \DateTimeInterface
+                    ? $value->format('Y-m-d')
+                    : (string) ($value ?? '');
+            }
+        }
+
+        if ($edit !== []) {
+            $out['edit_values'] = $edit;
+        }
+
         return $this->appendFileMeta($out, $row, $module);
     }
 
