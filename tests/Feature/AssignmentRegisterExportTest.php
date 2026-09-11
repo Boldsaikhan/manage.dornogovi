@@ -328,6 +328,37 @@ class AssignmentRegisterExportTest extends TestCase
         }
     }
 
+    public function test_the_word_file_really_holds_the_rows(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $this->assignment('Татах хүн');
+
+        $binary = $this->actingAs($admin)
+            ->get(route('modules.export', [
+                'module' => 'assignments', 'scope' => 'chief', 'format' => 'docx',
+            ]))
+            ->assertOk()
+            ->streamedContent();
+
+        $path = tempnam(sys_get_temp_dir(), 'docx_').'.docx';
+        file_put_contents($path, $binary);
+
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($path) === true, 'Word файл нээгдсэнгүй.');
+
+        $xml = (string) $zip->getFromName('word/document.xml');
+        $zip->close();
+        @unlink($path);
+
+        // Мөрийн нүднүүд байхгүй бол Word файлыг эвдэрсэн гэж үзэж нээхгүй.
+        $this->assertStringContainsString('Татах хүн', $xml);
+        $this->assertGreaterThan(
+            count(config('module_resources.assignments.columns')),
+            substr_count($xml, '<w:tc>'),
+            'Толгойноос гадна өгөгдлийн нүд ч байх ёстой.',
+        );
+    }
+
     public function test_a_module_without_export_is_refused(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

@@ -242,7 +242,15 @@ class ModuleResourceController extends Controller
         } elseif ($format === 'docx') {
             $path = $tmp.'.docx';
             $widths = array_fill(0, count($headings), (int) floor(100 / max(1, count($headings))));
-            $docx->write($path, $title, $headings, $widths, $rows, [], landscape: true);
+
+            // Word бичигч нь мөрийг {type, cells} хэлбэрээр хүлээдэг —
+            // энгийн жагсаалт өгвөл нүдгүй мөр үүсч, файл нээгдэхгүй.
+            $docxRows = array_map(
+                fn (array $cells) => ['type' => 'data', 'cells' => $cells],
+                $rows,
+            );
+
+            $docx->write($path, $title, $headings, $widths, $docxRows, [], landscape: true);
             $mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
         } else {
             $path = $tmp.'.pdf';
