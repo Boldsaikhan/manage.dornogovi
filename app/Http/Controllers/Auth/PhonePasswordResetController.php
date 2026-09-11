@@ -124,8 +124,22 @@ class PhonePasswordResetController extends Controller
             ]);
         }
 
-        $code = $this->verify->generateCode();
         $user = User::query()->where('phone', $phone)->first();
+
+        /*
+         * Бүртгэлгүй дугаарыг шууд хэлнэ.
+         *
+         * Урьд нь «бүртгэлтэй бол илгээлээ» гээд кодын нүд рүү оруулдаг
+         * байсан нь хүмүүсийг төөрөгдүүлж, ирэхгүй код хүлээлгэдэг байв.
+         */
+        if (! $user) {
+            throw ValidationException::withMessages([
+                'phone' => 'Энэ дугаар системд бүртгэлгүй байна. '
+                    .'Утасны жагсаалтад бүртгэлтэй дугаараа оруулах, эсвэл системийн админд хандана уу.',
+            ]);
+        }
+
+        $code = $this->verify->generateCode();
 
         $record = PhoneVerification::query()->create([
             'phone' => $phone,
@@ -136,33 +150,30 @@ class PhonePasswordResetController extends Controller
             'ip' => $request->ip(),
         ]);
 
-        // Бүртгэлгүй дугаарт session үүсгэхгүй — хэрэглэгчид алхам нь ижил харагдана.
-        if ($user) {
-            $result = $this->verify->startVerification($phone, $code);
+        $result = $this->verify->startVerification($phone, $code);
 
-            /*
-             * Код хаашаа ч очоогүй бол оруулах нүд харуулах нь утгагүй.
-             * (verify.mn тохируулаагүй, нөөц SMS суваг ч унтраалттай.)
-             */
-            if (! $result['sent']) {
-                $record->delete();
+        /*
+         * Код хаашаа ч очоогүй бол оруулах нүд харуулах нь утгагүй.
+         * (verify.mn тохируулаагүй, нөөц SMS суваг ч унтраалттай.)
+         */
+        if (! $result['sent']) {
+            $record->delete();
 
-                throw ValidationException::withMessages([
-                    'phone' => 'Одоогоор утсаар сэргээх боломжгүй байна. И-мэйлээр сэргээх, '
-                        .'эсвэл системийн админд хандана уу.',
-                ]);
-            }
-
-            $record->update(array_filter([
-                'channel' => $result['channel'],
-                'session_id' => $result['session_id'],
-                'sms_uri' => $result['sms_uri'],
-                'instruction' => $result['instruction'],
-                'expires_at' => $result['expires_at']
-                    ? Carbon::parse($result['expires_at'])
-                    : $record->expires_at,
-            ]));
+            throw ValidationException::withMessages([
+                'phone' => 'Одоогоор утсаар сэргээх боломжгүй байна. И-мэйлээр сэргээх, '
+                    .'эсвэл системийн админд хандана уу.',
+            ]);
         }
+
+        $record->update(array_filter([
+            'channel' => $result['channel'],
+            'session_id' => $result['session_id'],
+            'sms_uri' => $result['sms_uri'],
+            'instruction' => $result['instruction'],
+            'expires_at' => $result['expires_at']
+                ? Carbon::parse($result['expires_at'])
+                : $record->expires_at,
+        ]));
 
         PhoneVerification::prune();
 
@@ -170,7 +181,7 @@ class PhonePasswordResetController extends Controller
 
         return back()->with('status', $record->channel === 'verify.mn'
             ? 'Доорх зааврын дагуу кодоо илгээнэ үү.'
-            : 'Хэрэв энэ дугаар бүртгэлтэй бол баталгаажуулах код илгээлээ.');
+            : 'Баталгаажуулах код илгээлээ.');
     }
 
     /**
