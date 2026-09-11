@@ -43,6 +43,21 @@ class WebAuthnRoutesTest extends TestCase
             ->assertJsonFragment(['message' => 'Энэ утсанд хуруу/царай бүртгэгдээгүй. Эхлээд нууц үгээр нэвтэрч, «Идэвхжүүлэх» дарна уу.']);
     }
 
+    public function test_register_options_do_not_force_a_device_type(): void
+    {
+        $user = User::factory()->create();
+
+        $options = $this->actingAs($user)
+            ->postJson(route('webauthn.register.options'))
+            ->assertOk()
+            ->json('publicKey.authenticatorSelection');
+
+        // Төрлийг заахгүй — iPad-ын Chrome шиг өөрийн passkey сантай
+        // хөтөч дээр ч бүртгэл үүснэ.
+        $this->assertArrayNotHasKey('authenticatorAttachment', $options ?? []);
+        $this->assertSame('required', $options['userVerification'] ?? null);
+    }
+
     public function test_authenticated_user_can_request_register_options(): void
     {
         $user = User::factory()->create();

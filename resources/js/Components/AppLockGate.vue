@@ -91,6 +91,14 @@ const canBiometric = computed(() => bioSupported.value && localWebAuthn.value);
  * төхөөрөмж дээр «идэвхжүүлээгүй» ч бүртгэл нь аль хэдийн байж болно.
  * Тиймээс бүртгэлтэй эсэхийг серверээс мэдэж товчийг гаргана.
  */
+/** iPad / iPhone эсэх — тэдгээрт зориулсан заавар өгөхөд хэрэгтэй. */
+const isIpad = computed(() => {
+    if (typeof navigator === 'undefined') return false;
+
+    return /iPad|iPhone|iPod/i.test(navigator.userAgent)
+        || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform || ''));
+});
+
 const canTryBiometric = computed(
     () => bioSupported.value && (localWebAuthn.value || !! lock.value.hasWebAuthn),
 );
@@ -561,7 +569,10 @@ const setupBiometric = async () => {
         }
 
         if (/NotAllowedError|AbortError/i.test(name)) {
-            error.value = 'Үйлдэл цуцлагдлаа. Нууц үгээр нээнэ үү.';
+            error.value = isIpad.value
+                ? 'Үүсгэх үйлдэл дуусгагдсангүй. iPad дээр Safari-гаар нээх, эсвэл Тохиргоо → '
+                    + 'Нууц үг → Нууц үг бөглөх хэсэгт Chrome-ыг асаасны дараа дахин оролдоно уу.'
+                : 'Үйлдэл цуцлагдлаа. Нууц үгээр нээнэ үү.';
         } else {
             handleUnlockError(e, 'Идэвхжүүлж чадсангүй. Нууц үгээр нээнэ үү.');
         }
@@ -675,7 +686,7 @@ const unlockBiometric = async ({ skipSetupCheck = false, auto = false } = {}) =>
                 v-if="setupBusy"
                 class="mt-6 text-center text-xs leading-relaxed text-brand-navy-700"
             >
-                Google цонх гарвал <strong>Continue</strong> дарж passkey үүсгэнэ үү.
+                Цонх гарвал <strong>Continue</strong> дарж, дараа нь хуруу / царайгаа уншуулна уу.
             </p>
 
             <p
