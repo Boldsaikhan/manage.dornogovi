@@ -149,6 +149,8 @@ class ModuleResourceController extends Controller
             'lines' => AssignmentSheet::lines($activeScope),
             'signer' => AssignmentSheet::signerName($activeScope),
             'leaders' => AssignmentSheet::leaders(),
+            // Батлагч бүрийн албан тушаал, толгойн мөрүүд.
+            'leader_options' => AssignmentSheet::leaderOptions($activeScope),
             // Үнэмлэх дээр гарах дугаар — энэ хэсгийн дараагийн Д/д.
             'number' => \App\Models\TravelAssignment::query()
                 ->where('approver', $activeScope)
