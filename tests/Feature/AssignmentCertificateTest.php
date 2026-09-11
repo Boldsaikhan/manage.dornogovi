@@ -141,6 +141,57 @@ class AssignmentCertificateTest extends TestCase
         );
     }
 
+    public function test_the_form_offers_the_directory_staff(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'Н.Гарамжав',
+            'position' => 'Эрчим хүчний хяналтын улсын байцаагч',
+            'org_name' => 'СХЗХ',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('assignments.index', ['scope' => 'chief']))
+            ->assertOk()
+            ->assertInertia(function (\Inertia\Testing\AssertableInertia $page) {
+                $people = $page->toArray()['props']['formMeta']['people'];
+                $row = collect($people)->firstWhere('name', 'Н.Гарамжав');
+
+                $this->assertSame('Эрчим хүчний хяналтын улсын байцаагч', $row['position']);
+                $this->assertSame('СХЗХ', $row['org']);
+            });
+    }
+
+    public function test_the_chosen_staff_name_and_position_are_stored(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->from(route('assignments.index', ['scope' => 'chief']))
+            ->post(route('modules.store', ['module' => 'assignments']), [
+                'approver' => 'chief',
+                'person_name' => 'Н.Гарамжав',
+                'position' => 'Эрчим хүчний хяналтын улсын байцаагч',
+                'destination' => 'Эрдэнэ сум',
+                'start_date' => '2026-09-08',
+                'end_date' => '2026-09-09',
+            ])
+            ->assertRedirect();
+
+        $row = TravelAssignment::query()->latest('id')->first();
+
+        $this->assertSame('Н.Гарамжав', $row->person_name);
+        $this->assertSame('Эрчим хүчний хяналтын улсын байцаагч', $row->position);
+
+        // Бүртгэлийн хүснэгтэд ч тэр нэрээр харагдана.
+        $this->actingAs($admin)
+            ->get(route('assignments.index', ['scope' => 'chief']))
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->where('rows.0.user_name', 'Н.Гарамжав')
+                ->where('rows.0.user_position', 'Эрчим хүчний хяналтын улсын байцаагч'));
+    }
+
     public function test_the_certificate_text_is_saved_from_the_form(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

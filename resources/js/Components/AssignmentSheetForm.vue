@@ -33,6 +33,55 @@ const signerName = () => props.form.approved_by || props.meta.signer || '.......
 const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-transparent p-0 '
     + 'font-serif text-[13px] leading-relaxed focus:border-brand-navy-600 focus:ring-0';
 
+/* ── Томилолт авч буй албан хаагч ─────────────────────────────────── */
+
+const people = () => props.meta.people ?? [];
+
+/**
+ * Албан хаагч сонгоход нэр, албан тушаалыг нь бөглөөд үнэмлэхийн
+ * бичвэрийг зурган дээрх загвараар бүрдүүлнэ.
+ */
+const pickPerson = (name) => {
+    const person = people().find((p) => p.name === name);
+
+    props.form.person_name = name;
+    props.form.position = person?.position || '';
+
+    props.form.certificate_text = buildCertificateText(person);
+};
+
+const mn = (value) => {
+    if (! value) return '…';
+
+    const [, month, day] = String(value).split('-');
+
+    return `${Number(month)} дугаар сарын ${Number(day)}`;
+};
+
+const buildCertificateText = (person) => {
+    if (! person) return '';
+
+    const org = person.org ? person.org : 'Дорноговь аймгийн ЗДТГ';
+    const position = person.position || 'албан хаагч';
+    const where = props.form.destination || '…';
+    const days = props.form.days || dayCount();
+
+    return `${org}-ын ${position} ${person.name} ${where} ${mn(props.form.start_date)}-ны `
+        + `өдрөөс ${days} хоног ажиллуулахаар томилов.`;
+};
+
+/** Эхлэх, дуусах огнооноос хоногийг бодно. */
+const dayCount = () => {
+    const start = props.form.start_date;
+    const end = props.form.end_date;
+
+    if (! start || ! end) return '…';
+
+    const diff = Math.round((new Date(end) - new Date(start)) / 86400000) + 1;
+
+    return diff > 0 ? diff : '…';
+};
+
 // «БАТЛАВ» доторх сонголт — хэвлэгдэх нэртэй ижил харагдана.
 const pickerClass = 'w-auto border-0 border-b border-dotted border-black bg-transparent p-0 pr-5 '
     + 'font-serif text-[12px] font-bold uppercase focus:border-brand-navy-600 focus:ring-0';
@@ -102,6 +151,22 @@ const pickerClass = 'w-auto border-0 border-b border-dotted border-black bg-tran
                 </p>
 
                 <label class="mt-4 block font-sans text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                    Албан хаагч
+                </label>
+                <select
+                    v-if="people().length"
+                    :value="form.person_name"
+                    class="ui-input !py-1.5 font-sans !text-xs"
+                    @change="pickPerson($event.target.value)"
+                >
+                    <option value="">— утасны жагсаалтаас сонгох —</option>
+                    <option v-for="p in people()" :key="p.name + p.position" :value="p.name">
+                        {{ p.name }}{{ p.position ? ' · ' + p.position : '' }}
+                    </option>
+                </select>
+                <InputError :message="form.errors.person_name" class="font-sans" />
+
+                <label class="mt-3 block font-sans text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                     Үнэмлэхийн бичвэр
                 </label>
                 <textarea
