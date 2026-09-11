@@ -134,22 +134,53 @@
 
         .page-break { page-break-after: always; break-after: page; }
 
+        /*
+         * Дэлгэцэн дээр хоёр хуудсыг зэрэгцүүлнэ.
+         *
+         * Хоёр A4 нь ихэнх дэлгэцээс өргөн тул JS-ээр багасгаж багтаана.
+         * Хэвлэхэд энэ бүхэн хүчингүй болж, хуудас бүр цаасандаа гарна.
+         */
+        .sheets {
+            display: flex;
+            gap: 8mm;
+            justify-content: center;
+            align-items: flex-start;
+            transform-origin: top center;
+        }
+
+        .sheets .page { flex: 0 0 auto; box-shadow: 0 2px 12px rgb(15 23 42 / 0.12); }
+
         @media print {
             body { background: #fff; }
-            .page { margin: 0; padding: 0; width: auto; min-height: 0; }
+            .page { margin: 0; padding: 0; width: auto; min-height: 0; box-shadow: none; }
             .toolbar { display: none; }
+
+            /* Хэвлэхэд хуудас бүр өөрийн цаасан дээр гарна. */
+            .sheets { display: block; gap: 0; transform: none !important; }
+
+            /* Зөвхөн нэг талыг хэвлэх үед нөгөөг нь нуух. */
+            body.print-back .page--front,
+            body.print-front .page--back { display: none; }
+
+            /* Ганц хуудас хэвлэхэд илүү хуудас гарахаас сэргийлнэ. */
+            body.print-back .page--back,
+            body.print-front .page--front { page-break-after: auto; break-after: auto; }
         }
     </style>
 </head>
 <body>
 
 <div class="toolbar">
-    <button type="button" onclick="window.print()">Хэвлэх</button>
+    <button type="button" onclick="printSide('back')">Ар тал хэвлэх</button>
+    <button type="button" onclick="printSide('front')">Урд тал хэвлэх</button>
+    <button type="button" onclick="printSide('')">Хоёуланг хэвлэх</button>
     <button type="button" class="ghost" onclick="window.close()">Хаах</button>
 </div>
 
+<div class="sheets">
+
 {{-- Ар тал — албан томилолтын үнэмлэх --}}
-<div class="page page-break">
+<div class="page page--back page-break">
     <div class="cert">
         <div class="cert__col">
             <div class="cert__title">Албан томилолтын<br>үнэмлэх</div>
@@ -228,7 +259,7 @@
 </div>
 
 {{-- Урд тал — томилолтын удирдамж --}}
-<div class="page">
+<div class="page page--front">
     <div class="approve">
         БАТЛАВ<br>
         @foreach ($lines as $line)
@@ -308,6 +339,49 @@
         <div>Танилцсан................................................/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /</div>
     </div>
 </div>
+
+</div>{{-- .sheets --}}
+
+<script>
+    /** Аль талыг хэвлэхийг заана: 'back', 'front', эсвэл хоосон бол хоёуланг. */
+    function printSide(side) {
+        document.body.classList.remove('print-back', 'print-front');
+
+        if (side) {
+            document.body.classList.add('print-' + side);
+        }
+
+        window.print();
+    }
+
+    // Хэвлэж дууссаны дараа дэлгэцийн байдлыг сэргээнэ.
+    window.addEventListener('afterprint', function () {
+        document.body.classList.remove('print-back', 'print-front');
+    });
+
+    /**
+     * Хоёр A4 нь ихэнх дэлгэцээс өргөн тул багтаах хэмжээгээр багасгана.
+     */
+    var sheets = document.querySelector('.sheets');
+
+    function fitSheets() {
+        if (! sheets) return;
+
+        sheets.style.transform = 'none';
+
+        var width = sheets.scrollWidth;
+        var available = document.documentElement.clientWidth - 32;
+        var scale = Math.min(1, available / width);
+
+        sheets.style.transform = 'scale(' + scale + ')';
+        // Багасгасны дараа үлдэх хоосон зайг арилгана.
+        sheets.style.marginBottom = ((scale - 1) * sheets.scrollHeight) + 'px';
+    }
+
+    fitSheets();
+    window.addEventListener('resize', fitSheets);
+    window.addEventListener('load', fitSheets);
+</script>
 
 </body>
 </html>
