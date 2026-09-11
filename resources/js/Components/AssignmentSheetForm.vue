@@ -131,9 +131,12 @@ const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-
             Урд тал — томилолтын удирдамж
         </p>
         <!-- БАТЛАВ -->
-        <div class="ml-auto w-3/5 text-[12px] font-bold uppercase leading-snug">
-            БАТЛАВ<br />
-            <template v-for="(line, i) in headLines()" :key="i">{{ line }}<br /></template>
+        <div class="ml-auto w-[62%] text-[12px] font-bold uppercase leading-snug">
+            <!-- «БАТЛАВ» нь доорх бичвэрийнхээ голд байрлана. -->
+            <span class="block text-center">БАТЛАВ</span>
+            <template v-for="(line, i) in headLines()" :key="i">
+                <span class="whitespace-nowrap">{{ line }}</span><br />
+            </template>
             <div class="flex justify-between gap-10">
                 <span>{{ lastLine() }}</span>
                 <span class="whitespace-nowrap">{{ signerName() }}</span>
