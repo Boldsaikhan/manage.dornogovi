@@ -176,15 +176,17 @@ class PhonePasswordResetTest extends TestCase
         $this->assertNull(PhoneVerification::query()->firstOrFail()->verified_at);
     }
 
-    public function test_an_unknown_phone_looks_the_same_but_creates_no_session(): void
+    public function test_an_unknown_phone_is_told_plainly(): void
     {
         Http::fake();
 
         $this->post(route('password.phone.send'), ['phone' => '88001122'])
             ->assertRedirect()
-            ->assertSessionHasNoErrors();
+            ->assertSessionHasErrors('phone');
 
+        // Кодын нүд рүү оруулахгүй, мессеж ч илгээхгүй.
         Http::assertNothingSent();
+        $this->assertSame(0, PhoneVerification::query()->count());
     }
 
     public function test_an_expired_session_sends_the_user_back_to_the_start(): void
