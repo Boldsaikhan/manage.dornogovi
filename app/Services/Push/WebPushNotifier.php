@@ -93,7 +93,20 @@ class WebPushNotifier
             }
         }
 
-        foreach ($webPush->flush() as $report) {
+        /*
+         * flush() нь push серверүүд рүү сүлжээгээр хандана. Сүлжээ саатах,
+         * хугацаа хэтрэх зэргээс болж алдаа гарвал мэдэгдэл илгээхийн
+         * төлөө хэрэглэгчийн хадгалалт унах ёсгүй.
+         */
+        try {
+            $reports = $webPush->flush();
+        } catch (Throwable $e) {
+            Log::warning('Push flush failed', ['error' => $e->getMessage()]);
+
+            return;
+        }
+
+        foreach ($reports as $report) {
             if ($report->isSuccess()) {
                 continue;
             }

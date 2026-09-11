@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Request;
 
 /**
@@ -56,19 +57,79 @@ class AuditLog extends Model
         ?array $changes = null,
         ?string $source = null,
     ): void {
-        static::query()->create([
-            'user_id' => auth()->id(),
-            'model_type' => $modelType,
-            'model_id' => $modelId,
-            'action' => $action,
-            'scope' => $scope,
-            'label' => $label,
-            'summary' => $summary,
-            'changes' => $changes,
-            'source' => $source ?? (app()->runningInConsole() ? 'console' : 'web'),
-            'ip' => app()->runningInConsole() ? null : Request::ip(),
-            'created_at' => now(),
-        ]);
+        /*
+         * Лог бичих нь хэрэглэгчийн ажлыг хэзээ ч зогсоохгүй.
+         *
+         * Урт бичвэр, Word-оос хуулсан эвдэрсэн тэмдэгт зэргээс болж
+         * бичилт бүтэлгүйтвэл өгөгдөл хадгалагдахгүй үлдэх нь буруу —
+         * алдааг нь системийн лог руу бичээд цааш үргэлжилнэ.
+         */
+        try {
+            static::query()->create([
+                'user_id' => auth()->id(),
+                'model_type' => $modelType,
+                'model_id' => $modelId,
+                'action' => $action,
+                'scope' => self::trim($scope, 64),
+                'label' => self::trim($label, 240),
+                'summary' => self::trim($summary, 2000),
+                'changes' => self::cleanChanges($changes),
+                'source' => $source ?? (app()->runningInConsole() ? 'console' : 'web'),
+                'ip' => app()->runningInConsole() ? null : Request::ip(),
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Өөрчлөлтийн лог бичигдсэнгүй: '.$e->getMessage(), [
+                'model_type' => $modelType,
+                'model_id' => $modelId,
+                'action' => $action,
+            ]);
+        }
+    }
+
+    /**
+     * Хадгалахад аюулгүй бичвэр болгоно.
+     *
+     * Буруу UTF-8 байвал JSON болгоход алдаа өгдөг тул цэвэрлэнэ.
+     */
+    private static function trim(?string $value, int $limit): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $clean = mb_convert_encoding($value, 'UTF-8', 'UTF-8');
+
+        return mb_substr(trim($clean), 0, $limit);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $changes
+     * @return array<string, mixed>|null
+     */
+    private static function cleanChanges(?array $changes): ?array
+    {
+        if ($changes === null) {
+            return null;
+        }
+
+        $out = [];
+
+        foreach ($changes as $field => $change) {
+            $key = (string) self::trim((string) $field, 120);
+
+            $out[$key] = is_array($change)
+                ? array_map(fn ($value) => self::clean($value), $change)
+                : self::clean($change);
+        }
+
+        return $out;
+    }
+
+    /** Тоо, логик утгыг хэвээр нь, бичвэрийг л цэвэрлэж богиносгоно. */
+    private static function clean(mixed $value): mixed
+    {
+        return is_string($value) ? self::trim($value, 500) : $value;
     }
 
     public function actionLabel(): string
