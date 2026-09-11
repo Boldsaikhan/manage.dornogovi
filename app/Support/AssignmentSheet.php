@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\PhoneDirectoryEntry;
+use App\Support\MongolianCase;
 
 /**
  * «ТОМИЛОЛТЫН УДИРДАМЖ» маягтын толгойн мэдээлэл.
@@ -226,7 +227,8 @@ class AssignmentSheet
 
         $org = trim((string) (PhoneDirectoryEntry::orgFor($name) ?? '')) ?: 'Дорноговь аймгийн ЗДТГ';
 
-        $parts = [$org.'-ын'];
+        // Байгууллагын нэрийг харьяалахын тийн ялгалд оруулна.
+        $parts = [MongolianCase::genitive($org)];
 
         if ($position !== '') {
             $parts[] = $position;
