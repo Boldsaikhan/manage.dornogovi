@@ -800,50 +800,56 @@ const closeDirectoryForm = () => {
                     И-мэйл, хэлтэс, роль нь автоматаар оноогдоно.
                 </p>
 
-                <template>
-                    <div class="mt-4">
-                        <label class="ui-label">Нэвтрэх нэр (гар утас)</label>
-                        <input v-model="accountForm.login" type="tel" inputmode="numeric" class="ui-input" />
-                        <InputError :message="accountForm.errors.login" class="mt-1" />
-                        <p class="mt-1 text-xs text-slate-400">
-                            Өөрчилвөл утасны жагсаалтын дугаар нь ч зэрэг шинэчлэгдэнэ.
-                        </p>
-                    </div>
+                <div class="mt-4">
+                    <label class="ui-label">Нэвтрэх нэр (гар утас)</label>
+                    <input v-model="accountForm.login" type="tel" inputmode="numeric" class="ui-input" />
+                    <InputError :message="accountForm.errors.login" class="mt-1" />
+                    <p class="mt-1 text-xs text-slate-400">
+                        Өөрчилвөл утасны жагсаалтын дугаар нь ч зэрэг шинэчлэгдэнэ.
+                    </p>
+                </div>
 
-                    <div class="mt-4">
-                        <label class="ui-label">Шинэ нууц үг</label>
-                        <div class="flex gap-2">
-                            <input
-                                v-model="accountForm.password"
-                                :type="accountShowPassword ? 'text' : 'password'"
-                                class="ui-input flex-1"
-                                :placeholder="accountRow?.account
-                                ? 'Хоосон орхивол хэвээр үлдэнэ'
-                                : 'Шинэ бүртгэлд заавал'"
-                                autocomplete="new-password"
-                            />
-                            <button
-                                type="button"
-                                class="shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-600 hover:bg-slate-50"
-                                @click="accountShowPassword = ! accountShowPassword"
-                            >
-                                {{ accountShowPassword ? 'Нуух' : 'Харах' }}
-                            </button>
-                            <button
-                                type="button"
-                                class="shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-600 hover:bg-slate-50"
-                                title="Санамсаргүй нууц үг үүсгэнэ"
-                                @click="suggestPassword"
-                            >
-                                Санал
-                            </button>
-                        </div>
-                        <InputError :message="accountForm.errors.password" class="mt-1" />
-                        <p class="mt-1 text-xs text-slate-400">
-                            Хамгийн багадаа 6 тэмдэгт. Тухайн хүнд амаар эсвэл бичгээр дамжуулна уу.
-                        </p>
+                <div class="mt-4">
+                    <label class="ui-label">Шинэ нууц үг</label>
+                    <div class="flex gap-2">
+                        <input
+                            v-model="accountForm.password"
+                            :type="accountShowPassword ? 'text' : 'password'"
+                            class="ui-input flex-1"
+                            :placeholder="accountRow?.account
+                            ? 'Хоосон орхивол хэвээр үлдэнэ'
+                            : 'Шинэ бүртгэлд заавал'"
+                            autocomplete="new-password"
+                        />
+                        <button
+                            type="button"
+                            class="shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-600 hover:bg-slate-50"
+                            @click="accountShowPassword = ! accountShowPassword"
+                        >
+                            {{ accountShowPassword ? 'Нуух' : 'Харах' }}
+                        </button>
+                        <button
+                            type="button"
+                            class="shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-600 hover:bg-slate-50"
+                            title="Санамсаргүй нууц үг үүсгэнэ"
+                            @click="suggestPassword"
+                        >
+                            Санал
+                        </button>
                     </div>
-                </template>
+                    <InputError :message="accountForm.errors.password" class="mt-1" />
+                    <p class="mt-1 text-xs text-slate-400">
+                        Хамгийн багадаа 6 тэмдэгт. Тухайн хүнд амаар эсвэл бичгээр дамжуулна уу.
+                    </p>
+                </div>
+
+                <!-- Талбарт хамаарахгүй алдаа ч нуугдахгүй байх. -->
+                <p
+                    v-if="accountForm.hasErrors && ! accountForm.errors.login && ! accountForm.errors.password"
+                    class="mt-4 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700"
+                >
+                    {{ Object.values(accountForm.errors)[0] }}
+                </p>
 
                 <div class="mt-6 flex justify-end gap-2 border-t border-slate-100 pt-4">
                     <button type="button" class="ui-btn-ghost" @click="closeAccount">Болих</button>
