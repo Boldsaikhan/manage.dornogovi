@@ -661,6 +661,8 @@ const destroyRow = (id) => {
                     <h2 class="ui-title">{{ title }}</h2>
                     <p class="ui-subtitle">{{ description }}</p>
                 </div>
+                <!-- Товчнууд хоорондоо зууралдаж, баруун талд бөөгнөрнө. -->
+                <div class="flex flex-wrap items-center gap-1.5">
                 <button
                     v-if="canImport"
                     type="button"
@@ -735,6 +737,7 @@ const destroyRow = (id) => {
                 >
                     Шинэ нэмэх
                 </button>
+                </div>
             </div>
 
             <nav v-if="scopeTabs.length" class="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
@@ -850,12 +853,13 @@ const destroyRow = (id) => {
 
             <TableScrollViewport @near-bottom="growRenderLimit">
                 <div ref="sheetEl" class="ui-register">
-                <table class="ui-register__table min-w-[1180px]">
+                <!-- Дэлгэцэнд багтана; нарийн дэлгэц дээр л хөндлөн гүйнэ. -->
+                <table class="ui-register__table min-w-[56rem]">
                     <colgroup>
-                        <col v-if="canExportFile" style="width: 2.5rem" />
-                        <col v-if="rowNumberLabel" style="width: 3.25rem" />
+                        <col v-if="canExportFile" style="width: 3%" />
+                        <col v-if="rowNumberLabel" style="width: 4%" />
                         <col v-for="col in columns" :key="col.key" :style="col.width ? { width: col.width } : {}" />
-                        <col v-if="canManage || rowActions.length" style="width: 7.5rem" />
+                        <col v-if="canManage || rowActions.length" style="width: 8%" />
                     </colgroup>
                     <thead>
                         <tr>
@@ -923,7 +927,7 @@ const destroyRow = (id) => {
                                 v-for="col in columns"
                                 :key="col.key"
                                 :class="[
-                                    col.single_line ? 'whitespace-nowrap' : '',
+                                    col.single_line ? 'overflow-hidden whitespace-nowrap' : '',
                                     col.align === 'left' ? 'text-left' : '',
                                 ]"
                             >

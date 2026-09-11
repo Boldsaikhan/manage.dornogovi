@@ -71,16 +71,16 @@ return [
         'row_number' => 'Д/д',
         'columns' => [
             // Нэр нь хоёр мөр болж хуваагдахгүй — нэг мөрөнд багтана.
-            ['key' => 'user_name', 'label' => 'Овог нэр', 'single_line' => true, 'width' => '9rem'],
-            ['key' => 'user_position', 'label' => 'Албан тушаал', 'width' => '12rem'],
-            ['key' => 'destination', 'label' => 'Хаана', 'width' => '8rem'],
-            ['key' => 'purpose', 'label' => 'Ямар ажлаар', 'width' => '18rem', 'align' => 'left'],
+            ['key' => 'user_name', 'label' => 'Овог нэр', 'single_line' => true, 'width' => '11%'],
+            ['key' => 'user_position', 'label' => 'Албан тушаал', 'width' => '14%'],
+            ['key' => 'destination', 'label' => 'Хаана', 'width' => '9%'],
+            ['key' => 'purpose', 'label' => 'Ямар ажлаар', 'width' => '19%', 'align' => 'left'],
             // Огноог зөвхөн цифрээр нь харьцуулж хайна.
-            ['key' => 'start_date', 'label' => 'Хэзээнээс', 'width' => '6.5rem', 'date' => true],
-            ['key' => 'day_count', 'label' => 'Хэд хоног', 'width' => '4.5rem'],
-            ['key' => 'order_number', 'label' => 'Тушаалын дугаар', 'width' => '6.5rem'],
-            ['key' => 'status', 'label' => 'Төлөв', 'from_options' => true, 'width' => '6rem'],
-            ['key' => 'approved_by', 'label' => 'Баталсан', 'single_line' => true, 'width' => '9rem'],
+            ['key' => 'start_date', 'label' => 'Хэзээнээс', 'width' => '8%', 'date' => true],
+            ['key' => 'day_count', 'label' => 'Хэд хоног', 'width' => '5%'],
+            ['key' => 'order_number', 'label' => 'Тушаалын дугаар', 'width' => '7%'],
+            ['key' => 'status', 'label' => 'Төлөв', 'from_options' => true, 'width' => '8%'],
+            ['key' => 'approved_by', 'label' => 'Баталсан', 'single_line' => true, 'width' => '11%'],
         ],
         'fields' => [
             // Сонголт нь утасны жагсаалтын «Удирдлага» ангиллаас бүрдэнэ.

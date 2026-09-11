@@ -320,9 +320,17 @@
         @apply text-red-500 hover:bg-red-50 hover:text-red-600;
     }
 
-    /* Нэг мөрөнд багтаана — хуваагдаж хоёр мөр болохгүй. */
+    /*
+     * Нэг мөрөнд багтаана — хуваагдаж хоёр мөр болохгүй.
+     *
+     * Багана нь тогтмол өргөнтэй тул багтахгүй бичвэрийг гурван цэгээр
+     * таслана (бүтэн утгыг нь нүдний тайлбараас харна).
+     */
     .ui-clamp-1 {
         display: block;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
         @apply leading-snug;
     }
