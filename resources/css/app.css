@@ -278,6 +278,17 @@
     }
 
     /* Урт бичвэрийг 2 мөрөнд багтаана — бүтэн утга title-аар */
+    /* Хүснэгтийн мөрийн үйлдэл — зөвхөн icon. */
+    .ui-icon-btn {
+        @apply inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200
+            bg-white text-slate-500 transition hover:bg-slate-50 hover:text-brand-navy-700
+            disabled:cursor-not-allowed disabled:opacity-50;
+    }
+
+    .ui-icon-btn--danger {
+        @apply text-red-500 hover:bg-red-50 hover:text-red-600;
+    }
+
     /* Нэг мөрөнд багтаана — хуваагдаж хоёр мөр болохгүй. */
     .ui-clamp-1 {
         display: block;
