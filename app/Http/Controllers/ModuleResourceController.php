@@ -116,7 +116,7 @@ class ModuleResourceController extends Controller
             // Хүснэгтийн нүдэн дээр шууд солих боломжтой талбарууд.
             'inlineFields' => collect($config['inline_fields'] ?? [])
                 ->mapWithKeys(fn (string $name) => [
-                    $name => collect($config['fields'])->firstWhere('name', $name)['options'] ?? [],
+                    $name => $this->inlineOptions($config, $name),
                 ])
                 ->all(),
             'exportUrl' => ($config['file_export'] ?? false) ? route('modules.export', $module) : null,
@@ -984,6 +984,28 @@ class ModuleResourceController extends Controller
         }
 
         return $this->appendFileMeta($out, $row, $module);
+    }
+
+    /**
+     * Хүснэгтийн нүдэнд харагдах сонголтууд.
+     *
+     * Нүд нарийн тул баганад «богино» тэмдэглэгээ хийсэн бол утгыг нь
+     * өөрийг нь шошго болгоно (жишээ нь «О.Батжаргал — Засаг дарга»
+     * гэхийн оронд зөвхөн «О.Батжаргал»).
+     *
+     * @return array<string, string>
+     */
+    private function inlineOptions(array $config, string $name): array
+    {
+        $options = $this->selectOptions($config, $name);
+
+        $column = collect($config['columns'] ?? [])->firstWhere('key', $name);
+
+        if (! empty($column['inline_short'])) {
+            return collect($options)->keys()->mapWithKeys(fn ($key) => [$key => $key])->all();
+        }
+
+        return $options;
     }
 
     /**
