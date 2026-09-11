@@ -845,8 +845,8 @@ const destroyRow = (id) => {
             </section>
 
             <TableScrollViewport @near-bottom="growRenderLimit">
-                <div ref="sheetEl" class="decree-sheet">
-                <table class="decree-sheet__table min-w-[1180px]">
+                <div ref="sheetEl" class="ui-register">
+                <table class="ui-register__table min-w-[1180px]">
                     <colgroup>
                         <col v-if="canExportFile" style="width: 2.5rem" />
                         <col v-if="rowNumberLabel" style="width: 3.25rem" />
@@ -869,7 +869,7 @@ const destroyRow = (id) => {
                             <th v-if="canManage || rowActions.length" />
                         </tr>
                         <!-- Багана тус бүрд хайх мөр -->
-                        <tr class="decree-sheet__filters">
+                        <tr class="ui-register__filters">
                             <th v-if="canExportFile" />
                             <th v-if="rowNumberLabel">
                                 <button
@@ -912,7 +912,7 @@ const destroyRow = (id) => {
                                     @change="toggleRow(row.id)"
                                 />
                             </td>
-                            <td v-if="rowNumberLabel" class="decree-sheet__cell--no">
+                            <td v-if="rowNumberLabel" class="ui-register__cell--no">
                                 {{ rowNumber(row) }}
                             </td>
                             <td
@@ -1014,7 +1014,7 @@ const destroyRow = (id) => {
                             </td>
                         </tr>
                         <tr v-if="!visibleRows.length">
-                            <td :colspan="sheetColumnCount" class="decree-sheet__empty">
+                            <td :colspan="sheetColumnCount" class="ui-register__empty">
                                 <template v-if="hasFilters">Хайлтад тохирох бүртгэл олдсонгүй.</template>
                                 <template v-else>
                                     {{ activeScopeLabel && activeScope !== 'all' ? activeScopeLabel + ' — бүртгэл алга.' : 'Одоогоор бүртгэл алга.' }}
@@ -1022,7 +1022,7 @@ const destroyRow = (id) => {
                             </td>
                         </tr>
                         <tr v-else-if="hasMoreRows">
-                            <td :colspan="sheetColumnCount" class="decree-sheet__empty">
+                            <td :colspan="sheetColumnCount" class="ui-register__empty">
                                 <button type="button" class="text-brand-navy-600 hover:underline" @click="growRenderLimit">
                                     Үлдсэн {{ visibleRows.length - renderedRows.length }} мөрийг харах
                                 </button>

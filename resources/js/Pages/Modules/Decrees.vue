@@ -273,7 +273,7 @@ watch(() => [props.rows.length, props.tab, hasFilters.value], scheduleStickySync
 
 const canManage = computed(() => canManageRows.value);
 
-const cellClass = 'decree-sheet__cell';
+const cellClass = 'ui-register__cell';
 
 // Сүүлийн үйлдлийг буцаана (сервер дээр хадгалагддаг тул дахин ачаалсан ч ажиллана).
 const undoing = ref(false);
@@ -323,7 +323,7 @@ const groupEditable = (rowId, group) => {
 // Идэвхгүй нүдийг саарлаар ялгана.
 const qtyCellClass = (rowId, group) => [
     cellClass,
-    groupEditable(rowId, group) ? '' : 'decree-sheet__cell--muted',
+    groupEditable(rowId, group) ? '' : 'ui-register__cell--muted',
 ];
 
 const imageInput = ref(null);
@@ -805,8 +805,8 @@ const docColumnCount = computed(() => {
                 max-height="min(72vh, calc(100dvh - 11rem))"
                 @near-bottom="growRenderLimit"
             >
-                <div ref="blankSheetEl" class="decree-sheet">
-                    <table class="decree-sheet__table min-w-[1180px]">
+                <div ref="blankSheetEl" class="ui-register">
+                    <table class="ui-register__table min-w-[1180px]">
                     <colgroup>
                         <col style="width: 2.75rem" />
                         <col style="width: 10.5rem" />
@@ -823,13 +823,13 @@ const docColumnCount = computed(() => {
                                 Хэвлэмэл хуудас авсан<br>ажилтны нэр
                             </th>
                             <th rowspan="2">Огноо</th>
-                            <th colspan="8" class="decree-sheet__head-group--issued">
+                            <th colspan="8" class="ui-register__head-group--issued">
                                 Олгосон хэвлэмэл хуудас
                             </th>
-                            <th colspan="2" class="decree-sheet__head-group--numbers">
+                            <th colspan="2" class="ui-register__head-group--numbers">
                                 Хэвлэмэл хуудасны дугаар
                             </th>
-                            <th colspan="2" class="decree-sheet__head-group--void">
+                            <th colspan="2" class="ui-register__head-group--void">
                                 Хүчингүй болгосон хэвлэмэл хуудасны тоо
                             </th>
                             <th rowspan="2">
@@ -851,7 +851,7 @@ const docColumnCount = computed(() => {
                             <th>Захирамж</th>
                             <th>Тушаал</th>
                         </tr>
-                        <tr class="decree-sheet__filters">
+                        <tr class="ui-register__filters">
                             <th>
                                 <button
                                     v-if="hasFilters"
@@ -887,7 +887,7 @@ const docColumnCount = computed(() => {
                             v-for="row in renderedRows"
                             :key="row.id"
                         >
-                            <td class="decree-sheet__cell--no">{{ row.no }}</td>
+                            <td class="ui-register__cell--no">{{ row.no }}</td>
                             <td :class="cellClass">
                                 <SheetCell
                                     v-if="drafts[row.id]"
@@ -1065,12 +1065,12 @@ const docColumnCount = computed(() => {
                             </td>
                         </tr>
                         <tr v-if="!rows.length">
-                            <td :colspan="blankColCount" class="decree-sheet__empty">
+                            <td :colspan="blankColCount" class="ui-register__empty">
                                 Бүртгэл алга. «Мөр нэмэх» дарж нүдэн дээр бөглөнө үү.
                             </td>
                         </tr>
                         <tr v-else-if="!visibleRows.length">
-                            <td :colspan="blankColCount" class="decree-sheet__empty">
+                            <td :colspan="blankColCount" class="ui-register__empty">
                                 Хайлтад тохирох мөр алга.
                                 <button type="button" class="font-semibold text-brand-navy-600 hover:underline" @click="clearFilters">
                                     Хайлтыг цэвэрлэх
@@ -1100,11 +1100,11 @@ const docColumnCount = computed(() => {
                 max-height="min(72vh, calc(100dvh - 11rem))"
                 @near-bottom="growRenderLimit"
             >
-                <div ref="sheetEl" class="decree-sheet">
-                <div class="decree-sheet__banner">
+                <div ref="sheetEl" class="ui-register">
+                <div class="ui-register__banner">
                     Аймгийн Засаг даргын {{ docLabel }}ийн бүртгэл
                 </div>
-                <table class="decree-sheet__table min-w-[1400px]">
+                <table class="ui-register__table min-w-[1400px]">
                     <colgroup>
                         <col style="width: 2.5rem" />
                         <col style="width: 6.5rem" />
@@ -1123,13 +1123,13 @@ const docColumnCount = computed(() => {
                     <thead>
                         <tr>
                             <th rowspan="2" class="w-10">Д/д</th>
-                            <th colspan="4" class="decree-sheet__head-group--issued">
+                            <th colspan="4" class="ui-register__head-group--issued">
                                 Захирамжлалын баримт бичгийн үндсэн мэдээлэл
                             </th>
                             <th rowspan="2" class="w-24">
                                 Дагаж мөрдөх<br>он, сар, өдөр
                             </th>
-                            <th colspan="2" class="decree-sheet__head-group--issued">
+                            <th colspan="2" class="ui-register__head-group--issued">
                                 Хавсралтын мэдээлэл
                             </th>
                             <th rowspan="2" class="w-28">
@@ -1167,7 +1167,7 @@ const docColumnCount = computed(() => {
                             <th v-if="isNiit">—</th>
                             <th>—</th>
                         </tr>
-                        <tr class="decree-sheet__filters">
+                        <tr class="ui-register__filters">
                             <th>
                                 <button
                                     v-if="hasFilters"
@@ -1199,7 +1199,7 @@ const docColumnCount = computed(() => {
                             v-for="row in renderedRows"
                             :key="row.id"
                         >
-                            <td class="decree-sheet__cell--no">{{ row.no }}</td>
+                            <td class="ui-register__cell--no">{{ row.no }}</td>
                             <td :class="cellClass">
                                 <SheetCell
                                     v-if="drafts[row.id]"
@@ -1393,12 +1393,12 @@ const docColumnCount = computed(() => {
                             </td>
                         </tr>
 <tr v-if="!rows.length">
-                            <td :colspan="docColumnCount" class="decree-sheet__empty">
+                            <td :colspan="docColumnCount" class="ui-register__empty">
                                 {{ isNiit ? 'Бүртгэл алга.' : `${numberLabel}ын бүртгэл алга. «Мөр нэмэх» дарж бөглөнө үү.` }}
                             </td>
                         </tr>
                         <tr v-else-if="!visibleRows.length">
-                            <td :colspan="docColumnCount" class="decree-sheet__empty">
+                            <td :colspan="docColumnCount" class="ui-register__empty">
                                 Хайлтад тохирох мөр алга.
                                 <button type="button" class="font-semibold text-brand-navy-600 hover:underline" @click="clearFilters">
                                     Хайлтыг цэвэрлэх
