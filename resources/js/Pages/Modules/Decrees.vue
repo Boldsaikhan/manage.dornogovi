@@ -851,7 +851,7 @@ const docColumnCount = computed(() => {
                             <th>Захирамж</th>
                             <th>Тушаал</th>
                         </tr>
-                        <tr class="ui-register__filters">
+                        <tr class="ui-filters">
                             <th>
                                 <button
                                     v-if="hasFilters"
@@ -1167,7 +1167,7 @@ const docColumnCount = computed(() => {
                             <th v-if="isNiit">—</th>
                             <th>—</th>
                         </tr>
-                        <tr class="ui-register__filters">
+                        <tr class="ui-filters">
                             <th>
                                 <button
                                     v-if="hasFilters"

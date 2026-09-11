@@ -873,7 +873,7 @@ const destroyRow = (id) => {
                             <th v-if="canManage || rowActions.length" />
                         </tr>
                         <!-- Багана тус бүрд хайх мөр -->
-                        <tr class="ui-register__filters">
+                        <tr class="ui-filters">
                             <th v-if="canExportFile" />
                             <th v-if="rowNumberLabel">
                                 <button

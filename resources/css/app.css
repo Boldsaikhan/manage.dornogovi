@@ -461,8 +461,12 @@
         @apply bg-sky-50 text-sky-900;
     }
 
-    /* Багана тус бүрийн хайлтын мөр — толгойн доор наалдаж, өнгөөрөө ялгарна. */
-    .ui-register thead tr.ui-register__filters th {
+    /*
+     * Багана тус бүрийн хайлтын мөр — толгойн доор наалдаж, өнгөөрөө ялгарна.
+     *
+     * Аль ч хүснэгтийн <thead> дотор <tr class="ui-filters"> болгон тавина.
+     */
+    thead tr.ui-filters th {
         position: sticky;
         z-index: 17;
         @apply bg-brand-navy-100 px-1 py-1 align-middle;
@@ -472,22 +476,22 @@
             0 2px 3px -2px rgb(15 23 42 / 0.18);
     }
 
-    .ui-register thead tr.ui-register__filters th:last-child {
+    thead tr.ui-filters th:last-child {
         box-shadow:
             inset 0 -1px 0 rgb(203 213 225),
             0 2px 3px -2px rgb(15 23 42 / 0.18);
     }
 
-    .ui-register__filters input {
+    .ui-filters input {
         @apply w-full rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[11px] font-normal
             normal-case text-slate-700 placeholder-slate-300 outline-none transition;
     }
 
-    .ui-register__filters input:focus {
+    .ui-filters input:focus {
         @apply border-brand-navy-400 ring-2 ring-brand-navy-500/15;
     }
 
-    .ui-register__filters input::-webkit-search-cancel-button {
+    .ui-filters input::-webkit-search-cancel-button {
         @apply cursor-pointer;
     }
 

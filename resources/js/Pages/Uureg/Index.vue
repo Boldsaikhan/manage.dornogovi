@@ -114,18 +114,22 @@ const closeDownload = (event) => {
 onMounted(() => {
     document.addEventListener('click', closeDownload);
     window.addEventListener('keydown', onTableKeydown);
+
+    scheduleStickySync();
+    // Фонт хожуу ачаалагдвал толгойн өндөр өөрчлөгддөг тул дахин нэг хэмжинэ.
+    setTimeout(syncFilterRowTop, 400);
+    window.addEventListener('resize', syncFilterRowTop);
 });
 onBeforeUnmount(() => {
     document.removeEventListener('click', closeDownload);
     window.removeEventListener('keydown', onTableKeydown);
+    window.removeEventListener('resize', syncFilterRowTop);
     // Чирэлт дундуур хуудас солигдвол сонсогчид үлдэхээс сэргийлнэ.
     onColumnPointerUp();
 });
 
 const drafts = reactive({});
 const fileInput = ref(null);
-const showAddForm = ref(false);
-const addFormRoot = ref(null);
 const wordPreviewing = ref(false);
 const wordConfirming = ref(false);
 // { document_id, original_name, columns, headers, raw_rows, mapping, count }
@@ -368,44 +372,11 @@ const uploadForm = useForm({
     file: null,
 });
 
-const addForm = useForm({
-    kind: props.kind,
-    text: '',
-    measure: '',
-    period: '',
-    responsible: '',
-    collaborator: '',
-    sector: '',
-});
-
-const addPeriodStart = ref('');
-const addPeriodEnd = ref('');
-
-watch([addPeriodStart, addPeriodEnd], ([start, end]) => {
-    if (start && end) {
-        addForm.period = formatTaskPeriodMd(start, end);
-    } else if (start) {
-        addForm.period = formatTaskPeriodMd(start, start);
-    } else {
-        addForm.period = '';
-    }
-});
-
-const resetAddPeriodInputs = () => {
-    addPeriodStart.value = '';
-    addPeriodEnd.value = '';
-};
-
 watch(
     () => props.kind,
     (k) => {
         uploadForm.kind = k;
         uploadForm.file = null;
-        addForm.kind = k;
-        addForm.reset('text', 'measure', 'period', 'responsible', 'collaborator', 'sector');
-        addForm.clearErrors();
-        resetAddPeriodInputs();
-        showAddForm.value = false;
         closeWordPreview();
         if (fileInput.value) fileInput.value.value = '';
     },
@@ -830,6 +801,77 @@ const emptyTasksMessage = computed(() => {
     return 'Одоогоор мөр алга. «Мөр нэмэх» дарж эхлүүлнэ үү.';
 });
 
+/*
+ * Багана тус бүрийн хайлт — захирамж, томилолтын хүснэгттэй ижил.
+ */
+const columnFilters = reactive({});
+
+const hasColumnFilters = computed(
+    () => Object.values(columnFilters).some((v) => String(v).trim() !== ''),
+);
+
+const clearColumnFilters = () => Object.keys(columnFilters).forEach((k) => (columnFilters[k] = ''));
+
+// Багана өөрчлөгдвөл (өөр таб, өөр загвар) түлхүүрүүдийг шинэчилнэ.
+watch(
+    tableColumns,
+    (columns) => {
+        Object.keys(columnFilters).forEach((key) => {
+            if (! columns.some((col) => col.key === key)) delete columnFilters[key];
+        });
+
+        columns.forEach((col) => {
+            if (! (col.key in columnFilters)) columnFilters[col.key] = '';
+        });
+
+        scheduleStickySync();
+    },
+    { immediate: true },
+);
+
+/**
+ * Хайлтын мөрийг толгойн доор наалдуулна.
+ *
+ * Толгойн өндөр нь бичвэрийн урт, дэлгэцийн өргөнөөс хамаарч өөрчлөгддөг
+ * тул бодит өндрийг нь хэмжиж байрлуулна.
+ */
+const syncFilterRowTop = () => {
+    const head = document.querySelector('.ui-table thead');
+    const rows = head ? Array.from(head.rows) : [];
+
+    if (rows.length < 2) return;
+
+    // 1 пикселээр давхарлана — хүрээ хуваалцсанаас үүсэх завсрыг арилгана.
+    const top = Math.max(0, Math.round(rows[0].getBoundingClientRect().height) - 1);
+
+    Array.from(rows[1].cells).forEach((cell) => {
+        cell.style.top = `${top}px`;
+    });
+};
+
+const scheduleStickySync = () => nextTick(() => requestAnimationFrame(syncFilterRowTop));
+
+// Таб солигдоход хайлт цэвэрлэгдэнэ.
+watch(() => props.kind, () => clearColumnFilters());
+
+/** Том/жижиг үсэг, ө/о, ү/у зэргийн зөрүүг үл тооно. */
+const searchKey = (value) => String(value ?? '')
+    .toLowerCase()
+    .replace(/ө/g, 'о')
+    .replace(/ү/g, 'у')
+    .replace(/ё/g, 'е')
+    .replace(/й/g, 'и');
+
+const matchesColumnFilters = (task) => Object.entries(columnFilters).every(([key, needle]) => {
+    const text = String(needle).trim();
+
+    if (text === '') return true;
+
+    const column = tableColumns.value.find((col) => col.key === key);
+
+    return searchKey(task[column?.field ?? key]).includes(searchKey(text));
+});
+
 // Шүүлттэй үед зөвхөн холбогдох үүрэг чиглэл харагдана.
 const visibleTasks = computed(() => {
     let list = props.tasks;
@@ -841,6 +883,10 @@ const visibleTasks = computed(() => {
 
             return owner.org === filter.value.value;
         }));
+    }
+
+    if (hasColumnFilters.value) {
+        list = list.filter(matchesColumnFilters);
     }
 
     if (statusFilter.value === 'done') {
@@ -1004,23 +1050,46 @@ const switchKind = (key) => {
     router.get(route('tasks.index'), { kind: key }, { preserveState: false });
 };
 
-const openAddForm = () => {
-    showAddForm.value = true;
-    addForm.kind = props.kind;
-    requestAnimationFrame(() => {
-        addFormRoot.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    });
-};
+/**
+ * Хүснэгтийн төгсгөлд хоосон мөр нэмнэ.
+ *
+ * Тусдаа форм бөглөхгүй — мөр шууд үүсээд, нүд бүр дээр нь дарж
+ * бөглөнө. Захирамж, тушаалын хүснэгттэй ижил.
+ */
+const addingRow = ref(false);
 
-const submitAddForm = () => {
-    addForm.kind = props.kind;
-    addForm.post(route('tasks.store'), {
+const addRow = () => {
+    if (addingRow.value) return;
+
+    addingRow.value = true;
+
+    const before = new Set(props.tasks.map((task) => task.id));
+
+    router.post(route('tasks.store'), { kind: props.kind }, {
         preserveScroll: true,
         onSuccess: () => {
-            addForm.reset('text', 'measure', 'period', 'responsible', 'collaborator', 'sector');
-            addForm.clearErrors();
-            resetAddPeriodInputs();
+            // Шүүлтүүр идэвхтэй бол шинэ хоосон мөр нуугдана.
+            filter.value = null;
+            statusFilter.value = null;
+            showDashboard.value = false;
+            viewMode.value = 'table';
+
+            const added = props.tasks.find((task) => ! before.has(task.id));
+
+            if (! added) return;
+
+            // Шинэ мөр жагсаалтын төгсгөлд орох тул бүх мөрийг зурна.
+            renderLimit.value = visibleTasks.value.length;
+            highlightedTaskId.value = added.id;
+
+            nextTick(() => {
+                const row = document.getElementById(`task-row-${added.id}`);
+
+                row?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                row?.querySelector('.ui-sheet-cell')?.click();
+            });
         },
+        onFinish: () => (addingRow.value = false),
     });
 };
 
@@ -1311,9 +1380,13 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                         v-if="canEdit"
                         type="button"
                         class="ui-btn-accent w-full sm:w-auto"
-                        @click="openAddForm"
+                        :disabled="addingRow"
+                        @click="addRow"
                     >
-                        {{ hasColumn('text') && ! hasColumn('sector') ? 'Үүрэг чиглэл нэмэх' : 'Мөр нэмэх' }}
+                        <template v-if="addingRow">Нэмж байна…</template>
+                        <template v-else>
+                            {{ hasColumn('text') && ! hasColumn('sector') ? 'Үүрэг чиглэл нэмэх' : 'Мөр нэмэх' }}
+                        </template>
                     </button>
                 </div>
             </div>
@@ -1439,106 +1512,6 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                 </form>
                 <p v-if="newKindForm.errors.name" class="mt-2 text-xs text-red-600">{{ newKindForm.errors.name }}</p>
                 <p v-if="newKindForm.errors.columns" class="mt-2 text-xs text-red-600">{{ newKindForm.errors.columns }}</p>
-            </section>
-
-            <!-- Шинэ мөр нэмэх форм -->
-            <section
-                v-if="canEdit && showAddForm"
-                ref="addFormRoot"
-                class="rounded-2xl border border-brand-navy-200 bg-white p-4 shadow-soft sm:p-5"
-            >
-                <div class="mb-3 flex items-start justify-between gap-3">
-                    <div>
-                        <h3 class="text-sm font-semibold text-slate-800">
-                            {{ hasColumn('text') && ! hasColumn('sector') ? 'Үүрэг чиглэл нэмэх' : 'Төлөвлөгөөний мөр нэмэх' }}
-                        </h3>
-                        <p class="mt-0.5 text-xs text-slate-500">
-                            Талбаруудыг бөглөж хадгална. Хоосон үлдээсэн талбар дараа засварлана.
-                        </p>
-                    </div>
-                    <button
-                        type="button"
-                        class="rounded-lg px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100"
-                        @click="showAddForm = false"
-                    >
-                        Хаах
-                    </button>
-                </div>
-
-                <form class="space-y-3" @submit.prevent="submitAddForm">
-                    <div class="grid gap-3 sm:grid-cols-2">
-                        <label v-if="hasColumn('sector')" class="block">
-                            <span class="mb-1 block text-xs font-semibold text-slate-600">{{ columnLabel('sector', 'Ажлын чиглэл') }}</span>
-                            <input v-model="addForm.sector" type="text" class="ui-input w-full" placeholder="Ж: Зудын эсрэг" />
-                        </label>
-                        <label v-if="hasColumn('period')" class="block" :class="hasColumn('sector') ? '' : 'sm:col-span-2'">
-                            <span class="mb-1 block text-xs font-semibold text-slate-600">{{ columnLabel('period', 'Хугацаа') }}</span>
-                            <div class="grid gap-2 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
-                                <input v-model="addPeriodStart" type="date" class="ui-input w-full" />
-                                <span class="hidden text-center text-slate-400 sm:block">—</span>
-                                <input v-model="addPeriodEnd" type="date" class="ui-input w-full" :min="addPeriodStart || undefined" />
-                            </div>
-                            <p v-if="addForm.period" class="mt-1 text-xs text-slate-500">{{ addForm.period }}</p>
-                        </label>
-                    </div>
-
-                    <label v-if="hasColumn('text')" class="block">
-                        <span class="mb-1 block text-xs font-semibold text-slate-600">{{ columnLabel('text', 'Үүрэг чиглэл') }}</span>
-                        <textarea
-                            v-model="addForm.text"
-                            rows="3"
-                            class="ui-input w-full resize-y"
-                            placeholder="Үүрэг чиглэлийн агуулга…"
-                            :required="! hasColumn('measure')"
-                        />
-                        <p v-if="addForm.errors.text" class="mt-1 text-xs text-red-600">{{ addForm.errors.text }}</p>
-                    </label>
-
-                    <label v-if="hasColumn('measure')" class="block">
-                        <span class="mb-1 block text-xs font-semibold text-slate-600">{{ columnLabel('measure', 'Арга хэмжээ') }}</span>
-                        <textarea
-                            v-model="addForm.measure"
-                            rows="3"
-                            class="ui-input w-full resize-y"
-                            placeholder="Арга хэмжээний тайлбар…"
-                            :required="! hasColumn('text')"
-                        />
-                    </label>
-
-                    <div class="grid gap-3 sm:grid-cols-2">
-                        <div v-if="hasColumn('responsible')">
-                            <span class="mb-1 block text-xs font-semibold text-slate-600">{{ columnLabel('responsible', 'Хариуцах эзэн') }}</span>
-                            <div class="rounded-xl border border-slate-200 bg-slate-50/80 px-2 py-1.5">
-                                <SheetCell
-                                    v-model="addForm.responsible"
-                                    :options="people"
-                                    multiple
-                                    placeholder="Нэр сонгох…"
-                                    empty-label="—"
-                                />
-                            </div>
-                        </div>
-                        <div v-if="hasColumn('collaborator')">
-                            <span class="mb-1 block text-xs font-semibold text-slate-600">{{ columnLabel('collaborator', 'Хяналт тавих') }}</span>
-                            <div class="rounded-xl border border-slate-200 bg-slate-50/80 px-2 py-1.5">
-                                <SheetCell
-                                    v-model="addForm.collaborator"
-                                    :options="people"
-                                    multiple
-                                    placeholder="Нэр сонгох…"
-                                    empty-label="—"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-3">
-                        <button type="button" class="ui-btn-ghost" @click="showAddForm = false">Болих</button>
-                        <button type="submit" class="ui-btn-primary" :disabled="addForm.processing">
-                            {{ addForm.processing ? 'Хадгалж байна…' : 'Хадгалах' }}
-                        </button>
-                    </div>
-                </form>
             </section>
 
             <!-- Оруулсан Word файлын товч жагсаалт -->
@@ -1910,6 +1883,32 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                             </th>
                             <th class="sticky top-0 z-20 bg-brand-navy-50 text-center ui-sticky-progress">Биелэлтийн хувь</th>
                             <th v-if="canEdit" class="sticky top-0 z-20 bg-brand-navy-50 text-center ui-sticky-actions" />
+                        </tr>
+                        <!-- Багана тус бүрд хайх мөр -->
+                        <tr class="ui-filters">
+                            <th v-if="canEdit" />
+                            <th>
+                                <button
+                                    v-if="hasColumnFilters"
+                                    type="button"
+                                    class="w-full text-[10px] font-semibold text-brand-orange-600 hover:underline"
+                                    title="Хайлтыг цэвэрлэх"
+                                    @click="clearColumnFilters"
+                                >
+                                    Цэвэрлэх
+                                </button>
+                                <span v-else class="text-[10px] text-slate-300">Хайх</span>
+                            </th>
+                            <th v-for="col in tableColumns" :key="'f-' + col.key">
+                                <input
+                                    v-model="columnFilters[col.key]"
+                                    type="search"
+                                    placeholder="Хайх"
+                                    :aria-label="col.label + ' хайх'"
+                                />
+                            </th>
+                            <th class="ui-sticky-progress" />
+                            <th v-if="canEdit" class="ui-sticky-actions" />
                         </tr>
                     </thead>
                     <tbody>
