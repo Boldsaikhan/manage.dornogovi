@@ -216,6 +216,37 @@
         min-height: 1px;
     }
 
+    /*
+     * Мэдрэгчтэй төхөөрөмж (iPad, утас) — хүснэгтийг хуруугаараа шууд
+     * чирч гүйлгэнэ.
+     *
+     * Хулганатай дэлгэц дээр доор нь тусдаа хэвтээ зурвас гаргадаг ч
+     * хуруугаар тэр нимгэн зурвасыг барих хэцүү тул мэдрэгчтэй дэлгэц
+     * дээр биеийг нь өөрийг нь хөндлөн гүйдэг болгож, зурвасыг нуудаг.
+     */
+    @media (hover: none) and (pointer: coarse) {
+        .ui-table-scroll-body {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-x pan-y;
+        }
+
+        .ui-table-scroll-body::-webkit-scrollbar:horizontal {
+            display: none;
+            height: 0;
+        }
+
+        .ui-table-hscroll {
+            display: none;
+        }
+
+        /* Хүснэгтийн нүд, товч хуруунд таарахаар арай өндөр байна. */
+        .ui-register td,
+        .ui-table td {
+            @apply py-1.5;
+        }
+    }
+
     .ui-page--tasks-table,
     .ui-page--reports-table {
         @apply flex min-h-0 flex-1 flex-col gap-5 overflow-hidden !space-y-0;
