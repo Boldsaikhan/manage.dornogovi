@@ -1227,7 +1227,7 @@ const destroyRow = (id) => {
             </div>
         </Modal>
 
-        <Modal :show="showForm && canManage" :max-width="isSheetForm ? '4xl' : '2xl'" @close="closeForm">
+        <Modal :show="showForm && canManage" :max-width="isSheetForm ? '7xl' : '2xl'" @close="closeForm">
             <form :class="isSheetForm ? 'p-4 sm:p-6' : 'p-6'" @submit.prevent="submit">
                 <div class="mb-5 flex items-start justify-between gap-3">
                     <div>
