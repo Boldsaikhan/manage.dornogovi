@@ -153,6 +153,15 @@ class ModuleResourceController extends Controller
             'number' => \App\Models\TravelAssignment::query()
                 ->where('approver', $activeScope)
                 ->count() + 1,
+            // Томилолт хүлээж авах албан хаагчид — утасны жагсаалтаас.
+            'people' => collect(PhoneDirectoryEntry::accountPeopleOptions())
+                ->map(fn (array $row) => [
+                    'name' => $row['value'],
+                    'position' => $row['position'],
+                    'org' => $row['org'],
+                ])
+                ->values()
+                ->all(),
             'year' => now()->format('Y'),
             'budget_kinds' => AssignmentSheet::BUDGET_KINDS,
         ];

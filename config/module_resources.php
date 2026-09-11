@@ -85,6 +85,9 @@ return [
         'fields' => [
             // Сонголт нь утасны жагсаалтын «Удирдлага» ангиллаас бүрдэнэ.
             ['name' => 'approved_by', 'label' => 'Баталсан', 'type' => 'select', 'options_from' => 'assignment_leaders'],
+            // Томилолт авч буй албан хаагч — утасны жагсаалтаас сонгоно.
+            ['name' => 'person_name', 'label' => 'Овог нэр', 'type' => 'text'],
+            ['name' => 'position', 'label' => 'Албан тушаал', 'type' => 'text'],
             ['name' => 'destination', 'label' => 'Очих газар', 'type' => 'text', 'required' => true],
             ['name' => 'purpose', 'label' => '1. Зорилго', 'type' => 'textarea'],
             ['name' => 'composition', 'label' => '2. Бүрэлдэхүүн', 'type' => 'textarea'],
