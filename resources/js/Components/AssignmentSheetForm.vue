@@ -13,7 +13,16 @@ const props = defineProps({
     meta: { type: Object, default: () => ({}) },
 });
 
-const lines = () => props.meta.lines ?? [];
+/*
+ * Толгойн мөрүүд — батлагчийг сонгоход албан тушаал нь дагаж солигдоно.
+ */
+const leaderOptions = () => props.meta.leader_options ?? [];
+
+const lines = () => {
+    const chosen = leaderOptions().find((l) => l.name === props.form.approved_by);
+
+    return chosen?.lines ?? props.meta.lines ?? [];
+};
 
 /*
  * Албан тушаалын мөр олон бол (ЗДТГ-ын дарга) сүүлийн мөрийн хажууд нэр

@@ -146,6 +146,80 @@ class AssignmentSheet
     /** @var array<string, string>|null */
     private static ?array $leaderCache = null;
 
+    /**
+     * Батлах хүн бүрийн албан тушаал, толгойн мөрүүд.
+     *
+     * Сонгосон хүн нь табын үндсэн батлагч бол цаасан маягтын яг тэр
+     * бичвэрийг хэрэглэнэ (жишээ нь «ДАРГЫН АЛБАН ҮҮРГИЙГ ТҮР ОРЛОН
+     * ГҮЙЦЭТГЭГЧ»). Өөр хүн бол албан тушаалаас нь мөрийг үүсгэнэ.
+     *
+     * @return list<array{name: string, position: string, lines: list<string>}>
+     */
+    public static function leaderOptions(?string $approver): array
+    {
+        $default = self::signerName($approver);
+
+        return PhoneDirectoryEntry::query()
+            ->orderBy('org_order')
+            ->orderBy('sort_order')
+            ->get(['person_name', 'position', 'category'])
+            ->filter(fn (PhoneDirectoryEntry $row) => isset(self::leaders()[trim((string) $row->person_name)]))
+            ->unique(fn (PhoneDirectoryEntry $row) => trim((string) $row->person_name))
+            ->map(function (PhoneDirectoryEntry $row) use ($approver, $default) {
+                $name = trim((string) $row->person_name);
+                $position = trim((string) $row->position);
+
+                return [
+                    'name' => $name,
+                    'position' => $position,
+                    'lines' => $name === $default
+                        ? self::lines($approver)
+                        : [self::positionLine($position)],
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Албан тушаалаас толгойн мөр үүсгэнэ.
+     *
+     * «Засаг даргын орлогч» → «ДОРНОГОВЬ АЙМГИЙН ЗАСАГ ДАРГЫН ОРЛОГЧ».
+     */
+    public static function positionLine(string $position): string
+    {
+        $position = trim($position);
+
+        if ($position === '') {
+            return self::LINES['governor'][0];
+        }
+
+        // «Аймгийн Засаг дарга» гэх мэт давхардлыг арилгана.
+        $position = preg_replace('/^аймгийн\s+/iu', '', $position) ?? $position;
+
+        $upper = mb_strtoupper($position);
+
+        return str_contains($upper, 'ДОРНОГОВЬ') ? $upper : 'ДОРНОГОВЬ АЙМГИЙН '.$upper;
+    }
+
+    /** Сонгосон батлагчийн толгойн мөрүүд. */
+    public static function linesFor(?string $approver, ?string $chosenName): array
+    {
+        $name = trim((string) $chosenName);
+
+        if ($name === '') {
+            return self::lines($approver);
+        }
+
+        foreach (self::leaderOptions($approver) as $option) {
+            if ($option['name'] === $name) {
+                return $option['lines'];
+            }
+        }
+
+        return self::lines($approver);
+    }
+
     /** Тестийн хооронд цээжилсэн нэрийг цэвэрлэнэ. */
     public static function forgetSigners(): void
     {

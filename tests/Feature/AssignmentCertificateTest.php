@@ -192,6 +192,55 @@ class AssignmentCertificateTest extends TestCase
                 ->where('rows.0.user_position', 'Эрчим хүчний хяналтын улсын байцаагч'));
     }
 
+    public function test_the_position_follows_the_chosen_approver(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        foreach ([
+            ['О.Батжаргал', 'Аймгийн Засаг дарга'],
+            ['Г.Март', 'Засаг даргын орлогч'],
+        ] as [$name, $position]) {
+            \App\Models\PhoneDirectoryEntry::create([
+                'person_name' => $name,
+                'position' => $position,
+                'org_name' => 'Аймгийн удирдлага',
+                'category' => 'udirdlaga',
+            ]);
+        }
+
+        $row = $this->assignment([
+            'approver' => 'governor',
+            'approved_by' => 'Г.Март',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('assignments.sheet', $row))
+            ->assertOk()
+            // Орлогчийг сонгоход албан тушаал нь дагаж солигдоно.
+            ->assertSee('ДОРНОГОВЬ АЙМГИЙН ЗАСАГ ДАРГЫН ОРЛОГЧ')
+            ->assertDontSee('ДОРНОГОВЬ АЙМГИЙН ЗАСАГ ДАРГА<');
+    }
+
+    public function test_the_default_approver_keeps_the_paper_wording(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'М.Мөнхбат',
+            'position' => 'ЗДТГ-ын дарга',
+            'org_name' => 'Аймгийн удирдлага',
+            'category' => 'udirdlaga',
+        ]);
+
+        $row = $this->assignment(['approver' => 'chief', 'approved_by' => 'М.Мөнхбат']);
+
+        $this->actingAs($admin)
+            ->get(route('assignments.sheet', $row))
+            ->assertOk()
+            // Үндсэн батлагчид цаасан маягтын бичвэр хэвээр.
+            ->assertSee('ДАРГЫН АЛБАН ҮҮРГИЙГ ТҮР ОРЛОН');
+    }
+
     public function test_the_certificate_text_is_saved_from_the_form(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

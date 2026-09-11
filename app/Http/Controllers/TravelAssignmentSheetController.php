@@ -23,7 +23,8 @@ class TravelAssignmentSheetController extends Controller
 
         return view('assignments.sheet', [
             'assignment' => $assignment,
-            'lines' => AssignmentSheet::lines($assignment->approver),
+            // Батлагчийг сонгосон бол түүний албан тушаалаар толгойг бүрдүүлнэ.
+            'lines' => AssignmentSheet::linesFor($assignment->approver, $assignment->approved_by),
             // Сонгосон хүн байвал тэр, үгүй бол табын батлагчийн нэр.
             'signerName' => $assignment->approved_by
                 ?: AssignmentSheet::signerName($assignment->approver),
