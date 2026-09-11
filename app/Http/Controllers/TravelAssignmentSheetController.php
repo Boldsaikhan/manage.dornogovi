@@ -24,11 +24,28 @@ class TravelAssignmentSheetController extends Controller
         return view('assignments.sheet', [
             'assignment' => $assignment,
             'lines' => AssignmentSheet::lines($assignment->approver),
-            'signerName' => AssignmentSheet::signerName($assignment->approver),
+            // Сонгосон хүн байвал тэр, үгүй бол табын батлагчийн нэр.
+            'signerName' => $assignment->approved_by
+                ?: AssignmentSheet::signerName($assignment->approver),
             'approverLabel' => $assignment->approverLabel(),
             'year' => optional($assignment->start_date)?->format('Y') ?? now()->format('Y'),
             'period' => $this->period($assignment),
+            'number' => $this->rowNumber($assignment),
         ]);
+    }
+
+    /**
+     * Үнэмлэх дээр гарах дугаар — бүртгэлийн Д/д.
+     *
+     * Хүснэгтэд мөрүүд нь шинээсээ хуучин руу дугаарлагддаг тул тухайн
+     * хэсэгт өөрөөс нь өмнө бүртгэгдсэн мөрүүдийн тоо нь Д/д болно.
+     */
+    private function rowNumber(TravelAssignment $assignment): int
+    {
+        return TravelAssignment::query()
+            ->where('approver', $assignment->approver)
+            ->where('id', '<=', $assignment->id)
+            ->count();
     }
 
     /** «2026.09.01 — 2026.09.05» хэлбэрийн хугацаа. */

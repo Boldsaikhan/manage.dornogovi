@@ -149,6 +149,10 @@ class ModuleResourceController extends Controller
             'lines' => AssignmentSheet::lines($activeScope),
             'signer' => AssignmentSheet::signerName($activeScope),
             'leaders' => AssignmentSheet::leaders(),
+            // Үнэмлэх дээр гарах дугаар — энэ хэсгийн дараагийн Д/д.
+            'number' => \App\Models\TravelAssignment::query()
+                ->where('approver', $activeScope)
+                ->count() + 1,
             'year' => now()->format('Y'),
             'budget_kinds' => AssignmentSheet::BUDGET_KINDS,
         ];

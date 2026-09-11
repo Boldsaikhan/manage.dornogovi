@@ -26,7 +26,100 @@ const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-
 </script>
 
 <template>
-    <div class="mx-auto w-full max-w-[190mm] bg-white p-6 font-serif text-[13px] leading-relaxed text-black sm:p-10">
+    <div class="mx-auto w-full max-w-[190mm] space-y-6">
+
+    <!-- ══ АР ТАЛ — Албан томилолтын үнэмлэх ══ -->
+    <div class="bg-white p-6 font-serif text-[13px] leading-relaxed text-black sm:p-10">
+        <p class="mb-4 text-center font-sans text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            Ар тал — албан томилолтын үнэмлэх
+        </p>
+
+        <div class="grid gap-8 sm:grid-cols-2">
+            <div>
+                <div class="mt-10 text-center text-[15px] font-bold uppercase leading-tight">
+                    Албан томилолтын<br />үнэмлэх
+                </div>
+                <div class="mt-10 text-center text-[12px] font-bold">{{ meta.year }} он</div>
+
+                <p class="mt-10 text-[12px]">Томилолтоор ажилласан тухай тэмдэглэл</p>
+
+                <table class="mt-2 w-full border-collapse text-center text-[11px]">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" class="border border-black p-1">Хаана</th>
+                            <th colspan="2" class="border border-black p-1">Сар, өдөр</th>
+                            <th rowspan="2" class="border border-black p-1">Гарын үсэг</th>
+                        </tr>
+                        <tr>
+                            <th class="border border-black p-1">Ирсэн</th>
+                            <th class="border border-black p-1">Буцсан</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="i in 6" :key="'mark-' + i">
+                            <td class="h-7 border border-black" />
+                            <td class="border border-black" />
+                            <td class="border border-black" />
+                            <td class="border border-black" />
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p class="mt-4 text-[12px]">
+                    Албан томилолтын ажлын дүнг эх зардлыг ………хувиар тооцоо хийхийг зөвшөөрсөн.
+                </p>
+
+                <div class="mt-6 text-[12px] font-bold uppercase leading-snug">
+                    <template v-for="(line, i) in lines()" :key="'c1-' + i">{{ line }}<br /></template>
+                    <span class="ml-8 inline-block">{{ signerName() }}</span>
+                </div>
+
+                <p class="mt-6 text-center text-[12px]">………. оны …… сар …… өдөр</p>
+            </div>
+
+            <div>
+                <!-- Дугаар нь бүртгэлийн Д/д — хэвлэхэд автоматаар тавигдана. -->
+                <p class="text-center text-[12px] font-bold">
+                    Дугаар {{ meta.number || '—' }}
+                </p>
+
+                <label class="mt-4 block font-sans text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                    Үнэмлэхийн бичвэр
+                </label>
+                <textarea
+                    v-model="form.certificate_text"
+                    rows="7"
+                    :class="dotted"
+                    placeholder="Дорноговь аймгийн ЗДТГ-ын … албан хаагч … сарын …-ны өдрөөс … хоног ажиллуулахаар томилов."
+                />
+                <InputError :message="form.errors.certificate_text" />
+
+                <div class="mt-6 text-[12px] font-bold uppercase leading-snug">
+                    <template v-for="(line, i) in lines()" :key="'c2-' + i">{{ line }}<br /></template>
+                    <span class="ml-8 inline-block">{{ signerName() }}</span>
+                </div>
+
+                <p class="mt-6 text-center text-[12px]">………. оны …… сар …… өдөр</p>
+
+                <p class="mt-10 text-center text-[12px] font-bold uppercase">Тусгай тэмдэглэл</p>
+                <p class="mt-3 text-center text-[12px]">Хугацаа сунгах тухай</p>
+
+                <p class="mt-4 text-[12px] leading-loose">
+                    ……………………………………… газар, байгууллагын тодорхойлолт, хүсэлт
+                    ……………………………………… ажил гүйцэтгэх шаардлагын дагуу томилолтын
+                    хугацааг ……. хоногоор сунгав.
+                </p>
+
+                <p class="mt-6 text-[12px]">Зөвшөөрсөн дарга &nbsp;..................................</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ УРД ТАЛ — Томилолтын удирдамж ══ -->
+    <div class="bg-white p-6 font-serif text-[13px] leading-relaxed text-black sm:p-10">
+        <p class="mb-4 text-center font-sans text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            Урд тал — томилолтын удирдамж
+        </p>
         <!-- БАТЛАВ -->
         <div class="ml-auto w-3/5 text-[12px] font-bold uppercase leading-snug">
             БАТЛАВ<br />
@@ -191,5 +284,7 @@ const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-
                 </div>
             </div>
         </div>
+    </div>
+
     </div>
 </template>
