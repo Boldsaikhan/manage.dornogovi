@@ -69,6 +69,102 @@ class AssignmentRegisterExportTest extends TestCase
             );
     }
 
+    public function test_the_approver_is_chosen_from_the_leadership_list(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        // Утасны жагсаалтын «Удирдлага» ангилал.
+        foreach ([['О.Батжаргал', 'Аймгийн Засаг дарга'], ['Г.Март', 'Засаг даргын орлогч'], ['М.Мөнхбат', 'ЗДТГ-ын дарга']] as $i => [$name, $position]) {
+            \App\Models\PhoneDirectoryEntry::create([
+                'person_name' => $name,
+                'position' => $position,
+                'org_name' => 'Аймгийн удирдлага',
+                'category' => 'udirdlaga',
+                'sort_order' => $i,
+            ]);
+        }
+
+        // Өөр ангиллын хүн сонголтод орохгүй.
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'Б.Мэргэжилтэн',
+            'position' => 'Мэргэжилтэн',
+            'org_name' => 'ХХҮГ',
+            'category' => 'baiguullaga',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('assignments.index', ['scope' => 'chief']))
+            ->assertInertia(function (AssertableInertia $page) {
+                $props = $page->toArray()['props'];
+
+                $field = collect($props['fields'])->firstWhere('name', 'approved_by');
+
+                $this->assertSame('select', $field['type']);
+                $this->assertSame(
+                    ['О.Батжаргал', 'Г.Март', 'М.Мөнхбат'],
+                    array_keys($field['options']),
+                );
+                $this->assertSame('О.Батжаргал — Аймгийн Засаг дарга', $field['options']['О.Батжаргал']);
+            });
+    }
+
+    public function test_the_chosen_approver_is_saved_and_shown(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'Г.Март',
+            'position' => 'Засаг даргын орлогч',
+            'org_name' => 'Аймгийн удирдлага',
+            'category' => 'udirdlaga',
+        ]);
+
+        $row = $this->assignment('Томилолттой хүн');
+
+        $this->actingAs($admin)
+            ->from(route('assignments.index', ['scope' => 'chief']))
+            ->post(route('modules.update', ['module' => 'assignments', 'id' => $row->id]), [
+                'approved_by' => 'Г.Март',
+                'destination' => 'Улаанбаатар',
+                'start_date' => '2026-02-04',
+                'end_date' => '2026-02-06',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame('Г.Март', $row->fresh()->approved_by);
+
+        $this->actingAs($admin)
+            ->get(route('assignments.index', ['scope' => 'chief']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('rows.0.approved_by', 'Г.Март'));
+    }
+
+    public function test_someone_outside_the_leadership_list_is_refused(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'Г.Март',
+            'position' => 'Засаг даргын орлогч',
+            'org_name' => 'Аймгийн удирдлага',
+            'category' => 'udirdlaga',
+        ]);
+
+        $row = $this->assignment('Томилолттой хүн');
+
+        $this->actingAs($admin)
+            ->from(route('assignments.index', ['scope' => 'chief']))
+            ->post(route('modules.update', ['module' => 'assignments', 'id' => $row->id]), [
+                'approved_by' => 'Хэн нэгэн',
+                'destination' => 'Улаанбаатар',
+                'start_date' => '2026-02-04',
+                'end_date' => '2026-02-06',
+            ])
+            ->assertSessionHasErrors('approved_by');
+
+        $this->assertNull($row->fresh()->approved_by);
+    }
+
     public function test_only_the_selected_rows_are_downloaded(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

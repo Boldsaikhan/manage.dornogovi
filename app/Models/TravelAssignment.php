@@ -16,7 +16,7 @@ class TravelAssignment extends Model
     protected $fillable = [
         'user_id',
         'person_name',
-        'position', 'department_id', 'approver', 'destination', 'purpose',
+        'position', 'department_id', 'approver', 'approved_by', 'destination', 'purpose',
         'composition', 'scope_of_work', 'start_date', 'end_date',
         'order_number', 'status', 'note', 'report',
     ];

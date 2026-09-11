@@ -15,6 +15,12 @@ const props = defineProps({
 const lines = () => props.meta.lines ?? [];
 const budgetKinds = () => props.meta.budget_kinds ?? [];
 
+// Батлах эрхтэй удирдах албан хаагчид — утасны жагсаалтаас.
+const leaders = () => Object.entries(props.meta.leaders ?? {});
+
+// Сонгосон нэр байвал толгойд түүнийг харуулна.
+const signerName = () => props.form.approved_by || props.meta.signer || '.....................';
+
 const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-transparent p-0 '
     + 'font-serif text-[13px] leading-relaxed focus:border-brand-navy-600 focus:ring-0';
 </script>
@@ -25,7 +31,7 @@ const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-
         <div class="ml-auto w-3/5 text-[12px] font-bold uppercase leading-snug">
             БАТЛАВ<br />
             <template v-for="(line, i) in lines()" :key="i">{{ line }}<br /></template>
-            <span class="mt-1 inline-block">{{ meta.signer || '.....................' }}</span>
+            <span class="mt-1 inline-block">{{ signerName() }}</span>
         </div>
 
         <h3 class="mt-8 text-center text-[13px] font-bold uppercase">Томилолтын удирдамж</h3>
@@ -156,6 +162,16 @@ const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-
                 Бүртгэлийн мэдээлэл — маягт дээр хэвлэгдэхгүй
             </p>
             <div class="grid gap-3 sm:grid-cols-3">
+                <div v-if="leaders().length">
+                    <label class="ui-label">Баталсан</label>
+                    <select v-model="form.approved_by" class="ui-input">
+                        <option value="">— сонгох —</option>
+                        <option v-for="[name, label] in leaders()" :key="name" :value="name">
+                            {{ label }}
+                        </option>
+                    </select>
+                    <InputError :message="form.errors.approved_by" />
+                </div>
                 <div>
                     <label class="ui-label">Тушаалын дугаар</label>
                     <input v-model="form.order_number" type="text" class="ui-input" />
