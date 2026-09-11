@@ -24,6 +24,14 @@ class AssignmentSheet
         ],
     ];
 
+    /** «Удирдлага» ангилал тэмдэглэгдээгүй үед албан тушаалаар нь олох түлхүүрүүд. */
+    public const LEADER_POSITIONS = [
+        'засаг дарга',
+        'засаг даргын орлогч',
+        'здтг-ын дарга',
+        'тамгын газрын дарга',
+    ];
+
     /** Төсвийн хүснэгтийн зардлын төрлүүд. */
     public const BUDGET_KINDS = ['Байр', 'Зам хоног', 'Түлш, шатахуун'];
 
@@ -94,23 +102,43 @@ class AssignmentSheet
             return self::$leaderCache;
         }
 
-        $leaders = [];
-
-        PhoneDirectoryEntry::query()
-            ->where('category', 'udirdlaga')
+        $entries = PhoneDirectoryEntry::query()
             ->orderBy('org_order')
             ->orderBy('sort_order')
-            ->get(['person_name', 'position'])
-            ->each(function (PhoneDirectoryEntry $row) use (&$leaders) {
-                $name = trim((string) $row->person_name);
-                $position = trim((string) $row->position);
+            ->get(['person_name', 'position', 'category']);
 
-                if ($name === '' || isset($leaders[$name])) {
-                    return;
+        $chosen = $entries->where('category', 'udirdlaga');
+
+        /*
+         * Утасны жагсаалт дээр «Удирдлага» ангилал тэмдэглэгдээгүй байвал
+         * албан тушаалаар нь олно — Засаг дарга, орлогч, ЗДТГ-ын дарга.
+         */
+        if ($chosen->isEmpty()) {
+            $chosen = $entries->filter(function (PhoneDirectoryEntry $row) {
+                $position = mb_strtolower(trim((string) $row->position));
+
+                foreach (self::LEADER_POSITIONS as $needle) {
+                    if (str_contains($position, $needle)) {
+                        return true;
+                    }
                 }
 
-                $leaders[$name] = $position === '' ? $name : $name.' — '.$position;
+                return false;
             });
+        }
+
+        $leaders = [];
+
+        foreach ($chosen as $row) {
+            $name = trim((string) $row->person_name);
+            $position = trim((string) $row->position);
+
+            if ($name === '' || isset($leaders[$name])) {
+                continue;
+            }
+
+            $leaders[$name] = $position === '' ? $name : $name.' — '.$position;
+        }
 
         return self::$leaderCache = $leaders;
     }

@@ -165,6 +165,87 @@ class AssignmentRegisterExportTest extends TestCase
         $this->assertNull($row->fresh()->approved_by);
     }
 
+    public function test_the_approver_can_be_changed_straight_from_the_table(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'М.Мөнхбат',
+            'position' => 'ЗДТГ-ын дарга',
+            'org_name' => 'Аймгийн удирдлага',
+            'category' => 'udirdlaga',
+        ]);
+
+        $row = $this->assignment('Томилолттой хүн');
+
+        $this->actingAs($admin)
+            ->from(route('assignments.index', ['scope' => 'chief']))
+            ->post(route('modules.field', ['module' => 'assignments', 'id' => $row->id]), [
+                'field' => 'approved_by',
+                'value' => 'М.Мөнхбат',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertSame('М.Мөнхбат', $row->fresh()->approved_by);
+
+        // Хоосон болгож болно.
+        $this->actingAs($admin)
+            ->from(route('assignments.index', ['scope' => 'chief']))
+            ->post(route('modules.field', ['module' => 'assignments', 'id' => $row->id]), [
+                'field' => 'approved_by',
+                'value' => '',
+            ])
+            ->assertRedirect();
+
+        $this->assertNull($row->fresh()->approved_by);
+    }
+
+    public function test_only_whitelisted_fields_can_be_changed_inline(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $row = $this->assignment('Томилолттой хүн');
+
+        $this->actingAs($admin)
+            ->post(route('modules.field', ['module' => 'assignments', 'id' => $row->id]), [
+                'field' => 'destination',
+                'value' => 'Дархан',
+            ])
+            ->assertStatus(422);
+
+        $this->assertSame('Улаанбаатар', $row->fresh()->destination);
+    }
+
+    public function test_the_leadership_list_falls_back_to_the_position(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        // «Удирдлага» ангилал тэмдэглэгдээгүй байсан ч олдоно.
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'О.Батжаргал',
+            'position' => 'Аймгийн Засаг дарга',
+            'org_name' => 'АЗДТГ',
+            'category' => 'baiguullaga',
+        ]);
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'Б.Мэргэжилтэн',
+            'position' => 'Мэргэжилтэн',
+            'org_name' => 'АЗДТГ',
+            'category' => 'baiguullaga',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('assignments.index', ['scope' => 'chief']))
+            ->assertInertia(function (AssertableInertia $page) {
+                $props = $page->toArray()['props'];
+
+                $this->assertSame(
+                    ['О.Батжаргал'],
+                    array_keys($props['inlineFields']['approved_by']),
+                );
+            });
+    }
+
     public function test_only_the_selected_rows_are_downloaded(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

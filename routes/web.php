@@ -154,6 +154,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/modules/{module}', [ModuleResourceController::class, 'store'])->name('modules.store');
     Route::get('/modules/{module}/{id}/file', [ModuleResourceController::class, 'download'])->name('modules.file');
     Route::get('/modules/{module}/{id}/edit', [ModuleResourceController::class, 'editValues'])->name('modules.edit');
+    Route::post('/modules/{module}/{id}/field', [ModuleResourceController::class, 'updateField'])->name('modules.field');
     Route::post('/modules/{module}/{id}', [ModuleResourceController::class, 'update'])->name('modules.update');
     Route::delete('/modules/{module}/{id}', [ModuleResourceController::class, 'destroy'])->name('modules.destroy');
 
