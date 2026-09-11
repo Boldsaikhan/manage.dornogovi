@@ -107,6 +107,9 @@ class AssignmentCertificateTest extends TestCase
 
         // Албан тушаалын сүүлийн мөр, нэр хоёр нэг мөрөнд зэрэгцэнэ.
         $this->assertStringContainsString('signrow', $html);
+        // «БАТЛАВ» нь голлож, мөр бүр нь тасрахгүй.
+        $this->assertStringContainsString('approve__title', $html);
+        $this->assertStringContainsString('approve__line', $html);
         $this->assertMatchesRegularExpression(
             '/signrow.*?ГҮЙЦЭТГЭГЧ.*?М\.Мөнхбат/su',
             $html,

@@ -41,12 +41,21 @@
             background: #fff;
         }
 
+        /*
+         * «БАТЛАВ» блок — баруун талд байрлах ба мөр бүр нь нэг мөрөнд
+         * багтахаар өргөнтэй. Тасарч хуваагдвал зүүн ирмэг нь эвдэрдэг.
+         */
         .approve {
-            margin-left: 55%;
+            margin-left: 45%;
             text-transform: uppercase;
             font-weight: bold;
             line-height: 1.35;
         }
+
+        /* «БАТЛАВ» нь доорх бичвэрийнхээ голд байрлана. */
+        .approve__title { display: block; text-align: center; }
+
+        .approve__line { white-space: nowrap; }
 
         /*
          * Сүүлийн мөр: зүүн талд албан тушаал, баруун талд нэр. Голын зай
@@ -129,7 +138,7 @@
 
         .cert__year { margin-top: 20mm; text-align: center; font-weight: bold; }
 
-        .cert__signer { margin-top: 8mm; font-weight: bold; text-transform: uppercase; line-height: 1.35; }
+        .cert__signer { margin-top: 8mm; font-weight: bold; text-transform: uppercase; line-height: 1.35; font-size: 11pt; }
         .cert__signer .signrow { gap: 8mm; }
 
         .cert__date { margin-top: 10mm; text-align: center; }
@@ -313,12 +322,12 @@
 </div>
 <div class="page page--front">
     <div class="approve">
-        БАТЛАВ<br>
+        <span class="approve__title">БАТЛАВ</span>
         @foreach (array_slice($lines, 0, -1) as $line)
-            {{ $line }}<br>
+            <span class="approve__line">{{ $line }}</span><br>
         @endforeach
         <div class="signrow">
-            <span>{{ $lines[count($lines) - 1] }}</span>
+            <span class="approve__line">{{ $lines[count($lines) - 1] }}</span>
             <span class="name">{{ $signerName ?: '.....................' }}</span>
         </div>
     </div>
