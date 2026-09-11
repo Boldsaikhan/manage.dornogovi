@@ -245,6 +245,33 @@ class AssignmentRegisterExportTest extends TestCase
         $this->assertSame('А/12', $row->order_number);
     }
 
+    public function test_choosing_a_name_fills_the_position(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'Намсрайн Алдарбаяр',
+            'position' => 'ИТХ-ын дарга',
+            'org_name' => 'Аймгийн ИТХ',
+        ]);
+
+        $row = $this->assignment('Томилолттой хүн');
+
+        $this->actingAs($admin)
+            ->from(route('assignments.index', ['scope' => 'chief']))
+            ->post(route('modules.field', ['module' => 'assignments', 'id' => $row->id]), [
+                'field' => 'person_name',
+                'value' => 'Н.Алдарбаяр',
+            ])
+            ->assertRedirect();
+
+        $row->refresh();
+
+        $this->assertSame('Н.Алдарбаяр', $row->person_name);
+        // Албан тушаал нь дагаж бөглөгдөнө.
+        $this->assertSame('ИТХ-ын дарга', $row->position);
+    }
+
     public function test_a_blank_row_can_be_added_to_the_table(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

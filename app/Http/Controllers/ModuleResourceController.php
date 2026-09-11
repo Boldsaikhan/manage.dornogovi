@@ -519,6 +519,8 @@ class ModuleResourceController extends Controller
         $field = collect($config['fields'])->firstWhere('name', $name);
         abort_unless($field !== null, 404);
 
+        $column = collect($config['columns'] ?? [])->firstWhere('edit', $name) ?? [];
+
         $rules = ['nullable'];
 
         if (($field['type'] ?? '') === 'select') {
@@ -532,9 +534,23 @@ class ModuleResourceController extends Controller
 
         $data = $request->validate(['value' => $rules], [], ['value' => mb_strtolower($field['label'] ?? $name)]);
 
-        $changes = $this->changedFields($row, [$name => $data['value'] ?? null], $config);
+        $values = [$name => $data['value'] ?? null];
 
-        $row->update([$name => $data['value'] ?? null]);
+        /*
+         * Нэрийг утасны жагсаалтаас сонгоход албан тушаал нь дагаж
+         * бөглөгдөнө — хоёр нүдийг тусад нь бөглөх шаардлагагүй.
+         */
+        if (! empty($column['edit_people']) && filled($values[$name])) {
+            $position = PhoneDirectoryEntry::positionFor((string) $values[$name]);
+
+            if ($position !== null) {
+                $values['position'] = $position;
+            }
+        }
+
+        $changes = $this->changedFields($row, $values, $config);
+
+        $row->update($values);
 
         if ($changes !== []) {
             $this->log($module, $row, 'updated', $config, changes: $changes);
