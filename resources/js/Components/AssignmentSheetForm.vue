@@ -1,6 +1,7 @@
 <script setup>
 import { computed, watch } from 'vue';
 import InputError from '@/Components/InputError.vue';
+import SheetCell from '@/Components/SheetCell.vue';
 
 /**
  * «ТОМИЛОЛТЫН УДИРДАМЖ» — A4 цаасан дээр хэвлэгдэх байдлаараа бөглөх маягт.
@@ -52,10 +53,10 @@ const people = () => props.meta.people ?? [];
  * бичвэрийг зурган дээрх загвараар бүрдүүлнэ.
  */
 const pickPerson = (name) => {
-    const person = people().find((p) => p.name === name);
+    const person = people().find((p) => p.value === name || p.label === name);
 
     props.form.person_name = name;
-    props.form.position = person?.position || '';
+    props.form.position = person?.hint || '';
 
     refreshCertificateText();
 };
@@ -75,7 +76,9 @@ const refreshCertificateText = () => {
         return;
     }
 
-    const person = people().find((p) => p.name === props.form.person_name);
+    const person = people().find(
+        (p) => p.value === props.form.person_name || p.label === props.form.person_name,
+    );
 
     generated = buildCertificateText(person);
     props.form.certificate_text = generated;
@@ -120,10 +123,11 @@ const buildCertificateText = (person) => {
     if (! person) return '';
 
     const org = person.org ? person.org : 'Дорноговь аймгийн ЗДТГ';
-    const position = person.position || 'албан хаагч';
+    const position = person.hint || 'албан хаагч';
+    const name = person.value || person.label;
     const where = props.form.destination || '…';
 
-    return `${org}-ын ${position} ${person.name} ${where} ${mn(props.form.start_date)}-ны `
+    return `${org}-ын ${position} ${name} ${where} ${mn(props.form.start_date)}-ны `
         + `өдрөөс ${dayCount()} хоног ажиллуулахаар томилов.`;
 };
 
@@ -155,18 +159,17 @@ const pickerClass = 'w-auto border-0 border-b border-dotted border-black bg-tran
         <div class="grid gap-3 sm:grid-cols-[2fr_1fr_1fr]">
             <div>
                 <label class="ui-label">Албан хаагч</label>
-                <select
-                    v-if="people().length"
-                    :value="form.person_name"
-                    class="ui-input !py-2 text-sm"
-                    @change="pickPerson($event.target.value)"
-                >
-                    <option value="">— утасны жагсаалтаас сонгох —</option>
-                    <option v-for="p in people()" :key="p.name + p.position" :value="p.name">
-                        {{ p.name }}{{ p.position ? ' · ' + p.position : '' }}
-                    </option>
-                </select>
-                <input v-else v-model="form.person_name" type="text" class="ui-input !py-2 text-sm" />
+                <!-- Үүрэг даалгаварын «Хариуцах эзэн»-тэй ижил сонгогч. -->
+                <div class="rounded-xl border-2 border-slate-200 bg-white px-3 py-1.5">
+                    <SheetCell
+                        :model-value="form.person_name"
+                        :options="people()"
+                        placeholder="Утасны жагсаалтаас сонгох…"
+                        empty-label="Утасны жагсаалтаас сонгох…"
+                        @update:model-value="pickPerson"
+                        @commit="pickPerson"
+                    />
+                </div>
                 <InputError :message="form.errors.person_name" class="mt-1" />
             </div>
             <div>

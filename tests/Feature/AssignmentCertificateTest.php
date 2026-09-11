@@ -156,10 +156,12 @@ class AssignmentCertificateTest extends TestCase
             ->assertOk()
             ->assertInertia(function (\Inertia\Testing\AssertableInertia $page) {
                 $people = $page->toArray()['props']['formMeta']['people'];
-                $row = collect($people)->firstWhere('name', 'Н.Гарамжав');
+                $row = collect($people)->firstWhere('value', 'Н.Гарамжав');
 
-                $this->assertSame('Эрчим хүчний хяналтын улсын байцаагч', $row['position']);
+                // Үүрэг даалгаварын сонгогчтой ижил бүтэц.
+                $this->assertSame('Эрчим хүчний хяналтын улсын байцаагч', $row['hint']);
                 $this->assertSame('СХЗХ', $row['org']);
+                $this->assertArrayHasKey('category', $row);
             });
     }
 
