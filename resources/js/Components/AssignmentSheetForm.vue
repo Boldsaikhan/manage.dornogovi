@@ -13,6 +13,10 @@ const props = defineProps({
 });
 
 const lines = () => props.meta.lines ?? [];
+
+// Сүүлийн мөрийг нэртэй нь зэрэгцүүлнэ — голд нь гарын үсгийн зай үлдэнэ.
+const headLines = () => lines().slice(0, -1);
+const lastLine = () => lines()[lines().length - 1] ?? '';
 const budgetKinds = () => props.meta.budget_kinds ?? [];
 
 // Батлах эрхтэй удирдах албан хаагчид — утасны жагсаалтаас.
@@ -70,8 +74,11 @@ const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-
                 </p>
 
                 <div class="mt-6 text-[12px] font-bold uppercase leading-snug">
-                    <template v-for="(line, i) in lines()" :key="'c1-' + i">{{ line }}<br /></template>
-                    <span class="ml-8 inline-block">{{ signerName() }}</span>
+                    <template v-for="(line, i) in headLines()" :key="'c1-' + i">{{ line }}<br /></template>
+                    <div class="flex justify-between gap-6">
+                        <span>{{ lastLine() }}</span>
+                        <span class="whitespace-nowrap">{{ signerName() }}</span>
+                    </div>
                 </div>
 
                 <p class="mt-6 text-center text-[12px]">………. оны …… сар …… өдөр</p>
@@ -95,8 +102,11 @@ const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-
                 <InputError :message="form.errors.certificate_text" />
 
                 <div class="mt-6 text-[12px] font-bold uppercase leading-snug">
-                    <template v-for="(line, i) in lines()" :key="'c2-' + i">{{ line }}<br /></template>
-                    <span class="ml-8 inline-block">{{ signerName() }}</span>
+                    <template v-for="(line, i) in headLines()" :key="'c2-' + i">{{ line }}<br /></template>
+                    <div class="flex justify-between gap-6">
+                        <span>{{ lastLine() }}</span>
+                        <span class="whitespace-nowrap">{{ signerName() }}</span>
+                    </div>
                 </div>
 
                 <p class="mt-6 text-center text-[12px]">………. оны …… сар …… өдөр</p>
@@ -123,8 +133,11 @@ const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-
         <!-- БАТЛАВ -->
         <div class="ml-auto w-3/5 text-[12px] font-bold uppercase leading-snug">
             БАТЛАВ<br />
-            <template v-for="(line, i) in lines()" :key="i">{{ line }}<br /></template>
-            <span class="mt-1 inline-block">{{ signerName() }}</span>
+            <template v-for="(line, i) in headLines()" :key="i">{{ line }}<br /></template>
+            <div class="flex justify-between gap-10">
+                <span>{{ lastLine() }}</span>
+                <span class="whitespace-nowrap">{{ signerName() }}</span>
+            </div>
         </div>
 
         <h3 class="mt-8 text-center text-[13px] font-bold uppercase">Томилолтын удирдамж</h3>

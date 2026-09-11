@@ -48,7 +48,17 @@
             line-height: 1.35;
         }
 
-        .approve .name { display: inline-block; margin-top: 2mm; }
+        /*
+         * Сүүлийн мөр: зүүн талд албан тушаал, баруун талд нэр. Голын зай
+         * нь гарын үсэг зурах зориулалттай.
+         */
+        .signrow {
+            display: flex;
+            justify-content: space-between;
+            gap: 20mm;
+        }
+
+        .signrow .name { white-space: nowrap; }
 
         h1 {
             margin: 10mm 0 0;
@@ -120,7 +130,7 @@
         .cert__year { margin-top: 20mm; text-align: center; font-weight: bold; }
 
         .cert__signer { margin-top: 8mm; font-weight: bold; text-transform: uppercase; line-height: 1.35; }
-        .cert__signer .name { display: inline-block; margin-left: 12mm; }
+        .cert__signer .signrow { gap: 8mm; }
 
         .cert__date { margin-top: 10mm; text-align: center; }
 
@@ -241,10 +251,13 @@
             </div>
 
             <div class="cert__signer">
-                @foreach ($lines as $line)
-                    {{ $line }}@if (! $loop->last)<br>@endif
+                @foreach (array_slice($lines, 0, -1) as $line)
+                    {{ $line }}<br>
                 @endforeach
-                <span class="name">{{ $signerName ?: '.....................' }}</span>
+                <div class="signrow">
+                    <span>{{ $lines[count($lines) - 1] }}</span>
+                    <span class="name">{{ $signerName ?: '.....................' }}</span>
+                </div>
             </div>
 
             <div class="cert__date">………. оны …… сар …… өдөр</div>
@@ -264,10 +277,13 @@
             </div>
 
             <div class="cert__signer">
-                @foreach ($lines as $line)
-                    {{ $line }}@if (! $loop->last)<br>@endif
+                @foreach (array_slice($lines, 0, -1) as $line)
+                    {{ $line }}<br>
                 @endforeach
-                <span class="name">{{ $signerName ?: '.....................' }}</span>
+                <div class="signrow">
+                    <span>{{ $lines[count($lines) - 1] }}</span>
+                    <span class="name">{{ $signerName ?: '.....................' }}</span>
+                </div>
             </div>
 
             <div class="cert__date">………. оны …… сар …… өдөр</div>
@@ -298,10 +314,13 @@
 <div class="page page--front">
     <div class="approve">
         БАТЛАВ<br>
-        @foreach ($lines as $line)
-            {{ $line }}@if (! $loop->last)<br>@endif
+        @foreach (array_slice($lines, 0, -1) as $line)
+            {{ $line }}<br>
         @endforeach
-        <span class="name">{{ $signerName ?: '.....................' }}</span>
+        <div class="signrow">
+            <span>{{ $lines[count($lines) - 1] }}</span>
+            <span class="name">{{ $signerName ?: '.....................' }}</span>
+        </div>
     </div>
 
     <h1>Томилолтын удирдамж</h1>

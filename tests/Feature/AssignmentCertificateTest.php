@@ -94,6 +94,25 @@ class AssignmentCertificateTest extends TestCase
         $this->assertSame(3, substr_count($response->getContent(), 'М.Мөнхбат'));
     }
 
+    public function test_the_name_sits_beside_the_last_position_line(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = $this->assignment(['approved_by' => 'М.Мөнхбат']);
+
+        $html = $this->actingAs($admin)
+            ->get(route('assignments.sheet', $row))
+            ->assertOk()
+            ->getContent();
+
+        // Албан тушаалын сүүлийн мөр, нэр хоёр нэг мөрөнд зэрэгцэнэ.
+        $this->assertStringContainsString('signrow', $html);
+        $this->assertMatchesRegularExpression(
+            '/signrow.*?ГҮЙЦЭТГЭГЧ.*?М\.Мөнхбат/su',
+            $html,
+        );
+    }
+
     public function test_the_certificate_text_is_saved_from_the_form(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
