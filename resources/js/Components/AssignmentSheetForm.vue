@@ -145,6 +145,43 @@ const pickerClass = 'w-auto border-0 border-b border-dotted border-black bg-tran
 </script>
 
 <template>
+    <div class="w-full space-y-5">
+
+    <!-- Үндсэн мэдээлэл — эндээс бөглөвөл хоёр тал өөрөө дүүрнэ. -->
+    <section class="rounded-xl border border-brand-navy-200 bg-brand-navy-50/50 p-4 font-sans">
+        <h4 class="mb-3 text-xs font-semibold uppercase tracking-wide text-brand-navy-700">
+            Томилуулах албан хаагч, хугацаа
+        </h4>
+        <div class="grid gap-3 sm:grid-cols-[2fr_1fr_1fr]">
+            <div>
+                <label class="ui-label">Албан хаагч</label>
+                <select
+                    v-if="people().length"
+                    :value="form.person_name"
+                    class="ui-input !py-2 text-sm"
+                    @change="pickPerson($event.target.value)"
+                >
+                    <option value="">— утасны жагсаалтаас сонгох —</option>
+                    <option v-for="p in people()" :key="p.name + p.position" :value="p.name">
+                        {{ p.name }}{{ p.position ? ' · ' + p.position : '' }}
+                    </option>
+                </select>
+                <input v-else v-model="form.person_name" type="text" class="ui-input !py-2 text-sm" />
+                <InputError :message="form.errors.person_name" class="mt-1" />
+            </div>
+            <div>
+                <label class="ui-label">Эхлэх огноо</label>
+                <input v-model="form.start_date" type="date" class="ui-input !py-2 text-sm" />
+                <InputError :message="form.errors.start_date" class="mt-1" />
+            </div>
+            <div>
+                <label class="ui-label">Хэд хоног</label>
+                <input v-model="days" type="number" min="1" max="365" class="ui-input !py-2 text-sm" />
+                <InputError :message="form.errors.end_date" class="mt-1" />
+            </div>
+        </div>
+    </section>
+
     <!-- Хэвлэхтэй ижил: ар тал, урд тал зэрэгцэж харагдана. -->
     <div class="grid w-full gap-5 xl:grid-cols-2">
 
@@ -208,48 +245,6 @@ const pickerClass = 'w-auto border-0 border-b border-dotted border-black bg-tran
                 </p>
 
                 <label class="mt-4 block font-sans text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                    Албан хаагч
-                </label>
-                <select
-                    v-if="people().length"
-                    :value="form.person_name"
-                    class="ui-input !py-1.5 font-sans !text-xs"
-                    @change="pickPerson($event.target.value)"
-                >
-                    <option value="">— утасны жагсаалтаас сонгох —</option>
-                    <option v-for="p in people()" :key="p.name + p.position" :value="p.name">
-                        {{ p.name }}{{ p.position ? ' · ' + p.position : '' }}
-                    </option>
-                </select>
-                <InputError :message="form.errors.person_name" class="font-sans" />
-
-                <div class="mt-3 grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="block font-sans text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                            Эхлэх огноо
-                        </label>
-                        <input
-                            v-model="form.start_date"
-                            type="date"
-                            class="ui-input !py-1.5 font-sans !text-xs"
-                        />
-                    </div>
-                    <div>
-                        <label class="block font-sans text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                            Хэд хоног
-                        </label>
-                        <input
-                            v-model="days"
-                            type="number"
-                            min="1"
-                            max="365"
-                            class="ui-input !py-1.5 font-sans !text-xs"
-                        />
-                    </div>
-                </div>
-                <InputError :message="form.errors.start_date" class="font-sans" />
-
-                <label class="mt-3 block font-sans text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                     Үнэмлэхийн бичвэр
                 </label>
                 <textarea
@@ -465,5 +460,6 @@ const pickerClass = 'w-auto border-0 border-b border-dotted border-black bg-tran
         </div>
     </div>
 
+    </div>
     </div>
 </template>
