@@ -190,11 +190,7 @@ class ModuleOwnScopeTest extends TestCase
     {
         $viewer = User::factory()->create();
         $other = User::factory()->create();
-        UserModulePermission::create([
-            'user_id' => $viewer->id,
-            'module_key' => 'decrees',
-            'level' => 'view_own',
-        ]);
+        $this->grantModule($viewer, 'decrees', 'view_own');
 
         Decree::query()->create([
             'category' => 'zahiramj',
@@ -223,11 +219,7 @@ class ModuleOwnScopeTest extends TestCase
     {
         $editor = User::factory()->create();
         $other = User::factory()->create();
-        UserModulePermission::create([
-            'user_id' => $editor->id,
-            'module_key' => 'decrees',
-            'level' => 'edit_own',
-        ]);
+        $this->grantModule($editor, 'decrees', 'edit_own');
 
         $own = Decree::query()->create([
             'category' => 'zahiramj',
@@ -263,11 +255,7 @@ class ModuleOwnScopeTest extends TestCase
     public function test_manage_user_can_add_decrees_and_index_exposes_edit_flags(): void
     {
         $manager = User::factory()->create();
-        UserModulePermission::create([
-            'user_id' => $manager->id,
-            'module_key' => 'decrees',
-            'level' => 'manage',
-        ]);
+        $this->grantModule($manager, 'decrees', 'manage');
 
         $this->actingAs($manager)
             ->get(route('decrees.index', ['tab' => 'zahiramj_a']))

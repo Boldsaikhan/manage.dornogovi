@@ -20,7 +20,7 @@ class DecreeActionPermissionTest extends TestCase
     {
         $user = User::factory()->create(['is_specialist' => true]);
 
-        foreach ($permissions as $key => $level) {
+        foreach ($this->expandPermissions($permissions) as $key => $level) {
             UserModulePermission::create([
                 'user_id' => $user->id,
                 'module_key' => $key,
