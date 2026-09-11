@@ -28,9 +28,14 @@
             background: #f1f5f9;
         }
 
+        /*
+         * Хуудас яг A4 (210×297мм). Агуулга нь нэг хуудаст багтах ёстой
+         * тул өндрийг тогтмол авна — илүү гарвал хоёр цаас идэхгүй.
+         */
         .page {
             width: 210mm;
-            min-height: 297mm;
+            height: 297mm;
+            overflow: hidden;
             margin: 0 auto;
             padding: 15mm 15mm 15mm 20mm;
             background: #fff;
@@ -68,9 +73,9 @@
 
         .filled { font-weight: normal; }
 
-        .line { display: block; height: 6mm; border-bottom: 1px dotted #000; }
+        .line { display: block; height: 5.5mm; border-bottom: 1px dotted #000; }
 
-        .budget-title { margin: 6mm 0 2mm; }
+        .budget-title { margin: 5mm 0 2mm; }
 
         table { width: 100%; border-collapse: collapse; }
         th, td { border: 1px solid #000; padding: 2mm; font-size: 11pt; }
@@ -79,10 +84,10 @@
         td.kind { text-align: center; }
         tbody tr { height: 9mm; }
 
-        .report-title { margin: 6mm 0 2mm; font-weight: bold; text-transform: uppercase; }
+        .report-title { margin: 5mm 0 2mm; font-weight: bold; text-transform: uppercase; }
 
-        .sign { margin-top: 8mm; }
-        .sign div { margin-bottom: 4mm; }
+        .sign { margin-top: 6mm; }
+        .sign div { margin-bottom: 3mm; }
 
         .toolbar {
             max-width: 210mm; margin: 6mm auto; display: flex; gap: 8px; justify-content: flex-end;
@@ -148,19 +153,40 @@
             transform-origin: top center;
         }
 
-        .sheets .page { flex: 0 0 auto; box-shadow: 0 2px 12px rgb(15 23 42 / 0.12); }
+        .sheet { flex: 0 0 auto; }
+
+        .sheets .page { box-shadow: 0 2px 12px rgb(15 23 42 / 0.12); }
+
+        /* Хуудас бүрийн дээд талын хэвлэх хэсэг. */
+        .sheet__bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 3mm;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #475569;
+        }
+
+        .sheet__bar button {
+            padding: 6px 14px; border: 1px solid #1e3a5f; border-radius: 8px;
+            background: #1e3a5f; color: #fff; font-size: 12px; cursor: pointer;
+        }
 
         @media print {
             body { background: #fff; }
-            .page { margin: 0; padding: 0; width: auto; min-height: 0; box-shadow: none; }
+            .page { margin: 0; padding: 0; width: auto; height: auto; box-shadow: none; }
             .toolbar { display: none; }
 
             /* Хэвлэхэд хуудас бүр өөрийн цаасан дээр гарна. */
-            .sheets { display: block; gap: 0; transform: none !important; }
+            .sheets { display: block; gap: 0; transform: none !important; margin-bottom: 0 !important; }
+            .sheet { display: block; }
+            .sheet__bar { display: none; }
 
             /* Зөвхөн нэг талыг хэвлэх үед нөгөөг нь нуух. */
-            body.print-back .page--front,
-            body.print-front .page--back { display: none; }
+            body.print-back .sheet--front,
+            body.print-front .sheet--back { display: none; }
 
             /* Ганц хуудас хэвлэхэд илүү хуудас гарахаас сэргийлнэ. */
             body.print-back .page--back,
@@ -171,8 +197,6 @@
 <body>
 
 <div class="toolbar">
-    <button type="button" onclick="printSide('back')">Ар тал хэвлэх</button>
-    <button type="button" onclick="printSide('front')">Урд тал хэвлэх</button>
     <button type="button" onclick="printSide('')">Хоёуланг хэвлэх</button>
     <button type="button" class="ghost" onclick="window.close()">Хаах</button>
 </div>
@@ -180,6 +204,11 @@
 <div class="sheets">
 
 {{-- Ар тал — албан томилолтын үнэмлэх --}}
+<div class="sheet sheet--back">
+<div class="sheet__bar">
+    <span>Ар тал — албан томилолтын үнэмлэх</span>
+    <button type="button" onclick="printSide('back')">Энэ талыг хэвлэх</button>
+</div>
 <div class="page page--back page-break">
     <div class="cert">
         <div class="cert__col">
@@ -258,7 +287,14 @@
     </div>
 </div>
 
+</div>{{-- .sheet--back --}}
+
 {{-- Урд тал — томилолтын удирдамж --}}
+<div class="sheet sheet--front">
+<div class="sheet__bar">
+    <span>Урд тал — томилолтын удирдамж</span>
+    <button type="button" onclick="printSide('front')">Энэ талыг хэвлэх</button>
+</div>
 <div class="page page--front">
     <div class="approve">
         БАТЛАВ<br>
@@ -329,7 +365,7 @@
     @if (trim((string) $assignment->report) !== '')
         <div class="filled">{{ $assignment->report }}</div>
     @else
-        @for ($i = 0; $i < 14; $i++)
+        @for ($i = 0; $i < 10; $i++)
             <span class="line"></span>
         @endfor
     @endif
@@ -339,6 +375,7 @@
         <div>Танилцсан................................................/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /</div>
     </div>
 </div>
+</div>{{-- .sheet--front --}}
 
 </div>{{-- .sheets --}}
 

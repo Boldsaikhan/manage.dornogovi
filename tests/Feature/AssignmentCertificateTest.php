@@ -52,12 +52,16 @@ class AssignmentCertificateTest extends TestCase
         $this->actingAs($admin)
             ->get(route('assignments.sheet', $this->assignment()))
             ->assertOk()
-            ->assertSee('Ар тал хэвлэх')
-            ->assertSee('Урд тал хэвлэх')
+            // Хуудас бүр өөрийн хэвлэх товчтой.
+            ->assertSee('Ар тал — албан томилолтын үнэмлэх')
+            ->assertSee('Урд тал — томилолтын удирдамж')
+            ->assertSee('Энэ талыг хэвлэх')
             ->assertSee('Хоёуланг хэвлэх')
             // Нөгөө талыг нуух хэв маяг.
-            ->assertSee('body.print-back .page--front', false)
-            ->assertSee('body.print-front .page--back', false);
+            ->assertSee('body.print-back .sheet--front', false)
+            ->assertSee('body.print-front .sheet--back', false)
+            // Хуудас яг A4.
+            ->assertSee('height: 297mm', false);
     }
 
     public function test_the_number_follows_the_register_row_number(): void
