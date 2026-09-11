@@ -5,6 +5,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
 import AssignmentSheetForm from '@/Components/AssignmentSheetForm.vue';
+import SheetCell from '@/Components/SheetCell.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 
 const props = defineProps({
@@ -19,8 +20,9 @@ const props = defineProps({
     canImportFile: { type: Boolean, default: false },
     canExportFile: { type: Boolean, default: false },
     hasAuditLog: { type: Boolean, default: false },
-    // Хүснэгтийн нүдэн дээр шууд солих талбарууд: { нэр: { утга: шошго } }
+    // Нүд бүрийн засварлах тодорхойлолт: { баганы түлхүүр: { field, type, options, people } }
     inlineFields: { type: Object, default: () => ({}) },
+    canAddBlankRow: { type: Boolean, default: false },
     exportUrl: { type: String, default: null },
     fields: Array,
     rows: Array,
@@ -484,17 +486,50 @@ const editBusy = ref(false);
 /*
  * Хүснэгтийн нүдэн дээр шууд солих — засах горим асаалттай үед л.
  */
-const inlineOptions = (key) => Object.entries(props.inlineFields[key] ?? {});
+const inlineFor = (key) => props.inlineFields[key] ?? null;
+
+const inlineOptions = (key) => Object.entries(inlineFor(key)?.options ?? {});
 
 const canEditInline = computed(() => props.canManage && editMode.value);
 
-const isInlineCell = (key) => canEditInline.value && inlineOptions(key).length > 0;
+const isInlineCell = (key) => canEditInline.value && !! inlineFor(key);
 
 const saveInline = (row, key, value) => {
+    const field = inlineFor(key)?.field;
+
+    if (! field) return;
+
     router.post(
         route('modules.field', { module: props.module, id: row.id }),
-        { field: key, value },
+        { field, value },
         { preserveScroll: true, preserveState: false },
+    );
+};
+
+/**
+ * Хүснэгтийн төгсгөлд хоосон мөр нэмнэ.
+ *
+ * Тусдаа маягт нээхгүй — мөр шууд үүсээд нүд бүр дээр нь бөглөнө.
+ * Дэлгэрэнгүй (удирдамж, үнэмлэх) мэдээллийг харандаагаар нээж бөглөнө.
+ */
+const addingRow = ref(false);
+
+const addBlankRow = () => {
+    if (addingRow.value) return;
+
+    addingRow.value = true;
+
+    router.post(
+        props.storeUrl,
+        { blank: true, [props.scopeField || 'scope']: props.activeScope },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                editMode.value = true;
+                clearFilters();
+            },
+            onFinish: () => (addingRow.value = false),
+        },
     );
 };
 
@@ -730,7 +765,17 @@ const destroyRow = (id) => {
                     {{ editMode ? 'Засах горим асаалттай' : 'Засах' }}
                 </button>
                 <button
-                    v-if="canManage"
+                    v-if="canAddBlankRow"
+                    type="button"
+                    class="ui-btn-accent"
+                    :disabled="addingRow"
+                    title="Хүснэгтэд мөр нэмээд нүд бүр дээр нь бөглөнө"
+                    @click="addBlankRow"
+                >
+                    {{ addingRow ? 'Нэмж байна…' : 'Шинэ нэмэх' }}
+                </button>
+                <button
+                    v-else-if="canManage"
                     type="button"
                     class="ui-btn-accent"
                     @click="openForm"
@@ -959,18 +1004,29 @@ const destroyRow = (id) => {
                                     </a>
                                     <span v-else class="text-slate-400">—</span>
                                 </template>
-                                <select
-                                    v-else-if="isInlineCell(col.key)"
-                                    class="ui-input !py-1 !text-xs"
-                                    :value="row[col.key] === '—' ? '' : row[col.key]"
-                                    @click.stop
-                                    @change="saveInline(row, col.key, $event.target.value)"
-                                >
-                                    <option value="">— сонгох —</option>
-                                    <option v-for="[value, label] in inlineOptions(col.key)" :key="value" :value="value">
-                                        {{ label }}
-                                    </option>
-                                </select>
+                                <template v-else-if="isInlineCell(col.key)">
+                                    <select
+                                        v-if="inlineFor(col.key).type === 'select'"
+                                        class="ui-input !py-1 !text-xs"
+                                        :value="row[col.key] === '—' ? '' : row[col.key]"
+                                        @click.stop
+                                        @change="saveInline(row, col.key, $event.target.value)"
+                                    >
+                                        <option value="">— сонгох —</option>
+                                        <option v-for="[value, label] in inlineOptions(col.key)" :key="value" :value="value">
+                                            {{ label }}
+                                        </option>
+                                    </select>
+                                    <SheetCell
+                                        v-else
+                                        :model-value="row[col.key] === '—' ? '' : row[col.key]"
+                                        :type="inlineFor(col.key).type === 'date' ? 'date' : 'text'"
+                                        :options="inlineFor(col.key).people ? (formMeta.people ?? null) : null"
+                                        :align="col.align === 'left' ? 'left' : 'center'"
+                                        empty-label="—"
+                                        @commit="(v) => saveInline(row, col.key, v)"
+                                    />
+                                </template>
                                 <span
                                     v-else
                                     :class="col.single_line ? 'ui-clamp-1' : 'ui-clamp-2'"

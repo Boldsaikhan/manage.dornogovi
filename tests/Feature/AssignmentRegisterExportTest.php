@@ -206,14 +206,63 @@ class AssignmentRegisterExportTest extends TestCase
         $admin = User::factory()->create(['is_admin' => true]);
         $row = $this->assignment('Томилолттой хүн');
 
+        // Хүснэгтэд багана болж гараагүй талбарыг ингэж засахгүй.
         $this->actingAs($admin)
             ->post(route('modules.field', ['module' => 'assignments', 'id' => $row->id]), [
-                'field' => 'destination',
-                'value' => 'Дархан',
+                'field' => 'report',
+                'value' => 'Оролдлого',
             ])
             ->assertStatus(422);
 
-        $this->assertSame('Улаанбаатар', $row->fresh()->destination);
+        $this->assertNull($row->fresh()->report);
+    }
+
+    public function test_table_columns_can_be_filled_in_place(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $row = $this->assignment('Томилолттой хүн');
+
+        foreach ([
+            ['person_name', 'Н.Гарамжав'],
+            ['position', 'Байцаагч'],
+            ['destination', 'Дархан'],
+            ['purpose', 'Сургалт'],
+            ['order_number', 'А/12'],
+        ] as [$field, $value]) {
+            $this->actingAs($admin)
+                ->from(route('assignments.index', ['scope' => 'chief']))
+                ->post(route('modules.field', ['module' => 'assignments', 'id' => $row->id]), [
+                    'field' => $field,
+                    'value' => $value,
+                ])
+                ->assertRedirect();
+        }
+
+        $row->refresh();
+
+        $this->assertSame('Н.Гарамжав', $row->person_name);
+        $this->assertSame('Дархан', $row->destination);
+        $this->assertSame('А/12', $row->order_number);
+    }
+
+    public function test_a_blank_row_can_be_added_to_the_table(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->from(route('assignments.index', ['scope' => 'chief']))
+            ->post(route('modules.store', ['module' => 'assignments']), [
+                'blank' => true,
+                'approver' => 'chief',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $row = TravelAssignment::query()->latest('id')->first();
+
+        // Заавал бөглөх талбаруудыг шаардахгүй.
+        $this->assertSame('chief', $row->approver);
+        $this->assertNull($row->destination);
     }
 
     public function test_the_leadership_list_falls_back_to_the_position(): void
@@ -239,15 +288,12 @@ class AssignmentRegisterExportTest extends TestCase
             ->assertInertia(function (AssertableInertia $page) {
                 $props = $page->toArray()['props'];
 
-                $this->assertSame(
-                    ['О.Батжаргал'],
-                    array_keys($props['inlineFields']['approved_by']),
-                );
+                $options = $props['inlineFields']['approved_by']['options'];
+
+                $this->assertSame(['О.Батжаргал'], array_keys($options));
                 // Хүснэгтийн нүдэнд зөвхөн нэр — албан тушаалгүй.
-                $this->assertSame(
-                    'О.Батжаргал',
-                    $props['inlineFields']['approved_by']['О.Батжаргал'],
-                );
+                $this->assertSame('О.Батжаргал', $options['О.Батжаргал']);
+                $this->assertSame('approved_by', $props['inlineFields']['approved_by']['field']);
             });
     }
 
