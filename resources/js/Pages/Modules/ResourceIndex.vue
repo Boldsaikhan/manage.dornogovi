@@ -690,10 +690,14 @@ const destroyRow = (id) => {
                         {{ selectedIds.length ? `Татах (${selectedIds.length})` : 'Татах' }}
                     </button>
                     <!-- Гадна дарахад цэс хаагдана. -->
-                    <div v-if="downloadOpen" class="fixed inset-0 z-10" @click="downloadOpen = false" />
+                    <div v-if="downloadOpen" class="fixed inset-0 z-40" @click="downloadOpen = false" />
+                    <!--
+                        Хүснэгтийн наалдсан толгой z-30 хүртэл авдаг тул цэс
+                        түүнээс дээгүүр байх ёстой.
+                    -->
                     <div
                         v-if="downloadOpen"
-                        class="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                        class="absolute right-0 z-50 mt-1 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
                     >
                         <p class="px-3 py-1.5 text-[11px] text-slate-400">
                             {{ selectedIds.length ? `${selectedIds.length} сонгосон мөр` : 'Бүх бүртгэл' }}
