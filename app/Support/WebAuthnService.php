@@ -95,7 +95,13 @@ class WebAuthnService
             ->map(fn (string $id) => self::b64urlDecode($id))
             ->all();
 
-        // required: утсан дээрх passkey нэвтрэхэд олдохоор (discoverable).
+        /*
+         * required: утсан дээрх passkey нэвтрэхэд олдохоор (discoverable).
+         *
+         * Төрлийг нь заахгүй (null). Урьд нь зөвхөн «platform» гэж
+         * шаарддаг байсан тул iPad-ын Chrome шиг өөрийн passkey сантай
+         * хөтөч дээр бүртгэл үүсэхгүй байв.
+         */
         $args = $webauthn->getCreateArgs(
             self::userHandle($user),
             $user->email ?: ($user->phone ?: 'user-'.$user->id),
@@ -103,7 +109,7 @@ class WebAuthnService
             60,
             'required',
             'required',
-            false,         // platform only
+            null,
             $exclude
         );
 
