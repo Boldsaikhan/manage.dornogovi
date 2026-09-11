@@ -1024,7 +1024,8 @@ const destroyRow = (id) => {
                                     <SheetCell
                                         v-else
                                         :model-value="editValue(row, col.key)"
-                                        :type="inlineFor(col.key).type === 'date' ? 'date' : 'text'"
+                                        :type="inlineFor(col.key).type === 'date' ? 'date'
+                                            : (inlineFor(col.key).type === 'number' ? 'number' : 'text')"
                                         :options="inlineFor(col.key).people ? (formMeta.people ?? null) : null"
                                         :align="col.align === 'left' ? 'left' : 'center'"
                                         empty-label="—"
