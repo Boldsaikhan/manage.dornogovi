@@ -265,6 +265,45 @@ class AssignmentRegisterExportTest extends TestCase
             });
     }
 
+    public function test_typing_the_day_count_sets_the_end_date(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = $this->assignment('Томилолттой хүн');
+
+        $this->actingAs($admin)
+            ->from(route('assignments.index', ['scope' => 'chief']))
+            ->post(route('modules.field', ['module' => 'assignments', 'id' => $row->id]), [
+                'field' => 'days',
+                'value' => 5,
+            ])
+            ->assertRedirect();
+
+        // Эхлэх өдрийг оролцуулж 5 хоног.
+        $this->assertSame('2026-02-08', $row->fresh()->end_date->format('Y-m-d'));
+    }
+
+    public function test_the_day_count_needs_a_start_date(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = TravelAssignment::create([
+            'approver' => 'chief',
+            'person_name' => 'Огноогүй хүн',
+            'status' => 'approved',
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('assignments.index', ['scope' => 'chief']))
+            ->post(route('modules.field', ['module' => 'assignments', 'id' => $row->id]), [
+                'field' => 'days',
+                'value' => 3,
+            ])
+            ->assertSessionHasErrors('value');
+
+        $this->assertNull($row->fresh()->end_date);
+    }
+
     public function test_choosing_a_name_fills_the_position(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

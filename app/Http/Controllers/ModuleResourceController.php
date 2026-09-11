@@ -516,6 +516,11 @@ class ModuleResourceController extends Controller
 
         abort_unless(in_array($name, $allowed, true), 422, 'Энэ талбарыг шууд засах боломжгүй.');
 
+        // «Хэд хоног» нь хадгалагддаггүй — эхлэх огнооноос дуусахыг нь бодно.
+        if ($name === 'days') {
+            return $this->updateDayCount($request, $module, $row, $config);
+        }
+
         $field = collect($config['fields'])->firstWhere('name', $name);
         abort_unless($field !== null, 404);
 
@@ -551,6 +556,48 @@ class ModuleResourceController extends Controller
         $changes = $this->changedFields($row, $values, $config);
 
         $row->update($values);
+
+        if ($changes !== []) {
+            $this->log($module, $row, 'updated', $config, changes: $changes);
+        }
+
+        return back()->with('success', 'Хадгаллаа.');
+    }
+
+    /**
+     * Хоногоор дуусах огноог тохируулна.
+     *
+     * Эхлэх өдрийг оролцуулж тоолно: 1 хоног = эхлэх өдөр өөрөө.
+     */
+    private function updateDayCount(
+        Request $request,
+        string $module,
+        Model $row,
+        array $config,
+    ): RedirectResponse {
+        $data = $request->validate([
+            'value' => ['nullable', 'integer', 'min:1', 'max:365'],
+        ], [], ['value' => 'хоног']);
+
+        $days = $data['value'] ?? null;
+
+        if ($days === null) {
+            $row->update(['end_date' => null]);
+
+            return back()->with('success', 'Хадгаллаа.');
+        }
+
+        if (! $row->start_date) {
+            return back()->withErrors([
+                'value' => 'Эхлэх огноог нь эхлээд оруулна уу.',
+            ]);
+        }
+
+        $end = $row->start_date->copy()->addDays($days - 1)->format('Y-m-d');
+
+        $changes = $this->changedFields($row, ['end_date' => $end], $config);
+
+        $row->update(['end_date' => $end]);
 
         if ($changes !== []) {
             $this->log($module, $row, 'updated', $config, changes: $changes);
@@ -1050,13 +1097,23 @@ class ModuleResourceController extends Controller
         $edit = [];
 
         foreach ($config['columns'] as $col) {
-            if (! empty($col['edit'])) {
-                $value = $row->{$col['edit']} ?? null;
-
-                $edit[$col['key']] = $value instanceof \DateTimeInterface
-                    ? $value->format('Y-m-d')
-                    : (string) ($value ?? '');
+            if (empty($col['edit'])) {
+                continue;
             }
+
+            if ($col['edit'] === 'days') {
+                $count = $this->dayCount($row);
+
+                $edit[$col['key']] = $count === '—' ? '' : $count;
+
+                continue;
+            }
+
+            $value = $row->{$col['edit']} ?? null;
+
+            $edit[$col['key']] = $value instanceof \DateTimeInterface
+                ? $value->format('Y-m-d')
+                : (string) ($value ?? '');
         }
 
         if ($edit !== []) {

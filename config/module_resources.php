@@ -81,7 +81,8 @@ return [
             ['key' => 'purpose', 'label' => 'Ямар ажлаар', 'width' => '19%', 'align' => 'left', 'edit' => 'purpose'],
             // Огноог зөвхөн цифрээр нь харьцуулж хайна.
             ['key' => 'start_date', 'label' => 'Хэзээнээс', 'width' => '8%', 'date' => true, 'edit' => 'start_date', 'edit_type' => 'date'],
-            ['key' => 'day_count', 'label' => 'Хэд хоног', 'width' => '5%'],
+            // Хоногийг бичихэд дуусах огноо нь дагаж тохирно.
+            ['key' => 'day_count', 'label' => 'Хэд хоног', 'width' => '5%', 'edit' => 'days', 'edit_type' => 'number'],
             ['key' => 'order_number', 'label' => 'Тушаалын дугаар', 'width' => '7%', 'edit' => 'order_number'],
             ['key' => 'status', 'label' => 'Төлөв', 'from_options' => true, 'width' => '8%', 'edit' => 'status'],
             ['key' => 'approved_by', 'label' => 'Баталсан', 'single_line' => true, 'width' => '11%', 'inline_short' => true, 'edit' => 'approved_by'],
