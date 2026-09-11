@@ -82,6 +82,8 @@ return [
             ['key' => 'status', 'label' => 'Төлөв'],
         ],
         'fields' => [
+            // Сонголт нь утасны жагсаалтын «Удирдлага» ангиллаас бүрдэнэ.
+            ['name' => 'approved_by', 'label' => 'Баталсан', 'type' => 'select', 'options_from' => 'assignment_leaders'],
             ['name' => 'destination', 'label' => 'Очих газар', 'type' => 'text', 'required' => true],
             ['name' => 'purpose', 'label' => '1. Зорилго', 'type' => 'textarea'],
             ['name' => 'composition', 'label' => '2. Бүрэлдэхүүн', 'type' => 'textarea'],

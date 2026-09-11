@@ -140,6 +140,7 @@ class ModuleResourceController extends Controller
         return [
             'lines' => AssignmentSheet::lines($activeScope),
             'signer' => AssignmentSheet::signerName($activeScope),
+            'leaders' => AssignmentSheet::leaders(),
             'year' => now()->format('Y'),
             'budget_kinds' => AssignmentSheet::BUDGET_KINDS,
         ];
@@ -511,7 +512,36 @@ class ModuleResourceController extends Controller
 
     private function configFor(string $module): array
     {
-        return $this->withDynamicScopes($module, $this->configOrFail($module));
+        return $this->withDynamicOptions(
+            $this->withDynamicScopes($module, $this->configOrFail($module))
+        );
+    }
+
+    /**
+     * Сонгох талбарын утгыг мэдээллийн сангаас бөглөнө.
+     *
+     * Тохиргооны файлд бичих боломжгүй (утасны жагсаалтаас хамаарсан)
+     * сонголтуудыг эндээс нэмнэ.
+     *
+     * @param  array<string, mixed>  $config
+     * @return array<string, mixed>
+     */
+    private function withDynamicOptions(array $config): array
+    {
+        foreach ($config['fields'] ?? [] as $index => $field) {
+            $source = $field['options_from'] ?? null;
+
+            if ($source === null) {
+                continue;
+            }
+
+            $config['fields'][$index]['options'] = match ($source) {
+                'assignment_leaders' => AssignmentSheet::leaders(),
+                default => [],
+            };
+        }
+
+        return $config;
     }
 
     /**
@@ -778,8 +808,9 @@ class ModuleResourceController extends Controller
             // Цаасан бүртгэлээс орсон мөрд системд эрхгүй хүн ч байж болно.
             'user_name' => ($row->person_name ?? null) ?: ($row->user->name ?? '—'),
             'user_position' => ($row->position ?? null) ?: ($row->user->position ?? '—'),
-            // Томилолтыг батласан албан тушаалтны нэр.
-            'approved_by' => AssignmentSheet::signerName($row->approver ?? null) ?: '—',
+            // Сонгосон бол тэр нэр, эс бөгөөс табын батлах албан тушаалтан.
+            'approved_by' => ($row->approved_by ?? null)
+                ?: (AssignmentSheet::signerName($row->approver ?? null) ?: '—'),
             // Эхлэх, дуусах огноогоор хоногийг бодно (хоёулаа оруулсан үед).
             'day_count' => $this->dayCount($row),
             'person_label' => $row->person_name ?: ($row->user->name ?? '—'),

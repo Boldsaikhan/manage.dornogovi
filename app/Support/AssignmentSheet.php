@@ -79,9 +79,49 @@ class AssignmentSheet
         return self::$signerCache[$key] = trim((string) ($entry->person_name ?? ''));
     }
 
+    /**
+     * Батлах эрхтэй удирдах албан хаагчид.
+     *
+     * Утасны жагсаалтын «Удирдлага» ангилалд бүртгэлтэй хүмүүс — Засаг
+     * дарга, орлогч, ЗДТГ-ын дарга. Жагсаалт дээр нэр нь өөрчлөгдвөл энд
+     * шууд тусна.
+     *
+     * @return array<string, string> нэр => нэр (албан тушаалтай тайлбар)
+     */
+    public static function leaders(): array
+    {
+        if (self::$leaderCache !== null) {
+            return self::$leaderCache;
+        }
+
+        $leaders = [];
+
+        PhoneDirectoryEntry::query()
+            ->where('category', 'udirdlaga')
+            ->orderBy('org_order')
+            ->orderBy('sort_order')
+            ->get(['person_name', 'position'])
+            ->each(function (PhoneDirectoryEntry $row) use (&$leaders) {
+                $name = trim((string) $row->person_name);
+                $position = trim((string) $row->position);
+
+                if ($name === '' || isset($leaders[$name])) {
+                    return;
+                }
+
+                $leaders[$name] = $position === '' ? $name : $name.' — '.$position;
+            });
+
+        return self::$leaderCache = $leaders;
+    }
+
+    /** @var array<string, string>|null */
+    private static ?array $leaderCache = null;
+
     /** Тестийн хооронд цээжилсэн нэрийг цэвэрлэнэ. */
     public static function forgetSigners(): void
     {
         self::$signerCache = [];
+        self::$leaderCache = null;
     }
 }
