@@ -347,6 +347,70 @@ class ModuleResourceController extends Controller
     }
 
     /**
+     * Засах маягтад дүүргэх түүхий утгуудыг буцаана.
+     *
+     * Хүснэгтийн жагсаалт хэдэн зуун мөртэй байдаг тул эдгээрийг бүх мөрөнд
+     * урьдчилж илгээхгүй — засах товч дарсан үед л татна.
+     */
+    public function editValues(Request $request, string $module, int $id): JsonResponse
+    {
+        $config = $this->configFor($module);
+        abort_unless(ModuleAccess::canEdit($request->user(), $module), 403);
+
+        $row = $config['model']::query()->whereKey($id)->firstOrFail();
+        abort_unless(ModuleOwnScope::allows($request->user(), $module, $row), 403);
+
+        $config = $this->applyActiveScopeView($request, $config);
+
+        $values = [];
+
+        foreach ($config['fields'] as $field) {
+            $name = $field['name'];
+            $type = $field['type'] ?? 'text';
+
+            if ($type === 'file') {
+                continue;
+            }
+
+            $value = $row->{$name} ?? null;
+
+            $values[$name] = match ($type) {
+                'checkbox' => (bool) $value,
+                'date' => $value instanceof \DateTimeInterface ? $value->format('Y-m-d') : (string) ($value ?? ''),
+                'datetime' => $value instanceof \DateTimeInterface ? $value->format('Y-m-d\TH:i') : (string) ($value ?? ''),
+                default => (string) ($value ?? ''),
+            };
+        }
+
+        return response()->json(['values' => $values]);
+    }
+
+    /**
+     * Бүртгэлтэй мөрийг засна.
+     *
+     * Шинээр нэмэх маягттай ижил талбаруудыг ашиглана. Файл шинээр
+     * оруулаагүй бол хуучин файл хэвээр үлдэнэ.
+     */
+    public function update(Request $request, string $module, int $id): RedirectResponse
+    {
+        $config = $this->configFor($module);
+        abort_unless(ModuleAccess::canEdit($request->user(), $module), 403);
+
+        $row = $config['model']::query()->whereKey($id)->firstOrFail();
+        abort_unless(ModuleOwnScope::allows($request->user(), $module, $row), 403);
+
+        $config = $this->applyActiveScopeView($request, $config);
+
+        $data = $this->validated($request, $config);
+        $data = $this->normalizeDecreeData($config, $data);
+        $data = $this->storeUploadedFiles($request, $config, $data);
+
+        $row->update($data);
+
+        return back()->with('success', 'Хадгаллаа.');
+    }
+
+    /**
      * Модулийн бүртгэлээс холбоотой албан хаагчдад push мэдэгдэнэ.
      *
      * @param  array<string, mixed>  $data

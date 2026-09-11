@@ -153,6 +153,8 @@ Route::middleware('auth')->group(function () {
         ->name('modules.import.store');
     Route::post('/modules/{module}', [ModuleResourceController::class, 'store'])->name('modules.store');
     Route::get('/modules/{module}/{id}/file', [ModuleResourceController::class, 'download'])->name('modules.file');
+    Route::get('/modules/{module}/{id}/edit', [ModuleResourceController::class, 'editValues'])->name('modules.edit');
+    Route::post('/modules/{module}/{id}', [ModuleResourceController::class, 'update'])->name('modules.update');
     Route::delete('/modules/{module}/{id}', [ModuleResourceController::class, 'destroy'])->name('modules.destroy');
 
     Route::get('/work-groups', [WorkGroupController::class, 'index'])->name('work-groups.index');
