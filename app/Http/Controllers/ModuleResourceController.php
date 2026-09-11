@@ -542,15 +542,15 @@ class ModuleResourceController extends Controller
         $values = [$name => $data['value'] ?? null];
 
         /*
-         * Нэрийг утасны жагсаалтаас сонгоход албан тушаал нь дагаж
-         * бөглөгдөнө — хоёр нүдийг тусад нь бөглөх шаардлагагүй.
+         * Албан тушаал нь нэрээсээ хамаарна.
+         *
+         * Нэрийг сонгоход утасны жагсаалтаас албан тушаалыг нь олж
+         * тавина, нэрийг арилгахад албан тушаал нь ч арилна.
          */
-        if (! empty($column['edit_people']) && filled($values[$name])) {
-            $position = PhoneDirectoryEntry::positionFor((string) $values[$name]);
-
-            if ($position !== null) {
-                $values['position'] = $position;
-            }
+        if (! empty($column['edit_people'])) {
+            $values['position'] = filled($values[$name])
+                ? PhoneDirectoryEntry::positionFor((string) $values[$name])
+                : null;
         }
 
         $changes = $this->changedFields($row, $values, $config);

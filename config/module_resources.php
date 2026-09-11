@@ -76,7 +76,8 @@ return [
              */
             // Нэр нь хоёр мөр болж хуваагдахгүй — нэг мөрөнд багтана.
             ['key' => 'user_name', 'label' => 'Овог нэр', 'single_line' => true, 'width' => '11%', 'edit' => 'person_name', 'edit_people' => true],
-            ['key' => 'user_position', 'label' => 'Албан тушаал', 'width' => '14%', 'edit' => 'position'],
+            // Албан тушаал нь нэрээс хамаарна — гараар засахгүй.
+            ['key' => 'user_position', 'label' => 'Албан тушаал', 'width' => '14%'],
             ['key' => 'destination', 'label' => 'Хаана', 'width' => '9%', 'edit' => 'destination'],
             ['key' => 'purpose', 'label' => 'Ямар ажлаар', 'width' => '19%', 'align' => 'left', 'edit' => 'purpose'],
             // Огноог зөвхөн цифрээр нь харьцуулж хайна.
