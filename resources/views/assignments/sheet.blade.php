@@ -75,6 +75,9 @@
 
         .signrow .name { white-space: nowrap; }
 
+        /* Албан тушаал нэг мөр байвал нэр нь доороо, баруун ирмэг дээр. */
+        .signunder { margin-top: 4mm; text-align: right; white-space: nowrap; }
+
         h1 {
             margin: 10mm 0 0;
             text-align: center;
@@ -228,6 +231,32 @@
 </head>
 <body>
 
+@php
+    /*
+     * Албан тушаалын мөр олон бол (ЗДТГ-ын дарга) сүүлийн мөрийн хажууд
+     * нэр нь орж, голд нь гарын үсгийн зай үлдэнэ. Нэг мөр бол (Засаг
+     * дарга) нэр нь доороо, баруун ирмэг дээр байрлана — цаасан маягт
+     * хоёулаа ийм байдаг.
+     */
+    $signerBlock = function (array $lines, string $name) {
+        $name = $name ?: '.....................';
+        $html = '';
+
+        if (count($lines) > 1) {
+            foreach (array_slice($lines, 0, -1) as $line) {
+                $html .= '<span class="approve__line">'.e($line).'</span><br>';
+            }
+
+            return $html
+                .'<div class="signrow"><span class="approve__line">'.e($lines[count($lines) - 1]).'</span>'
+                .'<span class="name">'.e($name).'</span></div>';
+        }
+
+        return '<span class="approve__line">'.e($lines[0] ?? '').'</span>'
+            .'<div class="signunder">'.e($name).'</div>';
+    };
+@endphp
+
 <div class="toolbar">
     <button type="button" onclick="printSide('')">Хоёуланг хэвлэх</button>
     <button type="button" class="ghost" onclick="window.close()">Хаах</button>
@@ -273,13 +302,7 @@
             </div>
 
             <div class="cert__signer">
-                @foreach (array_slice($lines, 0, -1) as $line)
-                    {{ $line }}<br>
-                @endforeach
-                <div class="signrow">
-                    <span>{{ $lines[count($lines) - 1] }}</span>
-                    <span class="name">{{ $signerName ?: '.....................' }}</span>
-                </div>
+                {!! $signerBlock($lines, (string) $signerName) !!}
             </div>
 
             <div class="cert__date">………. оны …… сар …… өдөр</div>
@@ -299,13 +322,7 @@
             </div>
 
             <div class="cert__signer">
-                @foreach (array_slice($lines, 0, -1) as $line)
-                    {{ $line }}<br>
-                @endforeach
-                <div class="signrow">
-                    <span>{{ $lines[count($lines) - 1] }}</span>
-                    <span class="name">{{ $signerName ?: '.....................' }}</span>
-                </div>
+                {!! $signerBlock($lines, (string) $signerName) !!}
             </div>
 
             <div class="cert__date">………. оны …… сар …… өдөр</div>
@@ -337,13 +354,7 @@
     <div class="approve-wrap">
     <div class="approve">
         <span class="approve__title">БАТЛАВ</span>
-        @foreach (array_slice($lines, 0, -1) as $line)
-            <span class="approve__line">{{ $line }}</span><br>
-        @endforeach
-        <div class="signrow">
-            <span class="approve__line">{{ $lines[count($lines) - 1] }}</span>
-            <span class="name">{{ $signerName ?: '.....................' }}</span>
-        </div>
+        {!! $signerBlock($lines, (string) $signerName) !!}
     </div>
     </div>
 
