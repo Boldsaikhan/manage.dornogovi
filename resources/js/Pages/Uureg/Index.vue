@@ -21,6 +21,9 @@ const props = defineProps({
     canEdit: { type: Boolean, default: false },
     canEditProgress: { type: Boolean, default: false },
     canManage: { type: Boolean, default: false },
+    // Татах, оруулах эрхийг модулийн дэд эрхээр тусад нь тохируулна.
+    canExport: { type: Boolean, default: false },
+    canImport: { type: Boolean, default: false },
     undoCount: { type: Number, default: 0 },
 });
 
@@ -1323,7 +1326,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                         Буцаах<span v-if="undoCount"> ({{ undoCount }})</span>
                     </button>
                     <button
-                        v-if="canManage"
+                        v-if="canImport"
                         type="button"
                         class="ui-btn-primary w-full sm:w-auto"
                         :disabled="wordPreviewing"
@@ -1331,7 +1334,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                     >
                         {{ wordPreviewing ? 'Уншиж байна…' : 'Word оруулах' }}
                     </button>
-                    <div ref="downloadRoot" class="relative w-full sm:w-auto">
+                    <div v-if="canExport" ref="downloadRoot" class="relative w-full sm:w-auto">
                         <button
                             type="button"
                             class="ui-btn-ghost w-full sm:w-auto"

@@ -129,6 +129,7 @@ class TaskController extends Controller
         PdfTableWriter $pdf,
     ): HttpResponse {
         abort_unless(ModuleAccess::canView($request->user(), 'tasks'), 403);
+        abort_unless(ModuleAccess::canView($request->user(), 'tasks:export'), 403);
 
         $source = $this->resolveSource($request->string('kind')->toString());
         $kind = $source->key;
@@ -267,7 +268,7 @@ class TaskController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        abort_unless(ModuleAccess::canEdit($request->user(), 'tasks'), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), 'tasks:edit'), 403);
         abort_if(ModuleAccess::tasksProgressOnly($request->user()), 403);
 
         $data = $request->validate([
@@ -315,7 +316,7 @@ class TaskController extends Controller
 
     public function update(Request $request, Task $task): RedirectResponse
     {
-        abort_unless(ModuleAccess::canEdit($request->user(), 'tasks'), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), 'tasks:edit'), 403);
         abort_unless(ModuleOwnScope::allows($request->user(), 'tasks', $task), 403);
 
         $data = $request->validate([
@@ -367,7 +368,7 @@ class TaskController extends Controller
      */
     public function bulkUpdate(Request $request): RedirectResponse
     {
-        abort_unless(ModuleAccess::canEdit($request->user(), 'tasks'), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), 'tasks:edit'), 403);
 
         $data = $request->validate([
             'ids' => ['required', 'array', 'min:1'],
@@ -414,7 +415,7 @@ class TaskController extends Controller
 
     public function destroy(Request $request, Task $task): RedirectResponse
     {
-        abort_unless(ModuleAccess::canEdit($request->user(), 'tasks'), 403);
+        abort_unless(ModuleAccess::canEdit($request->user(), 'tasks:edit'), 403);
         abort_if(ModuleAccess::tasksProgressOnly($request->user()), 403);
         abort_unless(ModuleOwnScope::allows($request->user(), 'tasks', $task), 403);
 
@@ -485,12 +486,21 @@ class TaskController extends Controller
         return $count > 1 ? $name.' болон бусад '.($count - 1) : $name;
     }
 
-    public function storeDocument(Request $request): RedirectResponse
+    /** Word файлаас оруулах эрх — модулийн дэд эрхээр тусад нь тохируулна. */
+    private function authorizeImport(Request $request): void
     {
+        $user = $request->user();
+
         abort_unless(
-            ModuleAccess::canManage($request->user(), 'tasks') || $request->user()->is_admin,
+            ModuleAccess::canEdit($user, 'tasks:import')
+                && (ModuleAccess::canManage($user, 'tasks') || $user->is_admin),
             403
         );
+    }
+
+    public function storeDocument(Request $request): RedirectResponse
+    {
+        $this->authorizeImport($request);
 
         $data = $request->validate([
             'kind' => ['required', $this->kindRule()],
@@ -512,10 +522,7 @@ class TaskController extends Controller
      */
     public function previewDocument(Request $request): JsonResponse
     {
-        abort_unless(
-            ModuleAccess::canManage($request->user(), 'tasks') || $request->user()->is_admin,
-            403
-        );
+        $this->authorizeImport($request);
 
         $data = $request->validate([
             'kind' => ['required_without:document_id', $this->kindRule()],
