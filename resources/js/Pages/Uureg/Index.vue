@@ -74,14 +74,14 @@ const undo = () => {
     });
 };
 
-const kindTabs = computed(() => (
-    props.kinds.length
-        ? props.kinds
-        : [
-            { key: 'directive', label: 'Үүрэг чиглэл', layout: 'directive', is_system: true },
-            { key: 'prep_plan', label: 'Бэлтгэл ажил хангах төлөвлөгөө', layout: 'prep_plan', is_system: true },
-        ]
-));
+/*
+ * Зөвхөн сервер өгсөн табууд. Урьд нь хоосон үед хоёр таб хатуу бичиж
+ * харуулдаг байсан тул үүрэг даалгаваргүй хэрэглэгчид байхгүй хэсэг
+ * харагддаг байв.
+ */
+const kindTabs = computed(() => props.kinds);
+
+const hasKinds = computed(() => kindTabs.value.length > 0);
 
 const isDirective = computed(() => (props.source?.layout || props.kind) !== 'prep_plan');
 
@@ -1357,6 +1357,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                         Буцаах<span v-if="undoCount"> ({{ undoCount }})</span>
                     </button>
                     <button
+                        v-if="hasKinds"
                         type="button"
                         class="ui-btn-ghost w-full sm:w-auto"
                         title="Хэн, хэзээ, юуг өөрчилснийг харах"
@@ -1373,7 +1374,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                     >
                         {{ wordPreviewing ? 'Уншиж байна…' : 'Word оруулах' }}
                     </button>
-                    <div v-if="canExport" ref="downloadRoot" class="relative w-full sm:w-auto">
+                    <div v-if="canExport && hasKinds" ref="downloadRoot" class="relative w-full sm:w-auto">
                         <button
                             type="button"
                             class="ui-btn-ghost w-full sm:w-auto"
@@ -1435,7 +1436,9 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
             <p v-if="uploadForm.errors.file" class="text-sm text-red-600">{{ uploadForm.errors.file }}</p>
             <p v-if="kindError" class="text-sm text-red-600">{{ kindError }}</p>
 
+            <!-- Харах эрхтэй үүрэг даалгавар байхгүй бол таб огт гаргахгүй. -->
             <div
+                v-if="hasKinds || canManage"
                 class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:rounded-2xl sm:border sm:border-slate-200 sm:bg-white sm:p-1.5 sm:shadow-soft sm:[&::-webkit-scrollbar]:auto [&::-webkit-scrollbar]:hidden"
             >
                 <Link
@@ -1458,6 +1461,22 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                 >
                     + Үүрэг даалгавар нэмэх
                 </button>
+            </div>
+
+            <!-- Хоосон төлөв — хуурамч таб харуулахын оронд тайлбарлана. -->
+            <div
+                v-if="! hasKinds"
+                class="ui-card-pad text-center"
+            >
+                <p class="text-sm font-semibold text-slate-700">Танд хамаарах үүрэг даалгавар алга.</p>
+                <p class="mt-1 text-xs text-slate-500">
+                    <template v-if="canManage">
+                        «+ Үүрэг даалгавар нэмэх» дарж шинэ хэсэг үүсгэнэ үү.
+                    </template>
+                    <template v-else>
+                        Танд үүрэг оногдмогц энд харагдана.
+                    </template>
+                </p>
             </div>
 
             <section
@@ -1607,7 +1626,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
             </div>
 
             <!-- Дашбоард + төлөвийн шүүлт — нэг мөр -->
-            <div class="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-soft">
+            <div v-if="hasKinds" class="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-soft">
                 <button
                     type="button"
                     class="flex min-w-[min(100%,16rem)] flex-1 items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-slate-50"
@@ -1693,7 +1712,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
             </div>
 
             <!-- Харагдах горим -->
-            <div class="flex flex-wrap items-center gap-2">
+            <div v-if="hasKinds" class="flex flex-wrap items-center gap-2">
                 <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Харагдах байдал</span>
                 <div class="inline-flex rounded-xl border border-slate-200 bg-white p-0.5 shadow-soft">
                     <button
@@ -1741,12 +1760,12 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
 
             <!-- Цаглалт / төлөвлөгөө -->
             <TaskCalendar
-                v-if="viewMode === 'calendar'"
+                v-if="hasKinds && viewMode === 'calendar'"
                 :tasks="visibleTasks"
                 @focus-task="focusTaskRow"
             />
 
-            <div v-if="viewMode === 'table'" class="ui-tasks-table-shell">
+            <div v-if="hasKinds && viewMode === 'table'" class="ui-tasks-table-shell">
             <!-- Идэвхтэй шүүлт -->
             <div v-if="filter || statusFilter" class="flex flex-wrap items-center gap-2 text-sm">
                 <span v-if="filter || statusFilter" class="text-slate-500">Шүүлт:</span>
