@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\EditUndo;
 use App\Models\PhoneDirectoryEntry;
 use App\Models\Task;
@@ -289,7 +290,7 @@ class TaskController extends Controller
             $text = $measure;
         }
 
-        $source->tasks()->create([
+        $task = $source->tasks()->create([
             'text' => $text,
             'measure' => $measure !== '' ? $measure : null,
             'period' => $data['period'] ?? null,
@@ -299,6 +300,8 @@ class TaskController extends Controller
             'sort_order' => $next,
             'progress' => 0,
         ]);
+
+        $this->log($task, 'created');
 
         $snippet = mb_substr($text !== '' ? $text : $measure, 0, 80);
         app(\App\Services\Push\EmployeePushNotifier::class)->notifyNamed(
@@ -312,6 +315,88 @@ class TaskController extends Controller
         );
 
         return back(303)->with('success', 'Мөр нэмлээ.');
+    }
+
+    /**
+     * Өөрчлөлтийн лог үлдээнэ.
+     *
+     * @param  array<string, array{from: string, to: string}>|null  $changes
+     */
+    private function log(Task $task, string $action, ?string $summary = null, ?array $changes = null): void
+    {
+        AuditLog::record(
+            modelType: 'task',
+            modelId: $task->id,
+            action: $action,
+            scope: (string) ($task->source->key ?? '') ?: null,
+            label: mb_substr(trim((string) ($task->text ?: $task->measure)), 0, 120) ?: '#'.$task->id,
+            summary: $summary,
+            changes: $changes,
+        );
+    }
+
+    /** Талбарын монгол нэрс — логт харагдана. */
+    private const FIELD_LABELS = [
+        'text' => 'Үүрэг чиглэл',
+        'measure' => 'Арга хэмжээ',
+        'period' => 'Хугацаа',
+        'responsible' => 'Хариуцах эзэн',
+        'collaborator' => 'Хяналт тавих',
+        'sector' => 'Ажлын чиглэл',
+        'note' => 'Тэмдэглэл',
+        'progress' => 'Биелэлтийн хувь',
+    ];
+
+    /**
+     * Өөрчлөгдсөн талбаруудыг хуучин/шинэ утгаар нь тэмдэглэнэ.
+     *
+     * @param  array<string, mixed>  $dirty
+     * @return array<string, array{from: string, to: string}>
+     */
+    private function describeChanges(Task $task, array $dirty): array
+    {
+        $changes = [];
+
+        foreach ($dirty as $field => $new) {
+            $label = self::FIELD_LABELS[$field] ?? $field;
+
+            $changes[$label] = [
+                'from' => (string) ($task->getOriginal($field) ?? ''),
+                'to' => (string) ($new ?? ''),
+            ];
+        }
+
+        return $changes;
+    }
+
+    /**
+     * Тухайн табын өөрчлөлтийн түүх.
+     */
+    public function logs(Request $request): JsonResponse
+    {
+        abort_unless(ModuleAccess::canView($request->user(), 'tasks'), 403);
+
+        $kind = (string) $request->query('kind', '');
+
+        $rows = AuditLog::query()
+            ->with('user:id,name')
+            ->where('model_type', 'task')
+            ->when($kind !== '', fn ($query) => $query->where('scope', $kind))
+            ->orderByDesc('id')
+            ->limit(200)
+            ->get()
+            ->map(fn (AuditLog $log) => [
+                'id' => $log->id,
+                'action' => $log->action,
+                'action_label' => $log->actionLabel(),
+                'label' => $log->label,
+                'summary' => $log->summary,
+                'changes' => $log->changes,
+                'user' => $log->user?->name ?? 'Систем',
+                'at' => optional($log->created_at)?->format('Y-m-d H:i'),
+            ]);
+
+        return response()->json(['rows' => $rows]);
     }
 
     public function update(Request $request, Task $task): RedirectResponse
@@ -431,6 +516,8 @@ class TaskController extends Controller
             'Мөр устгах',
         );
 
+        $this->log($task, 'deleted');
+
         $task->delete();
 
         return back(303)->with('success', 'Мөр устгалаа.');
@@ -460,6 +547,8 @@ class TaskController extends Controller
             'Үүрэг даалгавар',
             $this->taskUndoSummary($dirty),
         );
+
+        $this->log($task, 'updated', changes: $this->describeChanges($task, $dirty));
 
         $task->save();
     }
@@ -708,6 +797,18 @@ class TaskController extends Controller
             $next++;
             $source->tasks()->create($row + ['sort_order' => $next, 'progress' => 0]);
         }
+
+        // Импортыг нэг бичлэгээр тэмдэглэнэ — мөр бүрээр биш.
+        AuditLog::record(
+            modelType: 'task',
+            modelId: null,
+            action: 'imported',
+            scope: $source->key,
+            label: $document->original_name,
+            summary: $replace
+                ? sprintf('Хуучныг нь орлуулж %d мөр орууллаа.', count($rows))
+                : sprintf('%d мөр нэмж орууллаа.', count($rows)),
+        );
 
         return count($rows);
     }
