@@ -243,6 +243,11 @@ class AssignmentRegisterExportTest extends TestCase
                     ['О.Батжаргал'],
                     array_keys($props['inlineFields']['approved_by']),
                 );
+                // Хүснэгтийн нүдэнд зөвхөн нэр — албан тушаалгүй.
+                $this->assertSame(
+                    'О.Батжаргал',
+                    $props['inlineFields']['approved_by']['О.Батжаргал'],
+                );
             });
     }
 

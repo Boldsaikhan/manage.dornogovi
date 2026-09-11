@@ -80,7 +80,7 @@ return [
             ['key' => 'day_count', 'label' => 'Хэд хоног', 'width' => '5%'],
             ['key' => 'order_number', 'label' => 'Тушаалын дугаар', 'width' => '7%'],
             ['key' => 'status', 'label' => 'Төлөв', 'from_options' => true, 'width' => '8%'],
-            ['key' => 'approved_by', 'label' => 'Баталсан', 'single_line' => true, 'width' => '11%'],
+            ['key' => 'approved_by', 'label' => 'Баталсан', 'single_line' => true, 'width' => '11%', 'inline_short' => true],
         ],
         'fields' => [
             // Сонголт нь утасны жагсаалтын «Удирдлага» ангиллаас бүрдэнэ.
