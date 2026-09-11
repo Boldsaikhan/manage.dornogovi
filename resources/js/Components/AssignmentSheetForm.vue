@@ -1,4 +1,5 @@
 <script setup>
+import { computed, watch } from 'vue';
 import InputError from '@/Components/InputError.vue';
 
 /**
@@ -47,8 +48,56 @@ const pickPerson = (name) => {
     props.form.person_name = name;
     props.form.position = person?.position || '';
 
-    props.form.certificate_text = buildCertificateText(person);
+    refreshCertificateText();
 };
+
+/**
+ * Бичвэрийг дахин бүрдүүлнэ.
+ *
+ * Гараар засварласан бичвэрийг дарж бичихгүй — өөрсдийн үүсгэсэн
+ * хэвээр байгаа үед л шинэчилнэ.
+ */
+let generated = '';
+
+const refreshCertificateText = () => {
+    const current = String(props.form.certificate_text ?? '').trim();
+
+    if (current !== '' && current !== generated.trim()) {
+        return;
+    }
+
+    const person = people().find((p) => p.name === props.form.person_name);
+
+    generated = buildCertificateText(person);
+    props.form.certificate_text = generated;
+};
+
+/** Хоногийг өөрчлөхөд дуусах огноо нь дагаж тохирно. */
+const days = computed({
+    get: () => {
+        const value = dayCount();
+
+        return value === '…' ? '' : value;
+    },
+    set: (value) => {
+        const count = Math.max(1, Number(value) || 1);
+
+        if (! props.form.start_date) {
+            return;
+        }
+
+        const end = new Date(props.form.start_date);
+        end.setDate(end.getDate() + count - 1);
+
+        props.form.end_date = end.toISOString().slice(0, 10);
+    },
+});
+
+// Огноо, хоног, очих газар өөрчлөгдөхөд бичвэр дагаж шинэчлэгдэнэ.
+watch(
+    () => [props.form.start_date, props.form.end_date, props.form.destination],
+    () => refreshCertificateText(),
+);
 
 const mn = (value) => {
     if (! value) return '…';
@@ -64,10 +113,9 @@ const buildCertificateText = (person) => {
     const org = person.org ? person.org : 'Дорноговь аймгийн ЗДТГ';
     const position = person.position || 'албан хаагч';
     const where = props.form.destination || '…';
-    const days = props.form.days || dayCount();
 
     return `${org}-ын ${position} ${person.name} ${where} ${mn(props.form.start_date)}-ны `
-        + `өдрөөс ${days} хоног ажиллуулахаар томилов.`;
+        + `өдрөөс ${dayCount()} хоног ажиллуулахаар томилов.`;
 };
 
 /** Эхлэх, дуусах огнооноос хоногийг бодно. */
@@ -165,6 +213,32 @@ const pickerClass = 'w-auto border-0 border-b border-dotted border-black bg-tran
                     </option>
                 </select>
                 <InputError :message="form.errors.person_name" class="font-sans" />
+
+                <div class="mt-3 grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-sans text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                            Эхлэх огноо
+                        </label>
+                        <input
+                            v-model="form.start_date"
+                            type="date"
+                            class="ui-input !py-1.5 font-sans !text-xs"
+                        />
+                    </div>
+                    <div>
+                        <label class="block font-sans text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                            Хэд хоног
+                        </label>
+                        <input
+                            v-model="days"
+                            type="number"
+                            min="1"
+                            max="365"
+                            class="ui-input !py-1.5 font-sans !text-xs"
+                        />
+                    </div>
+                </div>
+                <InputError :message="form.errors.start_date" class="font-sans" />
 
                 <label class="mt-3 block font-sans text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                     Үнэмлэхийн бичвэр
