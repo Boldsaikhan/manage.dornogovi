@@ -91,6 +91,32 @@ class PhoneDirectoryEntry extends Model
         return $position !== '' ? $position : null;
     }
 
+    /** Нэрээр нь харьяалах байгууллагыг олно. */
+    public static function orgFor(?string $name): ?string
+    {
+        $needle = trim((string) $name);
+
+        if ($needle === '') {
+            return null;
+        }
+
+        $entry = static::query()
+            ->whereNotNull('person_name')
+            ->orderBy('org_order')
+            ->orderBy('sort_order')
+            ->get(['person_name', 'org_name'])
+            ->first(function (self $row) use ($needle) {
+                $full = trim((string) $row->person_name);
+                $short = \App\Support\PersonName::short($full);
+
+                return $full === $needle || ($short !== '' && $short === $needle);
+            });
+
+        $org = trim((string) ($entry->org_name ?? ''));
+
+        return $org !== '' ? $org : null;
+    }
+
     public static function peopleOptions(): array
     {
         $rows = static::query()

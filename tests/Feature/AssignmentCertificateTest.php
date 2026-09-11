@@ -141,6 +141,45 @@ class AssignmentCertificateTest extends TestCase
         );
     }
 
+    public function test_the_sentence_is_built_when_nothing_was_typed(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'Намсрайн Гарамжав',
+            'position' => 'Эрчим хүчний хяналтын улсын байцаагч',
+            'org_name' => 'СХЗХ',
+        ]);
+
+        // Бичвэрийг гараар бичээгүй мөр.
+        $row = $this->assignment([
+            'person_name' => 'Н.Гарамжав',
+            'destination' => 'Эрдэнэ сум',
+            'purpose' => 'албан ажил',
+            'start_date' => '2026-09-08',
+            'end_date' => '2026-09-09',
+            'certificate_text' => null,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('assignments.sheet', $row))
+            ->assertOk()
+            ->assertSee('СХЗХ-ын Эрчим хүчний хяналтын улсын байцаагч Н.Гарамжав Эрдэнэ сум '
+                .'албан ажил-аар 2026 оны 9 дүгээр сарын 8-ны өдрөөс 2 хоног ажиллуулахаар томилов.');
+    }
+
+    public function test_a_typed_sentence_is_kept(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = $this->assignment(['certificate_text' => 'Гараар бичсэн бичвэр.']);
+
+        $this->actingAs($admin)
+            ->get(route('assignments.sheet', $row))
+            ->assertOk()
+            ->assertSee('Гараар бичсэн бичвэр.');
+    }
+
     public function test_the_form_offers_the_directory_staff(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
