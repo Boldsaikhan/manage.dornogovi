@@ -165,7 +165,25 @@ class AssignmentCertificateTest extends TestCase
             ->get(route('assignments.sheet', $row))
             ->assertOk()
             ->assertSee('СХЗХ-ын Эрчим хүчний хяналтын улсын байцаагч Н.Гарамжав Эрдэнэ сум '
-                .'албан ажил-аар 2026 оны 9 дүгээр сарын 8-ны өдрөөс 2 хоног ажиллуулахаар томилов.');
+                .'албан ажлаар 2026 оны 9 дүгээр сарын 8-ны өдрөөс 2 хоног ажиллуулахаар томилов.');
+    }
+
+    public function test_the_purpose_reads_as_ajlaar(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = $this->assignment([
+            'person_name' => 'Н.Гарамжав',
+            'purpose' => 'Сургалтын',
+            'certificate_text' => null,
+        ]);
+
+        // «-аар» биш, «ажлаар» гэж уншигдана.
+        $this->actingAs($admin)
+            ->get(route('assignments.sheet', $row))
+            ->assertOk()
+            ->assertSee('Сургалтын ажлаар')
+            ->assertDontSee('Сургалтын-аар');
     }
 
     public function test_a_typed_sentence_is_kept(): void
