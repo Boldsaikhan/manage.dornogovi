@@ -197,6 +197,14 @@ const openLogs = async () => {
 
 const changeList = (changes) => Object.entries(changes ?? {});
 
+// Үйлдэл бүрийг өнгөөр нь ялгана — захирамжийн түүхтэй ижил.
+const logTone = (action) => ({
+    created: 'bg-emerald-50 text-emerald-700',
+    imported: 'bg-sky-50 text-sky-700',
+    updated: 'bg-amber-50 text-amber-700',
+    deleted: 'bg-rose-50 text-rose-700',
+}[action] ?? 'bg-slate-100 text-slate-600');
+
 const downloadOpen = ref(false);
 
 const downloadFormats = [
@@ -1154,8 +1162,8 @@ const destroyRow = (id) => {
         </Modal>
 
         <!-- Өөрчлөлтийн түүх -->
-        <Modal :show="showLogs" max-width="3xl" @close="showLogs = false">
-            <div class="p-5 sm:p-6">
+        <Modal :show="showLogs" max-width="4xl" @close="showLogs = false">
+            <div class="p-5">
                 <div class="mb-4 flex items-start justify-between gap-3">
                     <div>
                         <h3 class="text-base font-semibold text-brand-navy-900">Өөрчлөлтийн түүх</h3>
@@ -1164,48 +1172,46 @@ const destroyRow = (id) => {
                             — сүүлийн 200 бичлэг.
                         </p>
                     </div>
-                    <button
-                        type="button"
-                        class="rounded-lg px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100"
-                        @click="showLogs = false"
-                    >
-                        Хаах
-                    </button>
+                    <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" @click="showLogs = false">✕</button>
                 </div>
 
                 <p v-if="logsBusy" class="py-8 text-center text-sm text-slate-400">Уншиж байна…</p>
-                <p v-else-if="!logRows.length" class="py-8 text-center text-sm text-slate-400">
-                    Одоогоор бүртгэгдсэн өөрчлөлт алга.
+                <p v-else-if="! logRows.length" class="py-8 text-center text-sm text-slate-400">
+                    Одоогоор бичлэг алга. Энэ түүх нь шинэчлэлт хийгдсэнээс хойших өөрчлөлтийг харуулна.
                 </p>
-                <div v-else class="max-h-[60vh] overflow-y-auto">
+                <div v-else class="max-h-[65vh] overflow-y-auto">
                     <table class="w-full text-left text-xs">
                         <thead class="sticky top-0 bg-slate-50 text-slate-500">
                             <tr>
-                                <th class="px-2 py-2 font-semibold">Огноо</th>
-                                <th class="px-2 py-2 font-semibold">Хэн</th>
-                                <th class="px-2 py-2 font-semibold">Үйлдэл</th>
-                                <th class="px-2 py-2 font-semibold">Бүртгэл</th>
-                                <th class="px-2 py-2 font-semibold">Тайлбар</th>
+                                <th class="px-2 py-1.5 font-semibold">Огноо</th>
+                                <th class="px-2 py-1.5 font-semibold">Үйлдэл</th>
+                                <th class="px-2 py-1.5 font-semibold">Мөр</th>
+                                <th class="px-2 py-1.5 font-semibold">Юу өөрчлөгдсөн</th>
+                                <th class="px-2 py-1.5 font-semibold">Хэн</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100">
-                            <tr v-for="log in logRows" :key="log.id" class="align-top">
-                                <td class="whitespace-nowrap px-2 py-2 text-slate-500">{{ log.at }}</td>
-                                <td class="whitespace-nowrap px-2 py-2 font-medium text-slate-700">{{ log.user }}</td>
-                                <td class="whitespace-nowrap px-2 py-2 text-slate-600">{{ log.action_label }}</td>
-                                <td class="px-2 py-2 text-slate-600">{{ log.label || '—' }}</td>
-                                <td class="px-2 py-2 text-slate-600">
-                                    <span v-if="log.summary">{{ log.summary }}</span>
-                                    <ul v-if="changeList(log.changes).length" class="space-y-0.5">
-                                        <li v-for="[field, change] in changeList(log.changes)" :key="field">
+                        <tbody>
+                            <tr v-for="item in logRows" :key="item.id" class="border-t border-slate-100 align-top">
+                                <td class="whitespace-nowrap px-2 py-1.5 tabular-nums text-slate-500">{{ item.at }}</td>
+                                <td class="px-2 py-1.5">
+                                    <span class="rounded-full px-2 py-0.5 font-semibold" :class="logTone(item.action)">
+                                        {{ item.action_label }}
+                                    </span>
+                                </td>
+                                <td class="px-2 py-1.5 text-slate-700">{{ item.label || '—' }}</td>
+                                <td class="px-2 py-1.5 text-slate-600">
+                                    <span v-if="item.summary">{{ item.summary }}</span>
+                                    <ul v-else-if="changeList(item.changes).length" class="space-y-0.5">
+                                        <li v-for="[field, change] in changeList(item.changes)" :key="field">
                                             <span class="font-medium text-slate-700">{{ field }}:</span>
                                             <span class="text-slate-400 line-through">{{ change.from || '—' }}</span>
                                             →
                                             <span class="text-brand-navy-700">{{ change.to || '—' }}</span>
                                         </li>
                                     </ul>
-                                    <span v-if="!log.summary && !changeList(log.changes).length" class="text-slate-400">—</span>
+                                    <span v-else class="text-slate-400">—</span>
                                 </td>
+                                <td class="whitespace-nowrap px-2 py-1.5 text-slate-700">{{ item.user }}</td>
                             </tr>
                         </tbody>
                     </table>

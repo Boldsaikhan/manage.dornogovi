@@ -460,6 +460,7 @@ class ModuleResourceController extends Controller
             ->get()
             ->map(fn (AuditLog $log) => [
                 'id' => $log->id,
+                'action' => $log->action,
                 'action_label' => $log->actionLabel(),
                 'label' => $log->label,
                 'summary' => $log->summary,

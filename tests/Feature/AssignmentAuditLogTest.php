@@ -48,6 +48,8 @@ class AssignmentAuditLogTest extends TestCase
 
         $this->assertCount(1, $logs);
         $this->assertSame('Засварласан', $logs[0]['action_label']);
+        // Өнгөөр нь ялгахад түүхий нэр хэрэгтэй.
+        $this->assertSame('updated', $logs[0]['action']);
         $this->assertSame('Б.Баттулга', $logs[0]['label']);
         $this->assertSame('Б.Болдсайхан', $logs[0]['user']);
 
