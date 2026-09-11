@@ -113,12 +113,10 @@ class ModuleResourceController extends Controller
                 && ModuleAccess::canEdit($request->user(), $module),
             'canExportFile' => (bool) ($config['file_export'] ?? false),
             'hasAuditLog' => (bool) ($config['audit_log'] ?? false),
-            // Хүснэгтийн нүдэн дээр шууд солих боломжтой талбарууд.
-            'inlineFields' => collect($config['inline_fields'] ?? [])
-                ->mapWithKeys(fn (string $name) => [
-                    $name => $this->inlineOptions($config, $name),
-                ])
-                ->all(),
+            // Хүснэгтийн нүдэн дээр шууд бөглөх боломжтой баганууд.
+            'inlineFields' => $this->inlineDefinitions($config),
+            'canAddBlankRow' => ($config['blank_row'] ?? false)
+                && ModuleAccess::canEdit($request->user(), $module),
             'exportUrl' => ($config['file_export'] ?? false) ? route('modules.export', $module) : null,
             'fields' => $config['fields'],
             'directory' => $this->directoryFor($config),
@@ -370,6 +368,11 @@ class ModuleResourceController extends Controller
         $config = $this->configFor($module);
         abort_unless(ModuleAccess::canEdit($request->user(), $module), 403);
 
+        // Хүснэгтэд хоосон мөр нэмээд нүдэн дээр нь бөглөх горим.
+        if ($request->boolean('blank') && ($config['blank_row'] ?? false)) {
+            return $this->storeBlankRow($request, $module, $config);
+        }
+
         $config = $this->applyActiveScopeView($request, $config);
 
         $data = $this->validated($request, $config);
@@ -508,7 +511,7 @@ class ModuleResourceController extends Controller
         $row = $config['model']::query()->whereKey($id)->firstOrFail();
         abort_unless(ModuleOwnScope::allows($request->user(), $module, $row), 403);
 
-        $allowed = (array) ($config['inline_fields'] ?? []);
+        $allowed = collect($config['columns'] ?? [])->pluck('edit')->filter()->all();
         $name = (string) $request->input('field');
 
         abort_unless(in_array($name, $allowed, true), 422, 'Энэ талбарыг шууд засах боломжгүй.');
@@ -520,8 +523,11 @@ class ModuleResourceController extends Controller
 
         if (($field['type'] ?? '') === 'select') {
             $rules[] = Rule::in(array_keys($field['options'] ?? []));
+        } elseif (($field['type'] ?? '') === 'date') {
+            $rules[] = 'date';
         } else {
             $rules[] = 'string';
+            $rules[] = 'max:5000';
         }
 
         $data = $request->validate(['value' => $rules], [], ['value' => mb_strtolower($field['label'] ?? $name)]);
@@ -605,6 +611,25 @@ class ModuleResourceController extends Controller
         }
 
         return back()->with('success', 'Хадгаллаа.');
+    }
+
+    /**
+     * Хоосон мөр үүсгэнэ.
+     *
+     * Заавал бөглөх талбаруудыг шаардахгүй — хэрэглэгч хүснэгтэн дээрээ
+     * нүд нүдээр нь бөглөнө.
+     */
+    private function storeBlankRow(Request $request, string $module, array $config): RedirectResponse
+    {
+        $data = $this->applyScopeToData($request, $config, $config['defaults'] ?? []);
+
+        ModuleOwnScope::assertCanCreate($request->user(), $module, $data);
+
+        $row = $config['model']::create($data);
+
+        $this->log($module, $row, 'created', $config, summary: 'Хоосон мөр нэмэв.');
+
+        return back()->with('success', 'Мөр нэмлээ. Нүд бүр дээр нь дарж бөглөнө үү.');
     }
 
     /**
@@ -1012,17 +1037,44 @@ class ModuleResourceController extends Controller
      *
      * @return array<string, string>
      */
-    private function inlineOptions(array $config, string $name): array
+    private function inlineOptions(array $config, string $name, array $column): array
     {
         $options = $this->selectOptions($config, $name);
-
-        $column = collect($config['columns'] ?? [])->firstWhere('key', $name);
 
         if (! empty($column['inline_short'])) {
             return collect($options)->keys()->mapWithKeys(fn ($key) => [$key => $key])->all();
         }
 
         return $options;
+    }
+
+    /**
+     * Багана бүрийн засварлах тодорхойлолт.
+     *
+     * @return array<string, array{field: string, type: string, options: array<string, string>, people: bool}>
+     */
+    private function inlineDefinitions(array $config): array
+    {
+        $out = [];
+
+        foreach ($config['columns'] ?? [] as $column) {
+            $field = $column['edit'] ?? null;
+
+            if ($field === null) {
+                continue;
+            }
+
+            $options = $this->inlineOptions($config, $field, $column);
+
+            $out[$column['key']] = [
+                'field' => $field,
+                'type' => $column['edit_type'] ?? ($options ? 'select' : 'text'),
+                'options' => $options,
+                'people' => (bool) ($column['edit_people'] ?? false),
+            ];
+        }
+
+        return $out;
     }
 
     /**

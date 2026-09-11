@@ -70,17 +70,21 @@ return [
         // Цаасан бүртгэлийн маягттай ижил толгой.
         'row_number' => 'Д/д',
         'columns' => [
+            /*
+             * «edit» нь тухайн нүдийг засах горимд шууд бөглөх талбарыг
+             * заана — мөр нэмээд хүснэгтэн дээрээ бөглөнө.
+             */
             // Нэр нь хоёр мөр болж хуваагдахгүй — нэг мөрөнд багтана.
-            ['key' => 'user_name', 'label' => 'Овог нэр', 'single_line' => true, 'width' => '11%'],
-            ['key' => 'user_position', 'label' => 'Албан тушаал', 'width' => '14%'],
-            ['key' => 'destination', 'label' => 'Хаана', 'width' => '9%'],
-            ['key' => 'purpose', 'label' => 'Ямар ажлаар', 'width' => '19%', 'align' => 'left'],
+            ['key' => 'user_name', 'label' => 'Овог нэр', 'single_line' => true, 'width' => '11%', 'edit' => 'person_name', 'edit_people' => true],
+            ['key' => 'user_position', 'label' => 'Албан тушаал', 'width' => '14%', 'edit' => 'position'],
+            ['key' => 'destination', 'label' => 'Хаана', 'width' => '9%', 'edit' => 'destination'],
+            ['key' => 'purpose', 'label' => 'Ямар ажлаар', 'width' => '19%', 'align' => 'left', 'edit' => 'purpose'],
             // Огноог зөвхөн цифрээр нь харьцуулж хайна.
-            ['key' => 'start_date', 'label' => 'Хэзээнээс', 'width' => '8%', 'date' => true],
+            ['key' => 'start_date', 'label' => 'Хэзээнээс', 'width' => '8%', 'date' => true, 'edit' => 'start_date', 'edit_type' => 'date'],
             ['key' => 'day_count', 'label' => 'Хэд хоног', 'width' => '5%'],
-            ['key' => 'order_number', 'label' => 'Тушаалын дугаар', 'width' => '7%'],
-            ['key' => 'status', 'label' => 'Төлөв', 'from_options' => true, 'width' => '8%'],
-            ['key' => 'approved_by', 'label' => 'Баталсан', 'single_line' => true, 'width' => '11%', 'inline_short' => true],
+            ['key' => 'order_number', 'label' => 'Тушаалын дугаар', 'width' => '7%', 'edit' => 'order_number'],
+            ['key' => 'status', 'label' => 'Төлөв', 'from_options' => true, 'width' => '8%', 'edit' => 'status'],
+            ['key' => 'approved_by', 'label' => 'Баталсан', 'single_line' => true, 'width' => '11%', 'inline_short' => true, 'edit' => 'approved_by'],
         ],
         'fields' => [
             // Сонголт нь утасны жагсаалтын «Удирдлага» ангиллаас бүрдэнэ.
@@ -112,8 +116,8 @@ return [
         'file_import' => true,
         // Сонгосон мөрүүдийг Excel/Word/PDF-ээр татна.
         'file_export' => true,
-        // Хүснэгтийн нүдэн дээр шууд солино.
-        'inline_fields' => ['approved_by'],
+        // Хүснэгтэд шинэ мөрийг хоосноор нэмж, нүдэн дээр нь бөглөнө.
+        'blank_row' => true,
         // Өөрчлөлтийн түүх хөтөлнө.
         'audit_log' => true,
         'defaults' => ['status' => 'pending'],
