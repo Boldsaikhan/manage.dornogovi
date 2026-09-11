@@ -84,6 +84,17 @@ const idleMs = computed(() => Math.max(1, Number(lock.value.idleMinutes || 30)) 
 /** Зөвхөн энэ утсан дээр идэвхжүүлсэн үед л биометрик санал болгоно. */
 const canBiometric = computed(() => bioSupported.value && localWebAuthn.value);
 
+/**
+ * Нээх товчийг харуулах эсэх.
+ *
+ * Chrome, iCloud-ын passkey нь төхөөрөмж хооронд синк хийгддэг тул энэ
+ * төхөөрөмж дээр «идэвхжүүлээгүй» ч бүртгэл нь аль хэдийн байж болно.
+ * Тиймээс бүртгэлтэй эсэхийг серверээс мэдэж товчийг гаргана.
+ */
+const canTryBiometric = computed(
+    () => bioSupported.value && (localWebAuthn.value || !! lock.value.hasWebAuthn),
+);
+
 const canSetupBiometric = computed(() => bioSupported.value && ! localWebAuthn.value && ! offline.value);
 
 /**
@@ -463,10 +474,19 @@ const handleUnlockError = (e, fallback = 'Түгжээ тайлагдахгүй 
         return;
     }
 
-    error.value = e?.response?.data?.errors?.password?.[0]
+    const message = e?.response?.data?.errors?.password?.[0]
         || e?.response?.data?.errors?.webauthn?.[0]
-        || e?.response?.data?.message
-        || fallback;
+        || e?.response?.data?.message;
+
+    if (message) {
+        error.value = message;
+
+        return;
+    }
+
+    // Серверийн тайлбар байхгүй бол хөтчийн алдааны нэрийг хавсаргана —
+    // ямар шалтгаанаар болохгүй байгааг хэлж өгөх боломжтой болно.
+    error.value = e?.name ? `${fallback} (${e.name})` : fallback;
 };
 
 const unlock = async () => {
@@ -517,13 +537,35 @@ const setupBiometric = async () => {
         markWebAuthnDevice();
         localWebAuthn.value = true;
         setupSuccess.value = true;
+        setupBusy.value = false;
+
+        // Идэвхжсэн даруйд нь нээнэ — хоёр дахь товч дарах шаардлагагүй.
+        await unlockBiometric({ skipSetupCheck: true });
+
+        return;
     } catch (e) {
         const name = e?.name || '';
+
+        if (/InvalidStateError/i.test(name)) {
+            /*
+             * Энэ төхөөрөмж дээр passkey аль хэдийн байна (Chrome, iCloud-оор
+             * синк хийгдсэн). Дахин үүсгэх шаардлагагүй — шууд нээнэ.
+             */
+            markWebAuthnDevice();
+            localWebAuthn.value = true;
+            setupBusy.value = false;
+
+            await unlockBiometric({ skipSetupCheck: true });
+
+            return;
+        }
+
         if (/NotAllowedError|AbortError/i.test(name)) {
             error.value = 'Үйлдэл цуцлагдлаа. Нууц үгээр нээнэ үү.';
         } else {
             handleUnlockError(e, 'Идэвхжүүлж чадсангүй. Нууц үгээр нээнэ үү.');
         }
+
         suppressHideLock(HIDE_GRACE_MS);
     } finally {
         setupBusy.value = false;
@@ -552,7 +594,7 @@ const autoPromptBiometric = async () => {
 };
 
 const unlockBiometric = async ({ skipSetupCheck = false, auto = false } = {}) => {
-    if ((! skipSetupCheck && ! canBiometric.value) || bioBusy.value || busy.value) return;
+    if ((! skipSetupCheck && ! canTryBiometric.value) || bioBusy.value || busy.value) return;
     if (! skipSetupCheck && setupBusy.value) return;
 
     offline.value = ! navigator.onLine;
@@ -637,14 +679,14 @@ const unlockBiometric = async ({ skipSetupCheck = false, auto = false } = {}) =>
             </p>
 
             <p
-                v-if="setupSuccess"
+                v-if="setupSuccess && !bioBusy"
                 class="mt-6 rounded-xl bg-emerald-50 px-3 py-2 text-center text-xs text-emerald-800"
             >
-                Идэвхжлээ. Доор «Хуруу / цараайгаар нээх» дарна уу.
+                Идэвхжлээ.
             </p>
 
             <button
-                v-if="canBiometric && !offline"
+                v-if="canTryBiometric && !offline"
                 type="button"
                 class="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-navy-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-navy-700 disabled:opacity-60"
                 :disabled="bioBusy || busy || setupBusy"
