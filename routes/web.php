@@ -75,6 +75,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/credentials/{system}/reveal', [CredentialController::class, 'reveal'])->name('credentials.reveal');
 
     Route::get('/uureg', [TaskController::class, 'index'])->name('tasks.index');
+    Route::get('/uureg/logs', [TaskController::class, 'logs'])->name('tasks.logs');
     Route::get('/uureg/export', [TaskController::class, 'export'])->name('tasks.export');
     Route::post('/uureg/sources', [TaskController::class, 'storeSource'])->name('tasks.sources.store');
     Route::delete('/uureg/sources/{source}', [TaskController::class, 'destroySource'])->name('tasks.sources.destroy');
