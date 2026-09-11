@@ -73,7 +73,7 @@ const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-
                     Албан томилолтын ажлын дүнг эх зардлыг ………хувиар тооцоо хийхийг зөвшөөрсөн.
                 </p>
 
-                <div class="mt-6 text-[12px] font-bold uppercase leading-snug">
+                <div class="mt-6 w-fit text-[12px] font-bold uppercase leading-snug">
                     <template v-for="(line, i) in headLines()" :key="'c1-' + i">{{ line }}<br /></template>
                     <div class="flex justify-between gap-6">
                         <span>{{ lastLine() }}</span>
@@ -101,7 +101,7 @@ const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-
                 />
                 <InputError :message="form.errors.certificate_text" />
 
-                <div class="mt-6 text-[12px] font-bold uppercase leading-snug">
+                <div class="mt-6 w-fit text-[12px] font-bold uppercase leading-snug">
                     <template v-for="(line, i) in headLines()" :key="'c2-' + i">{{ line }}<br /></template>
                     <div class="flex justify-between gap-6">
                         <span>{{ lastLine() }}</span>
@@ -131,7 +131,8 @@ const dotted = 'w-full resize-y border-0 border-b border-dotted border-black bg-
             Урд тал — томилолтын удирдамж
         </p>
         <!-- БАТЛАВ -->
-        <div class="ml-auto w-[62%] text-[12px] font-bold uppercase leading-snug">
+        <!-- Өргөн нь хамгийн урт мөрөөрөө — нэр нь тэр мөрийн ирмэгтэй тэнцэнэ. -->
+        <div class="ml-auto w-fit text-[12px] font-bold uppercase leading-snug">
             <!-- «БАТЛАВ» нь доорх бичвэрийнхээ голд байрлана. -->
             <span class="block text-center">БАТЛАВ</span>
             <template v-for="(line, i) in headLines()" :key="i">

@@ -42,11 +42,17 @@
         }
 
         /*
-         * «БАТЛАВ» блок — баруун талд байрлах ба мөр бүр нь нэг мөрөнд
-         * багтахаар өргөнтэй. Тасарч хуваагдвал зүүн ирмэг нь эвдэрдэг.
+         * «БАТЛАВ» блок — баруун талд байрлана.
+         *
+         * Өргөн нь хамгийн урт мөрөөрөө тодорхойлогдоно (shrink-to-fit).
+         * Ингэснээр нэр нь тэр мөрийн баруун ирмэгтэй яг тэнцэнэ — блокийг
+         * илүү өргөн авбал нэр хэт баруун тийш холдоно.
          */
+        .approve-wrap { text-align: right; }
+
         .approve {
-            margin-left: 45%;
+            display: inline-block;
+            text-align: left;
             text-transform: uppercase;
             font-weight: bold;
             line-height: 1.35;
@@ -138,7 +144,14 @@
 
         .cert__year { margin-top: 20mm; text-align: center; font-weight: bold; }
 
-        .cert__signer { margin-top: 8mm; font-weight: bold; text-transform: uppercase; line-height: 1.35; font-size: 11pt; }
+        .cert__signer {
+            display: inline-block;
+            margin-top: 8mm;
+            font-weight: bold;
+            text-transform: uppercase;
+            line-height: 1.35;
+            font-size: 11pt;
+        }
         .cert__signer .signrow { gap: 8mm; }
 
         .cert__date { margin-top: 10mm; text-align: center; }
@@ -321,6 +334,7 @@
     <button type="button" onclick="printSide('front')">Энэ талыг хэвлэх</button>
 </div>
 <div class="page page--front">
+    <div class="approve-wrap">
     <div class="approve">
         <span class="approve__title">БАТЛАВ</span>
         @foreach (array_slice($lines, 0, -1) as $line)
@@ -330,6 +344,7 @@
             <span class="approve__line">{{ $lines[count($lines) - 1] }}</span>
             <span class="name">{{ $signerName ?: '.....................' }}</span>
         </div>
+    </div>
     </div>
 
     <h1>Томилолтын удирдамж</h1>
