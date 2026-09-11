@@ -383,31 +383,38 @@
         appearance: textfield;
     }
 
-    /* Захирамж, тушаал — албан ёсны хүснэгт, зөөлөн харагдах байдал */
-    .decree-sheet {
+    /*
+     * Бүртгэлийн хүснэгт — албан ёсны, зөөлөн харагдах байдал.
+     *
+     * Захирамж, тушаал болон томилолтын бүртгэл хоёулаа энэ хэв маягийг
+     * ашиглана. Шинэ бүртгэлийн хүснэгт нэмэхдээ өөр загвар зохиохгүй,
+     * эндээс аваарай (толгой наалдах, багана тус бүрийн хайлт, мөрийн
+     * ээлжилсэн өнгө бүгд бэлэн).
+     */
+    .ui-register {
         @apply min-w-full bg-white;
     }
 
-    .decree-sheet__banner {
+    .ui-register__banner {
         @apply border-b border-slate-200 bg-brand-navy-50/80 px-4 py-2.5 text-center text-sm font-semibold tracking-wide text-brand-navy-900;
     }
 
-    .decree-sheet__table {
+    .ui-register__table {
         @apply w-full border-collapse text-center text-[12px] leading-snug text-slate-800;
         table-layout: fixed;
     }
 
-    .decree-sheet th,
-    .decree-sheet td {
+    .ui-register th,
+    .ui-register td {
         @apply border-b border-r border-slate-200;
     }
 
-    .decree-sheet th:last-child,
-    .decree-sheet td:last-child {
+    .ui-register th:last-child,
+    .ui-register td:last-child {
         @apply border-r-0;
     }
 
-    .decree-sheet thead th {
+    .ui-register thead th {
         @apply bg-brand-navy-50 px-2 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-600;
         vertical-align: middle;
     }
@@ -418,7 +425,7 @@
      * гүйлгэхэд алга болдог. Тиймээс толгойн нүднүүдийн хүрээг дотоод
      * сүүдрээр (inset box-shadow) зурна.
      */
-    .decree-sheet thead th {
+    .ui-register thead th {
         border-right-color: transparent;
         border-bottom-color: transparent;
         box-shadow:
@@ -426,36 +433,36 @@
             inset 0 -1px 0 rgb(226 232 240);
     }
 
-    .decree-sheet thead th:last-child {
+    .ui-register thead th:last-child {
         box-shadow: inset 0 -1px 0 rgb(226 232 240);
     }
 
-    .decree-sheet thead tr:first-child th {
+    .ui-register thead tr:first-child th {
         position: sticky;
         top: 0;
         z-index: 20;
     }
 
     /* Наалдах байрлалыг JS бодит өндрөөр нь тавина (Decrees.vue → syncStickyHead). */
-    .decree-sheet thead tr:nth-child(2) th {
+    .ui-register thead tr:nth-child(2) th {
         position: sticky;
         top: 2.65rem;
         z-index: 19;
         @apply bg-brand-navy-50 py-1.5 text-[10px] font-medium normal-case tracking-normal text-slate-500;
     }
 
-    .decree-sheet thead tr:nth-child(3) th {
+    .ui-register thead tr:nth-child(3) th {
         position: sticky;
         z-index: 18;
         @apply bg-brand-navy-50 py-0.5 text-[10px] font-normal normal-case text-slate-400;
     }
 
-    .decree-sheet__head-group--issued {
+    .ui-register__head-group--issued {
         @apply bg-sky-50 text-sky-900;
     }
 
     /* Багана тус бүрийн хайлтын мөр — толгойн доор наалдаж, өнгөөрөө ялгарна. */
-    .decree-sheet thead tr.decree-sheet__filters th {
+    .ui-register thead tr.ui-register__filters th {
         position: sticky;
         z-index: 17;
         @apply bg-brand-navy-100 px-1 py-1 align-middle;
@@ -465,89 +472,89 @@
             0 2px 3px -2px rgb(15 23 42 / 0.18);
     }
 
-    .decree-sheet thead tr.decree-sheet__filters th:last-child {
+    .ui-register thead tr.ui-register__filters th:last-child {
         box-shadow:
             inset 0 -1px 0 rgb(203 213 225),
             0 2px 3px -2px rgb(15 23 42 / 0.18);
     }
 
-    .decree-sheet__filters input {
+    .ui-register__filters input {
         @apply w-full rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[11px] font-normal
             normal-case text-slate-700 placeholder-slate-300 outline-none transition;
     }
 
-    .decree-sheet__filters input:focus {
+    .ui-register__filters input:focus {
         @apply border-brand-navy-400 ring-2 ring-brand-navy-500/15;
     }
 
-    .decree-sheet__filters input::-webkit-search-cancel-button {
+    .ui-register__filters input::-webkit-search-cancel-button {
         @apply cursor-pointer;
     }
 
-    .decree-sheet__head-group--numbers {
+    .ui-register__head-group--numbers {
         @apply bg-emerald-50 text-emerald-900;
     }
 
-    .decree-sheet__head-group--void {
+    .ui-register__head-group--void {
         @apply bg-amber-50 text-amber-900;
     }
 
-    .decree-sheet tbody tr:nth-child(even) td:not(.decree-sheet__cell--muted) {
+    .ui-register tbody tr:nth-child(even) td:not(.ui-register__cell--muted) {
         @apply bg-slate-50/50;
     }
 
-    .decree-sheet tbody tr:hover td:not(.decree-sheet__cell--muted) {
+    .ui-register tbody tr:hover td:not(.ui-register__cell--muted) {
         @apply bg-sky-50/70;
     }
 
-    .decree-sheet tbody tr:focus-within td:not(.decree-sheet__cell--muted) {
+    .ui-register tbody tr:focus-within td:not(.ui-register__cell--muted) {
         @apply bg-sky-50/80;
     }
 
-    .decree-sheet__cell {
+    .ui-register__cell {
         @apply p-0 align-middle overflow-hidden;
     }
 
-    .decree-sheet__cell--no {
+    .ui-register__cell--no {
         @apply px-1.5 py-1.5 text-center text-xs font-semibold tabular-nums text-slate-500;
     }
 
-    .decree-sheet__cell--muted {
+    .ui-register__cell--muted {
         @apply bg-slate-100/80;
     }
 
-    .decree-sheet__empty {
+    .ui-register__empty {
         @apply px-4 py-12 text-sm text-slate-400;
     }
 
-    .decree-sheet table {
+    .ui-register table {
         table-layout: fixed;
     }
 
-    .decree-sheet td,
-    .decree-sheet th {
+    .ui-register td,
+    .ui-register th {
         overflow: hidden;
     }
 
-    .decree-sheet .ui-sheet-cell {
+    .ui-register .ui-sheet-cell {
         min-height: 1.75rem;
     }
 
-    .decree-sheet .ui-sheet-display {
+    .ui-register .ui-sheet-display {
         @apply px-1.5 py-1 text-[12px] leading-snug;
         min-height: 1.75rem;
     }
 
-    .decree-sheet .ui-sheet-editor {
+    .ui-register .ui-sheet-editor {
         @apply px-1.5 py-1 text-[12px] leading-snug;
         min-height: 1.75rem;
     }
 
-    .decree-sheet .ui-sheet-cell.is-editing {
+    .ui-register .ui-sheet-cell.is-editing {
         @apply z-[1] bg-white ring-2 ring-inset ring-brand-navy-500/35;
     }
 
-    .decree-sheet .ui-sheet-cell.is-editable:hover:not(.is-editing) {
+    .ui-register .ui-sheet-cell.is-editable:hover:not(.is-editing) {
         @apply bg-sky-50/80;
     }
 
