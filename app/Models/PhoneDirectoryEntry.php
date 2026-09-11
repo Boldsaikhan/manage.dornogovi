@@ -61,6 +61,36 @@ class PhoneDirectoryEntry extends Model
      *
      * @return array<int, array{value: string, label: string, hint: string, org: string, category: string, full: string}>
      */
+    /**
+     * Нэрээр нь албан тушаалыг олно.
+     *
+     * Богино («Б.Болд») ба бүтэн («Болдын Болд») нэр хоёуланг таниулна.
+     */
+    public static function positionFor(?string $name): ?string
+    {
+        $needle = trim((string) $name);
+
+        if ($needle === '') {
+            return null;
+        }
+
+        $entry = static::query()
+            ->whereNotNull('person_name')
+            ->orderBy('org_order')
+            ->orderBy('sort_order')
+            ->get(['person_name', 'position'])
+            ->first(function (self $row) use ($needle) {
+                $full = trim((string) $row->person_name);
+                $short = \App\Support\PersonName::short($full);
+
+                return $full === $needle || ($short !== '' && $short === $needle);
+            });
+
+        $position = trim((string) ($entry->position ?? ''));
+
+        return $position !== '' ? $position : null;
+    }
+
     public static function peopleOptions(): array
     {
         $rows = static::query()
