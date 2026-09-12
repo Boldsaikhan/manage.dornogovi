@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppSetting;
 use App\Models\System;
 use App\Models\User;
 use App\Services\Ai\AiSettings;
@@ -13,6 +14,8 @@ use App\Support\LoginFormDetector;
 use App\Support\ModuleAccess;
 use App\Support\ModuleOrder;
 use App\Support\ModuleVisibility;
+use App\Support\MongolianCase;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -62,6 +65,64 @@ class SystemSettingsController extends Controller
             'menuGroups' => ModuleVisibility::groupsForAdmin(),
             // AI аль цэсэд ямар эрхтэйг тохируулах жагсаалт.
             'aiModules' => $this->aiModules($aiSettings),
+            // Харьяалахын тийн ялгал — үгийн жагсаалт.
+            'genitiveWords' => collect(MongolianCase::exceptions())
+                ->map(fn (string $form, string $word) => [
+                    'word' => $word,
+                    'form' => $form,
+                    // Анхны утгыг устгаж болохгүй — зөвхөн засна.
+                    'is_default' => array_key_exists($word, MongolianCase::EXCEPTIONS),
+                ])
+                ->sortBy('word')
+                ->values()
+                ->all(),
+        ]);
+    }
+
+    /**
+     * Харьяалахын тийн ялгалын үгсийг хадгална.
+     */
+    public function updateGenitive(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'words' => ['present', 'array'],
+            'words.*.word' => ['required', 'string', 'max:80'],
+            'words.*.form' => ['required', 'string', 'max:120'],
+        ], [], ['words' => 'үгийн жагсаалт']);
+
+        $map = [];
+
+        foreach ($data['words'] as $row) {
+            $word = mb_strtolower(trim($row['word']));
+            $form = trim($row['form']);
+
+            if ($word !== '' && $form !== '') {
+                $map[$word] = $form;
+            }
+        }
+
+        AppSetting::query()->updateOrCreate(
+            ['key' => MongolianCase::SETTING_KEY],
+            ['value' => json_encode($map, JSON_UNESCAPED_UNICODE)],
+        );
+
+        MongolianCase::forget();
+
+        return back()->with('success', 'Тийн ялгалын жагсаалтыг хадгаллаа.');
+    }
+
+    /**
+     * Оруулсан үг дээр дүрмийг шалгаж үзүүлнэ.
+     */
+    public function testGenitive(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'word' => ['required', 'string', 'max:200'],
+        ], [], ['word' => 'үг']);
+
+        return response()->json([
+            'word' => $data['word'],
+            'genitive' => MongolianCase::genitive($data['word']),
         ]);
     }
 

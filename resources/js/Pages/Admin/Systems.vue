@@ -15,15 +15,81 @@ const props = defineProps({
     menuGroups: { type: Array, default: () => [] },
     aiModules: { type: Array, default: () => [] },
     verify: { type: Object, default: () => ({}) },
+    genitiveWords: { type: Array, default: () => [] },
 });
 
 const page = usePage();
+
+/* ── Харьяалахын тийн ялгал ──────────────────────────────────────────
+ *
+ * Байгууллагын нэрэнд «-ын / -ийн» нөхцөлийг залгахад дүрмээр гаргахад
+ * хүндрэлтэй үгс байдаг («хэлтэс» → «хэлтсийн»). Тэдгээрийг эндээс
+ * харж, засаж, шинээр нэмнэ.
+ */
+const genitiveForm = useForm({ words: [] });
+
+const syncGenitive = () => {
+    genitiveForm.words = props.genitiveWords.map((row) => ({ ...row }));
+};
+
+watch(() => props.genitiveWords, syncGenitive, { immediate: true, deep: true });
+
+const addGenitiveWord = () => {
+    genitiveForm.words.unshift({ word: '', form: '', is_default: false });
+};
+
+const removeGenitiveWord = (index) => {
+    genitiveForm.words.splice(index, 1);
+};
+
+const saveGenitive = () => {
+    genitiveForm
+        .transform((data) => ({
+            words: data.words.filter((row) => row.word.trim() && row.form.trim()),
+        }))
+        .patch(route('admin.genitive.update'), { preserveScroll: true });
+};
+
+const genitiveSearch = ref('');
+
+const visibleGenitiveWords = computed(() => {
+    const q = genitiveSearch.value.trim().toLowerCase();
+
+    if (! q) return genitiveForm.words;
+
+    return genitiveForm.words.filter(
+        (row) => row.word.toLowerCase().includes(q) || row.form.toLowerCase().includes(q),
+    );
+});
+
+// Дүрмийг шалгаж үзэх.
+const genitiveProbe = ref('');
+const genitiveResult = ref('');
+const genitiveBusy = ref(false);
+
+const checkGenitive = async () => {
+    const word = genitiveProbe.value.trim();
+
+    if (! word || genitiveBusy.value) return;
+
+    genitiveBusy.value = true;
+
+    try {
+        const { data } = await window.axios.post(route('admin.genitive.test'), { word });
+        genitiveResult.value = data.genitive;
+    } catch (error) {
+        genitiveResult.value = 'Шалгаж чадсангүй.';
+    } finally {
+        genitiveBusy.value = false;
+    }
+};
 
 const SETTINGS_TABS = [
     { id: 'menus', label: 'Цэс нээх / хаах' },
     { id: 'ai', label: 'Manage AI' },
     { id: 'verify', label: 'Утсаар сэргээх' },
     { id: 'push', label: 'Push мэдэгдэл' },
+    { id: 'genitive', label: 'Тийн ялгал' },
     { id: 'systems', label: 'Гадны системүүд' },
 ];
 
@@ -1038,6 +1104,111 @@ const saveAi = () => {
                 </p>
             </div>
             <PushSubscribe class="max-w-xl" />
+        </section>
+
+        <section
+            v-show="activeTab === 'genitive'"
+            class="rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm"
+            role="tabpanel"
+        >
+            <div class="mb-4">
+                <h2 class="text-base font-semibold text-brand-navy-900">Харьяалахын тийн ялгал</h2>
+                <p class="mt-1 max-w-3xl text-sm text-brand-navy-400">
+                    Томилолтын үнэмлэх дээр байгууллагын нэрэнд «-ын / -ийн» нөхцөлийг залгана.
+                    Ихэнхийг дүрмээр гаргах боловч зарим үг онцгой байдаг
+                    («хэлтэс» → «хэлтсийн»). Тэдгээрийг эндээс засаж, шинээр нэмнэ.
+                </p>
+            </div>
+
+            <!-- Шалгаж үзэх -->
+            <div class="mb-5 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                <label class="ui-label">Дүрмийг шалгах</label>
+                <div class="flex flex-wrap items-center gap-2">
+                    <input
+                        v-model="genitiveProbe"
+                        type="text"
+                        class="ui-input max-w-md !py-2 text-sm"
+                        placeholder="Жишээ нь: Төрийн захиргааны удирдлагын хэлтэс"
+                        @keyup.enter="checkGenitive"
+                    />
+                    <button type="button" class="ui-btn-ghost !py-2" :disabled="genitiveBusy" @click="checkGenitive">
+                        {{ genitiveBusy ? 'Шалгаж байна…' : 'Шалгах' }}
+                    </button>
+                </div>
+                <p v-if="genitiveResult" class="mt-2 text-sm text-brand-navy-800">
+                    → <b>{{ genitiveResult }}</b>
+                </p>
+            </div>
+
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <input
+                    v-model="genitiveSearch"
+                    type="search"
+                    class="ui-input max-w-xs !py-2 text-sm"
+                    placeholder="Үгээр хайх…"
+                />
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-500">{{ genitiveForm.words.length }} үг</span>
+                    <button type="button" class="ui-btn-ghost !py-2" @click="addGenitiveWord">+ Үг нэмэх</button>
+                    <button
+                        type="button"
+                        class="ui-btn-primary !py-2"
+                        :disabled="genitiveForm.processing"
+                        @click="saveGenitive"
+                    >
+                        {{ genitiveForm.processing ? 'Хадгалж байна…' : 'Хадгалах' }}
+                    </button>
+                </div>
+            </div>
+
+            <div class="ui-table-wrap max-h-[60vh] overflow-y-auto">
+                <table class="ui-table">
+                    <thead>
+                        <tr>
+                            <th class="w-1/3">Үг</th>
+                            <th>Харьяалахын хэлбэр</th>
+                            <th class="w-24" />
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(row, index) in visibleGenitiveWords" :key="index">
+                            <td>
+                                <input
+                                    v-model="row.word"
+                                    type="text"
+                                    class="ui-input !py-1.5 text-sm"
+                                    :readonly="row.is_default"
+                                    :class="row.is_default ? 'bg-slate-50 text-slate-500' : ''"
+                                />
+                            </td>
+                            <td>
+                                <input v-model="row.form" type="text" class="ui-input !py-1.5 text-sm" />
+                            </td>
+                            <td class="text-right">
+                                <button
+                                    v-if="! row.is_default"
+                                    type="button"
+                                    class="ui-btn-danger !py-1 text-xs"
+                                    @click="removeGenitiveWord(index)"
+                                >
+                                    Устгах
+                                </button>
+                                <span v-else class="text-[11px] text-slate-400">үндсэн</span>
+                            </td>
+                        </tr>
+                        <tr v-if="!visibleGenitiveWords.length">
+                            <td colspan="3" class="!py-10 text-center text-slate-400">
+                                Үг олдсонгүй.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="mt-3 text-xs text-slate-500">
+                Товчлол (ЗДТГ, СХЗХ) нь эгшгийн зохицлоор автоматаар шийдэгддэг тул
+                энд бичих шаардлагагүй.
+            </p>
         </section>
 
         <div v-show="activeTab === 'systems'" role="tabpanel" class="space-y-4">

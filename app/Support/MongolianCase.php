@@ -24,12 +24,17 @@ class MongolianCase
     /** Тогтворгүй эгшиг — нөхцөл залгахад унадаг. */
     private const UNSTABLE = ['а', 'э', 'о', 'ө', 'у', 'ү'];
 
+    /** Тохиргоонд хадгалагдах түлхүүр. */
+    public const SETTING_KEY = 'mongolian.genitive';
+
     /**
      * Дүрмээр гаргахад хүндрэлтэй, түгээмэл тохиолддог үгс.
      *
+     * Системийн тохиргооноос нэмж, засаж болно — эндэх нь анхны утга.
+     *
      * @var array<string, string>
      */
-    private const EXCEPTIONS = [
+    public const EXCEPTIONS = [
         'хэлтэс' => 'хэлтсийн',
         'газар' => 'газрын',
         'алба' => 'албаны',
@@ -105,12 +110,57 @@ class MongolianCase
         }
 
         $lower = mb_strtolower($word);
+        $exceptions = self::exceptions();
 
-        if (isset(self::EXCEPTIONS[$lower])) {
-            return self::matchCase($word, self::EXCEPTIONS[$lower]);
+        if (isset($exceptions[$lower])) {
+            return self::matchCase($word, $exceptions[$lower]);
         }
 
         return self::matchCase($word, self::byRule($lower));
+    }
+
+    /**
+     * Хэрэглэгдэх үгийн жагсаалт — анхны утга дээр тохиргоог нэмнэ.
+     *
+     * @return array<string, string>
+     */
+    public static function exceptions(): array
+    {
+        if (self::$cache !== null) {
+            return self::$cache;
+        }
+
+        $saved = [];
+
+        try {
+            $raw = \App\Models\AppSetting::query()->where('key', self::SETTING_KEY)->value('value');
+            $decoded = $raw ? json_decode((string) $raw, true) : null;
+
+            if (is_array($decoded)) {
+                foreach ($decoded as $word => $form) {
+                    $word = mb_strtolower(trim((string) $word));
+                    $form = trim((string) $form);
+
+                    if ($word !== '' && $form !== '') {
+                        $saved[$word] = $form;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // Хүснэгт бэлэн биш (жишээ нь migration-аас өмнө) — анхны утгаар.
+            $saved = [];
+        }
+
+        return self::$cache = array_merge(self::EXCEPTIONS, $saved);
+    }
+
+    /** @var array<string, string>|null */
+    private static ?array $cache = null;
+
+    /** Тестийн хооронд, хадгалсны дараа цээжилсэн жагсаалтыг хаяна. */
+    public static function forget(): void
+    {
+        self::$cache = null;
     }
 
     /** Товчлол эсэх — үсэг нь бүгд том. */
