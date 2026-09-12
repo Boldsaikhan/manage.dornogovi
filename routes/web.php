@@ -191,6 +191,8 @@ Route::middleware('auth')->group(function () {
         Route::patch('/ai-settings', [SystemSettingsController::class, 'updateAi'])->name('ai-settings.update');
         Route::patch('/verify-settings', [SystemSettingsController::class, 'updateVerify'])->name('verify-settings.update');
         Route::post('/verify-settings/test', [SystemSettingsController::class, 'testVerify'])->middleware('throttle:20,1')->name('verify-settings.test');
+        Route::patch('/genitive', [SystemSettingsController::class, 'updateGenitive'])->name('genitive.update');
+        Route::post('/genitive/test', [SystemSettingsController::class, 'testGenitive'])->name('genitive.test');
         Route::patch('/menu-settings', [SystemSettingsController::class, 'updateMenus'])->name('menu-settings.update');
 
         Route::get('/users', [UserAccessController::class, 'index'])->name('users.index');

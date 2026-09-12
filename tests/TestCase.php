@@ -75,6 +75,7 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         AssignmentSheet::forgetSigners();
+        \App\Support\MongolianCase::forget();
         Role::forgetOrdered();
         AiSettings::forgetDisplayName();
         ModuleVisibility::forget();

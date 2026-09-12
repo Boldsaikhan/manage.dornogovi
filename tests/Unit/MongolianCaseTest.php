@@ -42,9 +42,7 @@ class MongolianCaseTest extends TestCase
         ];
     }
 
-    /**
-     * @dataProvider words
-     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('words')]
     public function test_the_genitive_is_built_correctly(string $word, string $expected): void
     {
         $this->assertSame($expected, MongolianCase::genitiveWord($word));
