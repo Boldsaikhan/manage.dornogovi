@@ -187,7 +187,8 @@ class AssignmentCertificateTest extends TestCase
         $this->actingAs($admin)
             ->get(route('assignments.sheet', $row))
             ->assertOk()
-            ->assertSee('Дорноговь аймгийн Төрийн захиргааны удирдлагын хэлтсийн')
+            // Хэлтэс бол «Засаг даргын» гэж нэмнэ.
+            ->assertSee('Дорноговь аймгийн Засаг даргын Төрийн захиргааны удирдлагын хэлтсийн')
             ->assertDontSee('хэлтэс-ын');
     }
 
@@ -252,6 +253,29 @@ class AssignmentCertificateTest extends TestCase
             ->assertOk()
             ->assertSee('Дорноговь аймгийн ЗДТГ-ын')
             ->assertDontSee('Дорноговь аймгийн Дорноговь');
+    }
+
+    public function test_a_plain_organisation_keeps_the_short_prefix(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'Дамбын Батцэцэг',
+            'position' => 'Дарга',
+            'org_name' => 'Эрүүл мэндийн газар',
+        ]);
+
+        $row = $this->assignment([
+            'person_name' => 'Д.Батцэцэг',
+            'certificate_text' => null,
+        ]);
+
+        // Хэлтэс биш тул «Засаг даргын» гэж нэмэхгүй.
+        $this->actingAs($admin)
+            ->get(route('assignments.sheet', $row))
+            ->assertOk()
+            ->assertSee('Дорноговь аймгийн Эрүүл мэндийн газрын')
+            ->assertDontSee('Дорноговь аймгийн Засаг даргын Эрүүл');
     }
 
     public function test_the_purpose_reads_as_ajlaar(): void
