@@ -43,6 +43,32 @@ class WebAuthnRoutesTest extends TestCase
             ->assertJsonFragment(['message' => 'Энэ утсанд хуруу/царай бүртгэгдээгүй. Эхлээд нууц үгээр нэвтэрч, «Идэвхжүүлэх» дарна уу.']);
     }
 
+    public function test_unlock_options_allow_every_transport(): void
+    {
+        $user = User::factory()->create();
+
+        \App\Models\WebAuthnCredential::create([
+            'user_id' => $user->id,
+            'credential_id' => 'dGVzdC1jcmVkZW50aWFs',
+            'public_key' => 'test-key',
+            'sign_count' => 0,
+        ]);
+
+        $options = $this->actingAs($user)
+            ->postJson(route('webauthn.verify.options'))
+            ->assertOk()
+            ->json('publicKey.allowCredentials');
+
+        $transports = $options[0]['transports'] ?? [];
+
+        /*
+         * Утсан дээрх passkey нь Google / iCloud-д хадгалагддаг тул
+         * «internal»-ээр хязгаарлаж болохгүй.
+         */
+        $this->assertContains('hybrid', $transports);
+        $this->assertContains('internal', $transports);
+    }
+
     public function test_register_options_do_not_force_a_device_type(): void
     {
         $user = User::factory()->create();
