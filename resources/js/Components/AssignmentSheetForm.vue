@@ -229,11 +229,11 @@ const pickerClass = 'w-auto border-0 border-b border-dotted border-black bg-tran
                     Албан томилолтын ажлын дүнг эх зардлыг ………хувиар тооцоо хийхийг зөвшөөрсөн.
                 </p>
 
-                <div class="mt-6 w-fit text-[12px] font-bold uppercase leading-snug">
+                <div class="mt-6 max-w-full text-[12px] font-bold uppercase leading-snug">
                     <template v-for="(line, i) in headLines()" :key="'c1-' + i">{{ line }}<br /></template>
-                    <div v-if="sideBySide()" class="flex justify-between gap-6">
-                        <span class="whitespace-nowrap">{{ lastLine() }}</span>
-                        <span class="whitespace-nowrap">{{ signerName() }}</span>
+                    <div v-if="sideBySide()" class="flex flex-wrap justify-between gap-x-4 gap-y-1">
+                        <span>{{ lastLine() }}</span>
+                        <span class="ml-auto whitespace-nowrap">{{ signerName() }}</span>
                     </div>
                     <div v-else class="mt-3 whitespace-nowrap text-right">{{ signerName() }}</div>
                 </div>
@@ -258,11 +258,11 @@ const pickerClass = 'w-auto border-0 border-b border-dotted border-black bg-tran
                 />
                 <InputError :message="form.errors.certificate_text" />
 
-                <div class="mt-6 w-fit text-[12px] font-bold uppercase leading-snug">
+                <div class="mt-6 max-w-full text-[12px] font-bold uppercase leading-snug">
                     <template v-for="(line, i) in headLines()" :key="'c2-' + i">{{ line }}<br /></template>
-                    <div v-if="sideBySide()" class="flex justify-between gap-6">
-                        <span class="whitespace-nowrap">{{ lastLine() }}</span>
-                        <span class="whitespace-nowrap">{{ signerName() }}</span>
+                    <div v-if="sideBySide()" class="flex flex-wrap justify-between gap-x-4 gap-y-1">
+                        <span>{{ lastLine() }}</span>
+                        <span class="ml-auto whitespace-nowrap">{{ signerName() }}</span>
                     </div>
                     <div v-else class="mt-3 whitespace-nowrap text-right">{{ signerName() }}</div>
                 </div>
