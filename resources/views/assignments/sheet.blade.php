@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Томилолтын удирдамж — {{ $assignment->destination }}</title>
     @php
         // Утга байвал бичнэ, үгүй бол цэгээр дүүргэсэн зай үлдээнэ (гараар бөглөнө).
@@ -187,6 +188,33 @@
 
         .cert__body { text-align: justify; text-indent: 8mm; }
 
+        /* Хуудсан дээрээ засах — хэвлэхэд ул мөр үлдэхгүй. */
+        .cert__body[contenteditable='true'] {
+            outline: 1px dashed #94a3b8;
+            outline-offset: 2mm;
+            min-height: 22mm;
+            cursor: text;
+        }
+
+        .cert__body[contenteditable='true']:focus { outline-color: #1e3a5f; }
+
+        .cert__edit {
+            margin-top: 3mm;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        .cert__edit button {
+            padding: 4px 12px; border: 1px solid #1e3a5f; border-radius: 6px;
+            background: #1e3a5f; color: #fff; font-size: 11px; cursor: pointer;
+        }
+
+        .cert__edit button[disabled] { opacity: .6; cursor: default; }
+
         .cert__title {
             margin-top: 28mm;
             text-align: center;
@@ -286,6 +314,8 @@
             .sheets { display: block; gap: 0; transform: none !important; margin-bottom: 0 !important; }
             .sheet { display: block; }
             .sheet__bar { display: none; }
+            .cert__edit { display: none; }
+            .cert__body[contenteditable='true'] { outline: none; }
 
             /* Зөвхөн нэг талыг хэвлэх үед нөгөөг нь нуух. */
             body.print-back .sheet--front,
@@ -381,15 +411,17 @@
         <div class="cert__col">
             <div class="cert__number">Дугаар {{ $number }}</div>
 
-            <div class="cert__body">
-                @if (trim((string) $certificateText) !== '')
-                    {{ $certificateText }}
-                @else
-                    @for ($i = 0; $i < 6; $i++)
-                        <span class="line"></span>
-                    @endfor
-                @endif
-            </div>
+            <div
+                class="cert__body"
+                @if ($canEdit) contenteditable="true" id="cert-text" spellcheck="false" @endif
+            >@if (trim((string) $certificateText) !== ''){{ $certificateText }}@elseif (! $canEdit)@for ($i = 0; $i < 6; $i++)<span class="line"></span>@endfor @endif</div>
+
+            @if ($canEdit)
+                <div class="cert__edit">
+                    <button type="button" id="cert-save">Хадгалах</button>
+                    <span id="cert-status">Бичвэр дээр дарж засна.</span>
+                </div>
+            @endif
 
             <div class="cert__signer">
                 {!! $signerBlock($lines, (string) $signerName) !!}
@@ -507,6 +539,63 @@
 </div>{{-- .sheets --}}
 
 <script>
+    /*
+     * Үнэмлэхийн бичвэрийг хуудсан дээр нь засаж хадгална.
+     */
+    const certBody = document.getElementById('cert-text');
+    const certSave = document.getElementById('cert-save');
+    const certStatus = document.getElementById('cert-status');
+
+    if (certBody && certSave) {
+        let saved = certBody.innerText.trim();
+
+        certSave.addEventListener('click', async () => {
+            certSave.disabled = true;
+            certStatus.textContent = 'Хадгалж байна…';
+
+            try {
+                const response = await fetch(@json(route('assignments.sheet.text', $assignment)), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        _method: 'PATCH',
+                        certificate_text: certBody.innerText.trim(),
+                    }),
+                });
+
+                if (response.ok) {
+                    saved = certBody.innerText.trim();
+                    certStatus.textContent = 'Хадгаллаа.';
+                } else {
+                    certStatus.textContent = 'Хадгалж чадсангүй.';
+                }
+            } catch (e) {
+                certStatus.textContent = 'Сүлжээгүй байна.';
+            } finally {
+                certSave.disabled = false;
+            }
+        });
+
+        certBody.addEventListener('input', () => {
+            certStatus.textContent = certBody.innerText.trim() === saved
+                ? 'Бичвэр дээр дарж засна.'
+                : 'Хадгалаагүй өөрчлөлт байна.';
+        });
+
+        // Хадгалаагүй байхад хуудсаас гарахаас сэргийлнэ.
+        window.addEventListener('beforeunload', (event) => {
+            if (certBody.innerText.trim() !== saved) {
+                event.preventDefault();
+                event.returnValue = '';
+            }
+        });
+    }
+
     /** Аль талыг хэвлэхийг заана: 'back', 'front', эсвэл хоосон бол хоёуланг. */
     function printSide(side) {
         document.body.classList.remove('print-back', 'print-front');

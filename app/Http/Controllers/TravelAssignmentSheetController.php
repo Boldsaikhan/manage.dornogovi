@@ -6,6 +6,7 @@ use App\Models\TravelAssignment;
 use App\Support\AssignmentSheet;
 use App\Support\ModuleAccess;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 /**
@@ -36,6 +37,7 @@ class TravelAssignmentSheetController extends Controller
             'certificateText' => AssignmentSheet::certificateText($assignment),
             // Хуудасны хэмжээ, зай, фонтыг «Бичиг хэргийн стандарт»-аас авна.
             'format' => $this->pageFormat(),
+            'canEdit' => ModuleAccess::canEdit($request->user(), self::MODULE),
         ]);
     }
 
@@ -51,6 +53,24 @@ class TravelAssignmentSheetController extends Controller
             ->where('approver', $assignment->approver)
             ->where('id', '<=', $assignment->id)
             ->count();
+    }
+
+    /**
+     * Үнэмлэхийн бичвэрийг хуудсан дээр нь засна.
+     */
+    public function updateText(Request $request, TravelAssignment $assignment): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
+
+        $data = $request->validate([
+            'certificate_text' => ['nullable', 'string', 'max:2000'],
+        ], [], ['certificate_text' => 'бичвэр']);
+
+        $assignment->update([
+            'certificate_text' => trim((string) ($data['certificate_text'] ?? '')) ?: null,
+        ]);
+
+        return back()->with('success', 'Хадгаллаа.');
     }
 
     /**

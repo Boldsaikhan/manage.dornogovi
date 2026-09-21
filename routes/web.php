@@ -113,6 +113,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/modules/assignments', [ModuleResourceController::class, 'index'])->name('assignments.index');
     Route::get('/modules/assignments/{assignment}/sheet', [TravelAssignmentSheetController::class, 'show'])->name('assignments.sheet');
+    Route::patch('/modules/assignments/{assignment}/sheet', [TravelAssignmentSheetController::class, 'updateText'])->name('assignments.sheet.text');
     Route::get('/modules/regulations', [ModuleResourceController::class, 'index'])->name('regulations.index');
     Route::post('/modules/regulations/categories', [RegulationCategoryController::class, 'store'])->name('regulations.categories.store');
     Route::patch('/modules/regulations/categories/{category}', [RegulationCategoryController::class, 'update'])->name('regulations.categories.update');
