@@ -237,7 +237,7 @@ class AssignmentSheet
         // Нэрэнд заахын тийн ялгал: «Д.Батцэцэг» → «Д.Батцэцэгийг».
         $parts[] = MongolianCase::accusative($name);
 
-        $where = trim((string) $assignment->destination);
+        $where = self::place(trim((string) $assignment->destination));
 
         if ($where !== '') {
             $parts[] = $where;
@@ -274,6 +274,50 @@ class AssignmentSheet
         $parts[] = 'ажиллуулахаар томилов.';
 
         return implode(' ', $parts);
+    }
+
+    /**
+     * Очих газрыг «хаана» гэсэн хэлбэрт оруулна.
+     *
+     * «Улаанбаатар» → «Улаанбаатар хотод», «Эрдэнэ сум» → «Эрдэнэ суманд».
+     * Танихгүй нэрийг хэвээр нь үлдээнэ — буруу нөхцөл залгахаас дээр.
+     */
+    public static function place(string $destination): string
+    {
+        $destination = trim($destination);
+
+        if ($destination === '') {
+            return '';
+        }
+
+        $lower = mb_strtolower($destination);
+
+        // Аль хэдийн хэлбэржсэн бол хөндөхгүй.
+        foreach (['хотод', 'суманд', 'аймагт', 'дүүрэгт', 'улсад'] as $done) {
+            if (str_ends_with($lower, $done)) {
+                return $destination;
+            }
+        }
+
+        $endings = [
+            'сум' => 'суманд',
+            'хот' => 'хотод',
+            'дүүрэг' => 'дүүрэгт',
+            'аймаг' => 'аймагт',
+        ];
+
+        foreach ($endings as $ending => $form) {
+            if (str_ends_with($lower, $ending)) {
+                return mb_substr($destination, 0, mb_strlen($destination) - mb_strlen($ending)).$form;
+            }
+        }
+
+        // Нийслэлийг «хотод» гэж бичнэ.
+        if ($lower === 'улаанбаатар' || $lower === 'уб') {
+            return 'Улаанбаатар хотод';
+        }
+
+        return $destination;
     }
 
     /** Эхлэх, дуусах огнооноос хоногийг бодно (эхлэх өдрийг оролцуулна). */
