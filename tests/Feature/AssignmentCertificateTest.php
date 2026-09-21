@@ -164,7 +164,7 @@ class AssignmentCertificateTest extends TestCase
         $this->actingAs($admin)
             ->get(route('assignments.sheet', $row))
             ->assertOk()
-            ->assertSee('СХЗХ-ын Эрчим хүчний хяналтын улсын байцаагч Н.Гарамжавыг Эрдэнэ суманд '
+            ->assertSee('Дорноговь аймгийн СХЗХ-ын Эрчим хүчний хяналтын улсын байцаагч Н.Гарамжавыг Эрдэнэ суманд '
                 .'албан ажлаар 2026 оны 9 дүгээр сарын 8-ны өдрөөс 2 хоног ажиллуулахаар томилов.');
     }
 
@@ -187,7 +187,7 @@ class AssignmentCertificateTest extends TestCase
         $this->actingAs($admin)
             ->get(route('assignments.sheet', $row))
             ->assertOk()
-            ->assertSee('Төрийн захиргааны удирдлагын хэлтсийн')
+            ->assertSee('Дорноговь аймгийн Төрийн захиргааны удирдлагын хэлтсийн')
             ->assertDontSee('хэлтэс-ын');
     }
 
@@ -229,6 +229,29 @@ class AssignmentCertificateTest extends TestCase
                 ->assertOk()
                 ->assertSee($expected);
         }
+    }
+
+    public function test_an_org_that_already_names_the_aimag_is_left_alone(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'Намсрайн Гарамжав',
+            'position' => 'Мэргэжилтэн',
+            'org_name' => 'Дорноговь аймгийн ЗДТГ',
+        ]);
+
+        $row = $this->assignment([
+            'person_name' => 'Н.Гарамжав',
+            'certificate_text' => null,
+        ]);
+
+        // Давхардуулахгүй.
+        $this->actingAs($admin)
+            ->get(route('assignments.sheet', $row))
+            ->assertOk()
+            ->assertSee('Дорноговь аймгийн ЗДТГ-ын')
+            ->assertDontSee('Дорноговь аймгийн Дорноговь');
     }
 
     public function test_the_purpose_reads_as_ajlaar(): void

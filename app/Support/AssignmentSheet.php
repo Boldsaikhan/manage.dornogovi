@@ -225,7 +225,7 @@ class AssignmentSheet
         $position = trim((string) $assignment->position)
             ?: (string) (PhoneDirectoryEntry::positionFor($name) ?? '');
 
-        $org = trim((string) (PhoneDirectoryEntry::orgFor($name) ?? '')) ?: 'Дорноговь аймгийн ЗДТГ';
+        $org = self::withAimag(trim((string) (PhoneDirectoryEntry::orgFor($name) ?? '')) ?: 'ЗДТГ');
 
         // Байгууллагын нэрийг харьяалахын тийн ялгалд оруулна.
         $parts = [MongolianCase::genitive($org)];
@@ -274,6 +274,22 @@ class AssignmentSheet
         $parts[] = 'ажиллуулахаар томилов.';
 
         return implode(' ', $parts);
+    }
+
+    /**
+     * Байгууллагын нэрийн өмнө «Дорноговь аймгийн» гэж нэмнэ.
+     *
+     * Нэрэндээ аль хэдийн байвал давхардуулахгүй.
+     */
+    public static function withAimag(string $org): string
+    {
+        $org = trim($org);
+
+        if ($org === '') {
+            return '';
+        }
+
+        return str_contains(mb_strtolower($org), 'дорноговь') ? $org : 'Дорноговь аймгийн '.$org;
     }
 
     /**
