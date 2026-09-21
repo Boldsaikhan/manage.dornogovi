@@ -277,9 +277,11 @@ class AssignmentSheet
     }
 
     /**
-     * Байгууллагын нэрийн өмнө «Дорноговь аймгийн» гэж нэмнэ.
+     * Байгууллагын нэрийн өмнөх хэсгийг нэмнэ.
      *
-     * Нэрэндээ аль хэдийн байвал давхардуулахгүй.
+     * Хэлтэс бол «Дорноговь аймгийн Засаг даргын», бусад байгууллага бол
+     * «Дорноговь аймгийн» гэж бичнэ. Нэрэндээ аль хэдийн байвал
+     * давхардуулахгүй.
      */
     public static function withAimag(string $org): string
     {
@@ -289,7 +291,13 @@ class AssignmentSheet
             return '';
         }
 
-        return str_contains(mb_strtolower($org), 'дорноговь') ? $org : 'Дорноговь аймгийн '.$org;
+        if (str_contains(mb_strtolower($org), 'дорноговь')) {
+            return $org;
+        }
+
+        return PhoneDirectoryEntry::looksLikeDepartment($org)
+            ? 'Дорноговь аймгийн Засаг даргын '.$org
+            : 'Дорноговь аймгийн '.$org;
     }
 
     /**
