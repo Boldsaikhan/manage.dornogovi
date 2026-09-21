@@ -984,11 +984,12 @@ class DecreeController extends Controller
         abort_unless(ModuleOwnScope::allows($request->user(), 'decrees', $decree), 403);
         abort_if($decree->category === 'blank' || $decree->kind === 'blank', 422);
 
-        // Зөвхөн PDF. Хэтэрсэн файлыг хөтөч дээр нь 2MB хүртэл шахаж илгээдэг.
+        // Зөвхөн PDF. Хэтэрсэн файлыг хөтөч дээр нь 5MB хүртэл шахаж илгээдэг.
         $request->validate([
-            'image' => ['required', 'file', 'mimetypes:application/pdf', 'mimes:pdf', 'max:2048'],
+            // 5MB. Түүнээс хэтэрсэн файлыг хөтөч дээр нь шахаж явуулна.
+            'image' => ['required', 'file', 'mimetypes:application/pdf', 'mimes:pdf', 'max:5120'],
         ], [
-            'image.max' => 'Файлын хэмжээ 2MB-аас хэтрэхгүй байх ёстой.',
+            'image.max' => 'Файлын хэмжээ 5MB-аас хэтрэхгүй байх ёстой.',
             'image.mimes' => 'Зөвхөн PDF файл оруулна уу.',
             'image.mimetypes' => 'Зөвхөн PDF файл оруулна уу.',
         ]);

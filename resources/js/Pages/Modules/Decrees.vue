@@ -494,7 +494,7 @@ const destroyRow = (id) => {
     router.delete(route('decrees.destroy', id), { preserveScroll: true });
 };
 
-const MAX_FILE_BYTES = 2 * 1024 * 1024;
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
 /** PDF-ийг оруулж байгаа мөр — товч дээр «Боловсруулж байна» гэж харуулна. */
 const compressingId = ref(null);
@@ -522,7 +522,7 @@ const onImagePicked = async (event) => {
     try {
         let ready = file;
 
-        // 2MB-аас хэтэрсэн бол хөтөч дээр нь шахаж багтаана.
+        // 5MB-аас хэтэрсэн бол хөтөч дээр нь шахаж багтаана.
         if (file.size > MAX_FILE_BYTES) {
             compressingId.value = id;
             const { compressPdfToLimit } = await import('@/Support/pdfCompress.js');
@@ -1339,7 +1339,7 @@ const docColumnCount = computed(() => {
                                         v-if="canManage && editMode"
                                         type="button"
                                         class="inline-flex h-7 w-7 items-center justify-center rounded text-slate-500 transition hover:bg-brand-navy-50 hover:text-brand-navy-700"
-                                        :title="compressingId === row.id ? 'Шахаж байна…' : 'PDF оруулах (2MB хүртэл автоматаар шахна)'"
+                                        :title="compressingId === row.id ? 'Шахаж байна…' : 'PDF оруулах (5MB хүртэл автоматаар шахна)'"
                                         :aria-label="compressingId === row.id ? 'Шахаж байна' : 'PDF оруулах'"
                                         :disabled="compressingId === row.id"
                                         @click="pickImage(row.id)"

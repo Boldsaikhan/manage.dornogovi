@@ -295,12 +295,23 @@ class DecreeStandardColumnsTest extends TestCase
             ])
             ->assertSessionHasErrors('image');
 
-        // 2MB-аас хэтэрсэн PDF-ийг хөтөч дээр нь шахах ёстой — сервер хүлээж авахгүй.
+        // 5MB-аас хэтэрсэн PDF-ийг хөтөч дээр нь шахах ёстой — сервер хүлээж авахгүй.
         $this->actingAs($admin)
             ->post(route('decrees.image.upload', $decree), [
-                'image' => UploadedFile::fake()->create('том.pdf', 3000, 'application/pdf'),
+                'image' => UploadedFile::fake()->create('том.pdf', 6000, 'application/pdf'),
             ])
             ->assertSessionHasErrors('image');
+
+        // 5MB хүртэлх PDF нь ороход асуудалгүй.
+        $this->actingAs($admin)
+            ->post(route('decrees.image.upload', $decree), [
+                'image' => UploadedFile::fake()->create('болох.pdf', 4000, 'application/pdf'),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertNotNull($decree->fresh()->file_path);
+
+        $decree->forceFill(['file_path' => null])->save();
 
         $this->assertNull($decree->fresh()->file_path);
     }
