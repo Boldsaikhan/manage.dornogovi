@@ -25,7 +25,7 @@
 
         body {
             margin: 0;
-            font-family: "{{ $format['font'] }}", "Times New Roman", Times, serif;
+            font-family: "{{ $format['font'] }}", Arial, Helvetica, sans-serif;
             font-size: {{ $format['size'] }}pt;
             line-height: {{ $format['spacing'] }};
             color: #000;

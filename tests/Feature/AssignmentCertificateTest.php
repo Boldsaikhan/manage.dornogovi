@@ -255,6 +255,20 @@ class AssignmentCertificateTest extends TestCase
             ->assertSee('font-family: "Arial"', false);
     }
 
+    public function test_the_sheet_falls_back_to_arial(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        // Стандарт тохируулаагүй ч Arial-аар хэвлэнэ.
+        \App\Models\DocumentFormat::query()->delete();
+
+        $this->actingAs($admin)
+            ->get(route('assignments.sheet', $this->assignment()))
+            ->assertOk()
+            ->assertSee('font-family: "Arial", Arial, Helvetica, sans-serif', false)
+            ->assertDontSee('Times New Roman');
+    }
+
     public function test_the_approval_block_stays_in_the_right_half(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
