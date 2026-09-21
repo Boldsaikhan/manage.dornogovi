@@ -215,6 +215,8 @@
 
         .cert__edit button[disabled] { opacity: .6; cursor: default; }
 
+        .cert__edit button.ghost { background: #fff; color: #1e3a5f; }
+
         .cert__title {
             margin-top: 28mm;
             text-align: center;
@@ -419,6 +421,7 @@
             @if ($canEdit)
                 <div class="cert__edit">
                     <button type="button" id="cert-save">Хадгалах</button>
+                    <button type="button" id="cert-reset" class="ghost">Дахин үүсгэх</button>
                     <span id="cert-status">Бичвэр дээр дарж засна.</span>
                 </div>
             @endif
@@ -578,6 +581,37 @@
                 certStatus.textContent = 'Сүлжээгүй байна.';
             } finally {
                 certSave.disabled = false;
+            }
+        });
+
+        // Хадгалсан бичвэрийг устгаад бүртгэлээс өгүүлбэрийг дахин бүрдүүлнэ.
+        const certReset = document.getElementById('cert-reset');
+
+        certReset?.addEventListener('click', async () => {
+            if (! confirm('Бичвэрийг бүртгэлийн мэдээллээс дахин үүсгэх үү?')) {
+                return;
+            }
+
+            certReset.disabled = true;
+            certStatus.textContent = 'Дахин үүсгэж байна…';
+
+            try {
+                await fetch(@json(route('assignments.sheet.text', $assignment)), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ _method: 'PATCH', certificate_text: '' }),
+                });
+
+                saved = '';
+                location.reload();
+            } catch (e) {
+                certStatus.textContent = 'Сүлжээгүй байна.';
+                certReset.disabled = false;
             }
         });
 
