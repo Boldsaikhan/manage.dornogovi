@@ -60,7 +60,8 @@
             max-width: 52%;
             text-align: left;
             text-transform: uppercase;
-            font-weight: bold;
+            /* Тодруулахгүй — цаасан маягтын энгийн бичвэр. */
+            font-weight: normal;
             line-height: 1.35;
         }
 
@@ -182,7 +183,7 @@
             display: block;
             max-width: 100%;
             margin-top: 8mm;
-            font-weight: bold;
+            font-weight: normal;
             text-transform: uppercase;
             line-height: 1.35;
             font-size: 10.5pt;
