@@ -290,19 +290,19 @@ const pickerClass = 'w-auto border-0 border-b border-dotted border-black bg-tran
         </p>
         <!-- БАТЛАВ -->
         <!-- Өргөн нь хамгийн урт мөрөөрөө — нэр нь тэр мөрийн ирмэгтэй тэнцэнэ. -->
-        <div class="ml-auto w-fit text-[12px] font-bold uppercase leading-snug">
+        <div class="ml-auto w-fit max-w-[52%] text-[12px] font-bold uppercase leading-snug">
             <!-- «БАТЛАВ» нь доорх бичвэрийнхээ голд байрлана. -->
             <span class="block text-center">БАТЛАВ</span>
             <template v-for="(line, i) in headLines()" :key="i">
-                <span class="whitespace-nowrap">{{ line }}</span><br />
+                <span>{{ line }}</span><br />
             </template>
-            <div v-if="sideBySide()" class="flex items-end justify-between gap-10">
-                <span class="whitespace-nowrap">{{ lastLine() }}</span>
-                <select v-if="leaders().length" v-model="form.approved_by" :class="pickerClass">
+            <div v-if="sideBySide()" class="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
+                <span>{{ lastLine() }}</span>
+                <select v-if="leaders().length" v-model="form.approved_by" :class="pickerClass + ' ml-auto'">
                     <option value="">— сонгох —</option>
                     <option v-for="[name] in leaders()" :key="name" :value="name">{{ name }}</option>
                 </select>
-                <span v-else class="whitespace-nowrap">{{ signerName() }}</span>
+                <span v-else class="ml-auto whitespace-nowrap">{{ signerName() }}</span>
             </div>
             <div v-else class="mt-3 text-right">
                 <select v-if="leaders().length" v-model="form.approved_by" :class="pickerClass">

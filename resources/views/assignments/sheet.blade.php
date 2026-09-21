@@ -56,6 +56,8 @@
 
         .approve {
             display: inline-block;
+            /* Цаасны баруун хагасаас хэтрэхгүй — хэтэрвэл доод мөрөнд орно. */
+            max-width: 52%;
             text-align: left;
             text-transform: uppercase;
             font-weight: bold;
@@ -65,7 +67,8 @@
         /* «БАТЛАВ» нь доорх бичвэрийнхээ голд байрлана. */
         .approve__title { display: block; text-align: center; }
 
-        .approve__line { white-space: nowrap; }
+        /* Богино мөр тасрахгүй, урт мөр л доошоо шилжинэ. */
+        .approve__line { white-space: normal; }
 
         /*
          * Сүүлийн мөр: зүүн талд албан тушаал, баруун талд нэр. Голын зай
@@ -73,9 +76,13 @@
          */
         .signrow {
             display: flex;
+            flex-wrap: wrap;
             justify-content: space-between;
-            gap: 20mm;
+            gap: 6mm;
+            row-gap: 2mm;
         }
+
+        .signrow .name { margin-left: auto; }
 
         .signrow .name { white-space: nowrap; }
 
