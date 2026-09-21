@@ -283,6 +283,20 @@ class AssignmentCertificateTest extends TestCase
         $this->assertStringContainsString('.approve__line { white-space: normal; }', $html);
     }
 
+    public function test_the_two_columns_end_at_the_same_height(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $html = $this->actingAs($admin)
+            ->get(route('assignments.sheet', $this->assignment()))
+            ->assertOk()
+            ->getContent();
+
+        // Гарын үсэг ба «Зөвшөөрсөн дарга» нэг өндрөөс эхэлнэ.
+        $this->assertSame(2, substr_count($html, 'class="cert__foot"'));
+        $this->assertStringContainsString('min-height: 36mm', $html);
+    }
+
     public function test_a_typed_sentence_is_kept(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

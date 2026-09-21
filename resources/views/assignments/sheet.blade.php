@@ -140,10 +140,25 @@
 
         /* ── Албан томилолтын үнэмлэх (ар тал) ───────────────────── */
 
-        .cert { display: flex; gap: 10mm; }
+        .cert { display: flex; gap: 10mm; align-items: stretch; }
 
         /* min-width: 0 — багана доторх урт мөр хажуу тийш халихгүй. */
-        .cert__col { width: 50%; min-width: 0; }
+        .cert__col {
+            width: 50%;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /*
+         * Хоёр баганын доод хэсэг (гарын үсэг ба «Зөвшөөрсөн дарга») нэг
+         * өндрөөс эхэлнэ. Тогтмол өндөр өгснөөр агуулга нь ялгаатай ч
+         * дээд ирмэг нь тэнцэнэ.
+         */
+        .cert__foot {
+            margin-top: auto;
+            min-height: 36mm;
+        }
 
         .cert__number { text-align: center; font-weight: bold; margin-bottom: 5mm; }
 
@@ -331,11 +346,13 @@
                 Албан томилолтын ажлын дүнг эх зардлыг ………хувиар тооцоо хийхийг зөвшөөрсөн.
             </div>
 
-            <div class="cert__signer">
-                {!! $signerBlock($lines, (string) $signerName) !!}
-            </div>
+            <div class="cert__foot">
+                <div class="cert__signer">
+                    {!! $signerBlock($lines, (string) $signerName) !!}
+                </div>
 
-            <div class="cert__date">………. оны …… сар …… өдөр</div>
+                <div class="cert__date">………. оны …… сар …… өдөр</div>
+            </div>
         </div>
 
         <div class="cert__col">
@@ -367,7 +384,7 @@
                 ……. хоногоор сунгав.
             </div>
 
-            <div style="margin-top:10mm">Зөвшөөрсөн дарга &nbsp;..................................</div>
+            <div class="cert__foot">Зөвшөөрсөн дарга &nbsp;..................................</div>
         </div>
     </div>
 </div>
