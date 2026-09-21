@@ -234,7 +234,8 @@ class AssignmentSheet
             $parts[] = $position;
         }
 
-        $parts[] = $name;
+        // Нэрэнд заахын тийн ялгал: «Д.Батцэцэг» → «Д.Батцэцэгийг».
+        $parts[] = MongolianCase::accusative($name);
 
         $where = trim((string) $assignment->destination);
 

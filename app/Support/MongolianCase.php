@@ -163,6 +163,77 @@ class MongolianCase
         self::$cache = null;
     }
 
+    /**
+     * Заахын тийн ялгал — «-ыг / -ийг / -г».
+     *
+     * Хүний нэрэнд хэрэглэнэ: «Д.Батцэцэг» → «Д.Батцэцэгийг»,
+     * «Ш.Алимаа» → «Ш.Алимааг», «А.Уянга» → «А.Уянгыг».
+     */
+    public static function accusative(string $name): string
+    {
+        $name = trim($name);
+
+        if ($name === '') {
+            return '';
+        }
+
+        // Аль хэдийн залгасан бол дахин залгахгүй.
+        foreach (['ыг', 'ийг'] as $ending) {
+            if (mb_strlen($name) > mb_strlen($ending) + 1 && str_ends_with(mb_strtolower($name), $ending)) {
+                return $name;
+            }
+        }
+
+        $lower = mb_strtolower($name);
+        $last = mb_substr($lower, -1);
+        $prev = mb_strlen($lower) > 1 ? mb_substr($lower, -2, 1) : '';
+
+        // Зөөлний тэмдэг: «Сувдмаль» → «Сувдмалийг».
+        if ($last === 'ь') {
+            return mb_substr($name, 0, -1).'ийг';
+        }
+
+        // и, й, ы-гаар төгссөн: «Дэлгэрхүү» биш «Гэрэлтий» → «-г».
+        if (in_array($last, ['й', 'и', 'ы'], true)) {
+            return $name.'г';
+        }
+
+        if (in_array($last, self::VOWELS, true)) {
+            // Урт эгшиг хэвээрээ: «Алимаа» → «Алимааг».
+            if ($prev === $last) {
+                return $name.'г';
+            }
+
+            /*
+             * Богино эгшиг унана: «Уянга» → «Уянгыг».
+             *
+             * Эгшгээ алдсан иш нь «г»-ээр төгссөн ч зохицлоор нь шийднэ —
+             * «Уянгийг» биш «Уянгыг».
+             */
+            $stem = mb_substr($name, 0, -1);
+
+            return $stem.(self::isBack($name) ? 'ыг' : 'ийг');
+        }
+
+        return $name.self::accusativeSuffix($name);
+    }
+
+    /** Ишний төгсгөлөөс хамаарч «ыг» эсвэл «ийг». */
+    private static function accusativeSuffix(string $stem): string
+    {
+        return self::softEnding($stem) || ! self::isBack($stem) ? 'ийг' : 'ыг';
+    }
+
+    /**
+     * Зөөлөн төгсгөл — эгшгийн зохицлыг үл хамааран «ий» авна.
+     *
+     * «Дорж» → «Доржийг / Доржийн», «аймаг» → «аймгийн».
+     */
+    private static function softEnding(string $stem): bool
+    {
+        return in_array(mb_substr(mb_strtolower($stem), -1), ['ж', 'ч', 'ш', 'щ', 'г', 'и', 'ь'], true);
+    }
+
     /** Товчлол эсэх — үсэг нь бүгд том. */
     private static function isAbbreviation(string $word): bool
     {
@@ -230,13 +301,14 @@ class MongolianCase
                 return $word.($back ? 'ны' : 'ний');
             }
 
-            return $word.($back ? 'гын' : 'гийн');
+            // Богино эгшиг унана: «Уянга» → «Уянгын».
+            return mb_substr($word, 0, -1).($back ? 'ын' : 'ийн');
         }
 
         $stem = self::dropUnstable($word);
 
-        // г-ээр төгссөн үгэнд үргэлж «ийн»: «аймаг» → «аймгийн».
-        if (mb_substr($stem, -1) === 'г') {
+        // ж, ч, ш, г зэрэг зөөлөн төгсгөлд үргэлж «ийн»: «Дорж» → «Доржийн».
+        if (self::softEnding($stem)) {
             return $stem.'ийн';
         }
 
