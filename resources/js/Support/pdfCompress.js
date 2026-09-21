@@ -3,7 +3,41 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 import { buildPdfFromJpegs } from '@/Support/jpegPdf.js';
 
-pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+/**
+ * pdf.js-ийн worker-ийг ачаална.
+ *
+ * Сервер «.mjs» өргөтгөлийг «application/octet-stream» гэж илгээдэг бол
+ * хөтөч модуль болгон ачаалахаас татгалздаг («Failed to fetch dynamically
+ * imported module»). Тиймээс файлыг өөрсдөө татаж, зөв төрөлтэй Blob
+ * болгоод өгнө. Татаж чадаагүй бол шууд хаягаар нь оролдоно.
+ */
+let workerReady = null;
+
+const prepareWorker = () => {
+    if (workerReady) {
+        return workerReady;
+    }
+
+    workerReady = (async () => {
+        try {
+            const response = await fetch(workerUrl);
+
+            if (! response.ok) {
+                throw new Error('worker unavailable');
+            }
+
+            const code = await response.text();
+
+            pdfjs.GlobalWorkerOptions.workerSrc = URL.createObjectURL(
+                new Blob([code], { type: 'text/javascript' }),
+            );
+        } catch (e) {
+            pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+        }
+    })();
+
+    return workerReady;
+};
 
 /**
  * Хэмжээ хэтэрсэн PDF-ийг хязгаарт багтаана.
@@ -82,6 +116,8 @@ export async function compressPdfToLimit(file, maxBytes) {
         return file;
     }
 
+    await prepareWorker();
+
     const data = new Uint8Array(await file.arrayBuffer());
     const doc = await pdfjs.getDocument({ data, isEvalSupported: false }).promise;
 
@@ -103,7 +139,9 @@ export async function compressPdfToLimit(file, maxBytes) {
         }
 
         if (! best || best.size > maxBytes) {
-            throw new Error('Файлыг 2MB хүртэл шахаж чадсангүй. Хуудсыг нь цөөрүүлж оролдоно уу.');
+            const limit = Math.round(maxBytes / (1024 * 1024));
+
+            throw new Error(`Файлыг ${limit}MB хүртэл шахаж чадсангүй. Хуудсыг нь цөөрүүлж оролдоно уу.`);
         }
 
         const name = (file.name.replace(/\.[^.]+$/, '') || 'decree') + '.pdf';
