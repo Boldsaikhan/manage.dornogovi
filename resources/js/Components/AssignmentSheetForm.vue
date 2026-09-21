@@ -145,7 +145,7 @@ const dayCount = () => {
 
 // «БАТЛАВ» доторх сонголт — хэвлэгдэх нэртэй ижил харагдана.
 const pickerClass = 'w-auto border-0 border-b border-dotted border-black bg-transparent p-0 pr-5 '
-    + 'font-serif text-[12px] font-bold uppercase focus:border-brand-navy-600 focus:ring-0';
+    + 'font-serif text-[12px] uppercase focus:border-brand-navy-600 focus:ring-0';
 </script>
 
 <template>
@@ -229,7 +229,7 @@ const pickerClass = 'w-auto border-0 border-b border-dotted border-black bg-tran
                     Албан томилолтын ажлын дүнг эх зардлыг ………хувиар тооцоо хийхийг зөвшөөрсөн.
                 </p>
 
-                <div class="mt-6 max-w-full text-[12px] font-bold uppercase leading-snug">
+                <div class="mt-6 max-w-full text-[12px] uppercase leading-snug">
                     <template v-for="(line, i) in headLines()" :key="'c1-' + i">{{ line }}<br /></template>
                     <div v-if="sideBySide()" class="flex flex-wrap justify-between gap-x-4 gap-y-1">
                         <span>{{ lastLine() }}</span>
@@ -258,7 +258,7 @@ const pickerClass = 'w-auto border-0 border-b border-dotted border-black bg-tran
                 />
                 <InputError :message="form.errors.certificate_text" />
 
-                <div class="mt-6 max-w-full text-[12px] font-bold uppercase leading-snug">
+                <div class="mt-6 max-w-full text-[12px] uppercase leading-snug">
                     <template v-for="(line, i) in headLines()" :key="'c2-' + i">{{ line }}<br /></template>
                     <div v-if="sideBySide()" class="flex flex-wrap justify-between gap-x-4 gap-y-1">
                         <span>{{ lastLine() }}</span>
@@ -290,7 +290,7 @@ const pickerClass = 'w-auto border-0 border-b border-dotted border-black bg-tran
         </p>
         <!-- БАТЛАВ -->
         <!-- Өргөн нь хамгийн урт мөрөөрөө — нэр нь тэр мөрийн ирмэгтэй тэнцэнэ. -->
-        <div class="ml-auto w-fit max-w-[52%] text-[12px] font-bold uppercase leading-snug">
+        <div class="ml-auto w-fit max-w-[52%] text-[12px] uppercase leading-snug">
             <!-- «БАТЛАВ» нь доорх бичвэрийнхээ голд байрлана. -->
             <span class="block text-center">БАТЛАВ</span>
             <template v-for="(line, i) in headLines()" :key="i">
