@@ -246,6 +246,37 @@ const submit = () => {
     });
 };
 
+/* ── Бүлгийн гарчиг засах ────────────────────────────────────────── */
+
+const renamingGroup = ref(null);
+const groupName = ref('');
+
+const startRenameGroup = (group) => {
+    renamingGroup.value = group.org_name;
+    groupName.value = group.org_name;
+};
+
+const cancelRenameGroup = () => {
+    renamingGroup.value = null;
+    groupName.value = '';
+};
+
+const saveGroupName = () => {
+    const next = groupName.value.trim();
+
+    if (! renamingGroup.value || next === '' || next === renamingGroup.value) {
+        cancelRenameGroup();
+
+        return;
+    }
+
+    router.patch(
+        route('phone-directory.group'),
+        { org_name: renamingGroup.value, new_name: next },
+        { preserveScroll: true, onFinish: cancelRenameGroup },
+    );
+};
+
 const changeCategory = (orgName, category) => {
     router.patch(
         route('phone-directory.category'),
@@ -623,7 +654,28 @@ const closeDirectoryForm = () => {
                                         title="Чирж байрлуулна"
                                         @pointerdown="startDrag($event, { kind: 'group', org: group.org_name })"
                                     >⠿</span>
-                                    {{ group.org_name }}
+                                    <!-- Гарчгийг эндээс шууд засна. -->
+                                    <input
+                                        v-if="renamingGroup === group.org_name"
+                                        v-model="groupName"
+                                        type="text"
+                                        class="w-[26rem] max-w-full rounded-lg border-slate-300 px-2 py-0.5 text-sm font-semibold not-italic text-brand-navy-900"
+                                        autofocus
+                                        @keyup.enter="saveGroupName"
+                                        @keyup.esc="cancelRenameGroup"
+                                        @blur="saveGroupName"
+                                    />
+                                    <button
+                                        v-else-if="editingActive"
+                                        type="button"
+                                        class="rounded px-1 hover:bg-white/70"
+                                        title="Гарчгийг засах"
+                                        @click="startRenameGroup(group)"
+                                    >
+                                        {{ group.org_name }}
+                                        <span class="ml-1 text-[11px] not-italic text-slate-400">✎</span>
+                                    </button>
+                                    <template v-else>{{ group.org_name }}</template>
                                     <span v-if="canInsert" class="ml-2 inline-flex align-middle">
                                         <button
                                             type="button"

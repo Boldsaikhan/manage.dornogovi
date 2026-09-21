@@ -248,6 +248,49 @@ class PhoneDirectoryController extends Controller
     /**
      * Байгууллагын ангиллыг (агентлаг/сум/байгууллага) бүлгээр нь солино.
      */
+    /**
+     * Бүлгийн гарчиг (байгууллага/хэлтсийн нэр) солино.
+     *
+     * Тухайн бүлгийн бүх мөрд нэг дор тусна.
+     */
+    public function renameGroup(Request $request): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
+
+        $data = $request->validate([
+            'org_name' => ['required', 'string', 'max:255'],
+            'new_name' => ['required', 'string', 'max:255'],
+        ], [], [
+            'org_name' => 'хуучин нэр',
+            'new_name' => 'шинэ нэр',
+        ]);
+
+        $old = trim($data['org_name']);
+        $new = trim($data['new_name']);
+
+        if ($new === $old) {
+            return back();
+        }
+
+        $rows = PhoneDirectoryEntry::query()->where('org_name', $old);
+
+        if (! $rows->exists()) {
+            return back()->withErrors(['new_name' => 'Ийм нэртэй бүлэг олдсонгүй.']);
+        }
+
+        // Өөр бүлэгтэй нэрээ давхцуулбал хоёр бүлэг нийлнэ — сануулна.
+        $merging = PhoneDirectoryEntry::query()->where('org_name', $new)->exists();
+
+        $rows->update(['org_name' => $new]);
+
+        return back()->with(
+            'success',
+            $merging
+                ? sprintf('«%s» нэрийг «%s» болгож, хоёр бүлгийг нийлүүллээ.', $old, $new)
+                : sprintf('«%s» → «%s» болголоо.', $old, $new),
+        );
+    }
+
     public function updateCategory(Request $request): RedirectResponse
     {
         abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
