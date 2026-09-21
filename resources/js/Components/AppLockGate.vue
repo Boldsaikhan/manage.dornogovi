@@ -471,15 +471,14 @@ const finishUnlock = async () => {
     router.reload({ only: ['appLock', 'vault'] });
 };
 
-const handleUnlockError = (e, fallback = 'Түгжээ тайлагдахгүй байна.') => {
+/** Алдааг хүнд ойлгомжтой бичвэр болгоно. */
+const unlockErrorMessage = (e, fallback = 'Түгжээ тайлагдахгүй байна.') => {
     if (e?.response?.status === 419) {
-        error.value = 'Холболтын хугацаа дууссан. Хуудас шинэчлэгдэж байна…';
-        return;
+        return 'Холболтын хугацаа дууссан. Хуудас шинэчлэгдэж байна…';
     }
 
     if (! navigator.onLine) {
-        error.value = 'Сүлжээгүй байна. Холбогдсоны дараа дахин оролдоно уу.';
-        return;
+        return 'Сүлжээгүй байна. Холбогдсоны дараа дахин оролдоно уу.';
     }
 
     const message = e?.response?.data?.errors?.password?.[0]
@@ -487,14 +486,16 @@ const handleUnlockError = (e, fallback = 'Түгжээ тайлагдахгүй 
         || e?.response?.data?.message;
 
     if (message) {
-        error.value = message;
-
-        return;
+        return message;
     }
 
     // Серверийн тайлбар байхгүй бол хөтчийн алдааны нэрийг хавсаргана —
     // ямар шалтгаанаар болохгүй байгааг хэлж өгөх боломжтой болно.
-    error.value = e?.name ? `${fallback} (${e.name})` : fallback;
+    return e?.name ? `${fallback} (${e.name})` : fallback;
+};
+
+const handleUnlockError = (e, fallback = 'Түгжээ тайлагдахгүй байна.') => {
+    error.value = unlockErrorMessage(e, fallback);
 };
 
 const unlock = async () => {
@@ -633,9 +634,16 @@ const unlockBiometric = async ({ skipSetupCheck = false, auto = false } = {}) =>
         const name = e?.name || '';
 
         if (auto) {
-            // Автоматаар нээх оролдлогыг хөтөч зөвшөөрөөгүй, эсвэл хэрэглэгч
-            // цуцалсан байж болно — бүртгэлийг нь арилгахгүй, товчоор дахин оролдоно.
-            error.value = '';
+            /*
+             * Автомат оролдлого бүтсэнгүй.
+             *
+             * Урьд нь алдааг нууж, дэлгэц хөдөлгөөнгүй үлддэг тул хэрэглэгч
+             * юу болсныг мэдэхгүй байв. Бүртгэлийг нь арилгахгүй ч шалтгааныг
+             * нь хэлж, товчоор дахин оролдохыг санал болгоно.
+             */
+            error.value = /NotAllowedError|AbortError/i.test(name)
+                ? 'Баталгаажуулалт дуусгагдсангүй. «Хуруу / царайгаар нээх» дарж дахин оролдоно уу.'
+                : unlockErrorMessage(e, 'Баталгаажуулж чадсангүй. Дахин оролдох, эсвэл нууц үгээрээ нээнэ үү.');
         } else if (/NotAllowedError|AbortError/i.test(name)) {
             clearWebAuthnDeviceHint();
             localWebAuthn.value = false;

@@ -210,16 +210,24 @@ class WebAuthnService
 
         $request->session()->put('webauthn.expected_user_id', $user->id);
 
-        // Энэ утсан дээрх credential ID-аар олно (discoverable биш хуучин passkey-д ч ажиллана).
+        /*
+         * Энэ утсан дээрх credential ID-аар олно (discoverable биш хуучин
+         * passkey-д ч ажиллана).
+         *
+         * Бүх төрлийн баталгаажуулагчийг зөвшөөрнө. Урьд нь зөвхөн
+         * «internal» гэж хязгаарладаг байсан тул Google Password Manager,
+         * iCloud Keychain-д хадгалагдсан passkey олдохгүй, хуруу уншуулсан
+         * ч нээгддэггүй байв.
+         */
         $args = $webauthn->getGetArgs(
             $ids,
             120,
-            false,
-            false,
-            false,
-            false,
-            true,
-            'preferred'
+            allowUsb: true,
+            allowNfc: true,
+            allowBle: true,
+            allowHybrid: true,
+            allowInternal: true,
+            requireUserVerification: 'preferred',
         );
 
         $challenge = $webauthn->getChallenge();
