@@ -11,7 +11,7 @@
         body {
             margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
             background: #f4f6f9; color: #2a3445; padding: 1.5rem;
-            font-family: Figtree, ui-sans-serif, system-ui, "Segoe UI", Arial, sans-serif;
+            font-family: Arial, Helvetica, "Segoe UI", sans-serif;
         }
         .card {
             width: 100%; max-width: 26rem; background: #fff; border: 1px solid #e2e7ef;

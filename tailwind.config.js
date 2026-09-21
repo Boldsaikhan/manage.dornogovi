@@ -13,7 +13,9 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Manrope', 'Segoe UI', ...defaultTheme.fontFamily.sans],
+                // Албан бичгийн стандартын дагуу бүх текст Arial.
+                sans: ['Arial', 'Helvetica', 'Segoe UI', ...defaultTheme.fontFamily.sans],
+                serif: ['Arial', 'Helvetica', ...defaultTheme.fontFamily.sans],
             },
             boxShadow: {
                 panel: '0 20px 40px -20px rgb(28 85 165 / 0.18)',
