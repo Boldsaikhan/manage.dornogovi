@@ -157,7 +157,9 @@
          */
         .cert__foot {
             margin-top: auto;
-            min-height: 36mm;
+            /* Дээд талын бичвэрээс хоёр мөрийн зай авна. */
+            padding-top: 2em;
+            min-height: 44mm;
         }
 
         .cert__number { text-align: center; font-weight: bold; margin-bottom: 5mm; }
