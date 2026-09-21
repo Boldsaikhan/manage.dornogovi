@@ -255,6 +255,20 @@ class AssignmentCertificateTest extends TestCase
             ->assertSee('font-family: "Arial"', false);
     }
 
+    public function test_the_approval_block_stays_in_the_right_half(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $html = $this->actingAs($admin)
+            ->get(route('assignments.sheet', $this->assignment()))
+            ->assertOk()
+            ->getContent();
+
+        // Урт албан тушаал цаасны талаас хэтрэхгүй, доод мөрөнд шилжинэ.
+        $this->assertStringContainsString('max-width: 52%', $html);
+        $this->assertStringContainsString('.approve__line { white-space: normal; }', $html);
+    }
+
     public function test_a_typed_sentence_is_kept(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
