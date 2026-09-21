@@ -48,6 +48,39 @@ class MongolianCaseTest extends TestCase
         $this->assertSame($expected, MongolianCase::genitiveWord($word));
     }
 
+    /** @return array<string, array{string, string}> */
+    public static function names(): array
+    {
+        return [
+            // Гийгүүлэгчээр төгссөн — эгшгийн зохицлоор.
+            'Батцэцэг' => ['Д.Батцэцэг', 'Д.Батцэцэгийг'],
+            'Гарамжав' => ['Н.Гарамжав', 'Н.Гарамжавыг'],
+            'Мөнхбат' => ['М.Мөнхбат', 'М.Мөнхбатыг'],
+            'Номин' => ['А.Номин', 'А.Номиныг'],
+
+            // Зөөлөн төгсгөл — үргэлж «ийг».
+            'Дорж' => ['Б.Дорж', 'Б.Доржийг'],
+
+            // Урт эгшиг хэвээрээ.
+            'Алимаа' => ['Ш.Алимаа', 'Ш.Алимааг'],
+
+            // Богино эгшиг унана.
+            'Уянга' => ['А.Уянга', 'А.Уянгыг'],
+            'Мөнх-Эрдэнэ' => ['Ц.Мөнх-Эрдэнэ', 'Ц.Мөнх-Эрдэнийг'],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('names')]
+    public function test_the_accusative_is_built_correctly(string $name, string $expected): void
+    {
+        $this->assertSame($expected, MongolianCase::accusative($name));
+    }
+
+    public function test_an_already_inflected_name_is_left_alone(): void
+    {
+        $this->assertSame('Д.Батцэцэгийг', MongolianCase::accusative('Д.Батцэцэгийг'));
+    }
+
     public function test_only_the_last_word_of_a_phrase_changes(): void
     {
         $this->assertSame(

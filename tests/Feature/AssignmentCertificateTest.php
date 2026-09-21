@@ -164,7 +164,7 @@ class AssignmentCertificateTest extends TestCase
         $this->actingAs($admin)
             ->get(route('assignments.sheet', $row))
             ->assertOk()
-            ->assertSee('СХЗХ-ын Эрчим хүчний хяналтын улсын байцаагч Н.Гарамжав Эрдэнэ сум '
+            ->assertSee('СХЗХ-ын Эрчим хүчний хяналтын улсын байцаагч Н.Гарамжавыг Эрдэнэ сум '
                 .'албан ажлаар 2026 оны 9 дүгээр сарын 8-ны өдрөөс 2 хоног ажиллуулахаар томилов.');
     }
 
@@ -189,6 +189,22 @@ class AssignmentCertificateTest extends TestCase
             ->assertOk()
             ->assertSee('Төрийн захиргааны удирдлагын хэлтсийн')
             ->assertDontSee('хэлтэс-ын');
+    }
+
+    public function test_the_name_takes_the_accusative(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = $this->assignment([
+            'person_name' => 'Д.Батцэцэг',
+            'certificate_text' => null,
+        ]);
+
+        // «Д.Батцэцэг» биш «Д.Батцэцэгийг».
+        $this->actingAs($admin)
+            ->get(route('assignments.sheet', $row))
+            ->assertOk()
+            ->assertSee('Д.Батцэцэгийг');
     }
 
     public function test_the_purpose_reads_as_ajlaar(): void
