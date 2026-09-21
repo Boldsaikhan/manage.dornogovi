@@ -278,7 +278,10 @@ const pickerClass = 'w-auto border-0 border-b border-dotted border-black bg-tran
                     хугацааг ……. хоногоор сунгав.
                 </p>
 
-                <p class="mt-6 text-[12px]">Зөвшөөрсөн дарга &nbsp;..................................</p>
+                <p class="mt-6 flex items-end gap-2 whitespace-nowrap text-[12px]">
+                    <span>Зөвшөөрсөн дарга</span>
+                    <span class="h-4 flex-1 border-b border-dotted border-black" />
+                </p>
             </div>
         </div>
     </div>

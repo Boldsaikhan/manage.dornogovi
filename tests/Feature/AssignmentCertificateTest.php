@@ -293,10 +293,12 @@ class AssignmentCertificateTest extends TestCase
             ->getContent();
 
         // Гарын үсэг ба «Зөвшөөрсөн дарга» нэг өндрөөс эхэлнэ.
-        $this->assertSame(2, substr_count($html, 'class="cert__foot"'));
+        $this->assertSame(2, substr_count($html, 'class="cert__foot'));
         $this->assertStringContainsString('min-height: 44mm', $html);
         // Дээд талын бичвэрээс хоёр мөрийн зай.
         $this->assertStringContainsString('padding-top: 2em', $html);
+        // «Зөвшөөрсөн дарга» ба зураас нэг мөрөнд.
+        $this->assertStringContainsString('cert__approver', $html);
     }
 
     public function test_a_typed_sentence_is_kept(): void
