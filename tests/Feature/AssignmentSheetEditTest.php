@@ -60,6 +60,20 @@ class AssignmentSheetEditTest extends TestCase
             ->assertSee('ажиллуулахаар томилов.');
     }
 
+    public function test_the_page_sends_a_real_patch_request(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $html = $this->actingAs($admin)
+            ->get(route('assignments.sheet', $this->assignment()))
+            ->assertOk()
+            ->getContent();
+
+        // JSON биетэй үед «_method» спүүф ажилладаггүй.
+        $this->assertStringContainsString("method: 'PATCH'", $html);
+        $this->assertStringNotContainsString("_method: 'PATCH'", $html);
+    }
+
     public function test_a_viewer_cannot_edit_the_text(): void
     {
         $viewer = User::factory()->create(['is_admin' => false]);

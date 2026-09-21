@@ -549,6 +549,24 @@
     const certSave = document.getElementById('cert-save');
     const certStatus = document.getElementById('cert-status');
 
+    /*
+     * PATCH-ийг шууд илгээнэ.
+     *
+     * Урьд нь POST дээр «_method» гэж спүүф хийдэг байсан нь JSON биетэй
+     * үед Laravel уншдаггүй тул хүсэлт нь замдаа тохирохгүй, хадгалалт
+     * чимээгүй бүтэлгүйтдэг байв.
+     */
+    const sendCertText = (text) => fetch(@json(route('assignments.sheet.text', $assignment)), {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+        },
+        body: JSON.stringify({ certificate_text: text }),
+    });
+
     if (certBody && certSave) {
         let saved = certBody.innerText.trim();
 
@@ -557,19 +575,7 @@
             certStatus.textContent = 'Хадгалж байна…';
 
             try {
-                const response = await fetch(@json(route('assignments.sheet.text', $assignment)), {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        _method: 'PATCH',
-                        certificate_text: certBody.innerText.trim(),
-                    }),
-                });
+                const response = await sendCertText(certBody.innerText.trim());
 
                 if (response.ok) {
                     saved = certBody.innerText.trim();
@@ -596,16 +602,14 @@
             certStatus.textContent = 'Дахин үүсгэж байна…';
 
             try {
-                await fetch(@json(route('assignments.sheet.text', $assignment)), {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json',
-                    },
-                    body: JSON.stringify({ _method: 'PATCH', certificate_text: '' }),
-                });
+                const response = await sendCertText('');
+
+                if (! response.ok) {
+                    certStatus.textContent = 'Дахин үүсгэж чадсангүй.';
+                    certReset.disabled = false;
+
+                    return;
+                }
 
                 saved = '';
                 location.reload();
