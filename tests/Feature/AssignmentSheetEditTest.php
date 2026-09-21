@@ -15,16 +15,16 @@ class AssignmentSheetEditTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function assignment(): TravelAssignment
+    private function assignment(array $extra = []): TravelAssignment
     {
-        return TravelAssignment::create([
+        return TravelAssignment::create(array_merge([
             'approver' => 'chief',
             'person_name' => 'Н.Гарамжав',
             'destination' => 'Эрдэнэ сум',
             'start_date' => '2026-09-08',
             'end_date' => '2026-09-09',
             'status' => 'approved',
-        ]);
+        ], $extra));
     }
 
     public function test_an_editor_sees_the_editable_text(): void
@@ -36,6 +36,28 @@ class AssignmentSheetEditTest extends TestCase
             ->assertOk()
             ->assertSee('contenteditable="true"', false)
             ->assertSee('Хадгалах');
+    }
+
+    public function test_an_editor_can_rebuild_the_sentence(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        // Хуучин бичвэр хадгалагдсан мөр.
+        $row = $this->assignment(['certificate_text' => 'Хуучин бичвэр.']);
+
+        $this->actingAs($admin)
+            ->get(route('assignments.sheet', $row))
+            ->assertOk()
+            ->assertSee('Дахин үүсгэх');
+
+        $this->actingAs($admin)
+            ->from(route('assignments.sheet', $row))
+            ->patch(route('assignments.sheet.text', $row), ['certificate_text' => '']);
+
+        $this->actingAs($admin)
+            ->get(route('assignments.sheet', $row))
+            ->assertDontSee('Хуучин бичвэр.')
+            ->assertSee('ажиллуулахаар томилов.');
     }
 
     public function test_a_viewer_cannot_edit_the_text(): void
