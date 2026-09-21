@@ -209,6 +209,36 @@ class AssignmentCertificateTest extends TestCase
             ->assertDontSee('Сургалтын-аар');
     }
 
+    public function test_the_page_follows_the_document_standard(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        // Өмнө нь суусан стандарт байвал энэ тестэд саад болохгүй.
+        \App\Models\DocumentFormat::query()->delete();
+
+        \App\Models\DocumentFormat::create([
+            'key' => 'a4-albany',
+            'label' => 'A4 албан бичиг',
+            'width_mm' => 210,
+            'height_mm' => 297,
+            'margin_top_mm' => 20,
+            'margin_right_mm' => 10,
+            'margin_bottom_mm' => 20,
+            'margin_left_mm' => 30,
+            'font_name' => 'Arial',
+            'font_size_pt' => 12,
+            'line_spacing' => 1.5,
+            'is_default' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('assignments.sheet', $this->assignment()))
+            ->assertOk()
+            ->assertSee('size: 210mm 297mm', false)
+            ->assertSee('margin: 20mm 10mm 20mm 30mm', false)
+            ->assertSee('font-family: "Arial"', false);
+    }
+
     public function test_a_typed_sentence_is_kept(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

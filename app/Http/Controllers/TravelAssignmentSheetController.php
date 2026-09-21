@@ -34,6 +34,8 @@ class TravelAssignmentSheetController extends Controller
             'number' => $this->rowNumber($assignment),
             // Гараар бичээгүй бол бүртгэлээс өгүүлбэрийг нь бүрдүүлнэ.
             'certificateText' => AssignmentSheet::certificateText($assignment),
+            // Хуудасны хэмжээ, зай, фонтыг «Бичиг хэргийн стандарт»-аас авна.
+            'format' => $this->pageFormat(),
         ]);
     }
 
@@ -49,6 +51,31 @@ class TravelAssignmentSheetController extends Controller
             ->where('approver', $assignment->approver)
             ->where('id', '<=', $assignment->id)
             ->count();
+    }
+
+    /**
+     * Албан бичгийн стандартын хэмжээс.
+     *
+     * Тохируулаагүй бол MNS 5140-ийн нийтлэг утгаар (A4, зүүн 30мм,
+     * баруун 10мм, дээд/доод 20мм) явна.
+     *
+     * @return array<string, mixed>
+     */
+    private function pageFormat(): array
+    {
+        $format = \App\Models\DocumentFormat::defaultFormat();
+
+        return [
+            'width' => (float) ($format->width_mm ?? 210),
+            'height' => (float) ($format->height_mm ?? 297),
+            'top' => (float) ($format->margin_top_mm ?? 20),
+            'right' => (float) ($format->margin_right_mm ?? 10),
+            'bottom' => (float) ($format->margin_bottom_mm ?? 20),
+            'left' => (float) ($format->margin_left_mm ?? 30),
+            'font' => $format->font_name ?: 'Times New Roman',
+            'size' => (float) ($format->font_size_pt ?? 12),
+            'spacing' => (float) ($format->line_spacing ?? 1.4),
+        ];
     }
 
     /** «2026.09.01 — 2026.09.05» хэлбэрийн хугацаа. */

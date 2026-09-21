@@ -15,15 +15,19 @@
         };
     @endphp
     <style>
-        @page { size: 210mm 297mm; margin: 15mm 15mm 15mm 20mm; }
+        /* Хэмжээ, зай, фонтыг «Бичиг хэргийн стандарт»-аас авна. */
+        @page {
+            size: {{ $format['width'] }}mm {{ $format['height'] }}mm;
+            margin: {{ $format['top'] }}mm {{ $format['right'] }}mm {{ $format['bottom'] }}mm {{ $format['left'] }}mm;
+        }
 
         * { box-sizing: border-box; }
 
         body {
             margin: 0;
-            font-family: "Times New Roman", Times, serif;
-            font-size: 12pt;
-            line-height: 1.45;
+            font-family: "{{ $format['font'] }}", "Times New Roman", Times, serif;
+            font-size: {{ $format['size'] }}pt;
+            line-height: {{ $format['spacing'] }};
             color: #000;
             background: #f1f5f9;
         }
@@ -33,11 +37,11 @@
          * тул өндрийг тогтмол авна — илүү гарвал хоёр цаас идэхгүй.
          */
         .page {
-            width: 210mm;
-            height: 297mm;
+            width: {{ $format['width'] }}mm;
+            height: {{ $format['height'] }}mm;
             overflow: hidden;
             margin: 0 auto;
-            padding: 15mm 15mm 15mm 20mm;
+            padding: {{ $format['top'] }}mm {{ $format['right'] }}mm {{ $format['bottom'] }}mm {{ $format['left'] }}mm;
             background: #fff;
         }
 
@@ -118,7 +122,7 @@
         .sign div { margin-bottom: 3mm; }
 
         .toolbar {
-            max-width: 210mm; margin: 6mm auto; display: flex; gap: 8px; justify-content: flex-end;
+            max-width: {{ $format['width'] }}mm; margin: 6mm auto; display: flex; gap: 8px; justify-content: flex-end;
             font-family: Arial, sans-serif;
         }
         .toolbar button {
@@ -130,7 +134,9 @@
         /* ── Албан томилолтын үнэмлэх (ар тал) ───────────────────── */
 
         .cert { display: flex; gap: 10mm; }
-        .cert__col { width: 50%; }
+
+        /* min-width: 0 — багана доторх урт мөр хажуу тийш халихгүй. */
+        .cert__col { width: 50%; min-width: 0; }
 
         .cert__number { text-align: center; font-weight: bold; margin-bottom: 5mm; }
 
@@ -148,14 +154,31 @@
         .cert__year { margin-top: 20mm; text-align: center; font-weight: bold; }
 
         .cert__signer {
-            display: inline-block;
+            /* Багананыхаа өргөнд багтана — өөрийн өргөнөөр сунахгүй. */
+            display: block;
+            max-width: 100%;
             margin-top: 8mm;
             font-weight: bold;
             text-transform: uppercase;
             line-height: 1.35;
-            font-size: 11pt;
+            font-size: 10.5pt;
         }
-        .cert__signer .signrow { gap: 8mm; }
+        /*
+         * Үнэмлэхийн багана нарийн тул албан тушаалын урт мөрийг мөр
+         * шилжүүлж багтаана. Нэр нь багтахгүй бол доошоо буугаад баруун
+         * ирмэг дээрээ зогсоно.
+         */
+        .cert__signer .approve__line { white-space: normal; }
+
+        .cert__signer .signrow {
+            gap: 4mm;
+            flex-wrap: wrap;
+            row-gap: 2mm;
+        }
+
+        .cert__signer .signrow .name { margin-left: auto; }
+
+        .cert__signer .signunder { margin-top: 3mm; }
 
         .cert__date { margin-top: 10mm; text-align: center; }
 
