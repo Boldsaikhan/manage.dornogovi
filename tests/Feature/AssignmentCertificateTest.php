@@ -164,7 +164,7 @@ class AssignmentCertificateTest extends TestCase
         $this->actingAs($admin)
             ->get(route('assignments.sheet', $row))
             ->assertOk()
-            ->assertSee('СХЗХ-ын Эрчим хүчний хяналтын улсын байцаагч Н.Гарамжавыг Эрдэнэ сум '
+            ->assertSee('СХЗХ-ын Эрчим хүчний хяналтын улсын байцаагч Н.Гарамжавыг Эрдэнэ суманд '
                 .'албан ажлаар 2026 оны 9 дүгээр сарын 8-ны өдрөөс 2 хоног ажиллуулахаар томилов.');
     }
 
@@ -205,6 +205,30 @@ class AssignmentCertificateTest extends TestCase
             ->get(route('assignments.sheet', $row))
             ->assertOk()
             ->assertSee('Д.Батцэцэгийг');
+    }
+
+    public function test_the_destination_reads_as_a_place(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        foreach ([
+            ['Улаанбаатар', 'Улаанбаатар хотод'],
+            ['Эрдэнэ сум', 'Эрдэнэ суманд'],
+            ['Сайншанд хот', 'Сайншанд хотод'],
+            // Танихгүй нэрийг хэвээр нь.
+            ['Замын-Үүд', 'Замын-Үүд'],
+        ] as [$destination, $expected]) {
+            $row = $this->assignment([
+                'person_name' => 'Н.Гарамжав',
+                'destination' => $destination,
+                'certificate_text' => null,
+            ]);
+
+            $this->actingAs($admin)
+                ->get(route('assignments.sheet', $row))
+                ->assertOk()
+                ->assertSee($expected);
+        }
     }
 
     public function test_the_purpose_reads_as_ajlaar(): void
