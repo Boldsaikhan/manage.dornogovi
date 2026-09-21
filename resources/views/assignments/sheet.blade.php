@@ -163,6 +163,26 @@
             min-height: 44mm;
         }
 
+        /*
+         * «Зөвшөөрсөн дарга» ба цэгэн зураас нэг мөрөнд.
+         *
+         * Цэгийг тэмдэгтээр бичвэл багтахгүй доошоо буудаг тул үлдсэн
+         * зайг дүүргэх зураас болгов.
+         */
+        .cert__approver {
+            display: flex;
+            align-items: flex-end;
+            gap: 3mm;
+            white-space: nowrap;
+        }
+
+        .cert__approver .fill {
+            flex: 1;
+            min-width: 20mm;
+            border-bottom: 1px dotted #000;
+            height: 1em;
+        }
+
         .cert__number { text-align: center; font-weight: bold; margin-bottom: 5mm; }
 
         .cert__body { text-align: justify; text-indent: 8mm; }
@@ -387,7 +407,10 @@
                 ……. хоногоор сунгав.
             </div>
 
-            <div class="cert__foot">Зөвшөөрсөн дарга &nbsp;..................................</div>
+            <div class="cert__foot cert__approver">
+                <span>Зөвшөөрсөн дарга</span>
+                <span class="fill"></span>
+            </div>
         </div>
     </div>
 </div>
