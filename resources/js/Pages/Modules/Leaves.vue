@@ -468,22 +468,30 @@ const visibleRows = computed(() => (
                                 </select>
                                 <span v-else class="ui-clamp-2">{{ row.signer_label }}</span>
                             </td>
-                            <td>
-                                <div class="leave-table__actions">
+                            <td class="text-center">
+                                <div class="flex items-center justify-center gap-1">
                                     <a
                                         :href="slipPrintUrl(row)"
                                         target="_blank"
-                                        class="leave-table__btn leave-table__btn--ghost"
+                                        class="ui-icon-btn"
+                                        title="Хэвлэх"
+                                        aria-label="Хэвлэх"
                                     >
-                                        Хэвлэх
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 8V4h10v4M7 18H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 15h10v5H7z" />
+                                        </svg>
                                     </a>
                                     <button
                                         v-if="canManage"
                                         type="button"
-                                        class="leave-table__btn leave-table__btn--danger"
+                                        class="ui-icon-btn ui-icon-btn--danger"
+                                        title="Устгах"
+                                        aria-label="Устгах"
                                         @click="destroyRow(row.id)"
                                     >
-                                        Устгах
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M10 11v6M14 11v6" />
+                                        </svg>
                                     </button>
                                 </div>
                             </td>
@@ -577,38 +585,6 @@ const visibleRows = computed(() => (
 <style scoped>
 .leave-table__date {
     font-variant-numeric: tabular-nums;
-}
-
-.leave-table__actions {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.2rem;
-}
-
-.leave-table__btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 1.5rem;
-    padding: 0.1rem 0.35rem;
-    border-radius: 0.375rem;
-    font-size: 0.625rem;
-    font-weight: 700;
-    line-height: 1.2;
-    white-space: nowrap;
-}
-
-.leave-table__btn--ghost {
-    border: 1px solid #cbd5e1;
-    background: #fff;
-    color: #1e3a8a;
-}
-
-.leave-table__btn--danger {
-    border: 0;
-    background: #e11d48;
-    color: #fff;
 }
 
 /* A4 харьцаа — дэлгэц дээр 6 ширхэг (2×3) багтана. */
