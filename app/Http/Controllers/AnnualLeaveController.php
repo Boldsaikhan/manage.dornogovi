@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -217,7 +218,6 @@ class AnnualLeaveController extends Controller
             'work_years' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:80'],
             'entitled_days' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:365'],
             'start_date' => ['sometimes', 'nullable', 'date'],
-            'end_date' => ['sometimes', 'nullable', 'date'],
             'substitute_position' => ['sometimes', 'nullable', 'string', 'max:255'],
             'substitute_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'substitute_phone' => ['sometimes', 'nullable', 'string', 'max:32'],
@@ -242,6 +242,16 @@ class AnnualLeaveController extends Controller
                 $data['substitute_position'] = null;
                 $data['substitute_phone'] = null;
             }
+        }
+
+        // Эхлэх огноо, эсвэл олгох хоног өөрчлөгдвөл дуусах огноог дагуулна.
+        if (array_key_exists('start_date', $data) || array_key_exists('entitled_days', $data)) {
+            $startValue = array_key_exists('start_date', $data) ? $data['start_date'] : $annualLeave->start_date;
+            $daysValue = array_key_exists('entitled_days', $data) ? $data['entitled_days'] : $annualLeave->entitled_days;
+
+            $data['end_date'] = ($startValue && $daysValue)
+                ? Carbon::parse($startValue)->addDays((int) $daysValue - 1)->toDateString()
+                : null;
         }
 
         $changes = $this->changedFields($annualLeave, $data);
