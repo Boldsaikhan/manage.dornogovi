@@ -6,9 +6,14 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Ээлжийн амралт олгох тухай мэдэгдэл — {{ $annualLeave->person_name }}</title>
     <style>
+        /*
+         * Margin-ийг зөвхөн .page-ийн padding-аар зурна — @page дээр давхар
+         * margin өгвөл (0 биш) хуудасны бодит хэмжээ А4-аас давж, хэвлэгч
+         * бүхэл хуудсыг багасгаж хэвлэдэг байсан (margin+padding давхардна).
+         */
         @page {
             size: {{ $format['width'] }}mm {{ $format['height'] }}mm;
-            margin: {{ $format['top'] }}mm {{ $format['right'] }}mm {{ $format['bottom'] }}mm {{ $format['left'] }}mm;
+            margin: 0;
         }
 
         * { box-sizing: border-box; }
