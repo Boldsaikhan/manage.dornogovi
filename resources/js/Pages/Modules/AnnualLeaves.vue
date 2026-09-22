@@ -18,13 +18,6 @@ const props = defineProps({
 
 const cellClass = 'ui-register__cell';
 
-/** Байгууллагын нэрсийн сонголт — утасны жагсаалтаас. */
-const orgOptions = computed(() => props.directory.map((d) => ({
-    value: d.org_name,
-    label: d.org_name,
-    category: d.category,
-})));
-
 /** Албан хаагчдын сонголт — утасны жагсаалтын бүх хүн, байгууллагатай нь. */
 const peopleOptions = computed(() => props.directory.flatMap((d) => (d.people ?? []).map((p) => ({
     value: p.name,
@@ -161,12 +154,12 @@ const logTone = (action) => ({
  *
  * Мөр бүр серверт бодит бичлэгтэй тул «Мөр нэмэх» дарахад шууд хоосон мөр
  * үүсээд, дараа нь нүд бүрийг {@see saveField} горимоор нэг нэгээр нь
- * хадгална. «Албан тушаал», «Орлох албан тушаал» — сонгосон нэрнээс,
- * «Дуусах огноо» нь эхлэх огноо, олгох хоногоос дагаж бөглөгддөг тул
- * энд байхгүй.
+ * хадгална. «Байгууллага», «Албан тушаал», «Орлох албан тушаал» —
+ * сонгосон нэрнээс, «Дуусах огноо» нь эхлэх огноо, олгох хоногоос дагаж
+ * бөглөгддөг тул энд байхгүй.
  */
 const DRAFT_FIELDS = [
-    'org_name', 'person_name', 'work_years', 'entitled_days', 'start_date',
+    'person_name', 'work_years', 'entitled_days', 'start_date',
     'substitute_name', 'substitute_phone',
 ];
 
@@ -463,16 +456,8 @@ const visibleRows = computed(() => (
                                 />
                             </td>
                             <td class="ui-register__cell--no">{{ row.seq }}</td>
-                            <td :class="cellClass">
-                                <SheetCell
-                                    v-if="drafts[row.id]"
-                                    v-model="drafts[row.id].org_name"
-                                    :options="orgOptions"
-                                    :editable="rowEditable"
-                                    empty-label=""
-                                    placeholder="Байгууллага…"
-                                    @commit="(v) => saveField(row.id, 'org_name', v)"
-                                />
+                            <td class="px-1.5 py-1.5 text-center text-xs text-slate-600">
+                                <span class="ui-clamp-2">{{ row.org_name || '—' }}</span>
                             </td>
                             <td class="px-1.5 py-1.5 text-center text-xs text-slate-600">
                                 <span class="ui-clamp-2">{{ row.position || '—' }}</span>
