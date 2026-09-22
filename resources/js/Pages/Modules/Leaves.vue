@@ -1,9 +1,10 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
+import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 
 const props = defineProps({
     activeScope: { type: String, default: 'baiguullaga' },
@@ -148,6 +149,70 @@ const emptyMessage = computed(() => {
     };
     return map[props.activeScope] || 'Бүртгэл алга';
 });
+
+const registerTitle = computed(() => {
+    const label = props.tabs.find((t) => t.value === props.activeScope)?.label;
+    return label ? `${label} — чөлөөний бүртгэл` : 'Чөлөөний бүртгэл';
+});
+
+/**
+ * Багана тус бүрийн хайлт.
+ *
+ * Хүснэгтийн толгойн доор жижиг талбар гарч, бичсэн үгээр нь мөрүүдийг
+ * шүүнэ. Хэд хэдэн баганад зэрэг бичвэл бүгдэд нь тохирсон мөр л үлдэнэ.
+ */
+const filters = reactive({
+    slip_number: '',
+    scope_label: '',
+    org_name: '',
+    person_name: '',
+    type_label: '',
+    start_date: '',
+    days: '',
+    end_date: '',
+    reason: '',
+    signer_label: '',
+});
+
+const hasFilters = computed(() => Object.values(filters).some((v) => String(v).trim() !== ''));
+
+const clearFilters = () => {
+    Object.keys(filters).forEach((key) => (filters[key] = ''));
+};
+
+watch(() => props.activeScope, () => clearFilters());
+
+const searchKey = (value) => String(value ?? '')
+    .toLowerCase()
+    .replace(/ө/g, 'о')
+    .replace(/ү/g, 'у')
+    .replace(/ё/g, 'е')
+    .replace(/й/g, 'и');
+
+const DATE_FIELDS = ['start_date', 'end_date'];
+
+const digitsOnly = (value) => String(value ?? '').replace(/\D+/g, '');
+
+const rowsWithSignerLabel = computed(() => props.rows.map((row) => ({
+    ...row,
+    signer_label: props.signers[row.signer] || '',
+})));
+
+const matchesFilters = (row) => Object.entries(filters).every(([field, needle]) => {
+    const text = String(needle).trim();
+
+    if (text === '') return true;
+
+    if (DATE_FIELDS.includes(field)) {
+        return digitsOnly(row[field]).includes(digitsOnly(text));
+    }
+
+    return searchKey(row[field]).includes(searchKey(text));
+});
+
+const visibleRows = computed(() => (
+    hasFilters.value ? rowsWithSignerLabel.value.filter(matchesFilters) : rowsWithSignerLabel.value
+));
 </script>
 
 <template>
@@ -224,42 +289,72 @@ const emptyMessage = computed(() => {
                 {{ emptyMessage }}
             </div>
 
-            <!-- Бүртгэлийн хүснэгт — баганууд дэлгэцийн өргөнд багтана -->
-            <div v-else-if="view === 'table'" class="ui-table-wrap leave-table-wrap">
-                <table class="ui-table leave-table table-fixed">
+            <!-- Бүртгэлийн хүснэгт — .ui-register стандарт систем -->
+            <TableScrollViewport v-else-if="view === 'table'" max-height="min(72vh, calc(100dvh - 11rem))">
+                <div class="ui-register">
+                <div class="ui-register__banner">{{ registerTitle }}</div>
+                <table class="ui-register__table min-w-[64rem]">
                     <colgroup>
-                        <col style="width: 3.2%" />
-                        <col style="width: 6.2%" />
-                        <col style="width: 8.2%" />
-                        <col style="width: 12%" />
-                        <col style="width: 10%" />
-                        <col style="width: 9%" />
-                        <col style="width: 7.4%" />
-                        <col style="width: 4.4%" />
-                        <col style="width: 7.4%" />
-                        <col style="width: 11.2%" />
-                        <col style="width: 12%" />
-                        <col style="width: 9%" />
+                        <col style="width: 3rem" />
+                        <col style="width: 6rem" />
+                        <col style="width: 8rem" />
+                        <col />
+                        <col style="width: 10rem" />
+                        <col style="width: 8rem" />
+                        <col style="width: 6rem" />
+                        <col style="width: 5rem" />
+                        <col style="width: 6rem" />
+                        <col style="width: 12rem" />
+                        <col style="width: 10rem" />
+                        <col style="width: 6rem" />
                     </colgroup>
                     <thead>
                         <tr>
-                            <th class="text-center">№</th>
-                            <th class="text-center">Хуудас №</th>
-                            <th>Хамрах хүрээ</th>
-                            <th>Байгууллага / хэлтэс</th>
-                            <th>Албан хаагч</th>
-                            <th>Төрөл</th>
-                            <th class="text-center">Эхлэх</th>
-                            <th class="text-center">Хоног</th>
-                            <th class="text-center">Дуусах</th>
-                            <th>Үндэслэл</th>
-                            <th>Гарын үсэг</th>
+                            <th rowspan="2">Д/д</th>
+                            <th rowspan="2">Хуудас<br>№</th>
+                            <th rowspan="2">Хамрах<br>хүрээ</th>
+                            <th rowspan="2">Байгууллага /<br>хэлтэс</th>
+                            <th rowspan="2">Албан хаагч</th>
+                            <th rowspan="2">Төрөл</th>
+                            <th colspan="3" class="ui-register__head-group--issued">Чөлөөний хугацаа</th>
+                            <th rowspan="2">Үндэслэл</th>
+                            <th rowspan="2">Орлон гарын<br>үсэг зурсан</th>
+                            <th rowspan="2" />
+                        </tr>
+                        <tr>
+                            <th>Эхлэх</th>
+                            <th>Хоног</th>
+                            <th>Дуусах</th>
+                        </tr>
+                        <tr class="ui-filters">
+                            <th>
+                                <button
+                                    v-if="hasFilters"
+                                    type="button"
+                                    class="w-full text-[10px] font-semibold text-brand-orange-600 hover:underline"
+                                    title="Хайлтыг цэвэрлэх"
+                                    @click="clearFilters"
+                                >
+                                    Цэвэрлэх
+                                </button>
+                                <span v-else class="text-[10px] text-slate-300">Хайх</span>
+                            </th>
+                            <th><input v-model="filters.slip_number" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.scope_label" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.org_name" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.person_name" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.type_label" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.start_date" type="search" placeholder="2026.09" /></th>
+                            <th><input v-model="filters.days" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.end_date" type="search" placeholder="2026.09" /></th>
+                            <th><input v-model="filters.reason" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.signer_label" type="search" placeholder="Хайх" /></th>
                             <th />
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="(row, index) in rows" :key="row.id">
-                            <td class="text-center">{{ index + 1 }}</td>
+                        <tr v-for="(row, index) in visibleRows" :key="row.id">
+                            <td class="ui-register__cell--no">{{ index + 1 }}</td>
                             <td class="text-center">{{ row.slip_number || '—' }}</td>
                             <td><span class="ui-clamp-2" :title="row.scope_label">{{ row.scope_label }}</span></td>
                             <td><span class="ui-clamp-2" :title="row.org_name">{{ row.org_name }}</span></td>
@@ -269,11 +364,7 @@ const emptyMessage = computed(() => {
                             <td class="text-center">{{ row.days || '—' }}</td>
                             <td class="leave-table__date text-center">{{ row.end_date || '—' }}</td>
                             <td><span class="ui-clamp-2" :title="row.reason || ''">{{ row.reason || '—' }}</span></td>
-                            <td>
-                                <span class="ui-clamp-2" :title="signers[row.signer] || ''">
-                                    {{ signers[row.signer] || '—' }}
-                                </span>
-                            </td>
+                            <td><span class="ui-clamp-2" :title="row.signer_label">{{ row.signer_label || '—' }}</span></td>
                             <td>
                                 <div class="leave-table__actions">
                                     <a
@@ -294,9 +385,16 @@ const emptyMessage = computed(() => {
                                 </div>
                             </td>
                         </tr>
+                        <tr v-if="!visibleRows.length">
+                            <td colspan="12" class="ui-register__empty">
+                                <template v-if="hasFilters">Хайлтад тохирох бүртгэл олдсонгүй.</template>
+                                <template v-else>{{ emptyMessage }}</template>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
-            </div>
+                </div>
+            </TableScrollViewport>
 
             <div v-else class="space-y-8">
                 <section
@@ -467,31 +565,6 @@ const emptyMessage = computed(() => {
 </template>
 
 <style scoped>
-.leave-table-wrap {
-    overflow-x: hidden;
-    width: 100%;
-}
-
-.leave-table {
-    width: 100%;
-    table-layout: fixed;
-    font-size: 0.75rem;
-}
-
-.leave-table th,
-.leave-table td {
-    overflow: hidden;
-    vertical-align: top;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-}
-
-.leave-table th {
-    white-space: normal;
-    line-height: 1.25;
-    letter-spacing: 0.02em;
-}
-
 .leave-table__date {
     font-variant-numeric: tabular-nums;
 }
