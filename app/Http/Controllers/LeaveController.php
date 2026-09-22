@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Leave;
 use App\Models\PhoneDirectoryEntry;
 use App\Support\DocxTableWriter;
@@ -9,6 +10,7 @@ use App\Support\ModuleAccess;
 use App\Support\ModuleOwnScope;
 use App\Support\PdfTableWriter;
 use App\Support\XlsxTableWriter;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -66,7 +68,42 @@ class LeaveController extends Controller
             'scopes' => self::SCOPES,
             'types' => Leave::TYPES,
             'signers' => Leave::SIGNERS,
+            'hasAuditLog' => true,
         ]);
+    }
+
+    /**
+     * Өөрчлөлтийн түүх — хэн, хэзээ, юуг сольсныг харуулна.
+     */
+    public function logs(Request $request): JsonResponse
+    {
+        abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
+
+        $scope = (string) $request->query('scope', 'all');
+
+        $rows = AuditLog::query()
+            ->with('user:id,name')
+            ->where('model_type', self::MODULE)
+            ->when(
+                $scope !== 'all' && array_key_exists($scope, self::SCOPES),
+                fn ($query) => $query->where('scope', $scope),
+            )
+            ->orderByDesc('id')
+            ->limit(200)
+            ->get()
+            ->map(fn (AuditLog $log) => [
+                'id' => $log->id,
+                'action' => $log->action,
+                'action_label' => $log->actionLabel(),
+                'label' => $log->label,
+                'summary' => $log->summary,
+                'changes' => $log->changes,
+                'scope' => self::SCOPES[$log->scope] ?? $log->scope,
+                'user' => $log->user?->name ?? 'Систем',
+                'at' => optional($log->created_at)?->format('Y-m-d H:i'),
+            ]);
+
+        return response()->json(['rows' => $rows]);
     }
 
     /**
@@ -193,7 +230,7 @@ class LeaveController extends Controller
         $days = (int) ($data['days'] ?? 1);
         $end = $start->copy()->addDays($days - 1);
 
-        Leave::query()->create([
+        $leave = Leave::query()->create([
             'scope' => $scope,
             'org_name' => $data['org_name'] ?? null,
             'person_name' => $data['person_name'] ?? null,
@@ -208,6 +245,8 @@ class LeaveController extends Controller
             'user_id' => $request->user()->id,
             'department_id' => $request->user()->department_id,
         ]);
+
+        $this->log($leave, 'created');
 
         if (filled($data['person_name'] ?? null)) {
             app(\App\Services\Push\EmployeePushNotifier::class)->notifyNamed(
@@ -247,6 +286,8 @@ class LeaveController extends Controller
             'reason' => ['sometimes', 'nullable', 'string', 'max:2000'],
         ]);
 
+        $changes = $this->changedFields($leave, $data);
+
         $leave->fill($data);
 
         if (array_key_exists('start_date', $data) || array_key_exists('days', $data)) {
@@ -257,6 +298,10 @@ class LeaveController extends Controller
 
         $leave->save();
 
+        if ($changes !== []) {
+            $this->log($leave, 'updated', $changes);
+        }
+
         return back(303)->with('success', 'Хадгаллаа.');
     }
 
@@ -266,6 +311,7 @@ class LeaveController extends Controller
         abort_unless(ModuleOwnScope::allows($request->user(), self::MODULE, $leave), 403);
 
         $scope = $leave->scope ?: 'baiguullaga';
+        $this->log($leave, 'deleted');
         $leave->delete();
 
         return redirect()
@@ -301,6 +347,68 @@ class LeaveController extends Controller
             'status' => $leave->status,
             'slip_url' => route('leaves.slip', $leave),
         ];
+    }
+
+    /**
+     * Өөрчлөлтийн лог үлдээнэ.
+     *
+     * @param  array<string, mixed>|null  $changes
+     */
+    private function log(Leave $leave, string $action, ?array $changes = null): void
+    {
+        AuditLog::record(
+            modelType: self::MODULE,
+            modelId: $leave->getKey(),
+            action: $action,
+            scope: $leave->scope ?: null,
+            label: $this->rowLabel($leave),
+            changes: $changes,
+        );
+    }
+
+    /** Логт харагдах богино нэр. */
+    private function rowLabel(Leave $leave): string
+    {
+        $name = trim((string) $leave->person_name);
+
+        return $name !== '' ? $name : '#'.$leave->getKey();
+    }
+
+    /**
+     * Өөрчлөгдсөн талбаруудыг хуучин/шинэ утгаар нь тэмдэглэнэ.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, array{from: string, to: string}>
+     */
+    private function changedFields(Leave $leave, array $data): array
+    {
+        $labels = [
+            'scope' => 'Хамрах хүрээ',
+            'org_name' => 'Байгууллага / хэлтэс',
+            'person_name' => 'Албан хаагч',
+            'slip_number' => 'Хуудас №',
+            'signer' => 'Орлон гарын үсэг зурсан',
+            'type' => 'Төрөл',
+            'start_date' => 'Эхлэх',
+            'days' => 'Хоног',
+            'reason' => 'Үндэслэл',
+        ];
+        $changes = [];
+
+        foreach ($data as $name => $new) {
+            $old = $leave->getOriginal($name);
+
+            $oldText = $old instanceof \DateTimeInterface ? $old->format('Y-m-d') : (string) ($old ?? '');
+            $newText = $new instanceof \DateTimeInterface ? $new->format('Y-m-d') : (string) ($new ?? '');
+
+            if ($oldText === $newText) {
+                continue;
+            }
+
+            $changes[$labels[$name] ?? $name] = ['from' => $oldText, 'to' => $newText];
+        }
+
+        return $changes;
     }
 
     private function unitName(?string $name): string
