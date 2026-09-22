@@ -70,6 +70,7 @@ class AnnualLeaveController extends Controller
             'directory' => $this->directory(),
             'canManage' => ModuleAccess::canEdit($request->user(), self::MODULE),
             'scopes' => self::SCOPES,
+            'signers' => AnnualLeave::signerOptions(),
             'hasAuditLog' => true,
         ]);
     }
@@ -113,10 +114,10 @@ class AnnualLeaveController extends Controller
 
         $headings = [
             'Д/д', 'Бүртгэсэн огноо', 'Байгууллага', 'Албан тушаал', 'Овог, нэр', 'Улсад ажилласан жил',
-            'Ээлжийн амралт олгох хоног', 'Эхлэх огноо', 'Дуусах огноо',
+            'Ээлжийн амралт олгох хоног', 'Эхлэх огноо', 'Дуусах огноо', 'Зөвшөөрсөн',
             'Орлох албан тушаал', 'Орлох овог, нэр', 'Орлох утасны дугаар',
         ];
-        $widths = [500, 1100, 2000, 1800, 1800, 1200, 1400, 1100, 1100, 1600, 1600, 1300];
+        $widths = [500, 1100, 2000, 1800, 1800, 1200, 1400, 1100, 1100, 1800, 1600, 1600, 1300];
         $center = [0, 1, 5, 6, 7, 8];
 
         $rows = $rowsQuery->values()->map(function (AnnualLeave $row, int $index) use ($total) {
@@ -130,6 +131,7 @@ class AnnualLeaveController extends Controller
                 (string) ($row->entitled_days ?? ''),
                 optional($row->start_date)?->format('Y-m-d') ?? '',
                 optional($row->end_date)?->format('Y-m-d') ?? '',
+                (string) ($row->signer ?? ''),
                 (string) ($row->substitute_position ?? ''),
                 (string) ($row->substitute_name ?? ''),
                 (string) ($row->substitute_phone ?? ''),
@@ -217,6 +219,7 @@ class AnnualLeaveController extends Controller
             'work_years' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:80'],
             'entitled_days' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:365'],
             'start_date' => ['sometimes', 'nullable', 'date'],
+            'signer' => ['sometimes', 'nullable', Rule::in(array_keys(AnnualLeave::signerOptions()))],
             'substitute_position' => ['sometimes', 'nullable', 'string', 'max:255'],
             'substitute_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'substitute_phone' => ['sometimes', 'nullable', 'string', 'max:32'],
@@ -335,6 +338,7 @@ class AnnualLeaveController extends Controller
             'entitled_days' => $row->entitled_days,
             'start_date' => optional($row->start_date)?->format('Y-m-d'),
             'end_date' => optional($row->end_date)?->format('Y-m-d'),
+            'signer' => $row->signer,
             'substitute_position' => $row->substitute_position,
             'substitute_name' => $row->substitute_name,
             'substitute_phone' => $row->substitute_phone,
@@ -383,6 +387,7 @@ class AnnualLeaveController extends Controller
             'entitled_days' => 'Ээлжийн амралт олгох хоног',
             'start_date' => 'Эхлэх огноо',
             'end_date' => 'Дуусах огноо',
+            'signer' => 'Зөвшөөрсөн',
             'substitute_position' => 'Орлох албан тушаал',
             'substitute_name' => 'Орлох овог, нэр',
             'substitute_phone' => 'Орлох утасны дугаар',

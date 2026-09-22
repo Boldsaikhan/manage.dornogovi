@@ -50,6 +50,38 @@ class AnnualLeaveNoticeTest extends TestCase
             ->assertSee('Залуучуудын хөгжил, оролцоо хариуцсан ажилтан Б.Чинзүрхийн', false);
     }
 
+    public function test_the_chosen_signer_appears_in_the_approved_signature(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        PhoneDirectoryEntry::create([
+            'person_name' => 'М.Мөнхбат',
+            'position' => 'ЗДТГ-ын дарга',
+            'org_name' => 'АЗДТГ',
+        ]);
+        PhoneDirectoryEntry::create([
+            'person_name' => 'О.Батжаргал',
+            'position' => 'Аймгийн Засаг дарга',
+            'org_name' => 'АЗДТГ',
+        ]);
+
+        $row = AnnualLeave::create([
+            'user_id' => $admin->id,
+            'scope' => 'baiguullaga',
+            'person_name' => 'Б.Чинзүрх',
+            'signer' => 'О.Батжаргал',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('annual-leaves.notice', $row))
+            ->assertOk()
+            ->assertSee('АЙМГИЙН ЗАСАГ ДАРГА')
+            ->assertSee('О.Батжаргал')
+            // Сонгоогүй үеийн урьдач (ЗДТГ-ын дарга М.Мөнхбат) харагдахгүй.
+            ->assertDontSee('М.Мөнхбат')
+            ->assertDontSee('ДАРГЫН АЛБАН ҮҮРГИЙГ ТҮР ОРЛОН ГҮЙЦЭТГЭГЧ');
+    }
+
     public function test_the_body_text_does_not_repeat_the_organisation_when_the_position_already_names_it(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

@@ -21,6 +21,52 @@ class PhoneDirectoryEntry extends Model
     ];
 
     /**
+     * Удирдах албан тушаалтнуудын сонголт — зөвхөн Аймгийн Засаг дарга,
+     * Засаг даргын орлогч, Хэлтсийн дарга нар, Тамгын дарга.
+     *
+     * Гарын үсэг зурах, зөвшөөрөх хүн сонгодог баганад ашиглана (чөлөөний
+     * бүртгэл, ээлжийн амралтын бүртгэл).
+     *
+     * @return array<string, string> нэр => «нэр — албан тушаал»
+     */
+    public static function leadershipOptions(): array
+    {
+        $entries = static::query()
+            ->orderBy('org_order')
+            ->orderBy('sort_order')
+            ->get(['person_name', 'position']);
+
+        $options = [];
+
+        foreach ($entries as $row) {
+            $position = mb_strtolower(trim((string) $row->position));
+
+            if ($position === '') {
+                continue;
+            }
+
+            $isLeaderRole = (str_contains($position, 'засаг') && str_contains($position, 'дарг'))
+                || (str_contains($position, 'хэлтс') && str_contains($position, 'дарг'))
+                || str_contains($position, 'тамгын');
+
+            if (! $isLeaderRole) {
+                continue;
+            }
+
+            $name = trim((string) $row->person_name);
+            $original = trim((string) $row->position);
+
+            if ($name === '' || isset($options[$name])) {
+                continue;
+            }
+
+            $options[$name] = $original !== '' ? $name.' — '.$original : $name;
+        }
+
+        return $options;
+    }
+
+    /**
      * Байгууллагын нэрээр ангиллыг таамаглана — дараа нь гараар засаж болно.
      * Хэлтэс нь АЗДТГ-ын албан хаагчдын нэгжид хамаарах тул энд ангилахгүй.
      */

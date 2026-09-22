@@ -13,8 +13,11 @@ const props = defineProps({
     directory: { type: Array, default: () => [] },
     canManage: { type: Boolean, default: false },
     scopes: { type: Object, default: () => ({}) },
+    signers: { type: Object, default: () => ({}) },
     hasAuditLog: { type: Boolean, default: false },
 });
+
+const signerEntries = computed(() => Object.entries(props.signers));
 
 const cellClass = 'ui-register__cell';
 
@@ -159,7 +162,7 @@ const logTone = (action) => ({
  * бөглөгддөг тул энд байхгүй.
  */
 const DRAFT_FIELDS = [
-    'person_name', 'work_years', 'entitled_days', 'start_date',
+    'person_name', 'work_years', 'entitled_days', 'start_date', 'signer',
     'substitute_name', 'substitute_phone',
 ];
 
@@ -229,6 +232,7 @@ const filters = reactive({
     entitled_days: '',
     start_date: '',
     end_date: '',
+    signer: '',
     substitute_position: '',
     substitute_name: '',
     substitute_phone: '',
@@ -375,7 +379,7 @@ const visibleRows = computed(() => (
             <TableScrollViewport v-else max-height="min(72vh, calc(100dvh - 11rem))">
                 <div class="ui-register">
                 <div class="ui-register__banner">{{ registerTitle }}</div>
-                <table class="ui-register__table min-w-[103rem]">
+                <table class="ui-register__table min-w-[113rem]">
                     <colgroup>
                         <col style="width: 2.5rem" />
                         <col style="width: 3rem" />
@@ -387,6 +391,7 @@ const visibleRows = computed(() => (
                         <col style="width: 7rem" />
                         <col style="width: 6rem" />
                         <col style="width: 6rem" />
+                        <col style="width: 10rem" />
                         <col style="width: 10rem" />
                         <col style="width: 10rem" />
                         <col style="width: 7rem" />
@@ -411,6 +416,7 @@ const visibleRows = computed(() => (
                             <th rowspan="2">Улсад<br>ажилласан жил</th>
                             <th rowspan="2">Ээлжийн амралт<br>олгох хоног</th>
                             <th colspan="2" class="ui-register__head-group--issued">Ээлжийн амралтын</th>
+                            <th rowspan="2">Зөвшөөрсөн</th>
                             <th colspan="3" class="ui-register__head-group--numbers">Эзгүй хугацаанд орлох албан тушаалтан</th>
                             <th rowspan="2" />
                         </tr>
@@ -443,6 +449,7 @@ const visibleRows = computed(() => (
                             <th><input v-model="filters.entitled_days" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.start_date" type="search" placeholder="2026.09" /></th>
                             <th><input v-model="filters.end_date" type="search" placeholder="2026.09" /></th>
+                            <th><input v-model="filters.signer" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.substitute_position" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.substitute_name" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.substitute_phone" type="search" placeholder="Хайх" /></th>
@@ -516,6 +523,18 @@ const visibleRows = computed(() => (
                             <td class="px-1.5 py-1.5 text-center text-xs tabular-nums text-slate-600">
                                 {{ row.end_date || '—' }}
                             </td>
+                            <td class="px-1.5 py-1.5">
+                                <select
+                                    v-if="rowEditable && drafts[row.id]"
+                                    v-model="drafts[row.id].signer"
+                                    class="w-full border-0 bg-transparent text-[11px] outline-none focus:bg-sky-50"
+                                    @change="saveField(row.id, 'signer', drafts[row.id].signer)"
+                                >
+                                    <option value="">— сонгох —</option>
+                                    <option v-for="[value, label] in signerEntries" :key="value" :value="value">{{ label }}</option>
+                                </select>
+                                <span v-else class="ui-clamp-2 px-1.5 py-1.5 text-xs text-slate-600">{{ row.signer || '—' }}</span>
+                            </td>
                             <td class="px-1.5 py-1.5 text-center text-xs text-slate-600">
                                 <span class="ui-clamp-2">{{ row.substitute_position || '—' }}</span>
                             </td>
@@ -570,7 +589,7 @@ const visibleRows = computed(() => (
                             </td>
                         </tr>
                         <tr v-if="!visibleRows.length">
-                            <td colspan="14" class="ui-register__empty">
+                            <td colspan="15" class="ui-register__empty">
                                 <template v-if="hasFilters">Хайлтад тохирох бүртгэл олдсонгүй.</template>
                                 <template v-else>{{ emptyMessage }}</template>
                             </td>

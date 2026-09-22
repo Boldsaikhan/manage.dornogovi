@@ -44,6 +44,48 @@ class AnnualLeaveTableSmokeTest extends TestCase
         $this->assertSame(24, $row->entitled_days);
     }
 
+    public function test_the_signer_is_restricted_to_leadership_options(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        PhoneDirectoryEntry::create([
+            'person_name' => 'О.Батжаргал',
+            'position' => 'Аймгийн Засаг дарга',
+            'org_name' => 'АЗДТГ',
+        ]);
+        PhoneDirectoryEntry::create([
+            'person_name' => 'Б.Мэргэжилтэн',
+            'position' => 'Мэргэжилтэн',
+            'org_name' => 'Санхүүгийн хэлтэс',
+        ]);
+
+        $this->actingAs($admin)->post(route('annual-leaves.store'), [
+            'scope' => 'baiguullaga',
+        ])->assertRedirect();
+
+        $row = AnnualLeave::query()->sole();
+
+        $this->actingAs($admin)
+            ->patch(route('annual-leaves.update', $row), ['signer' => 'О.Батжаргал'])
+            ->assertRedirect();
+
+        $this->assertSame('О.Батжаргал', $row->fresh()->signer);
+
+        $this->actingAs($admin)
+            ->patch(route('annual-leaves.update', $row), ['signer' => 'Б.Мэргэжилтэн'])
+            ->assertSessionHasErrors('signer');
+
+        $this->assertSame('О.Батжаргал', $row->fresh()->signer);
+
+        $response = $this->actingAs($admin)
+            ->get(route('annual-leaves.index', ['scope' => 'baiguullaga']))
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('signers'));
+
+        $signers = $response->viewData('page')['props']['signers'];
+        $this->assertArrayHasKey('О.Батжаргал', $signers);
+        $this->assertArrayNotHasKey('Б.Мэргэжилтэн', $signers);
+    }
+
     public function test_rows_carry_the_registration_date(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
