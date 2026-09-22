@@ -18,6 +18,7 @@ class AnnualLeave extends Model
         'entitled_days',
         'start_date',
         'end_date',
+        'signer',
         'substitute_position',
         'substitute_name',
         'substitute_phone',
@@ -40,6 +41,18 @@ class AnnualLeave extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    /**
+     * «Зөвшөөрсөн» гэдэг нь утасны жагсаалтаас сонгосон удирдах албан
+     * тушаалтан байх ёстой — зөвхөн Аймгийн Засаг дарга, Засаг даргын
+     * орлогч, Хэлтсийн дарга нар, Тамгын дарга нараас сонгоно.
+     *
+     * @return array<string, string> нэр => «нэр — албан тушаал»
+     */
+    public static function signerOptions(): array
+    {
+        return PhoneDirectoryEntry::leadershipOptions();
     }
 
     /**

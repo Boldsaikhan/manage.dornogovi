@@ -30,8 +30,8 @@ class AnnualLeaveNoticeController extends Controller
             'annualLeave' => $annualLeave,
             'copies' => $copies,
             'text' => AnnualLeaveNotice::text($annualLeave),
-            'approverLines' => AnnualLeaveNotice::APPROVER_LINES,
-            'approverName' => AnnualLeaveNotice::approverName(),
+            'approverLines' => AnnualLeaveNotice::approverLines($annualLeave),
+            'approverName' => AnnualLeaveNotice::approverName($annualLeave),
             'format' => [
                 'width' => (float) ($format?->width_mm ?? 210),
                 'height' => (float) ($format?->height_mm ?? 297),

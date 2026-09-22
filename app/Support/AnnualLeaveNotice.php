@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\AnnualLeave;
+use App\Models\PhoneDirectoryEntry;
 
 /**
  * «Ээлжийн амралт олгох тухай мэдэгдэл» хэвлэх маягтын бичвэр, гарын үсгийн
@@ -10,16 +11,39 @@ use App\Models\AnnualLeave;
  */
 class AnnualLeaveNotice
 {
-    /** Зөвшөөрсөн албан тушаалтны толгойн бичвэр — үргэлж ижил. */
-    public const APPROVER_LINES = [
+    /** Хэн ч сонгоогүй үед хэрэглэх урьдач толгойн бичвэр. */
+    public const DEFAULT_APPROVER_LINES = [
         'АЙМГИЙН ЗАСАГ ДАРГЫН ТАМГЫН ГАЗРЫН',
         'ДАРГЫН АЛБАН ҮҮРГИЙГ ТҮР ОРЛОН ГҮЙЦЭТГЭГЧ',
     ];
 
-    /** Зөвшөөрсөн албан тушаалтны нэр — утасны жагсаалтаас ЗДТГ-ын даргаар нь олно. */
-    public static function approverName(): string
+    /**
+     * Зөвшөөрсөн албан тушаалтны толгойн бичвэр.
+     *
+     * «Зөвшөөрсөн» баганад сонгосон хүн байвал түүний өөрийнх нь албан
+     * тушаалаар, үгүй бол урьдач (ЗДТГ-ын дарга) бичвэрээр.
+     *
+     * @return list<string>
+     */
+    public static function approverLines(AnnualLeave $row): array
     {
-        return AssignmentSheet::signerName('chief');
+        $name = trim((string) $row->signer);
+
+        if ($name === '') {
+            return self::DEFAULT_APPROVER_LINES;
+        }
+
+        $position = trim((string) (PhoneDirectoryEntry::positionFor($name) ?? ''));
+
+        return $position !== '' ? [mb_strtoupper($position)] : self::DEFAULT_APPROVER_LINES;
+    }
+
+    /** Зөвшөөрсөн албан тушаалтны нэр — сонгоогүй бол ЗДТГ-ын даргаар нь олно. */
+    public static function approverName(AnnualLeave $row): string
+    {
+        $name = trim((string) $row->signer);
+
+        return $name !== '' ? $name : AssignmentSheet::signerName('chief');
     }
 
     /**
