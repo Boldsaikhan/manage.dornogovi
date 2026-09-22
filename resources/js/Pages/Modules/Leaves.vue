@@ -306,20 +306,20 @@ const visibleRows = computed(() => (
             <TableScrollViewport v-else-if="view === 'table'" max-height="min(72vh, calc(100dvh - 11rem))">
                 <div class="ui-register">
                 <div class="ui-register__banner">{{ registerTitle }}</div>
-                <table class="ui-register__table min-w-[64rem]">
+                <table class="ui-register__table min-w-[98rem]">
                     <colgroup>
                         <col style="width: 3rem" />
                         <col style="width: 6rem" />
                         <col style="width: 8rem" />
-                        <col />
+                        <col style="width: 16rem" />
                         <col style="width: 10rem" />
                         <col style="width: 8rem" />
                         <col style="width: 6rem" />
                         <col style="width: 5rem" />
                         <col style="width: 6rem" />
-                        <col style="width: 12rem" />
+                        <col style="width: 14rem" />
                         <col style="width: 10rem" />
-                        <col style="width: 6rem" />
+                        <col style="width: 4rem" />
                     </colgroup>
                     <thead>
                         <tr>
