@@ -198,8 +198,15 @@ const DATE_FIELDS = ['start_date', 'end_date'];
 
 const digitsOnly = (value) => String(value ?? '').replace(/\D+/g, '');
 
-const rowsWithSignerLabel = computed(() => props.rows.map((row) => ({
+/**
+ * Мөрийн дугаар — шинэ мөр үргэлж дээд талд, хамгийн том дугаартай орно.
+ *
+ * Сервер шинэ мөрийг эхэнд нь буцаадаг тул (id-гаар буурахаар эрэмбэлсэн)
+ * дугаарыг эсрэгээр нь тооцоод, хуучин мөрүүдийн дугаар өөрчлөгдөхгүй.
+ */
+const rowsWithSignerLabel = computed(() => props.rows.map((row, index) => ({
     ...row,
+    seq: props.rows.length - index,
     signer_label: props.signers[row.signer] || '',
 })));
 
@@ -359,8 +366,8 @@ const visibleRows = computed(() => (
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="(row, index) in visibleRows" :key="row.id">
-                            <td class="ui-register__cell--no">{{ index + 1 }}</td>
+                        <tr v-for="row in visibleRows" :key="row.id">
+                            <td class="ui-register__cell--no">{{ row.seq }}</td>
                             <td :class="cellClass">
                                 <SheetCell
                                     v-if="drafts[row.id]"
