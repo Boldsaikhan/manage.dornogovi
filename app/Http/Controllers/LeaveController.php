@@ -66,7 +66,7 @@ class LeaveController extends Controller
             'canManage' => ModuleAccess::canEdit($request->user(), self::MODULE),
             'scopes' => self::SCOPES,
             'types' => Leave::TYPES,
-            'signers' => Leave::SIGNERS,
+            'signers' => Leave::signerOptions(),
             'hasAuditLog' => true,
         ]);
     }
@@ -160,7 +160,7 @@ class LeaveController extends Controller
                 (string) ($leave->days ?? ''),
                 optional($leave->end_date)?->format('Y-m-d') ?? '',
                 (string) ($leave->reason ?? ''),
-                Leave::SIGNERS[$leave->signer] ?? (string) $leave->signer,
+                (string) ($leave->signer ?? ''),
             ];
         })->all();
 
@@ -214,7 +214,7 @@ class LeaveController extends Controller
             'org_name' => ['nullable', 'string', 'max:255'],
             'person_name' => ['nullable', 'string', 'max:255'],
             'slip_number' => ['nullable', 'string', 'max:50'],
-            'signer' => ['nullable', Rule::in(array_keys(Leave::SIGNERS))],
+            'signer' => ['nullable', Rule::in(array_keys(Leave::signerOptions()))],
             'type' => ['nullable', Rule::in(array_keys(Leave::TYPES))],
             'start_date' => ['nullable', 'date'],
             'days' => ['nullable', 'integer', 'min:1', 'max:365'],
@@ -234,7 +234,7 @@ class LeaveController extends Controller
             'org_name' => $data['org_name'] ?? null,
             'person_name' => $data['person_name'] ?? null,
             'slip_number' => $data['slip_number'] ?? null,
-            'signer' => $data['signer'] ?? 'acting',
+            'signer' => $data['signer'] ?? null,
             'type' => $data['type'] ?? 'tsalintai',
             'start_date' => $start->toDateString(),
             'end_date' => $end->toDateString(),
@@ -278,7 +278,7 @@ class LeaveController extends Controller
             'org_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'person_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'slip_number' => ['sometimes', 'nullable', 'string', 'max:50'],
-            'signer' => ['sometimes', Rule::in(array_keys(Leave::SIGNERS))],
+            'signer' => ['sometimes', 'nullable', Rule::in(array_keys(Leave::signerOptions()))],
             'type' => ['sometimes', Rule::in(array_keys(Leave::TYPES))],
             'start_date' => ['sometimes', 'date'],
             'days' => ['sometimes', 'integer', 'min:1', 'max:365'],
@@ -333,7 +333,8 @@ class LeaveController extends Controller
             'unit' => $this->unitName($leave->org_name),
             'person_name' => $leave->person_name ?: ($leave->user?->name ?? ''),
             'slip_number' => $leave->slip_number,
-            'signer' => $leave->signer ?: 'acting',
+            'signer' => $leave->signer,
+            'signer_title' => $leave->signerTitle(),
             'type' => $leave->type,
             'type_label' => $leave->typeLabel(),
             'start_date' => optional($start)?->format('Y-m-d'),

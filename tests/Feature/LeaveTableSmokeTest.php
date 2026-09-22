@@ -16,12 +16,18 @@ class LeaveTableSmokeTest extends TestCase
     {
         $admin = User::factory()->create(['is_admin' => true]);
 
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'О.Батжаргал',
+            'position' => 'Аймгийн Засаг дарга',
+            'org_name' => 'АЗДТГ',
+        ]);
+
         $this->actingAs($admin)->post(route('leaves.store'), [
             'scope' => 'baiguullaga',
             'org_name' => 'Төрийн захиргааны удирдлагын хэлтэс',
             'person_name' => 'Б.Батбаяр',
             'slip_number' => '521',
-            'signer' => 'acting',
+            'signer' => 'О.Батжаргал',
             'type' => 'eeljiin',
             'start_date' => '2026-08-25',
             'days' => 3,
@@ -52,7 +58,7 @@ class LeaveTableSmokeTest extends TestCase
 
         $leave = Leave::query()->sole();
         $this->assertNull($leave->person_name);
-        $this->assertSame('acting', $leave->signer);
+        $this->assertNull($leave->signer);
 
         $this->actingAs($admin)
             ->patch(route('leaves.update', $leave), ['person_name' => 'Ц.Мөнхбат'])
@@ -126,5 +132,74 @@ class LeaveTableSmokeTest extends TestCase
         $this->assertSame('created', $rows[2]['action']);
         $this->assertSame('Админ', $rows[0]['user']);
         $this->assertSame('Ц.Мөнхбат', $rows[1]['changes']['Албан хаагч']['to']);
+    }
+
+    public function test_signer_options_are_limited_to_leader_positions(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'О.Батжаргал',
+            'position' => 'Аймгийн Засаг дарга',
+            'org_name' => 'АЗДТГ',
+        ]);
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'Г.Март',
+            'position' => 'Засаг даргын орлогч',
+            'org_name' => 'АЗДТГ',
+        ]);
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'Н.Алдарбаяр',
+            'position' => 'Санхүүгийн хэлтсийн дарга',
+            'org_name' => 'Санхүүгийн хэлтэс',
+        ]);
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'М.Мөнхбат',
+            'position' => 'Тамгын газрын дарга',
+            'org_name' => 'АЗДТГ',
+        ]);
+        // Жирийн мэргэжилтэн сонголтод орохгүй.
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'Б.Мэргэжилтэн',
+            'position' => 'Мэргэжилтэн',
+            'org_name' => 'Санхүүгийн хэлтэс',
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->get(route('leaves.index', ['scope' => 'baiguullaga']))
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('signers'));
+
+        $signers = $response->viewData('page')['props']['signers'];
+
+        $this->assertSame([
+            'О.Батжаргал' => 'О.Батжаргал — Аймгийн Засаг дарга',
+            'Г.Март' => 'Г.Март — Засаг даргын орлогч',
+            'Н.Алдарбаяр' => 'Н.Алдарбаяр — Санхүүгийн хэлтсийн дарга',
+            'М.Мөнхбат' => 'М.Мөнхбат — Тамгын газрын дарга',
+        ], $signers);
+    }
+
+    public function test_the_slip_shows_the_signers_own_title(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'Н.Алдарбаяр',
+            'position' => 'Санхүүгийн хэлтсийн дарга',
+            'org_name' => 'Санхүүгийн хэлтэс',
+        ]);
+
+        $this->actingAs($admin)->post(route('leaves.store'), [
+            'scope' => 'baiguullaga',
+            'signer' => 'Н.Алдарбаяр',
+        ])->assertRedirect();
+
+        $leave = Leave::query()->sole();
+
+        $this->actingAs($admin)
+            ->get(route('leaves.slip', $leave))
+            ->assertOk()
+            ->assertSee('САНХҮҮГИЙН ХЭЛТСИЙН ДАРГА')
+            ->assertSee('Н.Алдарбаяр');
     }
 }
