@@ -221,6 +221,7 @@ const registerTitle = computed(() => {
  * шүүнэ. Хэд хэдэн баганад зэрэг бичвэл бүгдэд нь тохирсон мөр л үлдэнэ.
  */
 const filters = reactive({
+    registered_on: '',
     org_name: '',
     position: '',
     person_name: '',
@@ -248,7 +249,7 @@ const searchKey = (value) => String(value ?? '')
     .replace(/ё/g, 'е')
     .replace(/й/g, 'и');
 
-const DATE_FIELDS = ['start_date', 'end_date'];
+const DATE_FIELDS = ['registered_on', 'start_date', 'end_date'];
 
 const digitsOnly = (value) => String(value ?? '').replace(/\D+/g, '');
 
@@ -374,10 +375,11 @@ const visibleRows = computed(() => (
             <TableScrollViewport v-else max-height="min(72vh, calc(100dvh - 11rem))">
                 <div class="ui-register">
                 <div class="ui-register__banner">{{ registerTitle }}</div>
-                <table class="ui-register__table min-w-[96rem]">
+                <table class="ui-register__table min-w-[103rem]">
                     <colgroup>
                         <col style="width: 2.5rem" />
                         <col style="width: 3rem" />
+                        <col style="width: 7rem" />
                         <col style="width: 14rem" />
                         <col style="width: 10rem" />
                         <col style="width: 10rem" />
@@ -402,6 +404,7 @@ const visibleRows = computed(() => (
                                 />
                             </th>
                             <th rowspan="2">Д/д</th>
+                            <th rowspan="2">Бүртгэсэн<br>огноо</th>
                             <th rowspan="2">Байгууллага</th>
                             <th rowspan="2">Албан тушаал</th>
                             <th rowspan="2">Овог, нэр</th>
@@ -432,6 +435,7 @@ const visibleRows = computed(() => (
                                 </button>
                                 <span v-else class="text-[10px] text-slate-300">Хайх</span>
                             </th>
+                            <th><input v-model="filters.registered_on" type="search" placeholder="2026.09" /></th>
                             <th><input v-model="filters.org_name" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.position" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.person_name" type="search" placeholder="Хайх" /></th>
@@ -456,6 +460,9 @@ const visibleRows = computed(() => (
                                 />
                             </td>
                             <td class="ui-register__cell--no">{{ row.seq }}</td>
+                            <td class="px-1.5 py-1.5 text-center text-xs tabular-nums text-slate-600">
+                                {{ row.registered_on || '—' }}
+                            </td>
                             <td class="px-1.5 py-1.5 text-center text-xs text-slate-600">
                                 <span class="ui-clamp-2">{{ row.org_name || '—' }}</span>
                             </td>
@@ -563,7 +570,7 @@ const visibleRows = computed(() => (
                             </td>
                         </tr>
                         <tr v-if="!visibleRows.length">
-                            <td colspan="13" class="ui-register__empty">
+                            <td colspan="14" class="ui-register__empty">
                                 <template v-if="hasFilters">Хайлтад тохирох бүртгэл олдсонгүй.</template>
                                 <template v-else>{{ emptyMessage }}</template>
                             </td>

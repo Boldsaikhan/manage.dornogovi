@@ -112,16 +112,17 @@ class AnnualLeaveController extends Controller
         $total = $rowsQuery->count();
 
         $headings = [
-            'Д/д', 'Байгууллага', 'Албан тушаал', 'Овог, нэр', 'Улсад ажилласан жил',
+            'Д/д', 'Бүртгэсэн огноо', 'Байгууллага', 'Албан тушаал', 'Овог, нэр', 'Улсад ажилласан жил',
             'Ээлжийн амралт олгох хоног', 'Эхлэх огноо', 'Дуусах огноо',
             'Орлох албан тушаал', 'Орлох овог, нэр', 'Орлох утасны дугаар',
         ];
-        $widths = [500, 2000, 1800, 1800, 1200, 1400, 1100, 1100, 1600, 1600, 1300];
-        $center = [0, 4, 5, 6, 7];
+        $widths = [500, 1100, 2000, 1800, 1800, 1200, 1400, 1100, 1100, 1600, 1600, 1300];
+        $center = [0, 1, 5, 6, 7, 8];
 
         $rows = $rowsQuery->values()->map(function (AnnualLeave $row, int $index) use ($total) {
             return [
                 (string) ($total - $index),
+                optional($row->created_at)?->format('Y-m-d') ?? '',
                 (string) ($row->org_name ?? ''),
                 (string) ($row->position ?? ''),
                 (string) ($row->person_name ?? ''),
@@ -326,6 +327,7 @@ class AnnualLeaveController extends Controller
             'id' => $row->id,
             'scope' => $row->scope,
             'scope_label' => self::SCOPES[$row->scope] ?? $row->scope,
+            'registered_on' => optional($row->created_at)?->format('Y-m-d'),
             'org_name' => $row->org_name,
             'position' => $row->position,
             'person_name' => $row->person_name,
