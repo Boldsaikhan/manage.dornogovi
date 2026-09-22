@@ -25,6 +25,13 @@ class AnnualLeaveTableSmokeTest extends TestCase
         $this->assertSame('baiguullaga', $row->scope);
         $this->assertNull($row->person_name);
 
+        // Хоосон мөрийн «Овог, нэр» баганад бүртгэсэн хэрэглэгчийн нэр
+        // орлон гарч ирэхгүй — жинхэнэ хоосон байна.
+        $this->actingAs($admin)
+            ->get(route('annual-leaves.index', ['scope' => 'baiguullaga']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('rows.0.person_name', null));
+
         $this->actingAs($admin)
             ->patch(route('annual-leaves.update', $row), [
                 'org_name' => 'Санхүүгийн хэлтэс',

@@ -312,7 +312,7 @@ class AnnualLeaveController extends Controller
             'scope_label' => self::SCOPES[$row->scope] ?? $row->scope,
             'org_name' => $row->org_name,
             'position' => $row->position,
-            'person_name' => $row->person_name ?: ($row->user?->name ?? ''),
+            'person_name' => $row->person_name,
             'work_years' => $row->work_years,
             'entitled_days' => $row->entitled_days,
             'start_date' => optional($row->start_date)?->format('Y-m-d'),
