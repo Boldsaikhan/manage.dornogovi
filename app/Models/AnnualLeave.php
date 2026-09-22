@@ -21,6 +21,7 @@ class AnnualLeave extends Model
         'substitute_position',
         'substitute_name',
         'substitute_phone',
+        'notice_text',
     ];
 
     protected function casts(): array

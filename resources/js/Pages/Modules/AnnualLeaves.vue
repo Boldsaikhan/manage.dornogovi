@@ -58,6 +58,8 @@ const destroyRow = (id) => {
     router.delete(route('annual-leaves.destroy', id), { preserveScroll: true });
 };
 
+const noticeUrl = (row) => route('annual-leaves.notice', row.id);
+
 /**
  * «Засах» горим — товчоор асаана.
  *
@@ -555,18 +557,31 @@ const visibleRows = computed(() => (
                                 />
                             </td>
                             <td class="text-center">
-                                <button
-                                    v-if="rowEditable"
-                                    type="button"
-                                    class="ui-icon-btn ui-icon-btn--danger"
-                                    title="Устгах"
-                                    aria-label="Устгах"
-                                    @click="destroyRow(row.id)"
-                                >
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M10 11v6M14 11v6" />
-                                    </svg>
-                                </button>
+                                <div class="flex items-center justify-center gap-1">
+                                    <a
+                                        :href="noticeUrl(row)"
+                                        target="_blank"
+                                        class="ui-icon-btn"
+                                        title="Хэвлэх"
+                                        aria-label="Хэвлэх"
+                                    >
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 8V4h10v4M7 18H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 15h10v5H7z" />
+                                        </svg>
+                                    </a>
+                                    <button
+                                        v-if="rowEditable"
+                                        type="button"
+                                        class="ui-icon-btn ui-icon-btn--danger"
+                                        title="Устгах"
+                                        aria-label="Устгах"
+                                        @click="destroyRow(row.id)"
+                                    >
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M10 11v6M14 11v6" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         <tr v-if="!visibleRows.length">
