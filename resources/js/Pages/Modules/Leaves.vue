@@ -244,7 +244,6 @@ const kindLabel = (key) => ({
 const emptyMessage = computed(() => {
     const map = {
         all: 'Бүртгэл алга',
-        udirdlaga: 'Аймгийн удирдлагын бүртгэл алга',
         agentlag: 'Агентлагийн бүртгэл алга',
         sum: 'Сумын бүртгэл алга',
         baiguullaga: 'Байгууллагын бүртгэл алга',
