@@ -44,6 +44,24 @@ class AnnualLeaveTableSmokeTest extends TestCase
         $this->assertSame(24, $row->entitled_days);
     }
 
+    public function test_rows_carry_the_registration_date(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        \Illuminate\Support\Carbon::setTestNow('2026-09-22 10:00:00');
+
+        $this->actingAs($admin)->post(route('annual-leaves.store'), [
+            'scope' => 'baiguullaga',
+        ])->assertRedirect();
+
+        \Illuminate\Support\Carbon::setTestNow();
+
+        $this->actingAs($admin)
+            ->get(route('annual-leaves.index', ['scope' => 'baiguullaga']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('rows.0.registered_on', '2026-09-22'));
+    }
+
     public function test_entitled_days_is_computed_from_work_years(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
