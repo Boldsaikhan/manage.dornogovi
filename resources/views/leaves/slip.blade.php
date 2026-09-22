@@ -41,9 +41,14 @@
         };
     @endphp
     <style>
+        /*
+         * Margin-ийг зөвхөн .sheet-ийн padding-аар зурна — @page дээр давхар
+         * margin өгвөл (0 биш) хуудасны бодит хэмжээ А4-аас давж, хэвлэгч
+         * бүхэл хуудсыг багасгаж хэвлэдэг байсан (margin+padding давхардна).
+         */
         @page {
             size: {{ $pageWidth }}mm {{ $pageHeight }}mm;
-            margin: {{ $marginTop }}mm {{ $marginRight }}mm {{ $marginBottom }}mm {{ $marginLeft }}mm;
+            margin: 0;
         }
 
         * { box-sizing: border-box; }
