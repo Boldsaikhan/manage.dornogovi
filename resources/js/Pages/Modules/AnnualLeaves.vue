@@ -161,11 +161,12 @@ const logTone = (action) => ({
  *
  * Мөр бүр серверт бодит бичлэгтэй тул «Мөр нэмэх» дарахад шууд хоосон мөр
  * үүсээд, дараа нь нүд бүрийг {@see saveField} горимоор нэг нэгээр нь
- * хадгална. «Албан тушаал», «Орлох албан тушаал» — сонгосон нэрнээс
- * дагаж бөглөгддөг тул энд байхгүй.
+ * хадгална. «Албан тушаал», «Орлох албан тушаал» — сонгосон нэрнээс,
+ * «Дуусах огноо» нь эхлэх огноо, олгох хоногоос дагаж бөглөгддөг тул
+ * энд байхгүй.
  */
 const DRAFT_FIELDS = [
-    'org_name', 'person_name', 'work_years', 'entitled_days', 'start_date', 'end_date',
+    'org_name', 'person_name', 'work_years', 'entitled_days', 'start_date',
     'substitute_name', 'substitute_phone',
 ];
 
@@ -520,16 +521,8 @@ const visibleRows = computed(() => (
                                     @commit="(v) => saveField(row.id, 'start_date', v)"
                                 />
                             </td>
-                            <td :class="cellClass">
-                                <SheetCell
-                                    v-if="drafts[row.id]"
-                                    v-model="drafts[row.id].end_date"
-                                    type="date"
-                                    align="center"
-                                    :editable="rowEditable"
-                                    empty-label=""
-                                    @commit="(v) => saveField(row.id, 'end_date', v)"
-                                />
+                            <td class="px-1.5 py-1.5 text-center text-xs tabular-nums text-slate-600">
+                                {{ row.end_date || '—' }}
                             </td>
                             <td class="px-1.5 py-1.5 text-center text-xs text-slate-600">
                                 <span class="ui-clamp-2">{{ row.substitute_position || '—' }}</span>

@@ -37,8 +37,6 @@ class AnnualLeaveTableSmokeTest extends TestCase
                 'org_name' => 'Санхүүгийн хэлтэс',
                 'work_years' => 5,
                 'entitled_days' => 24,
-                'start_date' => '2026-07-01',
-                'end_date' => '2026-07-24',
             ])
             ->assertRedirect();
 
@@ -46,6 +44,38 @@ class AnnualLeaveTableSmokeTest extends TestCase
         $this->assertSame('Санхүүгийн хэлтэс', $row->org_name);
         $this->assertSame(5, $row->work_years);
         $this->assertSame(24, $row->entitled_days);
+    }
+
+    public function test_the_end_date_is_computed_from_start_date_and_entitled_days(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->post(route('annual-leaves.store'), [
+            'scope' => 'baiguullaga',
+        ])->assertRedirect();
+
+        $row = AnnualLeave::query()->sole();
+
+        // Эхлээд олгох хоногийг бөглөнө, дараа нь эхлэх огноог сонгоно —
+        // алийг нь ч эхлээд бөглөсөн дуусах огноог зөв бодох ёстой.
+        $this->actingAs($admin)
+            ->patch(route('annual-leaves.update', $row), ['entitled_days' => 15])
+            ->assertRedirect();
+
+        $this->assertNull($row->fresh()->end_date);
+
+        $this->actingAs($admin)
+            ->patch(route('annual-leaves.update', $row), ['start_date' => '2026-08-31'])
+            ->assertRedirect();
+
+        $this->assertSame('2026-09-14', $row->fresh()->end_date->toDateString());
+
+        // Олгох хоногийг өөрчилвөл дуусах огноо дахин бодогдоно.
+        $this->actingAs($admin)
+            ->patch(route('annual-leaves.update', $row), ['entitled_days' => 10])
+            ->assertRedirect();
+
+        $this->assertSame('2026-09-09', $row->fresh()->end_date->toDateString());
     }
 
     public function test_choosing_a_name_fills_the_position(): void
