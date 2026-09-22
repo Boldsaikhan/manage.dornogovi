@@ -166,9 +166,6 @@
         @foreach ([1, 2, 4, 6] as $option)
             <a href="{{ request()->fullUrlWithQuery(['copies' => $option]) }}" class="{{ $copies === $option ? 'active' : '' }}">{{ $option }}</a>
         @endforeach
-        <span>Гарын үсэг:</span>
-        <a href="{{ request()->fullUrlWithQuery(['signer' => 'acting']) }}" class="{{ $signer === 'acting' ? 'active' : '' }}">Даргын үүрэг гүйцэтгэгч</a>
-        <a href="{{ request()->fullUrlWithQuery(['signer' => 'head']) }}" class="{{ $signer === 'head' ? 'active' : '' }}">Хэлтсийн дарга</a>
     </div>
 
     <div class="sheet">
@@ -189,11 +186,10 @@
                     </p>
                 </div>
                 <div class="sign">
-                    @if ($signer === 'acting')
-                        <span class="title">Даргын албан үүргийг<br>түр орлон гүйцэтгэгч</span>
-                        <span class="line">{{ $actingName }}</span>
+                    <span class="title">{{ $signerTitle !== '' ? $signerTitle : 'Гарын үсэг зурах албан тушаалтан' }}</span>
+                    @if ($signerName !== '')
+                        <span class="line">{{ $signerName }}</span>
                     @else
-                        <span class="title">Хэлтсийн<br>дарга</span>
                         <span class="line">/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /</span>
                     @endif
                 </div>

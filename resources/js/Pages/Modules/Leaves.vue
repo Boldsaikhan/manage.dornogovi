@@ -20,7 +20,6 @@ const props = defineProps({
 
 const view = ref('table'); // 'table' | 'sheet'
 const previewCopies = ref(6);
-const actingName = ref('М.МӨНХБАТ');
 const cellClass = 'ui-register__cell';
 
 const typeEntries = computed(() => Object.entries(props.types));
@@ -212,11 +211,7 @@ const saveField = (id, field, value) => {
 
 const slipPrintUrl = (row) => {
     const base = row.slip_url || route('leaves.slip', row.id);
-    const params = new URLSearchParams({
-        copies: String(previewCopies.value),
-        signer: row.signer || 'acting',
-        name: actingName.value,
-    });
+    const params = new URLSearchParams({ copies: String(previewCopies.value) });
     return `${base}?${params.toString()}`;
 };
 
@@ -596,6 +591,7 @@ const visibleRows = computed(() => (
                                     class="w-full border-0 bg-transparent text-[11px] outline-none focus:bg-sky-50"
                                     @change="saveField(row.id, 'signer', drafts[row.id].signer)"
                                 >
+                                    <option value="">— сонгох —</option>
                                     <option v-for="[value, label] in signerEntries" :key="value" :value="value">{{ label }}</option>
                                 </select>
                                 <span v-else class="ui-clamp-2">{{ row.signer_label }}</span>
@@ -677,12 +673,11 @@ const visibleRows = computed(() => (
                             </p>
                             <div class="leave-slip-sign">
                                 <span class="leave-sign-title">
-                                    <template v-if="row.signer === 'head'">Хэлтсийн дарга</template>
-                                    <template v-else>Даргын албан үүргийг түр орлон гүйцэтгэгч</template>
+                                    {{ row.signer_title || 'Гарын үсэг зурах албан тушаалтан' }}
                                 </span>
                                 <span class="leave-sign-name">
-                                    <template v-if="row.signer === 'head'">/ &nbsp;&nbsp;&nbsp;&nbsp; /</template>
-                                    <template v-else>{{ actingName }}</template>
+                                    <template v-if="row.signer">{{ row.signer }}</template>
+                                    <template v-else>/ &nbsp;&nbsp;&nbsp;&nbsp; /</template>
                                 </span>
                             </div>
 

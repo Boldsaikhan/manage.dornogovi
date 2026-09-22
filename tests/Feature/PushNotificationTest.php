@@ -106,7 +106,6 @@ class PushNotificationTest extends TestCase
             'scope' => 'baiguullaga',
             'org_name' => 'Тест хэлтэс',
             'person_name' => 'Ц.Мөнхбат',
-            'signer' => 'acting',
             'type' => array_key_first(\App\Models\Leave::TYPES),
             'start_date' => now()->toDateString(),
             'days' => 1,

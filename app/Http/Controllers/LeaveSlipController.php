@@ -22,15 +22,13 @@ class LeaveSlipController extends Controller
         $copies = (int) $request->query('copies', 6);
         $copies = in_array($copies, [1, 2, 4, 6], true) ? $copies : 6;
 
-        $signer = $request->query('signer', $leave->signer ?: 'acting');
-        $signer = $signer === 'head' ? 'head' : 'acting';
-
         $start = $leave->start_date;
 
         return view('leaves.slip', [
             'leave' => $leave,
             'copies' => $copies,
-            'signer' => $signer,
+            'signerTitle' => $leave->signerTitle(),
+            'signerName' => (string) $leave->signer,
             'format' => DocumentFormat::defaultFormat(),
             'unit' => $this->unitName($leave->org_name ?: $leave->department?->name),
             'person' => $leave->person_name ?: ($leave->user?->name ?? ''),
@@ -41,7 +39,6 @@ class LeaveSlipController extends Controller
             'days' => $leave->days,
             'reason' => $leave->reason,
             'kind' => $leave->type,
-            'actingName' => $request->query('name', 'М.МӨНХБАТ'),
         ]);
     }
 

@@ -13,10 +13,49 @@ class Leave extends Model
         'eeljiin' => 'Ээлжийн амралтаас',
     ];
 
-    public const SIGNERS = [
-        'acting' => 'Даргын албан үүргийг түр орлон гүйцэтгэгч',
-        'head' => 'Хэлтсийн дарга',
-    ];
+    /**
+     * «Орлон гарын үсэг зурсан» гэдэг нь одоо утасны жагсаалтаас сонгосон
+     * бодит албан хаагч байх ёстой — зөвхөн Аймгийн Засаг дарга, Засаг
+     * даргын орлогч, Хэлтсийн дарга нар, Тамгын дарга нараас сонгоно.
+     *
+     * @return array<string, string> нэр => «нэр — албан тушаал»
+     */
+    public static function signerOptions(): array
+    {
+        $entries = PhoneDirectoryEntry::query()
+            ->orderBy('org_order')
+            ->orderBy('sort_order')
+            ->get(['person_name', 'position']);
+
+        $options = [];
+
+        foreach ($entries as $row) {
+            $position = mb_strtolower(trim((string) $row->position));
+
+            if ($position === '') {
+                continue;
+            }
+
+            $isLeaderRole = (str_contains($position, 'засаг') && str_contains($position, 'дарг'))
+                || (str_contains($position, 'хэлтс') && str_contains($position, 'дарг'))
+                || str_contains($position, 'тамгын');
+
+            if (! $isLeaderRole) {
+                continue;
+            }
+
+            $name = trim((string) $row->person_name);
+            $original = trim((string) $row->position);
+
+            if ($name === '' || isset($options[$name])) {
+                continue;
+            }
+
+            $options[$name] = $original !== '' ? $name.' — '.$original : $name;
+        }
+
+        return $options;
+    }
 
     protected $fillable = [
         'user_id',
@@ -61,5 +100,19 @@ class Leave extends Model
     public function typeLabel(): string
     {
         return self::TYPES[$this->type] ?? $this->type;
+    }
+
+    /** Гарын үсэг зурах хүний албан тушаал — үнэмлэхэд том үсгээр гарна. */
+    public function signerTitle(): string
+    {
+        $name = trim((string) $this->signer);
+
+        if ($name === '') {
+            return '';
+        }
+
+        $position = trim((string) (PhoneDirectoryEntry::positionFor($name) ?? ''));
+
+        return $position !== '' ? mb_strtoupper($position) : '';
     }
 }
