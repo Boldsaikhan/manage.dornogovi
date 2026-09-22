@@ -22,7 +22,6 @@ const actingName = ref('М.МӨНХБАТ');
 const cellClass = 'ui-register__cell';
 
 const typeEntries = computed(() => Object.entries(props.types));
-const scopeEntries = computed(() => Object.entries(props.scopes));
 const signerEntries = computed(() => Object.entries(props.signers));
 
 /** Байгууллагын нэрсийн сонголт — утасны жагсаалтаас. */
@@ -77,7 +76,7 @@ const destroyRow = (id) => {
  * үүсээд, дараа нь нүд бүрийг {@see saveField} горимоор нэг нэгээр нь
  * хадгална.
  */
-const DRAFT_FIELDS = ['slip_number', 'scope', 'org_name', 'person_name', 'type', 'start_date', 'days', 'reason', 'signer'];
+const DRAFT_FIELDS = ['org_name', 'person_name', 'type', 'start_date', 'days', 'reason', 'signer'];
 
 const drafts = reactive({});
 
@@ -167,8 +166,6 @@ const registerTitle = computed(() => {
  * шүүнэ. Хэд хэдэн баганад зэрэг бичвэл бүгдэд нь тохирсон мөр л үлдэнэ.
  */
 const filters = reactive({
-    slip_number: '',
-    scope_label: '',
     org_name: '',
     person_name: '',
     type_label: '',
@@ -306,12 +303,10 @@ const visibleRows = computed(() => (
             <TableScrollViewport v-else-if="view === 'table'" max-height="min(72vh, calc(100dvh - 11rem))">
                 <div class="ui-register">
                 <div class="ui-register__banner">{{ registerTitle }}</div>
-                <table class="ui-register__table min-w-[98rem]">
+                <table class="ui-register__table min-w-[84rem]">
                     <colgroup>
                         <col style="width: 3rem" />
-                        <col style="width: 6rem" />
-                        <col style="width: 8rem" />
-                        <col style="width: 16rem" />
+                        <col style="width: 18rem" />
                         <col style="width: 10rem" />
                         <col style="width: 8rem" />
                         <col style="width: 6rem" />
@@ -324,8 +319,6 @@ const visibleRows = computed(() => (
                     <thead>
                         <tr>
                             <th rowspan="2">Д/д</th>
-                            <th rowspan="2">Хуудас<br>№</th>
-                            <th rowspan="2">Хамрах<br>хүрээ</th>
                             <th rowspan="2">Байгууллага /<br>хэлтэс</th>
                             <th rowspan="2">Албан хаагч</th>
                             <th rowspan="2">Төрөл</th>
@@ -352,8 +345,6 @@ const visibleRows = computed(() => (
                                 </button>
                                 <span v-else class="text-[10px] text-slate-300">Хайх</span>
                             </th>
-                            <th><input v-model="filters.slip_number" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.scope_label" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.org_name" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.person_name" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.type_label" type="search" placeholder="Хайх" /></th>
@@ -368,28 +359,6 @@ const visibleRows = computed(() => (
                     <tbody>
                         <tr v-for="row in visibleRows" :key="row.id">
                             <td class="ui-register__cell--no">{{ row.seq }}</td>
-                            <td :class="cellClass">
-                                <SheetCell
-                                    v-if="drafts[row.id]"
-                                    v-model="drafts[row.id].slip_number"
-                                    align="center"
-                                    :editable="canManage"
-                                    empty-label=""
-                                    placeholder="Дугаар…"
-                                    @commit="(v) => saveField(row.id, 'slip_number', v)"
-                                />
-                            </td>
-                            <td class="px-1.5 py-1.5">
-                                <select
-                                    v-if="canManage && drafts[row.id]"
-                                    v-model="drafts[row.id].scope"
-                                    class="w-full border-0 bg-transparent text-[11px] outline-none focus:bg-sky-50"
-                                    @change="saveField(row.id, 'scope', drafts[row.id].scope)"
-                                >
-                                    <option v-for="[value, label] in scopeEntries" :key="value" :value="value">{{ label }}</option>
-                                </select>
-                                <span v-else class="ui-clamp-2">{{ row.scope_label }}</span>
-                            </td>
                             <td :class="cellClass">
                                 <SheetCell
                                     v-if="drafts[row.id]"
@@ -497,7 +466,7 @@ const visibleRows = computed(() => (
                             </td>
                         </tr>
                         <tr v-if="!visibleRows.length">
-                            <td colspan="12" class="ui-register__empty">
+                            <td colspan="10" class="ui-register__empty">
                                 <template v-if="hasFilters">Хайлтад тохирох бүртгэл олдсонгүй.</template>
                                 <template v-else>{{ emptyMessage }}</template>
                             </td>
