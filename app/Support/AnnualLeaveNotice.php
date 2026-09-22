@@ -43,17 +43,21 @@ class AnnualLeaveNotice
             return '';
         }
 
+        /*
+         * Албан тушаалын бичвэрт байгууллагын нэр (Дорноговь аймаг дахь …)
+         * ихэвчлэн аль хэдийн орсон байдаг тул хоёуланг зэрэг залгавал
+         * давхардана. Тушаал байвал түүнийг ганцаараа, эс бөгөөс
+         * байгууллагын нэрийг орлуулан хэрэглэнэ.
+         */
         $parts = [];
-
-        if ($org !== '') {
-            $parts[] = MongolianCase::genitive($org);
-        }
 
         if ($position !== '') {
             $parts[] = $position;
+        } elseif ($org !== '') {
+            $parts[] = MongolianCase::genitive($org);
         }
 
-        $parts[] = MongolianCase::genitive($name);
+        $parts[] = self::nameGenitive($name);
 
         $year = $row->start_date?->format('Y') ?? (string) now()->format('Y');
         $parts[] = $year.' оны ээлжийн амралтыг';
@@ -71,5 +75,27 @@ class AnnualLeaveNotice
             : 'олгов.';
 
         return implode(' ', $parts);
+    }
+
+    /**
+     * Товч нэрийн («Б.Чинзүрх») харьяалахын тийн ялгал.
+     *
+     * MongolianCase::genitive() эхний үсгийг л том болгодог тул цэгийн
+     * дараах өгсөн нэрийг («Чинзүрх») биш өргөс үсгийг («Б») томруулж
+     * алдаа гаргадаг («Б.чинзүрхийн»). Цэгийн дараах хэсгийг тусад нь
+     * залгаж, угтварыг хэвээр нь үлдээнэ.
+     */
+    private static function nameGenitive(string $name): string
+    {
+        $dot = strrpos($name, '.');
+
+        if ($dot === false) {
+            return MongolianCase::genitive($name);
+        }
+
+        $prefix = mb_substr($name, 0, $dot + 1);
+        $given = mb_substr($name, $dot + 1);
+
+        return $given === '' ? $name : $prefix.MongolianCase::genitiveWord($given);
     }
 }

@@ -46,7 +46,31 @@ class AnnualLeaveNoticeTest extends TestCase
             ->assertSee('ДАРГЫН АЛБАН ҮҮРГИЙГ ТҮР ОРЛОН ГҮЙЦЭТГЭГЧ')
             ->assertSee('М.Мөнхбат')
             ->assertSee('Б.Чинзүрх')
-            ->assertSee('Залуучуудын хөгжил, оролцоо хариуцсан ажилтан');
+            ->assertSee('Залуучуудын хөгжил, оролцоо хариуцсан ажилтан')
+            ->assertSee('Залуучуудын хөгжил, оролцоо хариуцсан ажилтан Б.Чинзүрхийн', false);
+    }
+
+    public function test_the_body_text_does_not_repeat_the_organisation_when_the_position_already_names_it(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = AnnualLeave::create([
+            'user_id' => $admin->id,
+            'scope' => 'baiguullaga',
+            // Тушаалын бичвэрт байгууллагын нэр аль хэдийн орсон байдаг.
+            'org_name' => 'Дорноговь аймаг дахь Төрийн албаны салбар зөвлөл',
+            'position' => 'Төрийн албаны салбар зөвлөлийн Дорноговь аймаг дахь салбар зөвлөлийн нарийн бичгийн даргын албан үүргийг түр орлон гүйцэтгэгч',
+            'person_name' => 'Л.Оюунсүрэн',
+            'entitled_days' => 15,
+            'start_date' => '2026-09-22',
+            'end_date' => '2026-10-06',
+        ]);
+
+        $text = \App\Support\AnnualLeaveNotice::text($row);
+
+        $this->assertSame(1, substr_count($text, 'Төрийн албаны салбар зөвлөлийн'));
+        $this->assertSame(1, substr_count($text, 'Дорноговь аймаг дахь'));
+        $this->assertStringStartsWith('Төрийн албаны салбар зөвлөлийн Дорноговь аймаг дахь', $text);
     }
 
     public function test_the_notice_text_can_be_edited_and_reset(): void
