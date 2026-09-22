@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\PhonePasswordResetController;
 use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\UserAccessController;
 use App\Http\Controllers\AiAssistantController;
+use App\Http\Controllers\AnnualLeaveController;
 use App\Http\Controllers\AppLockController;
 use App\Http\Controllers\AwardController;
 use App\Http\Controllers\CredentialController;
@@ -108,6 +109,13 @@ Route::middleware('auth')->group(function () {
     Route::patch('/modules/leaves/{leave}', [LeaveController::class, 'update'])->name('leaves.update');
     Route::delete('/modules/leaves/{leave}', [LeaveController::class, 'destroy'])->name('leaves.destroy');
     Route::get('/modules/leaves/{leave}/slip', [LeaveSlipController::class, 'show'])->name('leaves.slip');
+
+    Route::get('/modules/annual-leaves', [AnnualLeaveController::class, 'index'])->name('annual-leaves.index');
+    Route::get('/modules/annual-leaves/export', [AnnualLeaveController::class, 'export'])->name('annual-leaves.export');
+    Route::get('/modules/annual-leaves/logs', [AnnualLeaveController::class, 'logs'])->name('annual-leaves.logs');
+    Route::post('/modules/annual-leaves', [AnnualLeaveController::class, 'store'])->name('annual-leaves.store');
+    Route::patch('/modules/annual-leaves/{annualLeave}', [AnnualLeaveController::class, 'update'])->name('annual-leaves.update');
+    Route::delete('/modules/annual-leaves/{annualLeave}', [AnnualLeaveController::class, 'destroy'])->name('annual-leaves.destroy');
 
     Route::get('/modules/awards', [AwardController::class, 'index'])->name('awards.index');
     Route::get('/modules/awards/export', [AwardController::class, 'export'])->name('awards.export');

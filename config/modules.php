@@ -112,6 +112,14 @@ return [
             'own_scope' => 'person_name',
         ],
         [
+            'key' => 'annual_leaves',
+            'label' => 'Ээлжийн амралт',
+            'route' => 'annual-leaves.index',
+            'group' => 'hr',
+            'icon' => 'calendar',
+            'own_scope' => 'person_name',
+        ],
+        [
             'key' => 'assignments',
             'label' => 'Томилолтын бүртгэл',
             'route' => 'assignments.index',
