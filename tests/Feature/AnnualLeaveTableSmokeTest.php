@@ -71,6 +71,7 @@ class AnnualLeaveTableSmokeTest extends TestCase
         $row->refresh();
         $this->assertSame('Н.Алдарбаяр', $row->person_name);
         $this->assertSame('Мэргэжилтэн', $row->position);
+        $this->assertSame('Санхүүгийн хэлтэс', $row->org_name);
     }
 
     public function test_choosing_a_substitute_fills_their_position_and_phone(): void

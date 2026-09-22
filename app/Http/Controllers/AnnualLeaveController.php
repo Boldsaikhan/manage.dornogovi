@@ -223,10 +223,13 @@ class AnnualLeaveController extends Controller
             'substitute_phone' => ['sometimes', 'nullable', 'string', 'max:32'],
         ]);
 
-        // Овог нэрийг сонгоход албан тушаал нь дагаж бөглөгдөнө.
+        // Овог нэрийг сонгоход албан тушаал, байгууллага нь дагаж бөглөгдөнө.
         if (array_key_exists('person_name', $data)) {
             $data['position'] = filled($data['person_name'])
                 ? PhoneDirectoryEntry::positionFor((string) $data['person_name'])
+                : null;
+            $data['org_name'] = filled($data['person_name'])
+                ? PhoneDirectoryEntry::orgFor((string) $data['person_name'])
                 : null;
         }
 
