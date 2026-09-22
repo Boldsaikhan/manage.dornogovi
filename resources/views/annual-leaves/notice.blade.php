@@ -83,10 +83,44 @@
         }
 
         .notice .body {
-            margin: 0 0 8mm;
+            margin: 0 0 2mm;
             text-align: justify;
             text-indent: 8mm;
         }
+
+        /* Хуудсан дээрээ засах — хэвлэхэд ул мөр үлдэхгүй. */
+        .notice .body[contenteditable='true'] {
+            outline: 1px dashed #94a3b8;
+            outline-offset: 2mm;
+            min-height: 12mm;
+            cursor: text;
+        }
+
+        .notice .body[contenteditable='true']:focus { outline-color: #1c55a5; }
+
+        .notice .body-edit {
+            margin: 0 0 8mm;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        .notice .body-edit button {
+            padding: 4px 12px;
+            border: 1px solid #1c55a5;
+            border-radius: 6px;
+            background: #1c55a5;
+            color: #fff;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .notice .body-edit button[disabled] { opacity: .6; cursor: default; }
+
+        .notice .body-edit button.ghost { background: #fff; color: #1c55a5; }
 
         .notice .sign {
             margin-bottom: 5mm;
@@ -108,49 +142,11 @@
             white-space: nowrap;
         }
 
-        .edit-panel {
-            max-width: {{ $format['width'] }}mm;
-            margin: 0 auto 24px;
-            padding: 12px 16px;
-            background: #fff;
-            border-radius: 8px;
-            font-family: Arial, sans-serif;
-            font-size: 13px;
-        }
-
-        .edit-panel textarea {
-            width: 100%;
-            min-height: 70px;
-            margin-top: 8px;
-            padding: 8px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font: inherit;
-        }
-
-        .edit-panel .row {
-            display: flex;
-            gap: 8px;
-            margin-top: 8px;
-            align-items: center;
-        }
-
-        .edit-panel button {
-            padding: 6px 14px;
-            border: 1px solid #1c55a5;
-            border-radius: 8px;
-            background: #1c55a5;
-            color: #fff;
-            font-size: 13px;
-            cursor: pointer;
-        }
-
-        .edit-panel button[disabled] { opacity: .6; cursor: default; }
-
         @media print {
             body { background: #fff; }
-            .toolbar, .edit-panel { display: none !important; }
+            .toolbar, .body-edit { display: none !important; }
             .page { margin: 0; box-shadow: none; }
+            .notice .body[contenteditable='true'] { outline: none; }
         }
     </style>
 </head>
@@ -173,7 +169,21 @@
                     <span>Дугаар <span class="dots">&nbsp;</span></span>
                 </div>
 
-                <p class="body">{{ $text ?: '……………………………………………………………………………………………………' }}</p>
+                @if ($i === 0 && $canEdit)
+                    <p
+                        class="body"
+                        contenteditable="true"
+                        id="notice-body"
+                        spellcheck="false"
+                    >{{ $text }}</p>
+                    <div class="body-edit">
+                        <button type="button" id="notice-save">Хадгалах</button>
+                        <button type="button" id="notice-reset" class="ghost">Дахин үүсгэх</button>
+                        <span id="notice-status">Бичвэр дээр дарж засна.</span>
+                    </div>
+                @else
+                    <p class="body" data-notice-copy>{{ $text ?: '……………………………………………………………………………………………………' }}</p>
+                @endif
 
                 <div class="sign">
                     <div class="row">
@@ -199,23 +209,13 @@
         @endfor
     </div>
 
-    @if ($canEdit)
-        <div class="edit-panel">
-            <label>Мэдэгдлийн бичвэр:</label>
-            <textarea id="notice-text">{{ $text }}</textarea>
-            <div class="row">
-                <button type="button" id="notice-save">Хадгалах</button>
-                <button type="button" id="notice-reset" style="background:#fff;color:#1c55a5;">Дахин үүсгэх</button>
-                <span id="notice-status" style="color:#64748b;">Засаад хадгална уу.</span>
-            </div>
-        </div>
-    @endif
-
     <script>
-        const textArea = document.getElementById('notice-text');
+        const body = document.getElementById('notice-body');
         const saveBtn = document.getElementById('notice-save');
         const resetBtn = document.getElementById('notice-reset');
         const status = document.getElementById('notice-status');
+        // Хоёр дахь хувь байвал зэрэг шинэчилнэ — хуудас дахин ачаалахгүй.
+        const otherCopies = document.querySelectorAll('[data-notice-copy]');
 
         const send = (text) => fetch(@json(route('annual-leaves.notice.text', $annualLeave)), {
             method: 'PATCH',
@@ -228,14 +228,24 @@
             body: JSON.stringify({ notice_text: text }),
         });
 
-        if (saveBtn) {
+        if (body && saveBtn) {
+            let saved = body.innerText.trim();
+
             saveBtn.addEventListener('click', async () => {
                 saveBtn.disabled = true;
                 status.textContent = 'Хадгалж байна…';
 
                 try {
-                    const response = await send(textArea.value.trim());
-                    status.textContent = response.ok ? 'Хадгаллаа — шинэчлэхэд хуудсан дээр гарна.' : 'Хадгалж чадсангүй.';
+                    const text = body.innerText.trim();
+                    const response = await send(text);
+
+                    if (response.ok) {
+                        saved = text;
+                        otherCopies.forEach((el) => { el.textContent = text; });
+                        status.textContent = 'Хадгаллаа.';
+                    } else {
+                        status.textContent = 'Хадгалж чадсангүй.';
+                    }
                 } catch (e) {
                     status.textContent = 'Сүлжээгүй байна.';
                 } finally {
@@ -252,15 +262,32 @@
                 try {
                     const response = await send('');
 
-                    if (response.ok) {
-                        location.reload();
-                    } else {
+                    if (! response.ok) {
                         status.textContent = 'Дахин үүсгэж чадсангүй.';
                         resetBtn.disabled = false;
+
+                        return;
                     }
+
+                    saved = '';
+                    location.reload();
                 } catch (e) {
                     status.textContent = 'Сүлжээгүй байна.';
                     resetBtn.disabled = false;
+                }
+            });
+
+            body.addEventListener('input', () => {
+                status.textContent = body.innerText.trim() === saved
+                    ? 'Бичвэр дээр дарж засна.'
+                    : 'Хадгалаагүй өөрчлөлт байна.';
+            });
+
+            // Хадгалаагүй байхад хуудсаас гарахаас сэргийлнэ.
+            window.addEventListener('beforeunload', (event) => {
+                if (body.innerText.trim() !== saved) {
+                    event.preventDefault();
+                    event.returnValue = '';
                 }
             });
         }
