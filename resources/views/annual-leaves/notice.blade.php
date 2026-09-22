@@ -87,6 +87,14 @@
             border-bottom: 1px dotted #000;
         }
 
+        .notice .meta .filled {
+            display: inline-block;
+            min-width: 24mm;
+            border-bottom: 1px dotted #000;
+            font-weight: 700;
+            text-align: center;
+        }
+
         .notice .body {
             margin: 0 0 2mm;
             text-align: justify;
@@ -171,7 +179,7 @@
 
                 <div class="meta">
                     <span><span class="dots">&nbsp;</span> оны <span class="dots">&nbsp;</span>-р сарын <span class="dots">&nbsp;</span>-ны өдөр</span>
-                    <span>Дугаар <span class="dots">&nbsp;</span></span>
+                    <span>Дугаар <span class="filled">{{ $number }}</span></span>
                 </div>
 
                 @if ($i === 0 && $canEdit)

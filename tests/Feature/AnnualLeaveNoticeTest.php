@@ -50,6 +50,38 @@ class AnnualLeaveNoticeTest extends TestCase
             ->assertSee('Залуучуудын хөгжил, оролцоо хариуцсан ажилтан Б.Чинзүрхийн', false);
     }
 
+    public function test_the_notice_shows_the_registers_own_number(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $first = AnnualLeave::create([
+            'user_id' => $admin->id,
+            'scope' => 'baiguullaga',
+            'person_name' => 'Нэгдүгээр',
+        ]);
+        $second = AnnualLeave::create([
+            'user_id' => $admin->id,
+            'scope' => 'baiguullaga',
+            'person_name' => 'Хоёрдугаар',
+        ]);
+        // Өөр хамрах хүрээ — дугаарлалтад нөлөөлөхгүй.
+        AnnualLeave::create([
+            'user_id' => $admin->id,
+            'scope' => 'agentlag',
+            'person_name' => 'Өөр хүрээ',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('annual-leaves.notice', $first))
+            ->assertOk()
+            ->assertSee('Дугаар <span class="filled">1</span>', false);
+
+        $this->actingAs($admin)
+            ->get(route('annual-leaves.notice', $second))
+            ->assertOk()
+            ->assertSee('Дугаар <span class="filled">2</span>', false);
+    }
+
     public function test_the_chosen_signer_appears_in_the_approved_signature(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

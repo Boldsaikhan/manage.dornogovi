@@ -32,6 +32,7 @@ class AnnualLeaveNoticeController extends Controller
             'text' => AnnualLeaveNotice::text($annualLeave),
             'approverLines' => AnnualLeaveNotice::approverLines($annualLeave),
             'approverName' => AnnualLeaveNotice::approverName($annualLeave),
+            'number' => $this->rowNumber($annualLeave),
             'format' => [
                 'width' => (float) ($format?->width_mm ?? 210),
                 'height' => (float) ($format?->height_mm ?? 297),
@@ -45,6 +46,21 @@ class AnnualLeaveNoticeController extends Controller
             ],
             'canEdit' => ModuleAccess::canEdit($request->user(), self::MODULE),
         ]);
+    }
+
+    /**
+     * Бүртгэлийн хүснэгтэд харагдах Д/д дугаар.
+     *
+     * Хүснэгтэд мөрүүд шинээсээ хуучин руу дугаарлагддаг тул тухайн
+     * хамрах хүрээнд өөрөөс нь өмнө (id-гаар) бүртгэгдсэн мөрүүдийн тоо
+     * нь Д/д болно.
+     */
+    private function rowNumber(AnnualLeave $annualLeave): int
+    {
+        return AnnualLeave::query()
+            ->where('scope', $annualLeave->scope)
+            ->where('id', '<=', $annualLeave->id)
+            ->count();
     }
 
     /** Мэдэгдлийн бичвэрийг хуудсан дээр нь засна. */
