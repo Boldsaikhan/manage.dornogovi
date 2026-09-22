@@ -547,7 +547,7 @@ class ModuleResourceController extends Controller
          * Нэрийг сонгоход утасны жагсаалтаас албан тушаалыг нь олж
          * тавина, нэрийг арилгахад албан тушаал нь ч арилна.
          */
-        if (! empty($column['edit_people'])) {
+        if (! empty($column['edit_sync_position'])) {
             $values['position'] = filled($values[$name])
                 ? PhoneDirectoryEntry::positionFor((string) $values[$name])
                 : null;

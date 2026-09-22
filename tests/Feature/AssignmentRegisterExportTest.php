@@ -62,11 +62,40 @@ class AssignmentRegisterExportTest extends TestCase
             ->get(route('assignments.index', ['scope' => 'chief']))
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('rows.0.approved_by', 'Б.Ганбат')
-                // «Төлөв»-ийн баруун талд, хамгийн сүүлд байрлана.
+                // «Төлөв»-ийн баруун талд, «Хаах»-ын дараа байрлана.
                 ->where('columns.7.key', 'status')
-                ->where('columns.8.key', 'approved_by')
-                ->where('columns.8.label', 'Баталсан')
+                ->where('columns.8.key', 'closed_by')
+                ->where('columns.9.key', 'approved_by')
+                ->where('columns.9.label', 'Баталсан')
             );
+    }
+
+    public function test_closed_by_can_be_set_from_the_table_without_touching_position(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'Н.Алдарбаяр',
+            'position' => 'Мэргэжилтэн',
+            'org_name' => 'Санхүүгийн хэлтэс',
+        ]);
+
+        $row = $this->assignment('Томилолттой хүн');
+        $row->update(['position' => 'Мэргэжилтэн']);
+
+        $this->actingAs($admin)
+            ->from(route('assignments.index', ['scope' => 'chief']))
+            ->post(route('modules.field', ['module' => 'assignments', 'id' => $row->id]), [
+                'field' => 'closed_by',
+                'value' => 'Н.Алдарбаяр',
+            ])
+            ->assertRedirect();
+
+        $row->refresh();
+
+        $this->assertSame('Н.Алдарбаяр', $row->closed_by);
+        // «Хаах» талбар нь томилогдсон хүний өөрийнх нь албан тушаалыг хөндөхгүй.
+        $this->assertSame('Мэргэжилтэн', $row->position);
     }
 
     public function test_the_approver_is_chosen_from_the_leadership_list(): void

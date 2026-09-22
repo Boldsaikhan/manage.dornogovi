@@ -75,7 +75,7 @@ return [
              * заана — мөр нэмээд хүснэгтэн дээрээ бөглөнө.
              */
             // Нэр нь хоёр мөр болж хуваагдахгүй — нэг мөрөнд багтана.
-            ['key' => 'user_name', 'label' => 'Овог нэр', 'single_line' => true, 'width' => '11%', 'edit' => 'person_name', 'edit_people' => true],
+            ['key' => 'user_name', 'label' => 'Овог нэр', 'single_line' => true, 'width' => '11%', 'edit' => 'person_name', 'edit_people' => true, 'edit_sync_position' => true],
             // Албан тушаал нь нэрээс хамаарна — гараар засахгүй.
             ['key' => 'user_position', 'label' => 'Албан тушаал', 'width' => '14%'],
             ['key' => 'destination', 'label' => 'Хаана', 'width' => '9%', 'edit' => 'destination'],
@@ -86,11 +86,15 @@ return [
             ['key' => 'day_count', 'label' => 'Хэд хоног', 'width' => '5%', 'edit' => 'days', 'edit_type' => 'number'],
             ['key' => 'order_number', 'label' => 'Тушаалын дугаар', 'width' => '7%', 'edit' => 'order_number'],
             ['key' => 'status', 'label' => 'Төлөв', 'from_options' => true, 'width' => '8%', 'edit' => 'status'],
+            // Зардлыг тооцоо хийхийг зөвшөөрсөн албан хаагч — үнэмлэхийн ар талд гарна.
+            ['key' => 'closed_by', 'label' => 'Хаах', 'single_line' => true, 'width' => '9%', 'edit' => 'closed_by', 'edit_people' => true],
             ['key' => 'approved_by', 'label' => 'Баталсан', 'single_line' => true, 'width' => '11%', 'inline_short' => true, 'edit' => 'approved_by'],
         ],
         'fields' => [
             // Сонголт нь утасны жагсаалтын «Удирдлага» ангиллаас бүрдэнэ.
             ['name' => 'approved_by', 'label' => 'Баталсан', 'type' => 'select', 'options_from' => 'assignment_leaders'],
+            // Хаах — зардлыг тооцоо хийхийг зөвшөөрсөн албан хаагч (хэн ч байж болно).
+            ['name' => 'closed_by', 'label' => 'Хаах', 'type' => 'text'],
             // Томилолт авч буй албан хаагч — утасны жагсаалтаас сонгоно.
             ['name' => 'person_name', 'label' => 'Овог нэр', 'type' => 'text'],
             ['name' => 'position', 'label' => 'Албан тушаал', 'type' => 'text'],
