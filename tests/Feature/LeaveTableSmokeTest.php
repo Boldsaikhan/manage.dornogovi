@@ -95,4 +95,36 @@ class LeaveTableSmokeTest extends TestCase
 
         $selected->assertOk();
     }
+
+    public function test_create_update_and_delete_are_logged(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true, 'name' => 'Админ']);
+
+        $this->actingAs($admin)->post(route('leaves.store'), [
+            'scope' => 'baiguullaga',
+        ])->assertRedirect();
+
+        $leave = Leave::query()->sole();
+
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $leave), ['person_name' => 'Ц.Мөнхбат'])
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->delete(route('leaves.destroy', $leave))
+            ->assertRedirect();
+
+        $response = $this->actingAs($admin)
+            ->get(route('leaves.logs', ['scope' => 'baiguullaga']))
+            ->assertOk();
+
+        $rows = $response->json('rows');
+
+        $this->assertCount(3, $rows);
+        $this->assertSame('deleted', $rows[0]['action']);
+        $this->assertSame('updated', $rows[1]['action']);
+        $this->assertSame('created', $rows[2]['action']);
+        $this->assertSame('Админ', $rows[0]['user']);
+        $this->assertSame('Ц.Мөнхбат', $rows[1]['changes']['Албан хаагч']['to']);
+    }
 }

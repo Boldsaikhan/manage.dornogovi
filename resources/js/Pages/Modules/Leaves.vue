@@ -2,6 +2,7 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Modal from '@/Components/Modal.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import SheetCell from '@/Components/SheetCell.vue';
 
@@ -14,6 +15,7 @@ const props = defineProps({
     scopes: { type: Object, default: () => ({}) },
     types: { type: Object, default: () => ({}) },
     signers: { type: Object, default: () => ({}) },
+    hasAuditLog: { type: Boolean, default: false },
 });
 
 const view = ref('table'); // 'table' | 'sheet'
@@ -132,6 +134,38 @@ const download = (format) => {
     downloadOpen.value = false;
     window.location.href = url.toString();
 };
+
+/*
+ * Өөрчлөлтийн түүх — хэн, хэзээ, юуг сольсныг харуулна.
+ */
+const showLogs = ref(false);
+const logsBusy = ref(false);
+const logRows = ref([]);
+
+const openLogs = async () => {
+    showLogs.value = true;
+    logsBusy.value = true;
+
+    try {
+        const { data } = await window.axios.get(
+            route('leaves.logs', { scope: props.activeScope }),
+        );
+        logRows.value = data.rows ?? [];
+    } catch (error) {
+        logRows.value = [];
+    } finally {
+        logsBusy.value = false;
+    }
+};
+
+const changeList = (changes) => Object.entries(changes ?? {});
+
+const logTone = (action) => ({
+    created: 'bg-emerald-50 text-emerald-700',
+    imported: 'bg-sky-50 text-sky-700',
+    updated: 'bg-amber-50 text-amber-700',
+    deleted: 'bg-rose-50 text-rose-700',
+}[action] ?? 'bg-slate-100 text-slate-600');
 
 /**
  * Нүд бүрийн засварлах утга — хүснэгтэд шууд бөглөхөд ашиглана.
@@ -308,6 +342,15 @@ const visibleRows = computed(() => (
                             <option :value="6">6</option>
                         </select>
                     </label>
+                    <button
+                        v-if="hasAuditLog"
+                        type="button"
+                        class="ui-btn-ghost whitespace-nowrap"
+                        title="Хэн, хэзээ, юуг өөрчилснийг харах"
+                        @click="openLogs"
+                    >
+                        Түүх
+                    </button>
                     <button
                         v-if="canManage"
                         type="button"
@@ -669,6 +712,61 @@ const visibleRows = computed(() => (
                 </section>
             </div>
         </div>
+
+        <!-- Өөрчлөлтийн түүх -->
+        <Modal :show="showLogs" max-width="4xl" @close="showLogs = false">
+            <div class="p-5">
+                <div class="mb-4 flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-semibold text-brand-navy-900">Өөрчлөлтийн түүх</h3>
+                        <p class="mt-0.5 text-sm text-slate-500">{{ registerTitle }} — сүүлийн 200 бичлэг.</p>
+                    </div>
+                    <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" @click="showLogs = false">✕</button>
+                </div>
+
+                <p v-if="logsBusy" class="py-8 text-center text-sm text-slate-400">Уншиж байна…</p>
+                <p v-else-if="! logRows.length" class="py-8 text-center text-sm text-slate-400">
+                    Одоогоор бичлэг алга. Энэ түүх нь шинэчлэлт хийгдсэнээс хойших өөрчлөлтийг харуулна.
+                </p>
+                <div v-else class="max-h-[65vh] overflow-y-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="sticky top-0 bg-slate-50 text-slate-500">
+                            <tr>
+                                <th class="px-2 py-1.5 font-semibold">Огноо</th>
+                                <th class="px-2 py-1.5 font-semibold">Үйлдэл</th>
+                                <th class="px-2 py-1.5 font-semibold">Мөр</th>
+                                <th class="px-2 py-1.5 font-semibold">Юу өөрчлөгдсөн</th>
+                                <th class="px-2 py-1.5 font-semibold">Хэн</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in logRows" :key="item.id" class="border-t border-slate-100 align-top">
+                                <td class="whitespace-nowrap px-2 py-1.5 tabular-nums text-slate-500">{{ item.at }}</td>
+                                <td class="px-2 py-1.5">
+                                    <span class="rounded-full px-2 py-0.5 font-semibold" :class="logTone(item.action)">
+                                        {{ item.action_label }}
+                                    </span>
+                                </td>
+                                <td class="px-2 py-1.5 text-slate-700">{{ item.label || '—' }}</td>
+                                <td class="px-2 py-1.5 text-slate-600">
+                                    <span v-if="item.summary">{{ item.summary }}</span>
+                                    <ul v-else-if="changeList(item.changes).length" class="space-y-0.5">
+                                        <li v-for="[field, change] in changeList(item.changes)" :key="field">
+                                            <span class="font-medium text-slate-700">{{ field }}:</span>
+                                            <span class="text-slate-400 line-through">{{ change.from || '—' }}</span>
+                                            →
+                                            <span class="text-brand-navy-700">{{ change.to || '—' }}</span>
+                                        </li>
+                                    </ul>
+                                    <span v-else class="text-slate-400">—</span>
+                                </td>
+                                <td class="whitespace-nowrap px-2 py-1.5 text-slate-700">{{ item.user }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </Modal>
     </AuthenticatedLayout>
 </template>
 
