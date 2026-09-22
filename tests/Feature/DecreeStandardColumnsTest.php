@@ -289,6 +289,7 @@ class DecreeStandardColumnsTest extends TestCase
             'created_by' => $admin->id,
         ]);
 
+        // Зургийг хөтөч дээр нь PDF болгодог тул сервер рүү зураг ирэхгүй.
         $this->actingAs($admin)
             ->post(route('decrees.image.upload', $decree), [
                 'image' => UploadedFile::fake()->image('decree.jpg', 800, 600),
