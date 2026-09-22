@@ -65,50 +65,102 @@ class LeaveController extends Controller
         ]);
     }
 
+    /**
+     * Мөр үүсгэнэ.
+     *
+     * Хүснэгтэд «Шинэ нэмэх» дарахад бараг хоосон мөр шууд үүсээд, талбаруудыг
+     * нь дараа нь {@see update()} горимоор нүд бүрээр нь бөглөдөг тул талбарууд
+     * заавал биш.
+     */
     public function store(Request $request): RedirectResponse
     {
         abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
 
         $data = $request->validate([
-            'scope' => ['required', Rule::in(array_keys(self::SCOPES))],
-            'org_name' => ['required', 'string', 'max:255'],
-            'person_name' => ['required', 'string', 'max:255'],
+            'scope' => ['nullable', Rule::in(array_keys(self::SCOPES))],
+            'org_name' => ['nullable', 'string', 'max:255'],
+            'person_name' => ['nullable', 'string', 'max:255'],
             'slip_number' => ['nullable', 'string', 'max:50'],
-            'signer' => ['required', Rule::in(array_keys(Leave::SIGNERS))],
-            'type' => ['required', Rule::in(array_keys(Leave::TYPES))],
-            'start_date' => ['required', 'date'],
-            'days' => ['required', 'integer', 'min:1', 'max:365'],
+            'signer' => ['nullable', Rule::in(array_keys(Leave::SIGNERS))],
+            'type' => ['nullable', Rule::in(array_keys(Leave::TYPES))],
+            'start_date' => ['nullable', 'date'],
+            'days' => ['nullable', 'integer', 'min:1', 'max:365'],
             'reason' => ['nullable', 'string', 'max:2000'],
             'status' => ['nullable', Rule::in(['pending', 'approved', 'rejected'])],
         ]);
 
         ModuleOwnScope::assertCanCreate($request->user(), self::MODULE, $data);
 
-        $start = Carbon::parse($data['start_date'])->startOfDay();
-        $days = (int) $data['days'];
+        $scope = $data['scope'] ?? 'baiguullaga';
+        $start = Carbon::parse($data['start_date'] ?? now())->startOfDay();
+        $days = (int) ($data['days'] ?? 1);
         $end = $start->copy()->addDays($days - 1);
 
         Leave::query()->create([
-            ...$data,
+            'scope' => $scope,
+            'org_name' => $data['org_name'] ?? null,
+            'person_name' => $data['person_name'] ?? null,
+            'slip_number' => $data['slip_number'] ?? null,
+            'signer' => $data['signer'] ?? 'acting',
+            'type' => $data['type'] ?? 'tsalintai',
+            'start_date' => $start->toDateString(),
             'end_date' => $end->toDateString(),
+            'days' => $days,
+            'reason' => $data['reason'] ?? null,
             'status' => $data['status'] ?? 'approved',
             'user_id' => $request->user()->id,
             'department_id' => $request->user()->department_id,
         ]);
 
-        app(\App\Services\Push\EmployeePushNotifier::class)->notifyNamed(
-            $data['person_name'],
-            [
-                'title' => 'Чөлөөний бүртгэл',
-                'body' => ($data['person_name'] ?? '').' — '.($data['type'] ?? 'чөлөө').' ('.$start->format('Y-m-d').', '.$days.' хоног)',
-                'url' => '/modules/leaves',
-                'tag' => 'leave',
-            ],
-        );
+        if (filled($data['person_name'] ?? null)) {
+            app(\App\Services\Push\EmployeePushNotifier::class)->notifyNamed(
+                $data['person_name'],
+                [
+                    'title' => 'Чөлөөний бүртгэл',
+                    'body' => $data['person_name'].' — '.($data['type'] ?? 'чөлөө').' ('.$start->format('Y-m-d').', '.$days.' хоног)',
+                    'url' => '/modules/leaves',
+                    'tag' => 'leave',
+                ],
+            );
+        }
 
         return redirect()
-            ->route('leaves.index', ['scope' => $data['scope']])
+            ->route('leaves.index', ['scope' => $scope])
             ->with('success', 'Чөлөөний бүртгэл хадгалагдлаа.');
+    }
+
+    /**
+     * Хүснэгтийн нүдийг тус тусад нь хадгална («Мөр нэмэх» дараа шууд нүдэн
+     * дээр бөглөдөг тул нэг талбар бүрд нэг хүсэлт очно).
+     */
+    public function update(Request $request, Leave $leave): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
+        abort_unless(ModuleOwnScope::allows($request->user(), self::MODULE, $leave), 403);
+
+        $data = $request->validate([
+            'scope' => ['sometimes', Rule::in(array_keys(self::SCOPES))],
+            'org_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'person_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'slip_number' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'signer' => ['sometimes', Rule::in(array_keys(Leave::SIGNERS))],
+            'type' => ['sometimes', Rule::in(array_keys(Leave::TYPES))],
+            'start_date' => ['sometimes', 'date'],
+            'days' => ['sometimes', 'integer', 'min:1', 'max:365'],
+            'reason' => ['sometimes', 'nullable', 'string', 'max:2000'],
+        ]);
+
+        $leave->fill($data);
+
+        if (array_key_exists('start_date', $data) || array_key_exists('days', $data)) {
+            $start = Carbon::parse($leave->start_date)->startOfDay();
+            $days = (int) ($leave->days ?: 1);
+            $leave->end_date = $start->copy()->addDays($days - 1)->toDateString();
+        }
+
+        $leave->save();
+
+        return back(303)->with('success', 'Хадгаллаа.');
     }
 
     public function destroy(Request $request, Leave $leave): RedirectResponse

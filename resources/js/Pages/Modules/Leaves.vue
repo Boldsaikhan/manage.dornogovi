@@ -1,10 +1,9 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
-import { router, useForm } from '@inertiajs/vue3';
+import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import Modal from '@/Components/Modal.vue';
-import InputError from '@/Components/InputError.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
+import SheetCell from '@/Components/SheetCell.vue';
 
 const props = defineProps({
     activeScope: { type: String, default: 'baiguullaga' },
@@ -17,95 +16,101 @@ const props = defineProps({
     signers: { type: Object, default: () => ({}) },
 });
 
-const showForm = ref(false);
 const view = ref('table'); // 'table' | 'sheet'
 const previewCopies = ref(6);
 const actingName = ref('М.МӨНХБАТ');
-
-const form = useForm({
-    scope: props.activeScope === 'all' ? 'baiguullaga' : props.activeScope,
-    org_name: '',
-    person_name: '',
-    slip_number: '',
-    signer: 'acting',
-    type: 'tsalintai',
-    start_date: new Date().toISOString().slice(0, 10),
-    days: 1,
-    reason: '',
-    status: 'approved',
-});
+const cellClass = 'ui-register__cell';
 
 const typeEntries = computed(() => Object.entries(props.types));
 const scopeEntries = computed(() => Object.entries(props.scopes));
 const signerEntries = computed(() => Object.entries(props.signers));
 
-const directoryForScope = computed(() => {
-    if (!form.scope) return props.directory;
-    return props.directory.filter((d) => d.category === form.scope);
-});
+/** Байгууллагын нэрсийн сонголт — утасны жагсаалтаас. */
+const orgOptions = computed(() => props.directory.map((d) => ({
+    value: d.org_name,
+    label: d.org_name,
+    category: d.category,
+})));
 
-const orgOptions = computed(() => directoryForScope.value.map((d) => d.org_name));
-
-const peopleOptions = computed(() => {
-    if (!form.org_name) return [];
-    return directoryForScope.value.find((d) => d.org_name === form.org_name)?.people ?? [];
-});
+/** Албан хаагчдын сонголт — утасны жагсаалтын бүх хүн, байгууллагатай нь. */
+const peopleOptions = computed(() => props.directory.flatMap((d) => (d.people ?? []).map((p) => ({
+    value: p.name,
+    label: p.name,
+    hint: p.position || '',
+    org: d.org_name,
+    category: d.category,
+}))));
 
 const unitFromOrg = (name) => {
     const text = String(name || '').trim();
     return text.replace(/\s*хэлт(эс|сийн)$/iu, '').trim();
 };
 
-watch(
-    () => form.scope,
-    () => {
-        if (form.org_name && !orgOptions.value.includes(form.org_name)) {
-            form.org_name = '';
-            form.person_name = '';
-        }
-    },
-);
-
-watch(
-    () => form.org_name,
-    () => {
-        const names = peopleOptions.value.map((p) => p.name);
-        if (form.person_name && !names.includes(form.person_name)) {
-            form.person_name = '';
-        }
-    },
-);
-
 const switchScope = (value) => {
     router.get(route('leaves.index'), { scope: value }, { preserveState: false, preserveScroll: true });
 };
 
-const openForm = () => {
-    form.reset();
-    form.clearErrors();
-    form.scope = props.activeScope === 'all' ? 'baiguullaga' : props.activeScope;
-    form.signer = 'acting';
-    form.type = 'tsalintai';
-    form.start_date = new Date().toISOString().slice(0, 10);
-    form.days = 1;
-    form.status = 'approved';
-    showForm.value = true;
-};
+const addingRow = ref(false);
 
-const closeForm = () => {
-    showForm.value = false;
-};
+const addRow = () => {
+    if (! props.canManage || addingRow.value) return;
 
-const submit = () => {
-    form.post(route('leaves.store'), {
+    addingRow.value = true;
+
+    router.post(route('leaves.store'), {
+        scope: props.activeScope === 'all' ? 'baiguullaga' : props.activeScope,
+    }, {
         preserveScroll: true,
-        onSuccess: () => closeForm(),
+        onFinish: () => { addingRow.value = false; },
     });
 };
 
 const destroyRow = (id) => {
     if (!confirm('Устгах уу?')) return;
     router.delete(route('leaves.destroy', id), { preserveScroll: true });
+};
+
+/**
+ * Нүд бүрийн засварлах утга — хүснэгтэд шууд бөглөхөд ашиглана.
+ *
+ * Мөр бүр серверт бодит бичлэгтэй тул «Мөр нэмэх» дарахад шууд хоосон мөр
+ * үүсээд, дараа нь нүд бүрийг {@see saveField} горимоор нэг нэгээр нь
+ * хадгална.
+ */
+const DRAFT_FIELDS = ['slip_number', 'scope', 'org_name', 'person_name', 'type', 'start_date', 'days', 'reason', 'signer'];
+
+const drafts = reactive({});
+
+const buildDraft = (row) => Object.fromEntries(DRAFT_FIELDS.map((f) => [f, row[f] ?? '']));
+
+const syncDrafts = () => {
+    Object.keys(drafts).forEach((key) => delete drafts[key]);
+    props.rows.forEach((row) => {
+        drafts[row.id] = buildDraft(row);
+    });
+};
+
+watch(() => props.rows, syncDrafts, { immediate: true });
+
+const saveField = (id, field, value) => {
+    let next = value;
+
+    if (field === 'days') {
+        const n = Number.parseInt(next, 10);
+        next = Number.isNaN(n) ? 1 : Math.min(365, Math.max(1, n));
+    } else if (typeof next === 'string') {
+        next = next.trim() === '' ? null : next;
+    }
+
+    if (drafts[id]) {
+        drafts[id][field] = next ?? '';
+    }
+
+    router.patch(
+        route('leaves.update', id),
+        { [field]: next },
+        { preserveScroll: true, preserveState: true },
+    );
 };
 
 const slipPrintUrl = (row) => {
@@ -239,9 +244,10 @@ const visibleRows = computed(() => (
                         v-if="canManage"
                         type="button"
                         class="ui-btn-accent"
-                        @click="openForm"
+                        :disabled="addingRow"
+                        @click="addRow"
                     >
-                        Шинэ нэмэх
+                        {{ addingRow ? 'Нэмж байна…' : 'Шинэ нэмэх' }}
                     </button>
                 </div>
             </div>
@@ -355,16 +361,106 @@ const visibleRows = computed(() => (
                     <tbody>
                         <tr v-for="(row, index) in visibleRows" :key="row.id">
                             <td class="ui-register__cell--no">{{ index + 1 }}</td>
-                            <td class="text-center">{{ row.slip_number || '—' }}</td>
-                            <td><span class="ui-clamp-2" :title="row.scope_label">{{ row.scope_label }}</span></td>
-                            <td><span class="ui-clamp-2" :title="row.org_name">{{ row.org_name }}</span></td>
-                            <td><span class="ui-clamp-2" :title="row.person_name">{{ row.person_name }}</span></td>
-                            <td><span class="ui-clamp-2" :title="row.type_label">{{ row.type_label }}</span></td>
-                            <td class="leave-table__date text-center">{{ row.start_date || '—' }}</td>
-                            <td class="text-center">{{ row.days || '—' }}</td>
-                            <td class="leave-table__date text-center">{{ row.end_date || '—' }}</td>
-                            <td><span class="ui-clamp-2" :title="row.reason || ''">{{ row.reason || '—' }}</span></td>
-                            <td><span class="ui-clamp-2" :title="row.signer_label">{{ row.signer_label || '—' }}</span></td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].slip_number"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    placeholder="Дугаар…"
+                                    @commit="(v) => saveField(row.id, 'slip_number', v)"
+                                />
+                            </td>
+                            <td class="px-1.5 py-1.5">
+                                <select
+                                    v-if="canManage && drafts[row.id]"
+                                    v-model="drafts[row.id].scope"
+                                    class="w-full border-0 bg-transparent text-[11px] outline-none focus:bg-sky-50"
+                                    @change="saveField(row.id, 'scope', drafts[row.id].scope)"
+                                >
+                                    <option v-for="[value, label] in scopeEntries" :key="value" :value="value">{{ label }}</option>
+                                </select>
+                                <span v-else class="ui-clamp-2">{{ row.scope_label }}</span>
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].org_name"
+                                    :options="orgOptions"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    placeholder="Байгууллага…"
+                                    @commit="(v) => saveField(row.id, 'org_name', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].person_name"
+                                    :options="peopleOptions"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    placeholder="Овог нэр…"
+                                    @commit="(v) => saveField(row.id, 'person_name', v)"
+                                />
+                            </td>
+                            <td class="px-1.5 py-1.5">
+                                <select
+                                    v-if="canManage && drafts[row.id]"
+                                    v-model="drafts[row.id].type"
+                                    class="w-full border-0 bg-transparent text-[11px] outline-none focus:bg-sky-50"
+                                    @change="saveField(row.id, 'type', drafts[row.id].type)"
+                                >
+                                    <option v-for="[value, label] in typeEntries" :key="value" :value="value">{{ label }}</option>
+                                </select>
+                                <span v-else class="ui-clamp-2">{{ row.type_label }}</span>
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].start_date"
+                                    type="date"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'start_date', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].days"
+                                    type="number"
+                                    align="center"
+                                    :editable="canManage"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'days', v)"
+                                />
+                            </td>
+                            <td class="leave-table__date px-1.5 py-1.5 text-center">{{ row.end_date || '—' }}</td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].reason"
+                                    multiline
+                                    :editable="canManage"
+                                    empty-label=""
+                                    placeholder="Үндэслэл…"
+                                    @commit="(v) => saveField(row.id, 'reason', v)"
+                                />
+                            </td>
+                            <td class="px-1.5 py-1.5">
+                                <select
+                                    v-if="canManage && drafts[row.id]"
+                                    v-model="drafts[row.id].signer"
+                                    class="w-full border-0 bg-transparent text-[11px] outline-none focus:bg-sky-50"
+                                    @change="saveField(row.id, 'signer', drafts[row.id].signer)"
+                                >
+                                    <option v-for="[value, label] in signerEntries" :key="value" :value="value">{{ label }}</option>
+                                </select>
+                                <span v-else class="ui-clamp-2">{{ row.signer_label }}</span>
+                            </td>
                             <td>
                                 <div class="leave-table__actions">
                                     <a
@@ -468,99 +564,6 @@ const visibleRows = computed(() => (
                 </section>
             </div>
         </div>
-
-        <Modal :show="showForm" max-width="2xl" @close="closeForm">
-            <form class="p-6" @submit.prevent="submit">
-                <div class="mb-4 flex items-start justify-between gap-3">
-                    <div>
-                        <h3 class="text-base font-semibold text-brand-navy-900">Чөлөөний хуудас бөглөх</h3>
-                        <p class="mt-0.5 text-sm text-slate-500">Хэвлэгдэх загварын дагуу шууд бөглөнө.</p>
-                    </div>
-                    <select v-model="form.scope" class="ui-input w-56 py-1.5 text-sm" required>
-                        <option v-for="[value, label] in scopeEntries" :key="value" :value="value">
-                            {{ label }}
-                        </option>
-                    </select>
-                </div>
-
-                <!-- Хуудасны загвар — талбарууд шууд бичвэр дотор -->
-                <div class="rounded-2xl border border-slate-300 bg-white p-5 leading-8 text-slate-800">
-                    <h4 class="text-center text-sm font-bold uppercase tracking-wide">Чөлөөний хуудас</h4>
-                    <p class="mt-1 text-center text-sm">
-                        №
-                        <input
-                            v-model="form.slip_number"
-                            class="slip-input w-24 text-center"
-                            placeholder="дугаар"
-                        />
-                    </p>
-
-                    <p class="mt-3 text-justify text-sm">
-                        Аймгийн ЗДТГ-ын
-                        <select v-if="orgOptions.length" v-model="form.org_name" class="slip-input w-56" required>
-                            <option value="" disabled>сонгох…</option>
-                            <option v-for="name in orgOptions" :key="name" :value="name">{{ name }}</option>
-                        </select>
-                        <input v-else v-model="form.org_name" class="slip-input w-56" required placeholder="хэлтсийн нэр" />
-                        хэлтсийн мэргэжилтэн
-                        <select v-if="peopleOptions.length" v-model="form.person_name" class="slip-input w-52" required>
-                            <option value="" disabled>сонгох…</option>
-                            <option v-for="p in peopleOptions" :key="p.name" :value="p.name">
-                                {{ p.name }}{{ p.position ? ` — ${p.position}` : '' }}
-                            </option>
-                        </select>
-                        <input v-else v-model="form.person_name" class="slip-input w-52" required placeholder="овог нэр" />
-                        нь
-                        <input v-model="form.reason" class="slip-input w-64" placeholder="үндэслэл" />
-                        үндэслэлээр
-                        <input v-model="form.start_date" type="date" class="slip-input w-40" required />
-                        -ны өдрөөс ажлын
-                        <input v-model.number="form.days" type="number" min="1" max="365" class="slip-input w-16 text-center" required />
-                        өдрийн чөлөө /
-                        <button
-                            v-for="[value, label] in typeEntries"
-                            :key="value"
-                            type="button"
-                            class="slip-type"
-                            :class="form.type === value ? 'font-semibold underline decoration-2' : 'text-slate-500'"
-                            @click="form.type = value"
-                        >{{ label.toLowerCase() }}</button>
-                        / олгов.
-                        <span class="text-xs italic text-slate-400">(доогуур зурахыг товшиж сонгоно)</span>
-                    </p>
-
-                    <div class="mt-6 flex flex-wrap items-end justify-between gap-3 text-sm">
-                        <select v-model="form.signer" class="slip-input w-72 uppercase" required>
-                            <option v-for="[value, label] in signerEntries" :key="value" :value="value">
-                                {{ label }}
-                            </option>
-                        </select>
-                        <input
-                            v-if="form.signer === 'acting'"
-                            v-model="actingName"
-                            class="slip-input w-44 text-right uppercase"
-                        />
-                        <span v-else class="pr-4">/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /</span>
-                    </div>
-                </div>
-
-                <div class="mt-3 space-y-1">
-                    <InputError :message="form.errors.org_name" />
-                    <InputError :message="form.errors.person_name" />
-                    <InputError :message="form.errors.start_date" />
-                    <InputError :message="form.errors.days" />
-                    <InputError :message="form.errors.reason" />
-                    <InputError :message="form.errors.slip_number" />
-                </div>
-
-                <div class="mt-5 flex justify-end gap-2 border-t border-slate-100 pt-4">
-                    <button type="button" class="ui-btn-ghost" @click="closeForm">Болих</button>
-                    <button type="submit" class="ui-btn-accent" :disabled="form.processing">
-                        {{ form.processing ? 'Хадгалж байна…' : 'Хадгалах' }}
-                    </button>
-                </div>
-            </form>
-        </Modal>
     </AuthenticatedLayout>
 </template>
 
@@ -599,31 +602,6 @@ const visibleRows = computed(() => (
     border: 0;
     background: #e11d48;
     color: #fff;
-}
-
-/* Хуудасны загварт тохирсон — доогуур зураастай, тунгалаг оруулга */
-.slip-input {
-    display: inline-block;
-    border: 0;
-    border-bottom: 1px dotted #475569;
-    background: transparent;
-    padding: 0 0.25rem;
-    font-size: 0.875rem;
-    line-height: 1.5rem;
-    color: #0f172a;
-}
-
-.slip-input:focus {
-    outline: none;
-    border-bottom-color: #1c55a5;
-    background: #f3f7fc;
-}
-
-.slip-type {
-    border: 0;
-    background: transparent;
-    padding: 0 0.15rem;
-    cursor: pointer;
 }
 
 /* A4 харьцаа — дэлгэц дээр 6 ширхэг (2×3) багтана. */

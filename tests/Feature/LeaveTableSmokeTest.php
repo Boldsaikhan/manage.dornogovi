@@ -41,4 +41,29 @@ class LeaveTableSmokeTest extends TestCase
                 ->has('rows.0.end_date')
                 ->where('rows.0.type_label', 'Ээлжийн амралтаас'));
     }
+
+    public function test_add_row_then_fill_cells_inline(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->post(route('leaves.store'), [
+            'scope' => 'baiguullaga',
+        ])->assertRedirect();
+
+        $leave = Leave::query()->sole();
+        $this->assertNull($leave->person_name);
+        $this->assertSame('acting', $leave->signer);
+
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $leave), ['person_name' => 'Ц.Мөнхбат'])
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $leave), ['start_date' => '2026-09-01', 'days' => 4])
+            ->assertRedirect();
+
+        $leave->refresh();
+        $this->assertSame('Ц.Мөнхбат', $leave->person_name);
+        $this->assertSame('2026-09-04', $leave->end_date->toDateString());
+    }
 }

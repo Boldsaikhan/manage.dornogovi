@@ -103,6 +103,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/modules/leaves', [LeaveController::class, 'index'])->name('leaves.index');
     Route::post('/modules/leaves', [LeaveController::class, 'store'])->name('leaves.store');
+    Route::patch('/modules/leaves/{leave}', [LeaveController::class, 'update'])->name('leaves.update');
     Route::delete('/modules/leaves/{leave}', [LeaveController::class, 'destroy'])->name('leaves.destroy');
     Route::get('/modules/leaves/{leave}/slip', [LeaveSlipController::class, 'show'])->name('leaves.slip');
 
