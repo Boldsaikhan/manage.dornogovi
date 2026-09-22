@@ -212,8 +212,6 @@ class AnnualLeaveController extends Controller
 
         $data = $request->validate([
             'scope' => ['sometimes', Rule::in(array_keys(self::SCOPES))],
-            'org_name' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'position' => ['sometimes', 'nullable', 'string', 'max:255'],
             'person_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'work_years' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:80'],
             'entitled_days' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:365'],

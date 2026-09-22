@@ -34,16 +34,36 @@ class AnnualLeaveTableSmokeTest extends TestCase
 
         $this->actingAs($admin)
             ->patch(route('annual-leaves.update', $row), [
-                'org_name' => 'Санхүүгийн хэлтэс',
                 'work_years' => 5,
                 'entitled_days' => 24,
             ])
             ->assertRedirect();
 
         $row->refresh();
-        $this->assertSame('Санхүүгийн хэлтэс', $row->org_name);
         $this->assertSame(5, $row->work_years);
         $this->assertSame(24, $row->entitled_days);
+    }
+
+    public function test_org_name_and_position_cannot_be_typed_directly(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->post(route('annual-leaves.store'), [
+            'scope' => 'baiguullaga',
+        ])->assertRedirect();
+
+        $row = AnnualLeave::query()->sole();
+
+        $this->actingAs($admin)
+            ->patch(route('annual-leaves.update', $row), [
+                'org_name' => 'Гараар бичсэн байгууллага',
+                'position' => 'Гараар бичсэн тушаал',
+            ])
+            ->assertRedirect();
+
+        $row->refresh();
+        $this->assertNull($row->org_name);
+        $this->assertNull($row->position);
     }
 
     public function test_the_end_date_is_computed_from_start_date_and_entitled_days(): void
