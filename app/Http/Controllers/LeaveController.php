@@ -4,10 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Leave;
 use App\Models\PhoneDirectoryEntry;
+use App\Support\DocxTableWriter;
 use App\Support\ModuleAccess;
 use App\Support\ModuleOwnScope;
+use App\Support\PdfTableWriter;
+use App\Support\XlsxTableWriter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -62,6 +66,99 @@ class LeaveController extends Controller
             'scopes' => self::SCOPES,
             'types' => Leave::TYPES,
             'signers' => Leave::SIGNERS,
+        ]);
+    }
+
+    /**
+     * Харагдаж байгаа (эсвэл сонгосон) мөрүүдийг Excel / Word / PDF файлаар татна.
+     */
+    public function export(
+        Request $request,
+        DocxTableWriter $docx,
+        XlsxTableWriter $xlsx,
+        PdfTableWriter $pdf,
+    ): HttpResponse {
+        abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
+
+        $format = strtolower((string) $request->query('format', 'xlsx'));
+        abort_unless(in_array($format, ['xlsx', 'docx', 'pdf'], true), 404);
+
+        $scope = (string) $request->query('scope', 'baiguullaga');
+        if ($scope !== 'all' && ! array_key_exists($scope, self::SCOPES)) {
+            $scope = 'baiguullaga';
+        }
+
+        $query = Leave::query()->latest('id');
+        if ($scope !== 'all') {
+            $query->where('scope', $scope);
+        }
+        ModuleOwnScope::apply($query, $request->user(), self::MODULE);
+
+        // Сонгосон мөр байвал зөвхөн түүнийг татна.
+        $ids = collect(explode(',', (string) $request->query('ids', '')))
+            ->map(fn ($id) => (int) trim($id))
+            ->filter()
+            ->values();
+
+        if ($ids->isNotEmpty()) {
+            $query->whereIn('id', $ids->all());
+        }
+
+        $leaves = $query->limit(2000)->get();
+        $total = $leaves->count();
+
+        $headings = [
+            'Д/д', 'Байгууллага / хэлтэс', 'Албан хаагч', 'Төрөл',
+            'Эхлэх', 'Хоног', 'Дуусах', 'Үндэслэл', 'Орлон гарын үсэг зурсан',
+        ];
+        $widths = [500, 2600, 1800, 1200, 1100, 700, 1100, 2400, 2000];
+        $center = [0, 3, 4, 5, 6];
+
+        $rows = $leaves->values()->map(function (Leave $leave, int $index) use ($total) {
+            return [
+                (string) ($total - $index),
+                (string) ($leave->org_name ?? ''),
+                (string) ($leave->person_name ?? ''),
+                $leave->typeLabel(),
+                optional($leave->start_date)?->format('Y-m-d') ?? '',
+                (string) ($leave->days ?? ''),
+                optional($leave->end_date)?->format('Y-m-d') ?? '',
+                (string) ($leave->reason ?? ''),
+                Leave::SIGNERS[$leave->signer] ?? (string) $leave->signer,
+            ];
+        })->all();
+
+        $title = 'Чөлөөний бүртгэл'.($scope !== 'all' ? ' — '.self::SCOPES[$scope] : '');
+        $tmp = tempnam(sys_get_temp_dir(), 'leave_export_');
+
+        try {
+            if ($format === 'xlsx') {
+                $path = $tmp.'.xlsx';
+                $xlsx->write($path, $title, $headings, $rows);
+                $mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+            } elseif ($format === 'docx') {
+                $path = $tmp.'.docx';
+                $docxRows = array_map(fn (array $cells) => ['type' => 'data', 'cells' => $cells], $rows);
+                $docx->write($path, $title, $headings, $widths, $docxRows, $center, true);
+                $mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            } else {
+                $path = $tmp.'.pdf';
+                $pdf->write($path, $title, $headings, $rows, true);
+                $mime = 'application/pdf';
+            }
+
+            $content = (string) file_get_contents($path);
+            @unlink($path);
+        } finally {
+            @unlink($tmp);
+        }
+
+        $fileName = $title.' '.now()->format('Y-m-d').'.'.$format;
+
+        return response($content, 200, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => "attachment; filename=\"leaves.{$format}\"; filename*=UTF-8''".rawurlencode($fileName),
+            'Content-Length' => (string) strlen($content),
         ]);
     }
 

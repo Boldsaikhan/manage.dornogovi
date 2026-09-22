@@ -70,6 +70,70 @@ const destroyRow = (id) => {
 };
 
 /**
+ * «Засах» горим — товчоор асаана.
+ *
+ * Унтраалттай үед хүснэгт зөвхөн харагдана: нүдэн дээр санамсаргүй дарж утга
+ * өөрчлөгдөхгүй. Асаалттай үед бүх нүд идэвхжиж, мөр устгах товч гарна.
+ */
+const editMode = ref(false);
+
+const rowEditable = computed(() => props.canManage && editMode.value);
+
+const toggleEditMode = () => {
+    editMode.value = ! editMode.value;
+};
+
+watch(() => props.activeScope, () => {
+    editMode.value = false;
+});
+
+/** Мөр сонгож, Excel/Word/PDF-ээр татах. */
+const selectedIds = ref([]);
+
+const isSelected = (id) => selectedIds.value.includes(id);
+
+const toggleRow = (id) => {
+    selectedIds.value = isSelected(id)
+        ? selectedIds.value.filter((value) => value !== id)
+        : [...selectedIds.value, id];
+};
+
+const allSelected = computed(
+    () => visibleRows.value.length > 0 && visibleRows.value.every((row) => isSelected(row.id)),
+);
+
+const toggleAll = () => {
+    const ids = visibleRows.value.map((row) => row.id);
+    selectedIds.value = allSelected.value
+        ? selectedIds.value.filter((id) => ! ids.includes(id))
+        : [...new Set([...selectedIds.value, ...ids])];
+};
+
+watch(() => props.activeScope, () => { selectedIds.value = []; });
+
+const downloadOpen = ref(false);
+
+const downloadFormats = [
+    { format: 'xlsx', label: 'Excel (.xlsx)' },
+    { format: 'docx', label: 'Word (.docx)' },
+    { format: 'pdf', label: 'PDF' },
+];
+
+const download = (format) => {
+    const url = new URL(route('leaves.export'), window.location.origin);
+    url.searchParams.set('format', format);
+    url.searchParams.set('scope', props.activeScope);
+
+    // Сонгоогүй бол идэвхтэй табын бүх мөрийг татна.
+    if (selectedIds.value.length) {
+        url.searchParams.set('ids', selectedIds.value.join(','));
+    }
+
+    downloadOpen.value = false;
+    window.location.href = url.toString();
+};
+
+/**
  * Нүд бүрийн засварлах утга — хүснэгтэд шууд бөглөхөд ашиглана.
  *
  * Мөр бүр серверт бодит бичлэгтэй тул «Мөр нэмэх» дарахад шууд хоосон мөр
@@ -247,6 +311,44 @@ const visibleRows = computed(() => (
                     <button
                         v-if="canManage"
                         type="button"
+                        class="ui-btn-ghost whitespace-nowrap"
+                        :class="editMode ? 'ring-2 ring-inset ring-brand-navy-500/40' : ''"
+                        @click="toggleEditMode"
+                    >
+                        {{ editMode ? 'Засварыг дуусгах' : 'Засах' }}
+                    </button>
+                    <div class="relative">
+                        <button
+                            type="button"
+                            class="ui-btn-ghost whitespace-nowrap"
+                            :title="selectedIds.length ? 'Сонгосон мөрийг татах' : 'Энэ табын бүх бүртгэлийг татах'"
+                            @click="downloadOpen = ! downloadOpen"
+                        >
+                            {{ selectedIds.length ? `Татах (${selectedIds.length})` : 'Татах' }}
+                        </button>
+                        <!-- Гадна дарахад цэс хаагдана. -->
+                        <div v-if="downloadOpen" class="fixed inset-0 z-40" @click="downloadOpen = false" />
+                        <div
+                            v-if="downloadOpen"
+                            class="absolute right-0 z-50 mt-1 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                        >
+                            <p class="px-3 py-1.5 text-[11px] text-slate-400">
+                                {{ selectedIds.length ? `${selectedIds.length} сонгосон мөр` : 'Бүх бүртгэл' }}
+                            </p>
+                            <button
+                                v-for="option in downloadFormats"
+                                :key="option.format"
+                                type="button"
+                                class="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                @click="download(option.format)"
+                            >
+                                {{ option.label }}
+                            </button>
+                        </div>
+                    </div>
+                    <button
+                        v-if="canManage"
+                        type="button"
                         class="ui-btn-accent"
                         :disabled="addingRow"
                         @click="addRow"
@@ -303,8 +405,9 @@ const visibleRows = computed(() => (
             <TableScrollViewport v-else-if="view === 'table'" max-height="min(72vh, calc(100dvh - 11rem))">
                 <div class="ui-register">
                 <div class="ui-register__banner">{{ registerTitle }}</div>
-                <table class="ui-register__table min-w-[84rem]">
+                <table class="ui-register__table min-w-[88rem]">
                     <colgroup>
+                        <col style="width: 2.5rem" />
                         <col style="width: 3rem" />
                         <col style="width: 18rem" />
                         <col style="width: 10rem" />
@@ -318,6 +421,15 @@ const visibleRows = computed(() => (
                     </colgroup>
                     <thead>
                         <tr>
+                            <th rowspan="2">
+                                <input
+                                    type="checkbox"
+                                    class="h-3.5 w-3.5 rounded border-slate-300 text-brand-navy-600 focus:ring-brand-navy-500"
+                                    :checked="allSelected"
+                                    title="Бүгдийг сонгох"
+                                    @change="toggleAll"
+                                />
+                            </th>
                             <th rowspan="2">Д/д</th>
                             <th rowspan="2">Байгууллага /<br>хэлтэс</th>
                             <th rowspan="2">Албан хаагч</th>
@@ -333,6 +445,7 @@ const visibleRows = computed(() => (
                             <th>Дуусах</th>
                         </tr>
                         <tr class="ui-filters">
+                            <th />
                             <th>
                                 <button
                                     v-if="hasFilters"
@@ -358,13 +471,21 @@ const visibleRows = computed(() => (
                     </thead>
                     <tbody>
                         <tr v-for="row in visibleRows" :key="row.id">
+                            <td class="text-center">
+                                <input
+                                    type="checkbox"
+                                    class="h-4 w-4 rounded border-slate-300 text-brand-navy-600 focus:ring-brand-navy-500"
+                                    :checked="isSelected(row.id)"
+                                    @change="toggleRow(row.id)"
+                                />
+                            </td>
                             <td class="ui-register__cell--no">{{ row.seq }}</td>
                             <td :class="cellClass">
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].org_name"
                                     :options="orgOptions"
-                                    :editable="canManage"
+                                    :editable="rowEditable"
                                     empty-label=""
                                     placeholder="Байгууллага…"
                                     @commit="(v) => saveField(row.id, 'org_name', v)"
@@ -375,7 +496,7 @@ const visibleRows = computed(() => (
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].person_name"
                                     :options="peopleOptions"
-                                    :editable="canManage"
+                                    :editable="rowEditable"
                                     empty-label=""
                                     placeholder="Овог нэр…"
                                     @commit="(v) => saveField(row.id, 'person_name', v)"
@@ -383,7 +504,7 @@ const visibleRows = computed(() => (
                             </td>
                             <td class="px-1.5 py-1.5">
                                 <select
-                                    v-if="canManage && drafts[row.id]"
+                                    v-if="rowEditable && drafts[row.id]"
                                     v-model="drafts[row.id].type"
                                     class="w-full border-0 bg-transparent text-[11px] outline-none focus:bg-sky-50"
                                     @change="saveField(row.id, 'type', drafts[row.id].type)"
@@ -398,7 +519,7 @@ const visibleRows = computed(() => (
                                     v-model="drafts[row.id].start_date"
                                     type="date"
                                     align="center"
-                                    :editable="canManage"
+                                    :editable="rowEditable"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'start_date', v)"
                                 />
@@ -409,7 +530,7 @@ const visibleRows = computed(() => (
                                     v-model="drafts[row.id].days"
                                     type="number"
                                     align="center"
-                                    :editable="canManage"
+                                    :editable="rowEditable"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'days', v)"
                                 />
@@ -420,7 +541,7 @@ const visibleRows = computed(() => (
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].reason"
                                     multiline
-                                    :editable="canManage"
+                                    :editable="rowEditable"
                                     empty-label=""
                                     placeholder="Үндэслэл…"
                                     @commit="(v) => saveField(row.id, 'reason', v)"
@@ -428,7 +549,7 @@ const visibleRows = computed(() => (
                             </td>
                             <td class="px-1.5 py-1.5">
                                 <select
-                                    v-if="canManage && drafts[row.id]"
+                                    v-if="rowEditable && drafts[row.id]"
                                     v-model="drafts[row.id].signer"
                                     class="w-full border-0 bg-transparent text-[11px] outline-none focus:bg-sky-50"
                                     @change="saveField(row.id, 'signer', drafts[row.id].signer)"
@@ -451,7 +572,7 @@ const visibleRows = computed(() => (
                                         </svg>
                                     </a>
                                     <button
-                                        v-if="canManage"
+                                        v-if="rowEditable"
                                         type="button"
                                         class="ui-icon-btn ui-icon-btn--danger"
                                         title="Устгах"
@@ -466,7 +587,7 @@ const visibleRows = computed(() => (
                             </td>
                         </tr>
                         <tr v-if="!visibleRows.length">
-                            <td colspan="10" class="ui-register__empty">
+                            <td colspan="11" class="ui-register__empty">
                                 <template v-if="hasFilters">Хайлтад тохирох бүртгэл олдсонгүй.</template>
                                 <template v-else>{{ emptyMessage }}</template>
                             </td>

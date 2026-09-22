@@ -66,4 +66,33 @@ class LeaveTableSmokeTest extends TestCase
         $this->assertSame('Ц.Мөнхбат', $leave->person_name);
         $this->assertSame('2026-09-04', $leave->end_date->toDateString());
     }
+
+    public function test_export_downloads_a_file_for_each_format(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->post(route('leaves.store'), [
+            'scope' => 'baiguullaga',
+            'org_name' => 'Төрийн захиргааны удирдлагын хэлтэс',
+            'person_name' => 'Б.Батбаяр',
+            'type' => 'eeljiin',
+            'start_date' => '2026-08-25',
+            'days' => 3,
+        ])->assertRedirect();
+
+        $leave = Leave::query()->sole();
+
+        foreach (['xlsx', 'docx', 'pdf'] as $format) {
+            $response = $this->actingAs($admin)
+                ->get(route('leaves.export', ['format' => $format, 'scope' => 'baiguullaga']));
+
+            $response->assertOk();
+            $this->assertNotEmpty($response->getContent());
+        }
+
+        $selected = $this->actingAs($admin)
+            ->get(route('leaves.export', ['format' => 'xlsx', 'ids' => (string) $leave->id]));
+
+        $selected->assertOk();
+    }
 }
