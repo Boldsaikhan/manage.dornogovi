@@ -242,6 +242,11 @@ class AnnualLeaveController extends Controller
             }
         }
 
+        // Улсад ажилласан жилийг бөглөхөд амралт олгох хоног стандартаар тооцогдоно.
+        if (array_key_exists('work_years', $data) && ! array_key_exists('entitled_days', $data)) {
+            $data['entitled_days'] = AnnualLeave::entitledDaysFor($data['work_years']);
+        }
+
         // Эхлэх огноо, эсвэл олгох хоног өөрчлөгдвөл дуусах огноог дагуулна.
         if (array_key_exists('start_date', $data) || array_key_exists('entitled_days', $data)) {
             $startValue = array_key_exists('start_date', $data) ? $data['start_date'] : $annualLeave->start_date;

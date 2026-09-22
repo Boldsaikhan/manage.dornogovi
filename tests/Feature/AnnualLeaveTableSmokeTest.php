@@ -44,6 +44,49 @@ class AnnualLeaveTableSmokeTest extends TestCase
         $this->assertSame(24, $row->entitled_days);
     }
 
+    public function test_entitled_days_is_computed_from_work_years(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->post(route('annual-leaves.store'), [
+            'scope' => 'baiguullaga',
+        ])->assertRedirect();
+
+        $row = AnnualLeave::query()->sole();
+
+        foreach ([
+            [0, 15], [5, 15], [6, 18], [10, 18], [11, 20], [15, 20],
+            [16, 22], [20, 22], [21, 24], [25, 24], [26, 26], [31, 26], [32, 29], [50, 29],
+        ] as [$years, $expectedDays]) {
+            $this->actingAs($admin)
+                ->patch(route('annual-leaves.update', $row), ['work_years' => $years])
+                ->assertRedirect();
+
+            $this->assertSame($expectedDays, $row->fresh()->entitled_days, "жил={$years}");
+        }
+    }
+
+    public function test_entitled_days_can_still_be_overridden_by_hand(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->post(route('annual-leaves.store'), [
+            'scope' => 'baiguullaga',
+        ])->assertRedirect();
+
+        $row = AnnualLeave::query()->sole();
+
+        $this->actingAs($admin)
+            ->patch(route('annual-leaves.update', $row), ['work_years' => 3])
+            ->assertRedirect();
+        $this->assertSame(15, $row->fresh()->entitled_days);
+
+        $this->actingAs($admin)
+            ->patch(route('annual-leaves.update', $row), ['entitled_days' => 20])
+            ->assertRedirect();
+        $this->assertSame(20, $row->fresh()->entitled_days);
+    }
+
     public function test_org_name_and_position_cannot_be_typed_directly(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

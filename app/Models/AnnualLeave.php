@@ -41,4 +41,31 @@ class AnnualLeave extends Model
     {
         return $this->belongsTo(Department::class);
     }
+
+    /**
+     * Улсад ажилласан жилээр нэмэгдэл амралт олгоно — Хөдөлмөрийн тухай
+     * хуулийн үндсэн 15 өдөрт ажилласан жилээс хамаарсан нэмэгдлийг
+     * нэмнэ.
+     *
+     * @see resources/views/annual-leaves/notice.blade.php-д ашигладаг
+     *      хүснэгттэй ижил шатлал (6-10 жил → +3, 11-15 → +5, гэх мэт).
+     */
+    public static function entitledDaysFor(?int $years): ?int
+    {
+        if ($years === null) {
+            return null;
+        }
+
+        $extra = match (true) {
+            $years <= 5 => 0,
+            $years <= 10 => 3,
+            $years <= 15 => 5,
+            $years <= 20 => 7,
+            $years <= 25 => 9,
+            $years <= 31 => 11,
+            default => 14,
+        };
+
+        return 15 + $extra;
+    }
 }
