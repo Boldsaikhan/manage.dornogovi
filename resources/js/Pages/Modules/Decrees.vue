@@ -512,9 +512,10 @@ const onImagePicked = async (event) => {
     if (! file || ! id) return;
 
     const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    const isImage = /^image\/(png|jpe?g)$/i.test(file.type) || /\.(png|jpe?g)$/i.test(file.name);
 
-    if (! isPdf) {
-        alert('Зөвхөн PDF файл оруулна уу.');
+    if (! isPdf && ! isImage) {
+        alert('PDF, эсвэл PNG / JPG зураг оруулна уу.');
         uploadingId.value = null;
         return;
     }
@@ -522,8 +523,13 @@ const onImagePicked = async (event) => {
     try {
         let ready = file;
 
-        // 5MB-аас хэтэрсэн бол хөтөч дээр нь шахаж багтаана.
-        if (file.size > MAX_FILE_BYTES) {
+        if (isImage) {
+            // Зургийг PDF болгож хувиргана.
+            compressingId.value = id;
+            const { imageToPdf } = await import('@/Support/pdfCompress.js');
+            ready = await imageToPdf(file, MAX_FILE_BYTES);
+        } else if (file.size > MAX_FILE_BYTES) {
+            // 5MB-аас хэтэрсэн PDF-ийг хөтөч дээр нь шахаж багтаана.
             compressingId.value = id;
             const { compressPdfToLimit } = await import('@/Support/pdfCompress.js');
             ready = await compressPdfToLimit(file, MAX_FILE_BYTES);
@@ -1339,7 +1345,7 @@ const docColumnCount = computed(() => {
                                         v-if="canManage && editMode"
                                         type="button"
                                         class="inline-flex h-7 w-7 items-center justify-center rounded text-slate-500 transition hover:bg-brand-navy-50 hover:text-brand-navy-700"
-                                        :title="compressingId === row.id ? 'Шахаж байна…' : 'PDF оруулах (5MB хүртэл автоматаар шахна)'"
+                                        :title="compressingId === row.id ? 'Шахаж байна…' : 'PDF эсвэл зураг оруулах (зургийг PDF болгоно)'"
                                         :aria-label="compressingId === row.id ? 'Шахаж байна' : 'PDF оруулах'"
                                         :disabled="compressingId === row.id"
                                         @click="pickImage(row.id)"
@@ -1426,7 +1432,7 @@ const docColumnCount = computed(() => {
         <input
             ref="imageInput"
             type="file"
-            accept="application/pdf,.pdf"
+            accept="application/pdf,.pdf,image/png,image/jpeg,.png,.jpg,.jpeg"
             class="hidden"
             @change="onImagePicked"
         />
