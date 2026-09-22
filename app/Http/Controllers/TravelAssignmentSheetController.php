@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PhoneDirectoryEntry;
 use App\Models\TravelAssignment;
 use App\Support\AssignmentSheet;
 use App\Support\ModuleAccess;
@@ -22,6 +23,8 @@ class TravelAssignmentSheetController extends Controller
     {
         abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
 
+        $closedBy = trim((string) $assignment->closed_by);
+
         return view('assignments.sheet', [
             'assignment' => $assignment,
             // Батлагчийг сонгосон бол түүний албан тушаалаар толгойг бүрдүүлнэ.
@@ -29,6 +32,13 @@ class TravelAssignmentSheetController extends Controller
             // Сонгосон хүн байвал тэр, үгүй бол табын батлагчийн нэр.
             'signerName' => $assignment->approved_by
                 ?: AssignmentSheet::signerName($assignment->approver),
+            // «Хаах» — зардлыг тооцоо хийхийг зөвшөөрсөн албан хаагч. Сонгоогүй
+            // бол батлагчийн мэдээллээр орлуулна (өмнөх зан төлөв хэвээр).
+            'closerLines' => $closedBy !== ''
+                ? [AssignmentSheet::positionLine((string) (PhoneDirectoryEntry::positionFor($closedBy) ?? ''))]
+                : AssignmentSheet::linesFor($assignment->approver, $assignment->approved_by),
+            'closerName' => $closedBy !== '' ? $closedBy : ($assignment->approved_by
+                ?: AssignmentSheet::signerName($assignment->approver)),
             'approverLabel' => $assignment->approverLabel(),
             'year' => optional($assignment->start_date)?->format('Y') ?? now()->format('Y'),
             'period' => $this->period($assignment),

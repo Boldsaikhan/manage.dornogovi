@@ -403,7 +403,7 @@
 
             <div class="cert__foot">
                 <div class="cert__signer">
-                    {!! $signerBlock($lines, (string) $signerName) !!}
+                    {!! $signerBlock($closerLines, (string) $closerName) !!}
                 </div>
 
                 <div class="cert__date">………. оны …… сар …… өдөр</div>

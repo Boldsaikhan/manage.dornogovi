@@ -59,6 +59,26 @@ class TravelAssignmentSheetTest extends TestCase
             ->assertSee('ДОРНОГОВЬ АЙМГИЙН ЗДТГ-ЫН');
     }
 
+    public function test_the_closing_signature_uses_the_chosen_closer(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'person_name' => 'Н.Алдарбаяр',
+            'position' => 'Санхүүгийн албаны дарга',
+            'org_name' => 'Санхүүгийн алба',
+        ]);
+
+        $assignment = $this->assignment('governor');
+        $assignment->update(['closed_by' => 'Н.Алдарбаяр']);
+
+        $this->actingAs($admin)
+            ->get(route('assignments.sheet', $assignment))
+            ->assertOk()
+            ->assertSee('ДОРНОГОВЬ АЙМГИЙН САНХҮҮГИЙН АЛБАНЫ ДАРГА')
+            ->assertSee('Н.Алдарбаяр');
+    }
+
     public function test_the_register_is_split_by_approver(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
