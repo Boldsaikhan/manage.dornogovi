@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\UserAccessController;
 use App\Http\Controllers\AiAssistantController;
 use App\Http\Controllers\AnnualLeaveController;
+use App\Http\Controllers\AnnualLeaveNoticeController;
 use App\Http\Controllers\AppLockController;
 use App\Http\Controllers\AwardController;
 use App\Http\Controllers\CredentialController;
@@ -116,6 +117,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/modules/annual-leaves', [AnnualLeaveController::class, 'store'])->name('annual-leaves.store');
     Route::patch('/modules/annual-leaves/{annualLeave}', [AnnualLeaveController::class, 'update'])->name('annual-leaves.update');
     Route::delete('/modules/annual-leaves/{annualLeave}', [AnnualLeaveController::class, 'destroy'])->name('annual-leaves.destroy');
+    Route::get('/modules/annual-leaves/{annualLeave}/notice', [AnnualLeaveNoticeController::class, 'show'])->name('annual-leaves.notice');
+    Route::patch('/modules/annual-leaves/{annualLeave}/notice-text', [AnnualLeaveNoticeController::class, 'updateText'])->name('annual-leaves.notice.text');
 
     Route::get('/modules/awards', [AwardController::class, 'index'])->name('awards.index');
     Route::get('/modules/awards/export', [AwardController::class, 'export'])->name('awards.export');
