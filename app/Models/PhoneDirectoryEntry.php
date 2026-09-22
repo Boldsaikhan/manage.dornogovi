@@ -91,6 +91,34 @@ class PhoneDirectoryEntry extends Model
         return $position !== '' ? $position : null;
     }
 
+    /** Нэрээр нь утасны дугаарыг олно — гар утас, эс бөгөөс ажлын утас. */
+    public static function phoneFor(?string $name): ?string
+    {
+        $needle = trim((string) $name);
+
+        if ($needle === '') {
+            return null;
+        }
+
+        $entry = static::query()
+            ->whereNotNull('person_name')
+            ->orderBy('org_order')
+            ->orderBy('sort_order')
+            ->get(['person_name', 'mobile_phone', 'office_phone'])
+            ->first(function (self $row) use ($needle) {
+                $full = trim((string) $row->person_name);
+                $short = \App\Support\PersonName::short($full);
+
+                return $full === $needle || ($short !== '' && $short === $needle);
+            });
+
+        if (! $entry) {
+            return null;
+        }
+
+        return self::preferredPhone($entry->mobile_phone, $entry->office_phone);
+    }
+
     /** Нэрээр нь харьяалах байгууллагыг олно. */
     public static function orgFor(?string $name): ?string
     {

@@ -33,7 +33,7 @@ class RolePermission extends Model
         'super_admin' => [
             'dept_dashboard' => 'manage', 'tasks' => 'manage', 'work_groups' => 'manage',
             'plans' => 'manage', 'meetings' => 'manage', 'reports' => 'manage',
-            'leaves' => 'manage', 'assignments' => 'manage', 'phone_directory' => 'manage',
+            'leaves' => 'manage', 'annual_leaves' => 'manage', 'assignments' => 'manage', 'phone_directory' => 'manage',
             'awards' => 'manage',
             'regulations' => 'manage', 'decrees' => 'manage', 'contracts' => 'manage',
             'archives' => 'manage', 'doc_standards' => 'manage', 'onboarding' => 'manage',
@@ -42,7 +42,7 @@ class RolePermission extends Model
         'department_head' => [
             'dept_dashboard' => 'manage', 'tasks' => 'manage', 'work_groups' => 'manage',
             'plans' => 'manage', 'meetings' => 'manage', 'reports' => 'manage',
-            'leaves' => 'manage', 'assignments' => 'manage', 'phone_directory' => 'view',
+            'leaves' => 'manage', 'annual_leaves' => 'manage', 'assignments' => 'manage', 'phone_directory' => 'view',
             'awards' => 'manage',
             'regulations' => 'view', 'decrees' => 'view', 'contracts' => 'view',
             'archives' => 'view', 'doc_standards' => 'view', 'onboarding' => 'view',
@@ -51,7 +51,7 @@ class RolePermission extends Model
         'specialist' => [
             'dept_dashboard' => 'view', 'tasks' => 'manage_own', 'work_groups' => 'view',
             'plans' => 'view', 'meetings' => 'view', 'reports' => 'manage',
-            'leaves' => 'manage', 'assignments' => 'manage', 'phone_directory' => 'view',
+            'leaves' => 'manage', 'annual_leaves' => 'manage', 'assignments' => 'manage', 'phone_directory' => 'view',
             'awards' => 'manage',
             'regulations' => 'view', 'decrees' => 'view', 'contracts' => 'view',
             'archives' => 'view', 'doc_standards' => 'view', 'onboarding' => 'view',
