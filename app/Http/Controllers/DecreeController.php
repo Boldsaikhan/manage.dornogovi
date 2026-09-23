@@ -7,6 +7,8 @@ use App\Models\Decree;
 use App\Models\EditUndo;
 use App\Models\DocumentFormat;
 use App\Models\PhoneDirectoryEntry;
+use App\Models\User;
+use App\Services\Push\EmployeePushNotifier;
 use App\Support\DecreeRegisterImporter;
 use App\Support\DocxTableWriter;
 use App\Support\ModuleAccess;
@@ -83,6 +85,27 @@ class DecreeController extends Controller
     private function decreeKey(Decree $decree): string
     {
         return $this->tabKey($this->tabForDecree($decree));
+    }
+
+    /**
+     * Тухайн табыг харах эрхтэй бүх хэрэглэгчид (нэмсэн хүнээс бусад) шинэ
+     * мөр бүртгэгдсэн тухай мэдэгдэнэ.
+     */
+    private function notifyTabViewers(Request $request, string $tab, string $body): void
+    {
+        $actorId = $request->user()->id;
+        $key = $this->tabKey($tab);
+
+        $viewers = User::query()
+            ->get()
+            ->filter(fn (User $u) => $u->id !== $actorId && ModuleAccess::canView($u, $key))
+            ->values();
+
+        app(EmployeePushNotifier::class)->notifyUsers($viewers, [
+            'title' => 'Захирамж, тушаал',
+            'body' => $body,
+            'url' => '/modules/decrees?tab='.$tab,
+        ]);
     }
 
     /** Хэрэглэгчийн харах эрхтэй эхний таб. */
@@ -680,6 +703,14 @@ class DecreeController extends Controller
             changes: $result,
         );
 
+        if ($result['created'] > 0) {
+            $this->notifyTabViewers(
+                $request,
+                $tab,
+                sprintf('%s бүртгэлд файлаас %d мөр нэмэгдлээ.', self::TABS[$tab] ?? $tab, $result['created']),
+            );
+        }
+
         $message = sprintf('%d мөр нэмэгдлээ.', $result['created']);
 
         if ($result['skipped'] > 0) {
@@ -791,6 +822,12 @@ class DecreeController extends Controller
 
             $this->log($created, 'created', '«Мөр нэмэх» товчоор нэмэгдлээ.');
         }
+
+        $this->notifyTabViewers(
+            $request,
+            $tab,
+            (self::TABS[$tab] ?? $tab).' бүртгэлд шинэ мөр нэмэгдлээ.',
+        );
 
         return redirect()
             ->route('decrees.index', ['tab' => $tab])
