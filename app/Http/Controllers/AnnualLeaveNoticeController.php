@@ -33,6 +33,7 @@ class AnnualLeaveNoticeController extends Controller
             'approverLines' => AnnualLeaveNotice::approverLines($annualLeave),
             'approverName' => AnnualLeaveNotice::approverName($annualLeave),
             'number' => $this->rowNumber($annualLeave),
+            'registeredOn' => $annualLeave->created_at,
             'format' => [
                 'width' => (float) ($format?->width_mm ?? 210),
                 'height' => (float) ($format?->height_mm ?? 297),

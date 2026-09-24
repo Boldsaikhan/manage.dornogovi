@@ -178,7 +178,11 @@
                 <h1>Ээлжийн амралт олгох тухай мэдэгдэл</h1>
 
                 <div class="meta">
-                    <span><span class="dots">&nbsp;</span> оны <span class="dots">&nbsp;</span>-р сарын <span class="dots">&nbsp;</span>-ны өдөр</span>
+                    <span>
+                        <span class="filled">{{ $registeredOn?->format('Y') }}</span> оны
+                        <span class="filled">{{ $registeredOn?->format('n') }}</span>-р сарын
+                        <span class="filled">{{ $registeredOn?->format('j') }}</span>-ны өдөр
+                    </span>
                     <span>Дугаар <span class="filled">{{ $number }}</span></span>
                 </div>
 
