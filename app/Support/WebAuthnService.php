@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\WebAuthnCredential;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Log;
 use lbuchs\WebAuthn\Binary\ByteBuffer;
 use lbuchs\WebAuthn\WebAuthn;
 use lbuchs\WebAuthn\WebAuthnException;
@@ -63,6 +64,33 @@ class WebAuthnService
         }
 
         return $data;
+    }
+
+    /**
+     * unpackState() яагаад null буцаасныг оношлоход ашиглана (зөвхөн алдааны
+     * лог бичихэд дуудагдана — энгийн урсгалд нөлөөлөхгүй).
+     */
+    private static function diagnoseState(mixed $token): string
+    {
+        if (! is_string($token) || $token === '') {
+            return 'missing';
+        }
+
+        try {
+            $data = json_decode(Crypt::decryptString($token), true, 512, JSON_THROW_ON_ERROR);
+        } catch (Throwable $e) {
+            return 'decrypt_failed: '.get_class($e).': '.$e->getMessage();
+        }
+
+        if (! is_array($data) || ! isset($data['exp'])) {
+            return 'malformed_payload';
+        }
+
+        if ((int) $data['exp'] < time()) {
+            return 'expired ('.(time() - (int) $data['exp']).'s ago)';
+        }
+
+        return 'kind_mismatch ('.($data['kind'] ?? 'null').')';
     }
 
     public static function make(Request $request): WebAuthn
@@ -340,7 +368,9 @@ class WebAuthnService
     {
         $webauthn = self::make($request);
 
-        $state = self::unpackState($payload['state'] ?? null);
+        $rawState = $payload['state'] ?? null;
+        $state = self::unpackState($rawState);
+        $sessionHadChallenge = $request->session()->has('webauthn.challenge');
 
         if ($state && ($state['kind'] ?? null) === 'assert') {
             $challengeB64 = (string) ($state['challenge'] ?? '');
@@ -351,6 +381,16 @@ class WebAuthnService
         }
 
         if (! $challengeB64) {
+            // Static шинжилгээгээр давхар шалгасан ч хэрэглэгч дээр давтагдсаар
+            // байгаа тул яг энэ мөчид state яагаад унасныг лог болгож үлдээнэ.
+            Log::warning('webauthn.assert.session_expired', [
+                'user_id' => optional($request->user())->id,
+                'user_agent' => $request->userAgent(),
+                'state_present' => is_string($rawState) && $rawState !== '',
+                'state_failure' => self::diagnoseState($rawState),
+                'session_had_challenge' => $sessionHadChallenge,
+            ]);
+
             throw new RuntimeException('Нэвтрэх сесс дууссан. Дахин оролдоно уу.');
         }
 
