@@ -4,6 +4,28 @@
 
 import { markWebAuthnDevice } from '@/utils/pwaClient';
 
+/**
+ * Зарим гар утасны хөтөч/апп-д (ялангуяа Android-ын зарим WebView) хуруу/царай
+ * баталгаажуулах цонх нээгдсэний дараа `navigator.credentials.*` Promise нь
+ * хэзээ ч шийдэгдэхгүй зогсчихдог тохиолдол бий — алдаа ч гарахгүй, дэлгэц ч
+ * хөдлөхгүй. Хугацаа хэтэрвэл алдаа шиг шидэж, хэрэглэгчийг гацаахгүй байхын
+ * тулд хугацаатай уралдуулна.
+ */
+const WEBAUTHN_TIMEOUT_MS = 25000;
+
+const withTimeout = (promise, ms = WEBAUTHN_TIMEOUT_MS) => new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+        const err = new Error('Хугацаа хэтэрлээ.');
+        err.name = 'TimeoutError';
+        reject(err);
+    }, ms);
+
+    promise.then(
+        (value) => { clearTimeout(timer); resolve(value); },
+        (error) => { clearTimeout(timer); reject(error); },
+    );
+});
+
 export const isWebAuthnSupported = () => (
     typeof window !== 'undefined'
     && !! window.PublicKeyCredential
@@ -100,7 +122,7 @@ export const registerBiometric = async () => {
 
     let credential;
     try {
-        credential = await navigator.credentials.create({ publicKey });
+        credential = await withTimeout(navigator.credentials.create({ publicKey }));
     } catch (e) {
         // DOMException нэрийг хадгална (NotAllowedError гэх мэт)
         const err = new Error(e?.message || 'Бүртгэл амжилтгүй.');
@@ -130,7 +152,7 @@ export const loginWithBiometric = async (login = '') => {
 
     let credential;
     try {
-        credential = await navigator.credentials.get({ publicKey });
+        credential = await withTimeout(navigator.credentials.get({ publicKey }));
     } catch (e) {
         const err = new Error(e?.message || 'Нэвтрэлт амжилтгүй.');
         err.name = e?.name || 'Error';
@@ -158,7 +180,7 @@ export const assertBiometric = async () => {
 
     let credential;
     try {
-        credential = await navigator.credentials.get({ publicKey });
+        credential = await withTimeout(navigator.credentials.get({ publicKey }));
     } catch (e) {
         const err = new Error(e?.message || 'Баталгаажуулалт амжилтгүй.');
         err.name = e?.name || 'Error';
