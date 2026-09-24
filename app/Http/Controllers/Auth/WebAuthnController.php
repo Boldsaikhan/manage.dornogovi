@@ -34,6 +34,7 @@ class WebAuthnController extends Controller
             'clientDataJSON' => ['required', 'string'],
             'attestationObject' => ['required', 'string'],
             'device_name' => ['nullable', 'string', 'max:120'],
+            'state' => ['nullable', 'string'],
         ]);
 
         try {
@@ -97,6 +98,7 @@ class WebAuthnController extends Controller
             'authenticatorData' => ['required', 'string'],
             'signature' => ['required', 'string'],
             'userHandle' => ['nullable', 'string'],
+            'state' => ['nullable', 'string'],
         ]);
 
         try {

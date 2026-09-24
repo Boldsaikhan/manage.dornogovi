@@ -5,13 +5,66 @@ namespace App\Support;
 use App\Models\User;
 use App\Models\WebAuthnCredential;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use lbuchs\WebAuthn\Binary\ByteBuffer;
 use lbuchs\WebAuthn\WebAuthn;
 use lbuchs\WebAuthn\WebAuthnException;
 use RuntimeException;
+use Throwable;
 
 class WebAuthnService
 {
+    /**
+     * Challenge-ийг зөвхөн PHP сессэд найдахгүй байхын тулд шифрлэсэн,
+     * бие даасан (stateless) токен болгож клиент рүү дамжуулна.
+     *
+     * Гар утасны PWA дээр апп дэвсгэрт очиход browser process нь OS-оор
+     * хаагдаж, дараа нь дахин нээгдэхэд session cookie алга болсон байх нь
+     * түгээмэл. Хуруу/царай баталгаажуулах цонх хариу авахад хэдэн секунд
+     * зарцуулдаг тул энэ хугацаанд session алдагдвал "Нэвтрэх сесс дууссан"
+     * гэсэн алдаа мөнхөд гардаг байв. Токен нь клиент рүү очоод буцаад
+     * ирдэг тул session-оос үл хамааран баталгаажина.
+     */
+    private const STATE_TTL_SECONDS = 300;
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private static function packState(array $data): ?string
+    {
+        try {
+            return Crypt::encryptString(json_encode(
+                $data + ['exp' => time() + self::STATE_TTL_SECONDS],
+                JSON_THROW_ON_ERROR,
+            ));
+        } catch (Throwable $e) {
+            // Токен бэлдэж чадаагүй ч session нөөц зам хэвээр ажиллана.
+            return null;
+        }
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private static function unpackState(mixed $token): ?array
+    {
+        if (! is_string($token) || $token === '') {
+            return null;
+        }
+
+        try {
+            $data = json_decode(Crypt::decryptString($token), true, 512, JSON_THROW_ON_ERROR);
+        } catch (Throwable $e) {
+            return null;
+        }
+
+        if (! is_array($data) || ! isset($data['exp']) || (int) $data['exp'] < time()) {
+            return null;
+        }
+
+        return $data;
+    }
+
     public static function make(Request $request): WebAuthn
     {
         $rpId = self::rpId($request);
@@ -114,22 +167,37 @@ class WebAuthnService
         );
 
         $challenge = $webauthn->getChallenge();
-        $request->session()->put('webauthn.challenge', self::b64urlEncode(
+        $challengeB64 = self::b64urlEncode(
             $challenge instanceof ByteBuffer ? $challenge->getBinaryString() : (string) $challenge
-        ));
+        );
+        $request->session()->put('webauthn.challenge', $challengeB64);
         $request->session()->put('webauthn.user_id', $user->id);
 
-        return json_decode(json_encode($args), true);
+        $result = json_decode(json_encode($args), true);
+        $result['state'] = self::packState([
+            'kind' => 'register',
+            'challenge' => $challengeB64,
+            'user_id' => $user->id,
+        ]);
+
+        return $result;
     }
 
     public static function register(Request $request, User $user, array $payload): WebAuthnCredential
     {
         $webauthn = self::make($request);
-        $challengeB64 = $request->session()->pull('webauthn.challenge');
-        $sessionUserId = $request->session()->pull('webauthn.user_id');
 
-        if (! $challengeB64 || (int) $sessionUserId !== (int) $user->id) {
-            throw new RuntimeException('Бүртгэлийн сесс дууссан. Дахин оролдоно уу.');
+        $state = self::unpackState($payload['state'] ?? null);
+
+        if ($state && ($state['kind'] ?? null) === 'register' && (int) ($state['user_id'] ?? 0) === (int) $user->id) {
+            $challengeB64 = (string) ($state['challenge'] ?? '');
+        } else {
+            $challengeB64 = $request->session()->pull('webauthn.challenge');
+            $sessionUserId = $request->session()->pull('webauthn.user_id');
+
+            if (! $challengeB64 || (int) $sessionUserId !== (int) $user->id) {
+                throw new RuntimeException('Бүртгэлийн сесс дууссан. Дахин оролдоно уу.');
+            }
         }
 
         $clientDataJSON = self::b64urlDecode($payload['clientDataJSON'] ?? '');
@@ -231,11 +299,19 @@ class WebAuthnService
         );
 
         $challenge = $webauthn->getChallenge();
-        $request->session()->put('webauthn.challenge', self::b64urlEncode(
+        $challengeB64 = self::b64urlEncode(
             $challenge instanceof ByteBuffer ? $challenge->getBinaryString() : (string) $challenge
-        ));
+        );
+        $request->session()->put('webauthn.challenge', $challengeB64);
 
-        return json_decode(json_encode($args), true);
+        $result = json_decode(json_encode($args), true);
+        $result['state'] = self::packState([
+            'kind' => 'assert',
+            'challenge' => $challengeB64,
+            'expected_user_id' => $user->id,
+        ]);
+
+        return $result;
     }
 
     public static function authenticate(Request $request, array $payload): User
@@ -263,8 +339,16 @@ class WebAuthnService
     private static function assertCredential(Request $request, array $payload): WebAuthnCredential
     {
         $webauthn = self::make($request);
-        $challengeB64 = $request->session()->pull('webauthn.challenge');
-        $expectedUserId = $request->session()->pull('webauthn.expected_user_id');
+
+        $state = self::unpackState($payload['state'] ?? null);
+
+        if ($state && ($state['kind'] ?? null) === 'assert') {
+            $challengeB64 = (string) ($state['challenge'] ?? '');
+            $expectedUserId = $state['expected_user_id'] ?? null;
+        } else {
+            $challengeB64 = $request->session()->pull('webauthn.challenge');
+            $expectedUserId = $request->session()->pull('webauthn.expected_user_id');
+        }
 
         if (! $challengeB64) {
             throw new RuntimeException('Нэвтрэх сесс дууссан. Дахин оролдоно уу.');
