@@ -138,6 +138,9 @@ export const registerBiometric = async () => {
     }
 
     const payload = credentialToCreatePayload(credential);
+    // Session-оос үл хамааран баталгаажуулах signed токен — сервер рүү буцаана.
+    if (options.state) payload.state = options.state;
+
     const { data } = await window.axios.post(route('webauthn.register'), payload);
     markWebAuthnDevice();
 
@@ -167,6 +170,8 @@ export const loginWithBiometric = async (login = '') => {
     }
 
     const payload = credentialToAssertPayload(credential);
+    if (options.state) payload.state = options.state;
+
     const { data } = await window.axios.post(route('webauthn.login'), payload);
     markWebAuthnDevice();
 
@@ -194,5 +199,8 @@ export const assertBiometric = async () => {
         throw err;
     }
 
-    return credentialToAssertPayload(credential);
+    const payload = credentialToAssertPayload(credential);
+    if (options.state) payload.state = options.state;
+
+    return payload;
 };
