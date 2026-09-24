@@ -137,20 +137,25 @@
         right: 0;
     }
 
+    /*
+     * 20-оос доош байлгана — толгойн самбар (header, z-20) яг доор нь
+     * байрлах ёстой, эс бөгөөс мэдэгдлийн цэс мэтийн доторх absolute
+     * цэснүүд хүснэгтийн наалдсан баганын ард нуугдана.
+     */
     .ui-table--pin-actions thead .ui-sticky-progress,
     .ui-table--pin-actions thead .ui-sticky-actions {
         @apply bg-brand-navy-50;
-        z-index: 25;
+        z-index: 15;
     }
 
     .ui-table--pin-actions thead .ui-sticky-actions {
-        z-index: 26;
+        z-index: 16;
     }
 
     .ui-table--pin-actions tbody td.ui-sticky-progress,
     .ui-table--pin-actions tbody td.ui-sticky-actions {
         @apply bg-white;
-        z-index: 12;
+        z-index: 5;
         isolation: isolate;
     }
 
@@ -520,20 +525,25 @@
     .ui-register thead tr:first-child th {
         position: sticky;
         top: 0;
-        z-index: 20;
+        /*
+         * 20-оос доош байлгана — толгойн самбар (header, z-20) яг доор нь
+         * байрлах ёстой, эс бөгөөс мэдэгдлийн цэс мэтийн absolute цэснүүд
+         * наалдсан хүснэгтийн толгойн ард нуугдана.
+         */
+        z-index: 14;
     }
 
     /* Наалдах байрлалыг JS бодит өндрөөр нь тавина (Decrees.vue → syncStickyHead). */
     .ui-register thead tr:nth-child(2) th {
         position: sticky;
         top: 2.65rem;
-        z-index: 19;
+        z-index: 13;
         @apply bg-brand-navy-50 py-1.5 text-[10px] font-medium normal-case tracking-normal text-slate-500;
     }
 
     .ui-register thead tr:nth-child(3) th {
         position: sticky;
-        z-index: 18;
+        z-index: 12;
         @apply bg-brand-navy-50 py-0.5 text-[10px] font-normal normal-case text-slate-400;
     }
 
@@ -548,7 +558,7 @@
      */
     thead tr.ui-filters th {
         position: sticky;
-        z-index: 17;
+        z-index: 11;
         @apply bg-brand-navy-100 px-1 py-1 align-middle;
         box-shadow:
             inset -1px 0 0 rgb(226 232 240),
