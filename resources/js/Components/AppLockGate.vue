@@ -632,6 +632,9 @@ const unlockBiometric = async ({ skipSetupCheck = false, auto = false } = {}) =>
         await finishUnlock();
     } catch (e) {
         const name = e?.name || '';
+        // Зарим гар утасны хөтөч/апп дээр хуруу/царайн цонх онгойгоод хариу
+        // хэзээ ч ирэхгүй зогсчихдог — доорх timeout энэ тохиолдлыг илрүүлнэ.
+        const timedOut = /TimeoutError/i.test(name);
 
         if (auto) {
             /*
@@ -641,9 +644,14 @@ const unlockBiometric = async ({ skipSetupCheck = false, auto = false } = {}) =>
              * юу болсныг мэдэхгүй байв. Бүртгэлийг нь арилгахгүй ч шалтгааныг
              * нь хэлж, товчоор дахин оролдохыг санал болгоно.
              */
-            error.value = /NotAllowedError|AbortError/i.test(name)
-                ? 'Баталгаажуулалт дуусгагдсангүй. «Хуруу / царайгаар нээх» дарж дахин оролдоно уу.'
-                : unlockErrorMessage(e, 'Баталгаажуулж чадсангүй. Дахин оролдох, эсвэл нууц үгээрээ нээнэ үү.');
+            error.value = timedOut
+                ? 'Хуруу/царай баталгаажихад удаж байна. Нууц үгээрээ нээх үү?'
+                : /NotAllowedError|AbortError/i.test(name)
+                    ? 'Баталгаажуулалт дуусгагдсангүй. «Хуруу / царайгаар нээх» дарж дахин оролдоно уу.'
+                    : unlockErrorMessage(e, 'Баталгаажуулж чадсангүй. Дахин оролдох, эсвэл нууц үгээрээ нээнэ үү.');
+        } else if (timedOut) {
+            error.value = 'Хуруу/царай баталгаажихад удаж байна. Энэ төхөөрөмж дээр ажиллахгүй байж магадгүй — нууц үгээрээ нээнэ үү.';
+            showPasswordForm.value = true;
         } else if (/NotAllowedError|AbortError/i.test(name)) {
             clearWebAuthnDeviceHint();
             localWebAuthn.value = false;
