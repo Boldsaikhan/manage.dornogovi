@@ -6,11 +6,34 @@ use App\Models\AnnualLeave;
 use App\Models\PhoneDirectoryEntry;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class AnnualLeaveNoticeTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_the_notice_shows_the_registration_date(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        Carbon::setTestNow('2026-09-24 10:00:00');
+
+        $row = AnnualLeave::create([
+            'user_id' => $admin->id,
+            'scope' => 'baiguullaga',
+            'person_name' => 'Б.Чинзүрх',
+        ]);
+
+        Carbon::setTestNow();
+
+        $this->actingAs($admin)
+            ->get(route('annual-leaves.notice', $row))
+            ->assertOk()
+            ->assertSee('<span class="filled">2026</span> оны', false)
+            ->assertSee('<span class="filled">9</span>-р сарын', false)
+            ->assertSee('<span class="filled">24</span>-ны өдөр', false);
+    }
 
     public function test_the_notice_shows_the_auto_generated_text_and_signatures(): void
     {
