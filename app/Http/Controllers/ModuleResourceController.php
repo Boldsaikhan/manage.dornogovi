@@ -766,6 +766,7 @@ class ModuleResourceController extends Controller
     private function storeBlankRow(Request $request, string $module, array $config): RedirectResponse
     {
         $data = $this->applyScopeToData($request, $config, $config['defaults'] ?? []);
+        $data = $this->applyCreateHooks($request, $config, $data);
 
         ModuleOwnScope::assertCanCreate($request->user(), $module, $data);
 
@@ -904,11 +905,30 @@ class ModuleResourceController extends Controller
 
             $config['fields'][$index]['options'] = match ($source) {
                 'assignment_leaders' => AssignmentSheet::leaders(),
+                'heltes_departments' => $this->heltesDepartmentOptions(),
                 default => [],
             };
         }
 
         return $config;
+    }
+
+    /**
+     * Утасны жагсаалтын «Хэлтэс» ангиллын байгууллагуудын нэрс — хяналт
+     * тавих хэлтэс сонгоход ашиглана.
+     *
+     * @return array<string, string>
+     */
+    private function heltesDepartmentOptions(): array
+    {
+        return PhoneDirectoryEntry::query()
+            ->where('category', 'heltes')
+            ->orderBy('org_order')
+            ->distinct()
+            ->pluck('org_name')
+            ->filter()
+            ->mapWithKeys(fn (string $name) => [$name => $name])
+            ->all();
     }
 
     /**
