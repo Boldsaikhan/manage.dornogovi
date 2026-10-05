@@ -162,6 +162,7 @@
         .notice .body-edit button.ghost { background: #fff; color: #1c55a5; }
 
         .notice .sign {
+            margin-top: 4mm;
             margin-bottom: 5mm;
         }
 
