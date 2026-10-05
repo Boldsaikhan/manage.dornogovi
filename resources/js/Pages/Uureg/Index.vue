@@ -1333,6 +1333,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                     <p class="ui-subtitle">Word файлын хүснэгтийг уншиж, мөр бүрийг шууд засварлана.</p>
                 </div>
                 <div
+                    v-if="hasKinds"
                     class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center"
                 >
                     <input
