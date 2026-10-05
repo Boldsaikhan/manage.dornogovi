@@ -9,6 +9,7 @@ use App\Support\WebAuthnService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
 use Throwable;
@@ -22,6 +23,11 @@ class WebAuthnController extends Controller
         try {
             $options = WebAuthnService::registrationOptions($request, $user);
         } catch (Throwable $e) {
+            Log::warning('webauthn.register.options.failed', [
+                'user_id' => $user?->id,
+                'exception' => get_class($e).': '.$e->getMessage(),
+            ]);
+
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
@@ -71,6 +77,11 @@ class WebAuthnController extends Controller
         try {
             $options = WebAuthnService::loginOptions($request);
         } catch (Throwable $e) {
+            Log::warning('webauthn.login.options.failed', [
+                'login' => $request->input('login'),
+                'exception' => get_class($e).': '.$e->getMessage(),
+            ]);
+
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
@@ -80,9 +91,17 @@ class WebAuthnController extends Controller
     /** Нэвтэрсэн хэрэглэгчийн биометрик assertion options. */
     public function verifyOptions(Request $request): JsonResponse
     {
+        $user = $request->user();
+
         try {
-            $options = WebAuthnService::assertionOptionsForUser($request, $request->user());
+            $options = WebAuthnService::assertionOptionsForUser($request, $user);
         } catch (Throwable $e) {
+            Log::warning('webauthn.verify.options.failed', [
+                'user_id' => $user?->id,
+                'credential_count' => $user ? $user->webauthnCredentials()->count() : null,
+                'exception' => get_class($e).': '.$e->getMessage(),
+            ]);
+
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
