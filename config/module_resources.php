@@ -237,6 +237,8 @@ return [
         ],
         'defaults' => ['status' => 'draft'],
         'on_create' => 'attach_creator_department',
+        // Word/Excel файлаас төлөвлөгөөний мөрүүдийг оруулна.
+        'file_import' => true,
     ],
     'meetings' => [
         'model' => App\Models\Meeting::class,

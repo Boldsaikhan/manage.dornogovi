@@ -9,6 +9,7 @@ use App\Support\AssignmentSheet;
 use App\Support\AssignmentRegisterImporter;
 use App\Support\DocxTableWriter;
 use App\Support\ModuleAccess;
+use App\Support\ModuleRowImporter;
 use App\Support\PdfTableWriter;
 use App\Support\XlsxTableWriter;
 use App\Support\TabularFileReader;
@@ -280,10 +281,11 @@ class ModuleResourceController extends Controller
         string $module,
         TabularFileReader $reader,
         AssignmentRegisterImporter $importer,
+        ModuleRowImporter $genericImporter,
     ): JsonResponse {
         $config = $this->configFor($module);
 
-        abort_unless($module === 'assignments', 404);
+        abort_unless($config['file_import'] ?? false, 404);
         abort_unless(ModuleAccess::canEdit($request->user(), $module), 403);
 
         $request->validate([
@@ -293,13 +295,20 @@ class ModuleResourceController extends Controller
         $file = $request->file('file');
         $rows = $reader->rows($file->getRealPath(), $file->getClientOriginalExtension());
 
-        $analysed = $importer->analyse($rows);
-        $entries = $importer->build($analysed['rows'], $analysed['mapping']);
+        if ($module === 'assignments') {
+            $analysed = $importer->analyse($rows);
+            $entries = $importer->build($analysed['rows'], $analysed['mapping']);
+            $fields = AssignmentRegisterImporter::FIELDS;
+        } else {
+            $fields = collect($config['fields'])->pluck('label', 'name')->all();
+            $analysed = $genericImporter->analyse($rows, $config['fields']);
+            $entries = $genericImporter->build($analysed['rows'], $analysed['mapping'], $config['fields']);
+        }
 
         return response()->json([
             'headers' => $analysed['headers'],
             'mapping' => $analysed['mapping'],
-            'fields' => AssignmentRegisterImporter::FIELDS,
+            'fields' => $fields,
             'rows' => array_slice($analysed['rows'], 0, 400),
             'entries' => $entries,
             'total' => count($entries),
@@ -316,20 +325,24 @@ class ModuleResourceController extends Controller
     ): RedirectResponse {
         $config = $this->configFor($module);
 
-        abort_unless($module === 'assignments', 404);
+        abort_unless($config['file_import'] ?? false, 404);
         abort_unless(ModuleAccess::canEdit($request->user(), $module), 403);
 
+        $scopes = $config['scopes'] ?? [];
+
         $data = $request->validate([
-            'scope' => ['required', 'string'],
+            'scope' => [$scopes ? 'required' : 'nullable', 'string'],
             'entries' => ['required', 'array', 'min:1'],
             'entries.*' => ['array'],
         ]);
 
-        $scopes = $config['scopes'] ?? [];
+        if ($scopes) {
+            abort_unless(array_key_exists($data['scope'], $scopes), 422, 'Ийм хэсэг алга.');
+        }
 
-        abort_unless(array_key_exists($data['scope'], $scopes), 422, 'Ийм хэсэг алга.');
-
-        $result = $importer->store($data['scope'], $data['entries']);
+        $result = $module === 'assignments'
+            ? $importer->store($data['scope'], $data['entries'])
+            : $this->storeGenericImport($request, $config, $data['entries']);
 
         // Импортыг нэг бичлэгээр тэмдэглэнэ — мөр бүрээр биш.
         if ($result['created'] > 0) {
@@ -337,8 +350,8 @@ class ModuleResourceController extends Controller
                 modelType: $module,
                 modelId: null,
                 action: 'imported',
-                scope: $data['scope'],
-                label: $scopes[$data['scope']] ?? $data['scope'],
+                scope: $data['scope'] ?? null,
+                label: $scopes[$data['scope'] ?? ''] ?? $config['title'],
                 summary: sprintf(
                     '%d мөр нэмэгдэж, %d мөр давхардсан тул алгасав.',
                     $result['created'],
@@ -359,8 +372,76 @@ class ModuleResourceController extends Controller
         }
 
         return redirect()
-            ->route('assignments.index', ['scope' => $data['scope']])
+            ->route($module.'.index', $scopes ? ['scope' => $data['scope']] : [])
             ->with($result['created'] > 0 ? 'success' : 'warning', $message);
+    }
+
+    /**
+     * Person_name-гүй (жишээ нь Төлөвлөгөө) модулиудын импорт — анхны
+     * талбарын (жишээ нь «Гарчиг») утгаар давхардлыг шалгана.
+     *
+     * @param  list<array<string, mixed>>  $entries
+     * @return array{created: int, skipped: int, failed: int, errors: list<string>}
+     */
+    private function storeGenericImport(Request $request, array $config, array $entries): array
+    {
+        $model = $config['model'];
+        $primary = $config['fields'][0]['name'] ?? null;
+        $normalize = fn (string $v) => mb_strtolower(trim($v));
+
+        $existing = $primary
+            ? $model::query()->pluck($primary)
+                ->filter()
+                ->map(fn ($v) => $normalize((string) $v))
+                ->flip()
+                ->all()
+            : [];
+
+        $created = 0;
+        $skipped = 0;
+        $failed = 0;
+        $errors = [];
+
+        foreach ($entries as $index => $entry) {
+            $primaryValue = $primary ? trim((string) ($entry[$primary] ?? '')) : '';
+
+            if ($primary && $primaryValue === '') {
+                $skipped++;
+
+                continue;
+            }
+
+            $key = $primary ? $normalize($primaryValue) : null;
+
+            if ($key !== null && isset($existing[$key])) {
+                $skipped++;
+
+                continue;
+            }
+
+            $data = array_merge($config['defaults'] ?? [], array_filter($entry, fn ($v) => $v !== null));
+            $data = $this->applyCreateHooks($request, $config, $data);
+
+            try {
+                $model::query()->create($data);
+            } catch (\Throwable $e) {
+                $failed++;
+
+                if (count($errors) < 3) {
+                    $errors[] = ($index + 1).'-р мөр: '.$e->getMessage();
+                }
+
+                continue;
+            }
+
+            if ($key !== null) {
+                $existing[$key] = true;
+            }
+
+            $created++;
+        }
+
+        return ['created' => $created, 'skipped' => $skipped, 'failed' => $failed, 'errors' => $errors];
     }
 
     public function store(Request $request, string $module): RedirectResponse
