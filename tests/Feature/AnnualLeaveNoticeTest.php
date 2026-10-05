@@ -35,6 +35,34 @@ class AnnualLeaveNoticeTest extends TestCase
             ->assertSee('<span class="filled">24</span>-ны өдөр', false);
     }
 
+    public function test_the_signature_gap_can_be_adjusted_via_query_param(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = AnnualLeave::create([
+            'user_id' => $admin->id,
+            'scope' => 'baiguullaga',
+            'person_name' => 'Б.Чинзүрх',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('annual-leaves.notice', $row))
+            ->assertOk()
+            ->assertSee('margin-left: 20mm;', false);
+
+        $this->actingAs($admin)
+            ->get(route('annual-leaves.notice', $row, absolute: false).'?gap=35')
+            ->assertOk()
+            ->assertSee('margin-left: 35mm;', false)
+            ->assertSee('35 мм', false);
+
+        // Хязгаараас гадуур утга 5-60мм хооронд хайчлагдана.
+        $this->actingAs($admin)
+            ->get(route('annual-leaves.notice', $row, absolute: false).'?gap=999')
+            ->assertOk()
+            ->assertSee('margin-left: 60mm;', false);
+    }
+
     public function test_the_notice_shows_the_auto_generated_text_and_signatures(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

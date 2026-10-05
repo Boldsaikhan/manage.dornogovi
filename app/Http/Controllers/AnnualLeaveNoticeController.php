@@ -24,11 +24,16 @@ class AnnualLeaveNoticeController extends Controller
         $copies = (int) $request->query('copies', 2);
         $copies = in_array($copies, [1, 2], true) ? $copies : 2;
 
+        // Тушаал ба нэрийн хоорондох зай — гарын үсэг зурах хэрэгцээнд тааруулж болно.
+        $signGap = (int) $request->query('gap', 20);
+        $signGap = max(5, min(60, $signGap));
+
         $format = DocumentFormat::defaultFormat();
 
         return view('annual-leaves.notice', [
             'annualLeave' => $annualLeave,
             'copies' => $copies,
+            'signGap' => $signGap,
             'text' => AnnualLeaveNotice::text($annualLeave),
             'approverLines' => AnnualLeaveNotice::approverLines($annualLeave),
             'approverName' => AnnualLeaveNotice::approverName($annualLeave),
