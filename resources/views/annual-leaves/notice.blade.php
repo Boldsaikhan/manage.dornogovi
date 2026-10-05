@@ -168,18 +168,24 @@
 
         .notice .sign .row {
             display: flex;
-            justify-content: space-between;
             align-items: flex-end;
-            gap: 6mm;
-            max-width: 75mm;
         }
 
+        /*
+         * Тушаалын багана тогтмол өргөнтэй — текст 1 мөр, 2 мөр ямар ч
+         * байсан нэр үргэлж яг ижил зайд эхэлнэ (гарын үсэг зурах зай
+         * тушаалын урт/богиноос хамаарахгүйгээр тооцогдоно).
+         */
         .notice .sign .title {
+            flex: 0 0 45mm;
+            max-width: 45mm;
             text-transform: uppercase;
             font-weight: normal;
         }
 
         .notice .sign .name {
+            flex: 0 0 auto;
+            margin-left: 20mm;
             white-space: nowrap;
         }
 
