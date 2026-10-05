@@ -67,6 +67,32 @@
             border-top: 1px dashed #cbd5e1;
         }
 
+        /*
+         * 2 хувь хэвлэхэд хуудсыг яг голоор нь хайчилж тасдах боломжтой
+         * байхын тулд хоёр хувийг хуудасны агуулгын өндрийг яг тэнцүү
+         * хуваасан өндөртэй болгоно (контент хэт урт бол tasarна).
+         */
+        .page--split {
+            height: {{ $format['height'] }}mm;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page--split .notice {
+            flex: 1 1 50%;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .page--split .notice + .notice {
+            margin-top: 0;
+            padding-top: 6mm;
+        }
+
+        .page--split .notice:first-child {
+            padding-bottom: 6mm;
+        }
+
         .notice h1 {
             font-size: 12pt;
             font-weight: 700;
@@ -173,7 +199,7 @@
         @endforeach
     </div>
 
-    <div class="page">
+    <div class="page {{ $copies === 2 ? 'page--split' : '' }}">
         @for ($i = 0; $i < $copies; $i++)
             <div class="notice">
                 <h1>Ээлжийн амралт олгох тухай мэдэгдэл</h1>
