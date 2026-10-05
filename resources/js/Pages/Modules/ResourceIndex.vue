@@ -592,6 +592,8 @@ const remapImport = () => {
     if (! importData.value) return;
 
     const { rows, mapping } = importData.value;
+    // Эхний талбар (жишээ нь «Овог нэр», «Гарчиг») хоосон бол мөрийг орхино.
+    const primaryField = Object.keys(importData.value.fields)[0];
 
     importData.value.entries = rows
         .map((row) => {
@@ -604,7 +606,7 @@ const remapImport = () => {
 
             return entry;
         })
-        .filter((entry) => String(entry.person_name ?? '').trim() !== '');
+        .filter((entry) => ! primaryField || String(entry[primaryField] ?? '').trim() !== '');
 };
 
 const importSample = computed(() => (importData.value?.entries ?? []).slice(0, 8));
@@ -617,7 +619,7 @@ const confirmImport = () => {
     importBusy.value = true;
 
     router.post(route('modules.import.store', { module: props.module }), {
-        scope: props.activeScope,
+        scope: props.scopeField ? props.activeScope : null,
         entries: importData.value.entries,
     }, {
         preserveScroll: true,
@@ -626,9 +628,8 @@ const confirmImport = () => {
     });
 };
 
-const canImport = computed(
-    () => props.canImportFile && props.activeScope && props.activeScope !== 'all',
-);
+const canImport = computed(() => props.canImportFile
+    && (! props.scopeField || (props.activeScope && props.activeScope !== 'all')));
 
 const submit = () => {
     form.transform(() => {
