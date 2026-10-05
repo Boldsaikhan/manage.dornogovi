@@ -45,16 +45,46 @@ class AnnualLeave extends Model
         return $this->belongsTo(Department::class);
     }
 
+    /** Зөвшөөрсөн сонголтод зөвшөөрөгдөх албан тушаалын нэрс (жижиг үсгээр). */
+    private const SIGNER_TITLES = [
+        'засаг дарга',
+        'засаг даргын орлогч',
+        // Одоогоор орлогчийн орон тоо нөхөгдөөгүй үед түр үүрэг гүйцэтгэгчээр сольдог.
+        'засаг даргын үүрэг гүйцэтгэгч',
+    ];
+
     /**
-     * «Зөвшөөрсөн» гэдэг нь утасны жагсаалтаас сонгосон удирдах албан
-     * тушаалтан байх ёстой — зөвхөн Аймгийн Засаг дарга, Засаг даргын
-     * орлогч, Хэлтсийн дарга нар, Тамгын дарга нараас сонгоно.
+     * «Зөвшөөрсөн» гэдэг нь зөвхөн Аймгийн Засаг дарга, Засаг даргын
+     * орлогч байх ёстой — бусад удирдлагууд (ЗДТГ-ын дарга гэх мэт)
+     * болон сумын/хэлтсийн дарга нар энд сонгогдохгүй.
      *
      * @return array<string, string> нэр => «нэр — албан тушаал»
      */
     public static function signerOptions(): array
     {
-        return PhoneDirectoryEntry::leadershipOptions();
+        $entries = PhoneDirectoryEntry::query()
+            ->where('category', 'udirdlaga')
+            ->orderBy('sort_order')
+            ->get(['person_name', 'position']);
+
+        $options = [];
+
+        foreach ($entries as $row) {
+            $name = trim((string) $row->person_name);
+            $position = trim((string) $row->position);
+
+            if ($name === '' || $position === '') {
+                continue;
+            }
+
+            if (! in_array(mb_strtolower($position), self::SIGNER_TITLES, true)) {
+                continue;
+            }
+
+            $options[$name] = $name.' — '.$position;
+        }
+
+        return $options;
     }
 
     /**

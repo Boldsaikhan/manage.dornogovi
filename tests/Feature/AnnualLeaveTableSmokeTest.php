@@ -44,19 +44,35 @@ class AnnualLeaveTableSmokeTest extends TestCase
         $this->assertSame(24, $row->entitled_days);
     }
 
-    public function test_the_signer_is_restricted_to_leadership_options(): void
+    public function test_the_signer_is_restricted_to_the_aimag_governor_and_deputy(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
 
         PhoneDirectoryEntry::create([
             'person_name' => 'О.Батжаргал',
-            'position' => 'Аймгийн Засаг дарга',
-            'org_name' => 'АЗДТГ',
+            'position' => 'Засаг дарга',
+            'org_name' => 'Удирдлагууд',
+            'category' => 'udirdlaga',
         ]);
         PhoneDirectoryEntry::create([
-            'person_name' => 'Б.Мэргэжилтэн',
-            'position' => 'Мэргэжилтэн',
-            'org_name' => 'Санхүүгийн хэлтэс',
+            'person_name' => 'Г.Март',
+            'position' => 'Засаг даргын үүрэг гүйцэтгэгч',
+            'org_name' => 'Удирдлагууд',
+            'category' => 'udirdlaga',
+        ]);
+        // ЗДТГ-ын дарга ч «Удирдлагууд» ангилалд байдаг ч сонголтод ороогүй байх ёстой.
+        PhoneDirectoryEntry::create([
+            'person_name' => 'М.Мөнхбат',
+            'position' => 'ЗДТГ-ын дарга',
+            'org_name' => 'Удирдлагууд',
+            'category' => 'udirdlaga',
+        ]);
+        // Сумын Засаг дарга ижил тушаалын нэртэй ч ороогүй байх ёстой.
+        PhoneDirectoryEntry::create([
+            'person_name' => 'Г.Ганбүрэн',
+            'position' => 'Засаг дарга',
+            'org_name' => 'УЛААНБАДРАХ СУМ',
+            'category' => 'sum',
         ]);
 
         $this->actingAs($admin)->post(route('annual-leaves.store'), [
@@ -72,10 +88,20 @@ class AnnualLeaveTableSmokeTest extends TestCase
         $this->assertSame('О.Батжаргал', $row->fresh()->signer);
 
         $this->actingAs($admin)
-            ->patch(route('annual-leaves.update', $row), ['signer' => 'Б.Мэргэжилтэн'])
+            ->patch(route('annual-leaves.update', $row), ['signer' => 'Г.Март'])
+            ->assertRedirect();
+
+        $this->assertSame('Г.Март', $row->fresh()->signer);
+
+        $this->actingAs($admin)
+            ->patch(route('annual-leaves.update', $row), ['signer' => 'М.Мөнхбат'])
             ->assertSessionHasErrors('signer');
 
-        $this->assertSame('О.Батжаргал', $row->fresh()->signer);
+        $this->actingAs($admin)
+            ->patch(route('annual-leaves.update', $row), ['signer' => 'Г.Ганбүрэн'])
+            ->assertSessionHasErrors('signer');
+
+        $this->assertSame('Г.Март', $row->fresh()->signer);
 
         $response = $this->actingAs($admin)
             ->get(route('annual-leaves.index', ['scope' => 'baiguullaga']))
@@ -83,7 +109,9 @@ class AnnualLeaveTableSmokeTest extends TestCase
 
         $signers = $response->viewData('page')['props']['signers'];
         $this->assertArrayHasKey('О.Батжаргал', $signers);
-        $this->assertArrayNotHasKey('Б.Мэргэжилтэн', $signers);
+        $this->assertArrayHasKey('Г.Март', $signers);
+        $this->assertArrayNotHasKey('М.Мөнхбат', $signers);
+        $this->assertArrayNotHasKey('Г.Ганбүрэн', $signers);
     }
 
     public function test_rows_carry_the_registration_date(): void
