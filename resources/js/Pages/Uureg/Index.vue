@@ -1360,6 +1360,29 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                         v-if="hasKinds"
                         type="button"
                         class="ui-btn-ghost w-full sm:w-auto"
+                        :title="tableExpanded ? 'Хэвийн хэмжээнд буцах (Esc)' : 'Хүснэгтийг дэлгэц дүүрэн харах'"
+                        @click="tableExpanded = ! tableExpanded"
+                    >
+                        <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path
+                                v-if="tableExpanded"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M9 9L5 5m0 0h4M5 5v4m10 0l4-4m0 0h-4m4 0v4M9 15l-4 4m0 0h4m-4 0v-4m10 0l4 4m0 0h-4m4 0v-4"
+                            />
+                            <path
+                                v-else
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M4 9V5a1 1 0 011-1h4M20 9V5a1 1 0 00-1-1h-4M4 15v4a1 1 0 001 1h4M20 15v4a1 1 0 01-1 1h-4"
+                            />
+                        </svg>
+                        {{ tableExpanded ? 'Хаах' : 'Дэлгэц дүүрэн' }}
+                    </button>
+                    <button
+                        v-if="hasKinds"
+                        type="button"
+                        class="ui-btn-ghost w-full sm:w-auto"
                         title="Хэн, хэзээ, юуг өөрчилснийг харах"
                         @click="openLogs"
                     >
@@ -1709,53 +1732,6 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                         </span>
                     </button>
                 </div>
-            </div>
-
-            <!-- Харагдах горим -->
-            <div v-if="hasKinds" class="flex flex-wrap items-center gap-2">
-                <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Харагдах байдал</span>
-                <div class="inline-flex rounded-xl border border-slate-200 bg-white p-0.5 shadow-soft">
-                    <button
-                        type="button"
-                        class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
-                        :class="viewMode === 'table' ? 'bg-brand-navy-600 text-white' : 'text-slate-600 hover:bg-slate-50'"
-                        @click="viewMode = 'table'"
-                    >
-                        Хүснэгт
-                    </button>
-                    <button
-                        type="button"
-                        class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
-                        :class="viewMode === 'calendar' ? 'bg-brand-navy-600 text-white' : 'text-slate-600 hover:bg-slate-50'"
-                        @click="viewMode = 'calendar'; tableExpanded = false"
-                    >
-                        Цаглалт
-                    </button>
-                </div>
-
-                <button
-                    v-if="viewMode === 'table'"
-                    type="button"
-                    class="ui-btn-ghost"
-                    :title="tableExpanded ? 'Хэвийн хэмжээнд буцах (Esc)' : 'Хүснэгтийг дэлгэц дүүрэн харах'"
-                    @click="tableExpanded = ! tableExpanded"
-                >
-                    <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                        <path
-                            v-if="tableExpanded"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M9 9L5 5m0 0h4M5 5v4m10 0l4-4m0 0h-4m4 0v4M9 15l-4 4m0 0h4m-4 0v-4m10 0l4 4m0 0h-4m4 0v-4"
-                        />
-                        <path
-                            v-else
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M4 9V5a1 1 0 011-1h4M20 9V5a1 1 0 00-1-1h-4M4 15v4a1 1 0 001 1h4M20 15v4a1 1 0 01-1 1h-4"
-                        />
-                    </svg>
-                    {{ tableExpanded ? 'Хаах' : 'Дэлгэц дүүрэн' }}
-                </button>
             </div>
 
             <!-- Цаглалт / төлөвлөгөө -->
