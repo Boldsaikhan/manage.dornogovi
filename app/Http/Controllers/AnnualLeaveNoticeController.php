@@ -85,4 +85,20 @@ class AnnualLeaveNoticeController extends Controller
 
         return back()->with('success', 'Хадгаллаа.');
     }
+
+    /** «Зөвшөөрсөн» хэсгийн толгой бичвэрийг хуудсан дээр нь засна. */
+    public function updateApproverTitle(Request $request, AnnualLeave $annualLeave): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
+
+        $data = $request->validate([
+            'approver_title' => ['nullable', 'string', 'max:500'],
+        ], [], ['approver_title' => 'толгой бичвэр']);
+
+        $annualLeave->update([
+            'approver_title_override' => trim((string) ($data['approver_title'] ?? '')) ?: null,
+        ]);
+
+        return back()->with('success', 'Хадгаллаа.');
+    }
 }

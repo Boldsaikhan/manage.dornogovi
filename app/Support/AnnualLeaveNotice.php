@@ -20,13 +20,20 @@ class AnnualLeaveNotice
     /**
      * Зөвшөөрсөн албан тушаалтны толгойн бичвэр.
      *
-     * «Зөвшөөрсөн» баганад сонгосон хүн байвал түүний өөрийнх нь албан
-     * тушаалаар, үгүй бол урьдач (ЗДТГ-ын дарга) бичвэрээр.
+     * Хэрэглэгч мэдэгдлийн хуудсан дээрээ гараар засварласан бол тэрийг нь,
+     * эс бөгөөс «Зөвшөөрсөн» баганад сонгосон хүний өөрийнх нь албан
+     * тушаалаар, үгүй бол урьдач (ЗДТГ-ын дарга) бичвэрээр үүсгэнэ.
      *
      * @return list<string>
      */
     public static function approverLines(AnnualLeave $row): array
     {
+        $override = trim((string) $row->approver_title_override);
+
+        if ($override !== '') {
+            return [$override];
+        }
+
         $name = trim((string) $row->signer);
 
         if ($name === '') {

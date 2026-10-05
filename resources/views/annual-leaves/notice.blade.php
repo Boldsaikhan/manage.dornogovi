@@ -139,6 +139,14 @@
 
         .notice .body[contenteditable='true']:focus { outline-color: #1c55a5; }
 
+        .notice .sign .title[contenteditable='true'] {
+            outline: 1px dashed #94a3b8;
+            outline-offset: 1mm;
+            cursor: text;
+        }
+
+        .notice .sign .title[contenteditable='true']:focus { outline-color: #1c55a5; }
+
         .notice .body-edit {
             margin: 0 0 8mm;
             display: flex;
@@ -196,6 +204,7 @@
             .toolbar, .body-edit { display: none !important; }
             .page { margin: 0; box-shadow: none; }
             .notice .body[contenteditable='true'] { outline: none; }
+            .notice .sign .title[contenteditable='true'] { outline: none; }
         }
     </style>
 </head>
@@ -249,14 +258,26 @@
                     <div class="row">
                         <span class="title">Зөвшөөрсөн:</span>
                     </div>
-                    @foreach ($approverLines as $line)
-                        <div class="row">
-                            <span class="title">{{ $line }}</span>
-                            @if ($loop->last)
-                                <span class="name">{{ $approverName ?: '/ ……………… /' }}</span>
-                            @endif
+                    <div class="row">
+                        @if ($i === 0 && $canEdit)
+                            <span
+                                class="title"
+                                contenteditable="true"
+                                id="approver-title"
+                                spellcheck="false"
+                            >{{ implode(' ', $approverLines) }}</span>
+                        @else
+                            <span class="title" data-approver-title-copy>{{ implode(' ', $approverLines) }}</span>
+                        @endif
+                        <span class="name">{{ $approverName ?: '/ ……………… /' }}</span>
+                    </div>
+                    @if ($i === 0 && $canEdit)
+                        <div class="body-edit">
+                            <button type="button" id="approver-title-save">Хадгалах</button>
+                            <button type="button" id="approver-title-reset" class="ghost">Дахин үүсгэх</button>
+                            <span id="approver-title-status">Бичвэр дээр дарж засна.</span>
                         </div>
-                    @endforeach
+                    @endif
                 </div>
 
                 <div class="sign">
@@ -346,6 +367,86 @@
             // Хадгалаагүй байхад хуудсаас гарахаас сэргийлнэ.
             window.addEventListener('beforeunload', (event) => {
                 if (body.innerText.trim() !== saved) {
+                    event.preventDefault();
+                    event.returnValue = '';
+                }
+            });
+        }
+
+        const approverTitle = document.getElementById('approver-title');
+        const approverSaveBtn = document.getElementById('approver-title-save');
+        const approverResetBtn = document.getElementById('approver-title-reset');
+        const approverStatus = document.getElementById('approver-title-status');
+        const otherApproverTitles = document.querySelectorAll('[data-approver-title-copy]');
+
+        const sendApproverTitle = (text) => fetch(@json(route('annual-leaves.notice.approver-title', $annualLeave)), {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ approver_title: text }),
+        });
+
+        if (approverTitle && approverSaveBtn) {
+            let savedApproverTitle = approverTitle.innerText.trim();
+
+            approverSaveBtn.addEventListener('click', async () => {
+                approverSaveBtn.disabled = true;
+                approverStatus.textContent = 'Хадгалж байна…';
+
+                try {
+                    const text = approverTitle.innerText.trim();
+                    const response = await sendApproverTitle(text);
+
+                    if (response.ok) {
+                        savedApproverTitle = text;
+                        otherApproverTitles.forEach((el) => { el.textContent = text; });
+                        approverStatus.textContent = 'Хадгаллаа.';
+                    } else {
+                        approverStatus.textContent = 'Хадгалж чадсангүй.';
+                    }
+                } catch (e) {
+                    approverStatus.textContent = 'Сүлжээгүй байна.';
+                } finally {
+                    approverSaveBtn.disabled = false;
+                }
+            });
+
+            approverResetBtn.addEventListener('click', async () => {
+                if (! confirm('Бичвэрийг бүртгэлийн мэдээллээс дахин үүсгэх үү?')) return;
+
+                approverResetBtn.disabled = true;
+                approverStatus.textContent = 'Дахин үүсгэж байна…';
+
+                try {
+                    const response = await sendApproverTitle('');
+
+                    if (! response.ok) {
+                        approverStatus.textContent = 'Дахин үүсгэж чадсангүй.';
+                        approverResetBtn.disabled = false;
+
+                        return;
+                    }
+
+                    savedApproverTitle = '';
+                    location.reload();
+                } catch (e) {
+                    approverStatus.textContent = 'Сүлжээгүй байна.';
+                    approverResetBtn.disabled = false;
+                }
+            });
+
+            approverTitle.addEventListener('input', () => {
+                approverStatus.textContent = approverTitle.innerText.trim() === savedApproverTitle
+                    ? 'Бичвэр дээр дарж засна.'
+                    : 'Хадгалаагүй өөрчлөлт байна.';
+            });
+
+            window.addEventListener('beforeunload', (event) => {
+                if (approverTitle.innerText.trim() !== savedApproverTitle) {
                     event.preventDefault();
                     event.returnValue = '';
                 }

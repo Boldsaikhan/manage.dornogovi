@@ -270,6 +270,52 @@ class AnnualLeaveNoticeTest extends TestCase
         $this->assertNull($row->fresh()->notice_text);
     }
 
+    public function test_the_approver_title_can_be_edited_and_reset(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        PhoneDirectoryEntry::create([
+            'person_name' => 'О.Батжаргал',
+            'position' => 'Аймгийн Засаг дарга',
+            'org_name' => 'АЗДТГ',
+        ]);
+
+        $row = AnnualLeave::create([
+            'user_id' => $admin->id,
+            'scope' => 'baiguullaga',
+            'person_name' => 'Б.Чинзүрх',
+            'signer' => 'О.Батжаргал',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('annual-leaves.notice', $row))
+            ->assertOk()
+            ->assertSee('АЙМГИЙН ЗАСАГ ДАРГА');
+
+        $this->actingAs($admin)
+            ->patch(route('annual-leaves.notice.approver-title', $row), ['approver_title' => 'ГАРААР ЗАСВАРЛАСАН ТУШААЛ'])
+            ->assertRedirect();
+
+        $this->assertSame('ГАРААР ЗАСВАРЛАСАН ТУШААЛ', $row->fresh()->approver_title_override);
+
+        $this->actingAs($admin)
+            ->get(route('annual-leaves.notice', $row))
+            ->assertOk()
+            ->assertSee('ГАРААР ЗАСВАРЛАСАН ТУШААЛ')
+            ->assertDontSee('АЙМГИЙН ЗАСАГ ДАРГА');
+
+        $this->actingAs($admin)
+            ->patch(route('annual-leaves.notice.approver-title', $row), ['approver_title' => ''])
+            ->assertRedirect();
+
+        $this->assertNull($row->fresh()->approver_title_override);
+
+        $this->actingAs($admin)
+            ->get(route('annual-leaves.notice', $row))
+            ->assertOk()
+            ->assertSee('АЙМГИЙН ЗАСАГ ДАРГА');
+    }
+
     public function test_a_viewer_without_edit_access_cannot_change_the_text(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
@@ -293,6 +339,10 @@ class AnnualLeaveNoticeTest extends TestCase
 
         $this->actingAs($viewer)
             ->patch(route('annual-leaves.notice.text', $row), ['notice_text' => 'Оролдлого'])
+            ->assertForbidden();
+
+        $this->actingAs($viewer)
+            ->patch(route('annual-leaves.notice.approver-title', $row), ['approver_title' => 'Оролдлого'])
             ->assertForbidden();
     }
 }
