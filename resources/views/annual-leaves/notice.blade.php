@@ -51,6 +51,8 @@
 
         .toolbar .primary { background: #1c55a5; border-color: #1c55a5; color: #fff; }
         .toolbar .active { border-color: #1c55a5; font-weight: 700; }
+        .toolbar .divider { width: 1px; height: 20px; background: #cbd5e1; }
+        .toolbar .gap-value { min-width: 3.5em; text-align: center; font-weight: 600; color: #334155; }
 
         .page {
             width: {{ $format['width'] }}mm;
@@ -185,7 +187,7 @@
 
         .notice .sign .name {
             flex: 0 0 auto;
-            margin-left: 20mm;
+            margin-left: {{ $signGap }}mm;
             white-space: nowrap;
         }
 
@@ -204,6 +206,13 @@
         @foreach ([1, 2] as $option)
             <a href="{{ request()->fullUrlWithQuery(['copies' => $option]) }}" class="{{ $copies === $option ? 'active' : '' }}">{{ $option }}</a>
         @endforeach
+
+        <span class="divider"></span>
+
+        <span>Тушаал — нэрний зай:</span>
+        <a href="{{ request()->fullUrlWithQuery(['gap' => max(5, $signGap - 5)]) }}" title="Багасгах">−</a>
+        <span class="gap-value">{{ $signGap }} мм</span>
+        <a href="{{ request()->fullUrlWithQuery(['gap' => min(60, $signGap + 5)]) }}" title="Ихэсгэх">+</a>
     </div>
 
     <div class="page {{ $copies === 2 ? 'page--split' : '' }}">
