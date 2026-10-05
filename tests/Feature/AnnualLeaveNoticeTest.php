@@ -73,7 +73,7 @@ class AnnualLeaveNoticeTest extends TestCase
             ->assertSee('Залуучуудын хөгжил, оролцоо хариуцсан ажилтан Б.Чинзүрхийн', false);
     }
 
-    public function test_the_own_signature_line_names_the_organisation_when_the_position_alone_is_ambiguous(): void
+    public function test_the_own_signature_line_shows_the_position_exactly_as_in_the_phone_directory(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
 
@@ -88,22 +88,25 @@ class AnnualLeaveNoticeTest extends TestCase
         $this->actingAs($admin)
             ->get(route('annual-leaves.notice', $row))
             ->assertOk()
-            ->assertSee('УЛААНБАДРАХ СУМ', false)
             ->assertSee('Засаг дарга', false);
 
-        $this->assertStringContainsString(
+        $this->assertSame(
             'Засаг дарга',
             \App\Support\AnnualLeaveNotice::ownPositionLine($row->fresh()),
         );
-        $this->assertStringContainsString(
-            'УЛААНБАДРАХ СУМ',
-            \App\Support\AnnualLeaveNotice::ownPositionLine($row->fresh()),
-        );
+    }
 
-        // «СУМ-ЫН» хэвийн зураас биш, тасрахгүй зураас (U+2011) байх ёстой —
-        // эс бөгөөс мөр шилжихэд яг энэ цэг дээр тасардаг.
-        $this->assertStringNotContainsString('-', \App\Support\AnnualLeaveNotice::ownPositionLine($row->fresh()));
-        $this->assertStringContainsString("\u{2011}", \App\Support\AnnualLeaveNotice::ownPositionLine($row->fresh()));
+    public function test_the_own_signature_line_falls_back_when_there_is_no_position(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = AnnualLeave::create([
+            'user_id' => $admin->id,
+            'scope' => 'baiguullaga',
+            'person_name' => 'Б.Чинзүрх',
+        ]);
+
+        $this->assertSame('Албан хаагч', \App\Support\AnnualLeaveNotice::ownPositionLine($row->fresh()));
     }
 
     public function test_the_own_signature_line_does_not_repeat_the_organisation_when_the_position_already_names_it(): void
