@@ -72,7 +72,15 @@ class AnnualLeaveNotice
             return $position;
         }
 
-        return MongolianCase::genitive($org).' '.$position;
+        $line = MongolianCase::genitive($org).' '.$position;
+
+        /*
+         * «СУМ-ЫН» дотоод зурыг мөр шилжихэд таслахгүйн тулд (жишээ нь
+         * «УЛААНБАДРАХ СУМ-\nЫН ЗАСАГ ДАРГА» болж муудаж байсан) харагдах
+         * зураас хэвээр хадгалж, зөвхөн мөр шилжүүлэх боломжийг хаана —
+         * «Засаг дарга» гэх мэт дараагийн үг хэвээрээ бүхэлдээ шилждэг.
+         */
+        return str_replace('-', "\u{2011}", $line);
     }
 
     /**
