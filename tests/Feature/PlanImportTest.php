@@ -23,7 +23,7 @@ class PlanImportTest extends TestCase
         app(XlsxTableWriter::class)->write(
             $path,
             'ТӨЛӨВЛӨГӨӨ',
-            ['Гарчиг', 'Он', 'Хугацаа', 'Төлөв'],
+            ['Үүрэг чиглэл', 'Хугацаа', 'Хяналт тавих хэлтэс', 'Хэрэгжилт'],
             $rows,
         );
 
@@ -35,8 +35,8 @@ class PlanImportTest extends TestCase
         $admin = User::factory()->create(['is_admin' => true]);
 
         $file = $this->excel([
-            ['Хэлтсийн жилийн төлөвлөгөө', '2026', 'I улирал', 'Хэрэгжиж буй'],
-            ['Байгууллагын төлөвлөгөө', '2026', 'Жилийн', 'Ноорог'],
+            ['Хэлтсийн жилийн төлөвлөгөө боловсруулах', 'I улирал', 'Санхүүгийн хэлтэс', 'Хэрэгжиж байна'],
+            ['Байгууллагын төлөвлөгөө батлах', 'Жилийн', 'Хяналт шалгалтын хэлтэс', ''],
         ]);
 
         $data = $this->actingAs($admin)
@@ -46,13 +46,14 @@ class PlanImportTest extends TestCase
 
         $this->assertSame(2, $data['total']);
         $this->assertSame(0, $data['mapping']['title']);
-        $this->assertSame(1, $data['mapping']['year']);
+        $this->assertSame(1, $data['mapping']['period']);
+        $this->assertSame(2, $data['mapping']['supervisor_department']);
 
         $first = $data['entries'][0];
-        $this->assertSame('Хэлтсийн жилийн төлөвлөгөө', $first['title']);
-        $this->assertSame(2026, $first['year']);
+        $this->assertSame('Хэлтсийн жилийн төлөвлөгөө боловсруулах', $first['title']);
         $this->assertSame('I улирал', $first['period']);
-        $this->assertSame('active', $first['status']);
+        $this->assertSame('Санхүүгийн хэлтэс', $first['supervisor_department']);
+        $this->assertSame('Хэрэгжиж байна', $first['body']);
 
         // Урьдчилан харах нь юу ч хадгалахгүй.
         $this->assertSame(0, Plan::query()->count());
@@ -65,8 +66,8 @@ class PlanImportTest extends TestCase
         $this->actingAs($admin)
             ->post(route('modules.import.store', ['module' => 'plans']), [
                 'entries' => [
-                    ['title' => 'Хэлтсийн жилийн төлөвлөгөө', 'year' => 2026, 'period' => 'I улирал', 'status' => 'active'],
-                    ['title' => 'Хоёр дахь төлөвлөгөө', 'year' => 2026, 'period' => null, 'status' => null],
+                    ['title' => 'Хэлтсийн жилийн төлөвлөгөө', 'period' => 'I улирал', 'supervisor_department' => 'Санхүүгийн хэлтэс'],
+                    ['title' => 'Хоёр дахь төлөвлөгөө', 'period' => null, 'supervisor_department' => null],
                 ],
             ])
             ->assertRedirect()
@@ -76,9 +77,9 @@ class PlanImportTest extends TestCase
 
         $row = Plan::query()->where('title', 'Хэлтсийн жилийн төлөвлөгөө')->firstOrFail();
         $this->assertSame($admin->id, $row->created_by);
-        $this->assertSame('active', $row->status);
+        $this->assertSame('Санхүүгийн хэлтэс', $row->supervisor_department);
 
-        // Статус өгөгдөөгүй бол тохиргооны анхны утга (draft) орно.
+        // Төлөв өгөгдөөгүй бол тохиргооны анхны утга (draft) орно.
         $fallback = Plan::query()->where('title', 'Хоёр дахь төлөвлөгөө')->firstOrFail();
         $this->assertSame('draft', $fallback->status);
     }
@@ -87,7 +88,7 @@ class PlanImportTest extends TestCase
     {
         $admin = User::factory()->create(['is_admin' => true]);
 
-        $payload = ['entries' => [['title' => 'Давхардсан гарчиг', 'year' => 2026]]];
+        $payload = ['entries' => [['title' => 'Давхардсан гарчиг']]];
 
         $this->actingAs($admin)->post(route('modules.import.store', ['module' => 'plans']), $payload);
         $this->actingAs($admin)->post(route('modules.import.store', ['module' => 'plans']), $payload);
