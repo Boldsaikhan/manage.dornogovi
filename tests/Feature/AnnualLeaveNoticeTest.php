@@ -99,6 +99,11 @@ class AnnualLeaveNoticeTest extends TestCase
             'УЛААНБАДРАХ СУМ',
             \App\Support\AnnualLeaveNotice::ownPositionLine($row->fresh()),
         );
+
+        // «СУМ-ЫН» хэвийн зураас биш, тасрахгүй зураас (U+2011) байх ёстой —
+        // эс бөгөөс мөр шилжихэд яг энэ цэг дээр тасардаг.
+        $this->assertStringNotContainsString('-', \App\Support\AnnualLeaveNotice::ownPositionLine($row->fresh()));
+        $this->assertStringContainsString("\u{2011}", \App\Support\AnnualLeaveNotice::ownPositionLine($row->fresh()));
     }
 
     public function test_the_own_signature_line_does_not_repeat_the_organisation_when_the_position_already_names_it(): void
