@@ -47,6 +47,35 @@ class AnnualLeaveNotice
     }
 
     /**
+     * Амралт эдэлж буй хүний гарын үсгийн мөрөнд гарах бүтэн албан
+     * тушаал — зөвхөн «Засаг дарга» гэхээс илүү алийн сумын эсэхийг
+     * тодруулахын тулд байгууллагын нэрийг урдаас нь залгана
+     * («Улаанбадрах сумын Засаг дарга»).
+     */
+    public static function ownPositionLine(AnnualLeave $row): string
+    {
+        $position = trim((string) $row->position);
+        $org = trim((string) $row->org_name);
+
+        if ($position === '') {
+            return 'Албан хаагч';
+        }
+
+        if ($org === '') {
+            return $position;
+        }
+
+        // Тушаалд байгууллагын нэр (жишээ нь сумын нэр) аль хэдийн орсон
+        // бол давхардуулахгүй.
+        $orgFirstWord = (string) (preg_split('/\s+/u', $org)[0] ?? '');
+        if ($orgFirstWord !== '' && mb_stripos($position, $orgFirstWord) !== false) {
+            return $position;
+        }
+
+        return MongolianCase::genitive($org).' '.$position;
+    }
+
+    /**
      * Мэдэгдлийн гол өгүүлбэрийг бүртгэлийн мэдээллээс бүрдүүлнэ.
      *
      * Гараар бичсэн бичвэр байвал түүнийг хэвээр нь авна.

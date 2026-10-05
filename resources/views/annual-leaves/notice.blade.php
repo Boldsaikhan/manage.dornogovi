@@ -246,7 +246,7 @@
 
                 <div class="sign">
                     <div class="row">
-                        <span class="title">{{ $annualLeave->position ?: 'Албан хаагч' }}</span>
+                        <span class="title">{{ $ownPositionLine }}</span>
                         <span class="name">{{ $annualLeave->person_name }}</span>
                     </div>
                 </div>

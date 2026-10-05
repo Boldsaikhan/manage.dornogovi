@@ -73,6 +73,52 @@ class AnnualLeaveNoticeTest extends TestCase
             ->assertSee('Залуучуудын хөгжил, оролцоо хариуцсан ажилтан Б.Чинзүрхийн', false);
     }
 
+    public function test_the_own_signature_line_names_the_organisation_when_the_position_alone_is_ambiguous(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = AnnualLeave::create([
+            'user_id' => $admin->id,
+            'scope' => 'sum',
+            'org_name' => 'УЛААНБАДРАХ СУМ',
+            'position' => 'Засаг дарга',
+            'person_name' => 'Г.Ганбүрэн',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('annual-leaves.notice', $row))
+            ->assertOk()
+            ->assertSee('УЛААНБАДРАХ СУМ', false)
+            ->assertSee('Засаг дарга', false);
+
+        $this->assertStringContainsString(
+            'Засаг дарга',
+            \App\Support\AnnualLeaveNotice::ownPositionLine($row->fresh()),
+        );
+        $this->assertStringContainsString(
+            'УЛААНБАДРАХ СУМ',
+            \App\Support\AnnualLeaveNotice::ownPositionLine($row->fresh()),
+        );
+    }
+
+    public function test_the_own_signature_line_does_not_repeat_the_organisation_when_the_position_already_names_it(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = AnnualLeave::create([
+            'user_id' => $admin->id,
+            'scope' => 'baiguullaga',
+            'org_name' => 'Дорноговь аймаг дахь Төрийн албаны салбар зөвлөл',
+            'position' => 'Төрийн албаны салбар зөвлөлийн Дорноговь аймаг дахь салбар зөвлөлийн нарийн бичгийн даргын албан үүргийг түр орлон гүйцэтгэгч',
+            'person_name' => 'Л.Оюунсүрэн',
+        ]);
+
+        $this->assertSame(
+            $row->position,
+            \App\Support\AnnualLeaveNotice::ownPositionLine($row->fresh()),
+        );
+    }
+
     public function test_the_notice_shows_the_registers_own_number(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
