@@ -144,6 +144,7 @@
             justify-content: space-between;
             align-items: flex-end;
             gap: 6mm;
+            max-width: 75mm;
         }
 
         .notice .sign .title {
