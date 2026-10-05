@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Plan extends Model
 {
     protected $fillable = [
-        'title', 'department_id', 'year', 'period', 'body', 'status', 'created_by',
+        'title', 'department_id', 'year', 'period', 'supervisor_department', 'body', 'status', 'created_by',
     ];
 
     public function department(): BelongsTo
