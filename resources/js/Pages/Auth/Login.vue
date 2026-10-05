@@ -5,12 +5,6 @@ import QRCode from 'qrcode';
 import StateEmblem from '@/Components/StateEmblem.vue';
 import OrnamentMark from '@/Components/OrnamentMark.vue';
 import { isMobileDevice } from '@/utils/mobileClient';
-import {
-    clearWebAuthnDeviceHint,
-    hasWebAuthnDeviceHint,
-    markWebAuthnDevice,
-} from '@/utils/pwaClient';
-import { isWebAuthnSupported, loginWithBiometric } from '@/utils/webauthn';
 import MobileAppInstall from '@/Components/MobileAppInstall.vue';
 
 defineProps({
@@ -26,55 +20,6 @@ defineProps({
 const mode = ref('phone');
 const onPhone = ref(false);
 const showPassword = ref(false);
-
-/* ---------------- Хуруу / царайгаар нэвтрэх (WebAuthn) ---------------- */
-const bioSupported = ref(false);
-const bioBusy = ref(false);
-const bioError = ref('');
-const localWebAuthn = ref(false);
-
-/** Зөвхөн энэ утсан дээр идэвхжүүлсэн үед л товчийг үзүүлнэ. */
-const canBiometric = computed(() => onPhone.value && bioSupported.value && localWebAuthn.value);
-
-const loginBiometric = async () => {
-    if (bioBusy.value) return;
-
-    if (! form.login) {
-        bioError.value = isPhone.value
-            ? 'Утасны дугаараа оруулаад хуруу / царайгаар нэвтэрнэ үү.'
-            : 'И-мэйл хаягаа оруулаад хуруу / царайгаар нэвтэрнэ үү.';
-
-        return;
-    }
-
-    bioBusy.value = true;
-    bioError.value = '';
-
-    try {
-        const data = await loginWithBiometric(form.login);
-        markWebAuthnDevice();
-        window.location.href = data?.redirect || '/';
-    } catch (e) {
-        const name = e?.name || '';
-        const msg = e?.response?.data?.errors?.webauthn?.[0]
-            || e?.response?.data?.message
-            || e?.message
-            || '';
-
-        if (/NotAllowedError|AbortError/i.test(name)) {
-            clearWebAuthnDeviceHint();
-            bioError.value = 'Энэ утсанд хуруу/царай бүртгэгдээгүй эсвэл үйлдэл цуцлагдсан. Нууц үгээр нэвтэрч, «Идэвхжүүлэх» дарна уу.';
-        } else if (e?.response?.status === 422) {
-            clearWebAuthnDeviceHint();
-            bioError.value = msg
-                || 'Энэ утсанд хуруу/царай бүртгэгдээгүй. Эхлээд нууц үгээр нэвтэрч, «Идэвхжүүлэх» дарна уу.';
-        } else {
-            bioError.value = msg || 'Нэвтэрч чадсангүй. Нууц үгээрээ орно уу.';
-        }
-    } finally {
-        bioBusy.value = false;
-    }
-};
 
 /** public/images/building.jpg байхгүй бол градиент дэвсгэрээр орлуулна */
 const buildingMissing = ref(false);
@@ -198,8 +143,6 @@ const qrCountdown = computed(() => {
 
 onMounted(() => {
     onPhone.value = isMobileDevice();
-    bioSupported.value = isWebAuthnSupported();
-    localWebAuthn.value = hasWebAuthnDeviceHint();
 });
 
 onBeforeUnmount(stopQrTimers);
@@ -553,35 +496,6 @@ const submit = () => {
                         >
                         <span class="h-px flex-1 bg-slate-200"></span>
                     </div>
-
-                    <!-- Хуруу / царайгаар нэвтрэх — зөвхөн утсан дээр -->
-                    <button
-                        v-if="canBiometric && ! isQr"
-                        type="button"
-                        class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-brand-navy-200 bg-brand-navy-50 px-5 py-3 text-sm font-semibold text-brand-navy-700 transition hover:border-brand-navy-300 hover:bg-brand-navy-100 focus:outline-none focus:ring-4 focus:ring-brand-navy-600/10 disabled:opacity-60"
-                        :disabled="bioBusy"
-                        @click="loginBiometric"
-                    >
-                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 11c1.657 0 3-1.567 3-3.5S13.657 4 12 4 9 5.567 9 7.5 10.343 11 12 11z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6.5 20c.8-3.2 2.9-5 5.5-5s4.7 1.8 5.5 5" />
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 8.5c-.8.6-1.3 1.6-1.3 2.7 0 2.3 1.6 3.8 3.3 4.3M17 8.5c.8.6 1.3 1.6 1.3 2.7 0 2.3-1.6 3.8-3.3 4.3" />
-                        </svg>
-                        {{ bioBusy ? 'Хүлээж байна…' : 'Хуруу / царайгаар нэвтрэх' }}
-                    </button>
-                    <p
-                        v-if="canBiometric && ! isQr && ! bioError"
-                        class="mt-1.5 text-center text-xs text-slate-400"
-                    >
-                        Эхлээд утасны дугаараа оруулаад дарна уу
-                    </p>
-
-                    <p
-                        v-if="bioError && ! isQr"
-                        class="mt-2 text-center text-xs leading-relaxed text-red-600"
-                    >
-                        {{ bioError }}
-                    </p>
 
                     <button
                         v-if="isQr"

@@ -1,8 +1,6 @@
 /** PWA — утсан дээр апп суулгах, standalone илрүүлэх */
 
 const PWA_INSTALLED_KEY = 'md_pwa_installed';
-const WEBAUTHN_DEVICE_KEY = 'md_webauthn_device';
-const BIO_SETUP_DISMISSED_KEY = 'md_bio_setup_dismissed';
 
 export const isStandalonePwa = () => (
     typeof window !== 'undefined'
@@ -42,46 +40,6 @@ export const isPwaInstalledHint = () => {
         return localStorage.getItem(PWA_INSTALLED_KEY) === '1';
     } catch {
         return false;
-    }
-};
-
-export const markWebAuthnDevice = () => {
-    try {
-        localStorage.setItem(WEBAUTHN_DEVICE_KEY, '1');
-    } catch {
-        // ignore
-    }
-};
-
-export const hasWebAuthnDeviceHint = () => {
-    try {
-        return localStorage.getItem(WEBAUTHN_DEVICE_KEY) === '1';
-    } catch {
-        return false;
-    }
-};
-
-export const clearWebAuthnDeviceHint = () => {
-    try {
-        localStorage.removeItem(WEBAUTHN_DEVICE_KEY);
-    } catch {
-        // ignore
-    }
-};
-
-export const isBioSetupDismissed = () => {
-    try {
-        return localStorage.getItem(BIO_SETUP_DISMISSED_KEY) === '1';
-    } catch {
-        return false;
-    }
-};
-
-export const dismissBioSetup = () => {
-    try {
-        localStorage.setItem(BIO_SETUP_DISMISSED_KEY, '1');
-    } catch {
-        // ignore
     }
 };
 
