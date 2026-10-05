@@ -172,7 +172,7 @@ onBeforeUnmount(() => {
         >
             <div
                 v-if="open"
-                class="absolute right-0 z-40 mt-2 w-[min(92vw,22rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+                class="fixed inset-x-3 top-[4.75rem] z-40 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-[22rem]"
                 @click.stop
             >
                 <div class="flex items-center justify-between border-b border-slate-100 px-3 py-2.5">
