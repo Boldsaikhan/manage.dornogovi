@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -80,5 +82,34 @@ class AnnualLeave extends Model
         };
 
         return 15 + $extra;
+    }
+
+    /**
+     * Эхлэх огноо + олгох хоногоор дуусах огноог тооцно — амралтын хоног
+     * бүр ажлын өдөр (Даваа–Баасан) байх ёстой тул Бямба, Ням өдрийг
+     * алгасна. Эхлэх өдөр амралтын эхний өдөр гэж тооцогдоно.
+     */
+    public static function endDateFor(string|CarbonInterface $start, int $days): ?string
+    {
+        if ($days < 1) {
+            return null;
+        }
+
+        $date = $start instanceof CarbonInterface ? $start->copy() : Carbon::parse($start);
+        $counted = 0;
+
+        while (true) {
+            if (! $date->isWeekend()) {
+                $counted++;
+            }
+
+            if ($counted >= $days) {
+                break;
+            }
+
+            $date->addDay();
+        }
+
+        return $date->toDateString();
     }
 }

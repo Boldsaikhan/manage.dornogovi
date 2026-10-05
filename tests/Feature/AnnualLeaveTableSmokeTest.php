@@ -191,14 +191,14 @@ class AnnualLeaveTableSmokeTest extends TestCase
             ->patch(route('annual-leaves.update', $row), ['start_date' => '2026-08-31'])
             ->assertRedirect();
 
-        $this->assertSame('2026-09-14', $row->fresh()->end_date->toDateString());
+        $this->assertSame('2026-09-18', $row->fresh()->end_date->toDateString());
 
         // Олгох хоногийг өөрчилвөл дуусах огноо дахин бодогдоно.
         $this->actingAs($admin)
             ->patch(route('annual-leaves.update', $row), ['entitled_days' => 10])
             ->assertRedirect();
 
-        $this->assertSame('2026-09-09', $row->fresh()->end_date->toDateString());
+        $this->assertSame('2026-09-11', $row->fresh()->end_date->toDateString());
     }
 
     public function test_choosing_a_name_fills_the_position(): void

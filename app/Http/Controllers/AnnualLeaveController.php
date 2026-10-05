@@ -14,7 +14,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
-use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -257,7 +256,7 @@ class AnnualLeaveController extends Controller
             $daysValue = array_key_exists('entitled_days', $data) ? $data['entitled_days'] : $annualLeave->entitled_days;
 
             $data['end_date'] = ($startValue && $daysValue)
-                ? Carbon::parse($startValue)->addDays((int) $daysValue - 1)->toDateString()
+                ? AnnualLeave::endDateFor($startValue, (int) $daysValue)
                 : null;
         }
 
