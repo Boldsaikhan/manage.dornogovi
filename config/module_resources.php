@@ -222,21 +222,24 @@ return [
         'description' => 'Хэлтэс, байгууллагын төлөвлөгөө оруулах.',
         'row_number' => '№',
         'columns' => [
-            ['key' => 'title', 'label' => 'Үүрэг чиглэл'],
-            ['key' => 'period', 'label' => 'Хугацаа'],
-            ['key' => 'supervisor_department', 'label' => 'Хяналт тавих хэлтэс'],
-            ['key' => 'body', 'label' => 'Хэрэгжилт'],
+            ['key' => 'title', 'label' => 'Үүрэг чиглэл', 'edit' => 'title'],
+            ['key' => 'period', 'label' => 'Хугацаа', 'edit' => 'period'],
+            ['key' => 'supervisor_department', 'label' => 'Хяналт тавих хэлтэс', 'edit' => 'supervisor_department'],
+            ['key' => 'body', 'label' => 'Хэрэгжилт', 'edit' => 'body'],
         ],
         'fields' => [
             ['name' => 'title', 'label' => 'Үүрэг чиглэл', 'type' => 'textarea', 'required' => true],
             ['name' => 'period', 'label' => 'Хугацаа', 'type' => 'text'],
-            ['name' => 'supervisor_department', 'label' => 'Хяналт тавих хэлтэс', 'type' => 'text'],
+            // Сонголт нь утасны жагсаалтын «Хэлтэс» ангиллаас бүрдэнэ.
+            ['name' => 'supervisor_department', 'label' => 'Хяналт тавих хэлтэс', 'type' => 'select', 'options_from' => 'heltes_departments'],
             ['name' => 'body', 'label' => 'Хэрэгжилт', 'type' => 'textarea'],
         ],
         'defaults' => ['status' => 'draft'],
         'on_create' => 'attach_creator_department',
         // Word/Excel файлаас төлөвлөгөөний мөрүүдийг оруулна.
         'file_import' => true,
+        // Хүснэгтэд шинэ мөрийг хоосноор нэмж, нүдэн дээр нь бөглөнө.
+        'blank_row' => true,
     ],
     'meetings' => [
         'model' => App\Models\Meeting::class,

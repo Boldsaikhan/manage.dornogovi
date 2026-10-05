@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\PhoneDirectoryEntry;
 use App\Models\Plan;
 use App\Models\User;
 use App\Support\XlsxTableWriter;
@@ -33,6 +34,13 @@ class PlanImportTest extends TestCase
     public function test_the_preview_maps_the_columns(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
+
+        PhoneDirectoryEntry::create([
+            'org_name' => 'Санхүүгийн хэлтэс',
+            'category' => 'heltes',
+            'person_name' => 'Б.Должин',
+            'position' => 'Дарга',
+        ]);
 
         $file = $this->excel([
             ['Хэлтсийн жилийн төлөвлөгөө боловсруулах', 'I улирал', 'Санхүүгийн хэлтэс', 'Хэрэгжиж байна'],
