@@ -32,6 +32,7 @@ class AnnualLeaveNoticeController extends Controller
             'text' => AnnualLeaveNotice::text($annualLeave),
             'approverLines' => AnnualLeaveNotice::approverLines($annualLeave),
             'approverName' => AnnualLeaveNotice::approverName($annualLeave),
+            'ownPositionLine' => AnnualLeaveNotice::ownPositionLine($annualLeave),
             'number' => $this->rowNumber($annualLeave),
             'registeredOn' => $annualLeave->created_at,
             'format' => [
