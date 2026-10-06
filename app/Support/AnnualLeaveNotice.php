@@ -90,11 +90,11 @@ class AnnualLeaveNotice
     }
 
     /**
-     * «Зөвшөөрсөн» хэсэг + өөрийн гарын үсгийн мөр — голлуулж харуулна.
-     * Тушаал, нэрийн хооронд зай байна (тушаал ба нэр нэг мөрөнд үлдэхийн
-     * тулд таб ("\t") бус тасрашгүй зай (NBSP) хэрэглэнэ — таб тэмдэгт
-     * тэмдэгтийн өргөнөөс хамаарч урт тушаалтай мөрийг дараагийн мөрөнд
-     * хийсвэрлэн шилжүүлж байсан).
+     * «Зөвшөөрсөн» хэсэг + өөрийн гарын үсгийн мөр — голлуулж харуулна
+     * (хадгалах, хуучин бичвэрээс хуваахад хэрэглэх хавтгай хэлбэр нь).
+     * Тушаал, нэрийг нэг таб ("\t") тэмдэгтээр тусгаарлана — харагдах
+     * байрлалыг grid (бусад багана жигд) хариуцдаг тул энэ нь зөвхөн
+     * утгыг тусгаарлах тэмдэг.
      */
     public static function signaturesPart(AnnualLeave $row): string
     {
@@ -104,14 +104,73 @@ class AnnualLeaveNotice
             return $split[1];
         }
 
-        $tab = str_repeat("\u{00A0}", 6);
+        $fields = self::signatureFields($row);
 
         return implode("\n", [
             'ЗӨВШӨӨРСӨН:',
-            implode(' ', self::approverLines($row)).$tab.self::approverName($row),
+            $fields['approverTitle']."\t".$fields['approverName'],
             '',
-            mb_strtoupper(self::ownPositionLine($row)).$tab.mb_strtoupper(trim((string) $row->person_name)),
+            $fields['ownTitle']."\t".$fields['ownName'],
         ]);
+    }
+
+    /**
+     * Зөвшөөрсөн ба өөрийн гарын үсгийн мөрүүдийг (тушаал, нэр тус тусдаа)
+     * grid байрлалд харуулахын тулд задлана — тушаалын багана баруун
+     * талдаа, нэрийн багана мөн баруун талдаа нэг шугаманд зэрэгцэнэ.
+     * Хадгалсан (notice_text) бичвэр байвал түүнээс, үгүй бол бүртгэлийн
+     * мэдээллээс шууд бүрдүүлнэ.
+     *
+     * @return array{approverTitle: string, approverName: string, ownTitle: string, ownName: string}
+     */
+    public static function signatureFields(AnnualLeave $row): array
+    {
+        $split = self::splitOverride($row);
+
+        if ($split === null) {
+            return [
+                'approverTitle' => implode(' ', self::approverLines($row)),
+                'approverName' => self::approverName($row),
+                'ownTitle' => mb_strtoupper(self::ownPositionLine($row)),
+                'ownName' => mb_strtoupper(trim((string) $row->person_name)),
+            ];
+        }
+
+        $lines = preg_split('/\n/', $split[1]);
+        $approver = self::splitSignatureLine($lines[1] ?? '');
+        $own = self::splitSignatureLine($lines[3] ?? ($lines[2] ?? ''));
+
+        return [
+            'approverTitle' => $approver[0],
+            'approverName' => $approver[1],
+            'ownTitle' => $own[0],
+            'ownName' => $own[1],
+        ];
+    }
+
+    /**
+     * Нэг мөрийг тушаал, нэр болгон хуваана — хооронд нь таб, тасрашгүй
+     * зай (хуучнаар хадгалсан өгөгдөлд) эсвэл цуваа энгийн зай орсон
+     * байж болно тул сүүлийн ийм тусгаарлагчаар нь, эцсийн үгийн (нэрийн)
+     * өмнө нь хуваана.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private static function splitSignatureLine(string $line): array
+    {
+        $line = trim($line);
+
+        if ($line === '') {
+            return ['', ''];
+        }
+
+        $parts = preg_split('/[\t\x{00A0}]+(?=\S+$)/u', $line, 2);
+
+        if (count($parts) < 2) {
+            $parts = preg_split('/ {2,}(?=\S+$)/u', $line, 2);
+        }
+
+        return [trim($parts[0] ?? ''), trim($parts[1] ?? '')];
     }
 
     /**

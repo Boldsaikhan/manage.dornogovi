@@ -30,7 +30,7 @@ class AnnualLeaveNoticeController extends Controller
             'annualLeave' => $annualLeave,
             'copies' => $copies,
             'bodyText' => AnnualLeaveNotice::bodyPart($annualLeave),
-            'signaturesText' => AnnualLeaveNotice::signaturesPart($annualLeave),
+            'signatureFields' => AnnualLeaveNotice::signatureFields($annualLeave),
             'number' => $this->rowNumber($annualLeave),
             'registeredOn' => $annualLeave->created_at,
             'format' => [

@@ -101,10 +101,17 @@ class AnnualLeaveNoticeTest extends TestCase
         $this->assertStringContainsString('БАЙГАЛЬ ОРЧНЫ АЛБАНЫ ДАРГА', $text);
         $this->assertStringContainsString('Ш.АМАРБИЛЭГ', $text);
 
-        // Тушаал, нэрийн хооронд зай байна (ижил мөрөнд, таб биш — тасрашгүй зай).
-        $gap = str_repeat("\u{00A0}", 6);
-        $this->assertStringContainsString("АЙМГИЙН ЗАСАГ ДАРГА{$gap}О.БАТЖАРГАЛ", $text);
-        $this->assertStringContainsString("БАЙГАЛЬ ОРЧНЫ АЛБАНЫ ДАРГА{$gap}Ш.АМАРБИЛЭГ", $text);
+        // Тушаал, нэрийг нэг таб тэмдэгтээр тусгаарлан хадгална (grid-ээр
+        // баруун тал руугаа зэрэгцүүлж харуулна).
+        $this->assertStringContainsString("АЙМГИЙН ЗАСАГ ДАРГА\tО.БАТЖАРГАЛ", $text);
+        $this->assertStringContainsString("БАЙГАЛЬ ОРЧНЫ АЛБАНЫ ДАРГА\tШ.АМАРБИЛЭГ", $text);
+
+        // Grid-д тусдаа харуулахаар тушаал, нэр тус тусдаа ялгаатай болно.
+        $fields = \App\Support\AnnualLeaveNotice::signatureFields($row);
+        $this->assertSame('АЙМГИЙН ЗАСАГ ДАРГА', $fields['approverTitle']);
+        $this->assertSame('О.БАТЖАРГАЛ', $fields['approverName']);
+        $this->assertSame('БАЙГАЛЬ ОРЧНЫ АЛБАНЫ ДАРГА', $fields['ownTitle']);
+        $this->assertSame('Ш.АМАРБИЛЭГ', $fields['ownName']);
     }
 
     public function test_the_own_signature_line_shows_the_position_exactly_as_in_the_phone_directory(): void
