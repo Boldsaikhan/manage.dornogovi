@@ -142,8 +142,7 @@
         /*
          * Тушаал, нэрийн баганыг grid-ээр зохионо — багана тус бүр хамгийн
          * өргөн агуулгадаа тохируулан өргөнждөг тул хоёр мөрийн тушаал
-         * (баруун талдаа), нэр (баруун талдаа) тус бүр нэг шугаманд
-         * зэрэгцэнэ.
+         * (зүүн талдаа), нэр (зүүн талдаа) тус бүр нэг шугаманд зэрэгцэнэ.
          */
         .notice .signatures-grid {
             display: grid;
@@ -155,7 +154,7 @@
 
         .notice .signatures-grid .sig-title,
         .notice .signatures-grid .sig-name {
-            text-align: right;
+            text-align: left;
             white-space: pre-wrap;
         }
 
