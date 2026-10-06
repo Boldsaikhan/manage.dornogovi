@@ -192,7 +192,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/ai/conversations', [AiAssistantController::class, 'newConversation'])->name('ai.conversations.store');
 
     Route::get('/extension/download', [ExtensionController::class, 'download'])->name('extension.download');
-    Route::get('/extension/download.zip', [ExtensionController::class, 'downloadZip'])->name('extension.download.zip');
+    // ⚠️ Зам нь «.zip»-ээр төгсдөггүй — nginx-ийн статик файлын дүрэм
+    // (css|js|...|zip|...) ийм URL-ийг Laravel руу дамжуулахгүй шууд
+    // 404 буцаадаг тул «-zip» гэж бичсэн (цэггүй).
+    Route::get('/extension/download-zip', [ExtensionController::class, 'downloadZip'])->name('extension.download.zip');
     Route::get('/systems/{system}/launch', LaunchController::class)->name('systems.launch');
     Route::get('/systems/{system}', [SystemViewController::class, 'show'])->name('systems.show');
 
