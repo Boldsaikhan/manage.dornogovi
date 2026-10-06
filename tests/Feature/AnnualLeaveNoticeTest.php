@@ -277,6 +277,30 @@ class AnnualLeaveNoticeTest extends TestCase
         $this->assertStringStartsWith('Төрийн албаны салбар зөвлөлийн Дорноговь аймаг дахь', $text);
     }
 
+    public function test_the_body_text_names_the_organisation_when_the_short_position_does_not_already_name_it(): void
+    {
+        // «Засаг дарга» мэт богино тушаал сумын нэрийг агуулдаггүй тул
+        // (өмнөх тохиолдлоос ялгаатайгаар) байгууллагын (сумын) нэрийг
+        // урдаа нэмж залгах ёстой — үгүй бол ямар сумын дарга болохыг
+        // мэдэгдэлд огт дурдахгүй үлдэнэ.
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = AnnualLeave::create([
+            'user_id' => $admin->id,
+            'scope' => 'sum',
+            'org_name' => 'Замын-Үүд сум',
+            'position' => 'Засаг дарга',
+            'person_name' => 'Б.Сайнбаяр',
+            'entitled_days' => 20,
+            'start_date' => '2026-10-12',
+            'end_date' => '2026-11-06',
+        ]);
+
+        $text = \App\Support\AnnualLeaveNotice::text($row);
+
+        $this->assertStringStartsWith('Замын-Үүд сумын Засаг дарга Б.Сайнбаярын', $text);
+    }
+
     public function test_the_whole_notice_can_be_edited_in_one_field_and_reset(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
