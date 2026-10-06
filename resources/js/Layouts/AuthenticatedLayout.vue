@@ -376,33 +376,6 @@ const onLinkedSystemClick = (sys, event) => {
                     type="button"
                     class="flex w-full items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-left text-sm text-slate-600 transition hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                     :class="sidebarCollapsed ? 'lg:relative lg:justify-center lg:px-0' : ''"
-                    :title="`Загвар: ${themeLabel} (солих)`"
-                    @mouseenter="showNavTip($event, `Загвар — ${themeLabel}`)"
-                    @mouseleave="hideNavTip"
-                    @click="cycleTheme"
-                >
-                    <svg v-if="themeMode === 'light'" class="h-5 w-5 shrink-0 text-brand-navy-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                        <path :d="iconPaths.sun" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                    <svg v-else-if="themeMode === 'dark'" class="h-5 w-5 shrink-0 text-brand-navy-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                        <path :d="iconPaths.moon" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                    <svg v-else class="h-5 w-5 shrink-0 text-brand-navy-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                        <path :d="iconPaths.monitor" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                    <span class="flex-1 font-medium" :class="sidebarCollapsed ? 'lg:hidden' : ''">Загвар</span>
-                    <span
-                        class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300"
-                        :class="sidebarCollapsed ? 'lg:hidden' : ''"
-                    >
-                        {{ themeLabel }}
-                    </span>
-                </button>
-
-                <button
-                    type="button"
-                    class="flex w-full items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-left text-sm text-slate-600 transition hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-                    :class="sidebarCollapsed ? 'lg:relative lg:justify-center lg:px-0' : ''"
                     :title="vaultUnlocked ? 'Сан хаах' : 'Сан нээх'"
                     @mouseenter="showNavTip($event, vaultUnlocked ? 'Сан — нээлттэй (хаах)' : 'Сан — түгжээтэй (нээх)')"
                     @mouseleave="hideNavTip"
@@ -516,6 +489,24 @@ const onLinkedSystemClick = (sys, event) => {
                     <QrScanButton />
                     <NotificationBell />
                     <AppInstallMenu />
+
+                    <button
+                        type="button"
+                        class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-brand-navy-200 hover:bg-brand-navy-50 hover:text-brand-navy-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:border-brand-navy-700 dark:hover:bg-slate-700 dark:hover:text-brand-navy-200"
+                        :title="`Загвар: ${themeLabel} (солих)`"
+                        :aria-label="`Загвар: ${themeLabel} (солих)`"
+                        @click="cycleTheme"
+                    >
+                        <svg v-if="themeMode === 'light'" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path :d="iconPaths.sun" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <svg v-else-if="themeMode === 'dark'" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path :d="iconPaths.moon" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <svg v-else class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path :d="iconPaths.monitor" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </button>
 
                     <Dropdown align="right" width="48">
                         <template #trigger>
