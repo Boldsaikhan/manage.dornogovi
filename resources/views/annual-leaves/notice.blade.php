@@ -129,24 +129,55 @@
             text-indent: 8mm;
         }
 
-        /* Зөвшөөрсөн хэсэг + гарын үсэг — голлуулсан, таб зайг хадгална. */
-        .notice .signatures {
+        /* Зөвшөөрсөн хэсэг + гарын үсэг — голлуулсан. */
+        .notice .signatures-wrap {
             margin: 0 0 2mm;
-            white-space: pre-wrap;
+        }
+
+        .notice .signatures-header {
             text-align: center;
+            margin-bottom: 3mm;
+        }
+
+        /*
+         * Тушаал, нэрийн баганыг grid-ээр зохионо — багана тус бүр хамгийн
+         * өргөн агуулгадаа тохируулан өргөнждөг тул хоёр мөрийн тушаал
+         * (баруун талдаа), нэр (баруун талдаа) тус бүр нэг шугаманд
+         * зэрэгцэнэ.
+         */
+        .notice .signatures-grid {
+            display: grid;
+            grid-template-columns: max-content max-content;
+            column-gap: 10mm;
+            row-gap: 3mm;
+            justify-content: center;
+        }
+
+        .notice .signatures-grid .sig-title,
+        .notice .signatures-grid .sig-name {
+            text-align: right;
+            white-space: pre-wrap;
+        }
+
+        .notice .signatures-grid .sig-spacer {
+            grid-column: 1 / -1;
+            height: 1mm;
         }
 
         /* Хуудсан дээрээ засах — хэвлэхэд ул мөр үлдэхгүй. */
         .notice .body[contenteditable='true'],
-        .notice .signatures[contenteditable='true'] {
+        .notice .sig-title[contenteditable='true'],
+        .notice .sig-name[contenteditable='true'] {
             outline: 1px dashed #94a3b8;
-            outline-offset: 2mm;
-            min-height: 12mm;
+            outline-offset: 1mm;
             cursor: text;
         }
 
+        .notice .body[contenteditable='true'] { min-height: 12mm; outline-offset: 2mm; }
+
         .notice .body[contenteditable='true']:focus,
-        .notice .signatures[contenteditable='true']:focus { outline-color: #1c55a5; }
+        .notice .sig-title[contenteditable='true']:focus,
+        .notice .sig-name[contenteditable='true']:focus { outline-color: #1c55a5; }
 
         .notice .body-edit {
             margin: 0 0 8mm;
@@ -177,7 +208,8 @@
             .toolbar, .body-edit { display: none !important; }
             .page { margin: 0; box-shadow: none; }
             .notice .body[contenteditable='true'],
-            .notice .signatures[contenteditable='true'] { outline: none; }
+            .notice .sig-title[contenteditable='true'],
+            .notice .sig-name[contenteditable='true'] { outline: none; }
         }
     </style>
 </head>
@@ -211,12 +243,16 @@
                         id="notice-body"
                         spellcheck="false"
                     >{{ $bodyText }}</div>
-                    <div
-                        class="signatures"
-                        contenteditable="true"
-                        id="notice-signatures"
-                        spellcheck="false"
-                    >{{ $signaturesText }}</div>
+                    <div class="signatures-wrap">
+                        <div class="signatures-header">ЗӨВШӨӨРСӨН:</div>
+                        <div class="signatures-grid">
+                            <div class="sig-title" contenteditable="true" id="notice-approver-title" spellcheck="false">{{ $signatureFields['approverTitle'] }}</div>
+                            <div class="sig-name" contenteditable="true" id="notice-approver-name" spellcheck="false">{{ $signatureFields['approverName'] }}</div>
+                            <div class="sig-spacer"></div>
+                            <div class="sig-title" contenteditable="true" id="notice-own-title" spellcheck="false">{{ $signatureFields['ownTitle'] }}</div>
+                            <div class="sig-name" contenteditable="true" id="notice-own-name" spellcheck="false">{{ $signatureFields['ownName'] }}</div>
+                        </div>
+                    </div>
                     <div class="body-edit">
                         <button type="button" id="notice-save">Хадгалах</button>
                         <button type="button" id="notice-reset" class="ghost">Дахин үүсгэх</button>
@@ -224,7 +260,16 @@
                     </div>
                 @else
                     <div class="body" data-notice-body-copy>{{ $bodyText ?: '……………………………………………………………………………………………………' }}</div>
-                    <div class="signatures" data-notice-signatures-copy>{{ $signaturesText }}</div>
+                    <div class="signatures-wrap">
+                        <div class="signatures-header">ЗӨВШӨӨРСӨН:</div>
+                        <div class="signatures-grid">
+                            <div class="sig-title" data-notice-approver-title-copy>{{ $signatureFields['approverTitle'] }}</div>
+                            <div class="sig-name" data-notice-approver-name-copy>{{ $signatureFields['approverName'] }}</div>
+                            <div class="sig-spacer"></div>
+                            <div class="sig-title" data-notice-own-title-copy>{{ $signatureFields['ownTitle'] }}</div>
+                            <div class="sig-name" data-notice-own-name-copy>{{ $signatureFields['ownName'] }}</div>
+                        </div>
+                    </div>
                 @endif
             </div>
         @endfor
@@ -232,16 +277,31 @@
 
     <script>
         const body = document.getElementById('notice-body');
-        const signatures = document.getElementById('notice-signatures');
+        const approverTitle = document.getElementById('notice-approver-title');
+        const approverName = document.getElementById('notice-approver-name');
+        const ownTitle = document.getElementById('notice-own-title');
+        const ownName = document.getElementById('notice-own-name');
         const saveBtn = document.getElementById('notice-save');
         const resetBtn = document.getElementById('notice-reset');
         const status = document.getElementById('notice-status');
         // Хоёр дахь хувь байвал зэрэг шинэчилнэ — хуудас дахин ачаалахгүй.
         const otherBodyCopies = document.querySelectorAll('[data-notice-body-copy]');
-        const otherSignaturesCopies = document.querySelectorAll('[data-notice-signatures-copy]');
+        const otherApproverTitleCopies = document.querySelectorAll('[data-notice-approver-title-copy]');
+        const otherApproverNameCopies = document.querySelectorAll('[data-notice-approver-name-copy]');
+        const otherOwnTitleCopies = document.querySelectorAll('[data-notice-own-title-copy]');
+        const otherOwnNameCopies = document.querySelectorAll('[data-notice-own-name-copy]');
 
-        // Хоёр хэсгийг нэг хоосон мөрөөр холбоод ганц notice_text болгож хадгална.
-        const combined = () => `${body.innerText.trim()}\n\n${signatures.innerText.trim()}`;
+        // Тушаал, нэрийг нэг таб тэмдэгтээр тусгаарлаж хадгална (харагдах
+        // байрлалыг grid хариуцна, энэ зөвхөн утга тусгаарлах тэмдэг).
+        const signaturesText = () => [
+            'ЗӨВШӨӨРСӨН:',
+            `${approverTitle.innerText.trim()}\t${approverName.innerText.trim()}`,
+            '',
+            `${ownTitle.innerText.trim()}\t${ownName.innerText.trim()}`,
+        ].join('\n');
+
+        // Хэсгүүдийг нэг хоосон мөрөөр холбоод ганц notice_text болгож хадгална.
+        const combined = () => `${body.innerText.trim()}\n\n${signaturesText()}`;
 
         const send = (text) => fetch(@json(route('annual-leaves.notice.text', $annualLeave)), {
             method: 'PATCH',
@@ -254,7 +314,7 @@
             body: JSON.stringify({ notice_text: text }),
         });
 
-        if (body && signatures && saveBtn) {
+        if (body && approverTitle && approverName && ownTitle && ownName && saveBtn) {
             let saved = combined();
 
             saveBtn.addEventListener('click', async () => {
@@ -268,7 +328,10 @@
                     if (response.ok) {
                         saved = text;
                         otherBodyCopies.forEach((el) => { el.textContent = body.innerText.trim(); });
-                        otherSignaturesCopies.forEach((el) => { el.textContent = signatures.innerText.trim(); });
+                        otherApproverTitleCopies.forEach((el) => { el.textContent = approverTitle.innerText.trim(); });
+                        otherApproverNameCopies.forEach((el) => { el.textContent = approverName.innerText.trim(); });
+                        otherOwnTitleCopies.forEach((el) => { el.textContent = ownTitle.innerText.trim(); });
+                        otherOwnNameCopies.forEach((el) => { el.textContent = ownName.innerText.trim(); });
                         status.textContent = 'Хадгаллаа.';
                     } else {
                         status.textContent = 'Хадгалж чадсангүй.';
@@ -311,7 +374,10 @@
             };
 
             body.addEventListener('input', onInput);
-            signatures.addEventListener('input', onInput);
+            approverTitle.addEventListener('input', onInput);
+            approverName.addEventListener('input', onInput);
+            ownTitle.addEventListener('input', onInput);
+            ownName.addEventListener('input', onInput);
 
             // Хадгалаагүй байхад хуудсаас гарахаас сэргийлнэ.
             window.addEventListener('beforeunload', (event) => {
