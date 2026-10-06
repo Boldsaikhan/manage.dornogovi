@@ -18,14 +18,22 @@ class AnnualLeaveNotice
     ];
 
     /**
-     * Зөвшөөрсөн албан тушаалтны толгойн бичвэр — «Зөвшөөрсөн» баганад
-     * сонгосон хүний өөрийнх нь албан тушаалаар, үгүй бол урьдач
-     * (ЗДТГ-ын дарга) бичвэрээр үүсгэнэ.
+     * Зөвшөөрсөн албан тушаалтны толгойн бичвэр.
+     *
+     * Хэрэглэгч мэдэгдлийн хуудсан дээрээ гараар засварласан бол тэрийг нь,
+     * эс бөгөөс «Зөвшөөрсөн» баганад сонгосон хүний өөрийнх нь албан
+     * тушаалаар, үгүй бол урьдач (ЗДТГ-ын дарга) бичвэрээр үүсгэнэ.
      *
      * @return list<string>
      */
     public static function approverLines(AnnualLeave $row): array
     {
+        $override = trim((string) $row->approver_title_override);
+
+        if ($override !== '') {
+            return [$override];
+        }
+
         $name = trim((string) $row->signer);
 
         if ($name === '') {
@@ -37,35 +45,23 @@ class AnnualLeaveNotice
         return $position !== '' ? [mb_strtoupper($position)] : self::DEFAULT_APPROVER_LINES;
     }
 
-    /** Зөвшөөрсөн албан тушаалтны нэр — сонгоогүй бол ЗДТГ-ын даргаар нь олно. */
+    /**
+     * Зөвшөөрсөн албан тушаалтны нэр.
+     *
+     * Хэрэглэгч мэдэгдлийн хуудсан дээрээ гараар засварласан бол тэрийг нь,
+     * эс бөгөөс сонгоогүй үед ЗДТГ-ын даргаар нь олно.
+     */
     public static function approverName(AnnualLeave $row): string
     {
-        $name = trim((string) $row->signer);
-
-        return $name !== '' ? $name : AssignmentSheet::signerName('chief');
-    }
-
-    /**
-     * «ЗӨВШӨӨРСӨН:» бүхэл хэсгийн бичвэр (толгой + нэр хамт) — мэдэгдлийн
-     * хуудсан дээр нэг доороо чөлөөтэй засварлана. Хэрэглэгч гараар
-     * засварласан бол тэрийг нь, эс бөгөөс бүртгэлийн мэдээллээс
-     * автоматаар үүсгэнэ.
-     */
-    public static function approverBlockText(AnnualLeave $row): string
-    {
-        $override = trim((string) $row->approver_block_override);
+        $override = trim((string) $row->approver_name_override);
 
         if ($override !== '') {
             return $override;
         }
 
-        $lines = array_merge(
-            ['ЗӨВШӨӨРСӨН:'],
-            self::approverLines($row),
-            [self::approverName($row)],
-        );
+        $name = trim((string) $row->signer);
 
-        return implode("\n", $lines);
+        return $name !== '' ? $name : AssignmentSheet::signerName('chief');
     }
 
     /**
