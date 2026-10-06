@@ -136,9 +136,16 @@ class AnnualLeaveNotice
             ];
         }
 
-        $lines = preg_split('/\n/', $split[1]);
-        $approver = self::splitSignatureLine($lines[1] ?? '');
-        $own = self::splitSignatureLine($lines[3] ?? ($lines[2] ?? ''));
+        // Эхний мөр («ЗӨВШӨӨРСӨН:») толгой — задлахад хэрэггүй тул хасна.
+        $rest = preg_replace('/^[^\n]*\n?/u', '', trim($split[1], "\n"), 1);
+
+        // Хуучин хадгалсан өгөгдөлд тушаал, нэр тус тусдаа мөрөнд байж
+        // болох тул (одоогийн нэг мөрт tab-аар тусгаарласнаас ялгаатай)
+        // блок тус бүрийг эхний хоосон мөрөөр нь ялгаад аль ч хэлбэрийг
+        // таньдаг байхаар задална.
+        $pieces = preg_split('/\n[ \t]*\n/', trim((string) $rest), 2);
+        $approver = self::splitSignatureBlock($pieces[0] ?? '');
+        $own = self::splitSignatureBlock($pieces[1] ?? '');
 
         return [
             'approverTitle' => $approver[0],
@@ -146,6 +153,27 @@ class AnnualLeaveNotice
             'ownTitle' => $own[0],
             'ownName' => $own[1],
         ];
+    }
+
+    /**
+     * Нэг (тушаал+нэр нэг мөрт, одоогийн хэлбэр) эсвэл хоёр (тушаал, нэр
+     * тус тусдаа мөрт, хуучин хэлбэр) мөр бүхий блокийг тушаал, нэр болгон
+     * хуваана.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private static function splitSignatureBlock(string $block): array
+    {
+        $lines = array_values(array_filter(
+            preg_split('/\n/', trim($block)),
+            fn (string $line) => trim($line) !== '',
+        ));
+
+        if (count($lines) >= 2) {
+            return [trim($lines[0]), trim($lines[1])];
+        }
+
+        return self::splitSignatureLine($lines[0] ?? '');
     }
 
     /**
