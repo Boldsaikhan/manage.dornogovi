@@ -114,6 +114,28 @@ class AnnualLeaveNoticeTest extends TestCase
         $this->assertSame('Ш.АМАРБИЛЭГ', $fields['ownName']);
     }
 
+    public function test_signature_fields_parse_old_format_notice_text_with_title_and_name_on_separate_lines(): void
+    {
+        // Grid-ээр задлах шинэчлэлээс өмнө хадгалсан бичвэрт тушаал, нэр
+        // нэг мөрт tab-аар биш, тус тусдаа мөрөнд байсан — энэ хуучин
+        // өгөгдлийг ч алдаагүй задлаж чадах ёстой.
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = AnnualLeave::create([
+            'user_id' => $admin->id,
+            'scope' => 'baiguullaga',
+            'person_name' => 'Ш.Амарбилэг',
+            'notice_text' => "Өгүүлбэр.\n\nЗӨВШӨӨРСӨН:\nЗАСАГ ДАРГЫН ҮҮРЭГ ГҮЙЦЭТГЭГЧ\nГ.МАРТ\n\nБАЙГАЛЬ ОРЧНЫ АЛБАНЫ ДАРГА\nШ.АМАРБИЛЭГ",
+        ]);
+
+        $fields = \App\Support\AnnualLeaveNotice::signatureFields($row);
+
+        $this->assertSame('ЗАСАГ ДАРГЫН ҮҮРЭГ ГҮЙЦЭТГЭГЧ', $fields['approverTitle']);
+        $this->assertSame('Г.МАРТ', $fields['approverName']);
+        $this->assertSame('БАЙГАЛЬ ОРЧНЫ АЛБАНЫ ДАРГА', $fields['ownTitle']);
+        $this->assertSame('Ш.АМАРБИЛЭГ', $fields['ownName']);
+    }
+
     public function test_the_own_signature_line_shows_the_position_exactly_as_in_the_phone_directory(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
