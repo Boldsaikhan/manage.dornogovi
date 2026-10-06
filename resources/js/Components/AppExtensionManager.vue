@@ -138,9 +138,7 @@ const downloadExtension = async () => {
 
     try {
         const result = await downloadExtensionLoose();
-        message.value = result.method === 'folder'
-            ? `«${result.folder}» хавтас үүслээ (${result.count} файл). Доторх install.bat эсвэл СУУЛГАХ.txt-ийн дагуу Load unpacked хийнэ.`
-            : `«${result.folder}.zip» татагдлаа. Хавтас сонгох цонх нээгдээгүй тул ZIP-ээр өглөө — задаад Load unpacked хийнэ (install.bat ажиллуулж болно).`;
+        message.value = `«${result.folder}.zip» татагдлаа. Задаад Load unpacked хийнэ (install.bat ажиллуулж болно).`;
         showHelp.value = true;
     } catch (e) {
         if (e?.name === 'AbortError') {
@@ -221,7 +219,7 @@ const downloadExtension = async () => {
                 class="!py-1.5 text-xs"
                 :class="extensionReady ? 'ui-btn-ghost' : 'ui-btn-primary'"
                 :disabled="downloading"
-                title="Хавтас сонгох цонх гарна — сонгосон газарт бүх файл нэг хавтас болж бичигдэнэ"
+                title="ZIP файл шууд татагдана — задалж Load unpacked хийнэ"
                 @click="downloadExtension"
             >
                 {{ downloading ? 'Татаж байна…' : (extensionReady ? 'Дахин татах' : 'Өргөтгөл татах') }}
@@ -252,10 +250,10 @@ const downloadExtension = async () => {
         </div>
 
         <ol v-if="showHelp" class="list-decimal space-y-1 rounded-lg bg-slate-50 px-3 py-2 pl-5 text-xs leading-relaxed text-slate-600">
-            <li>«Өргөтгөл татах» дарж хадгалах <b>хавтсыг сонгоно</b> (Downloads гэх мэт).</li>
-            <li>Дотор нь <b>manage-dornogovi-extension</b> хавтас автоматаар үүснэ.</li>
-            <li>Хавтас доторх <b>install.bat</b> ажиллуулна (эсвэл chrome://extensions нээнэ).</li>
-            <li><b>Developer mode</b> асаагаад <b>Load unpacked</b> → тэр хавтсыг сонгоно.</li>
+            <li>«Өргөтгөл татах» дарахад <b>manage-dornogovi-extension.zip</b> шууд татагдана.</li>
+            <li>ZIP файлыг задлана (Задлах / Extract All).</li>
+            <li>Задарсан хавтас доторх <b>install.bat</b> ажиллуулна (эсвэл chrome://extensions нээнэ).</li>
+            <li><b>Developer mode</b> асаагаад <b>Load unpacked</b> → задарсан хавтсыг сонгоно.</li>
             <li v-if="extensionReady">Устгах: энэ товч эсвэл chrome://extensions → Remove.</li>
         </ol>
     </section>
@@ -375,10 +373,10 @@ const downloadExtension = async () => {
                     </div>
 
                     <ol v-if="showHelp" class="mt-3 list-decimal space-y-1.5 rounded-lg bg-slate-50 px-3 py-2.5 pl-5 text-xs leading-relaxed text-slate-600">
-                        <li>«Өргөтгөл татах» дарж хадгалах <b>хавтсыг сонгоно</b> (Downloads гэх мэт).</li>
-                        <li>Дотор нь <b>manage-dornogovi-extension</b> хавтас автоматаар үүснэ.</li>
-                        <li>Хавтас доторх <b>install.bat</b> ажиллуулна (эсвэл chrome://extensions нээнэ).</li>
-                        <li><b>Developer mode</b> асаагаад <b>Load unpacked</b> → тэр хавтсыг сонгоно.</li>
+                        <li>«Өргөтгөл татах» дарахад <b>manage-dornogovi-extension.zip</b> шууд татагдана.</li>
+                        <li>ZIP файлыг задлана (Задлах / Extract All).</li>
+                        <li>Задарсан хавтас доторх <b>install.bat</b> ажиллуулна (эсвэл chrome://extensions нээнэ).</li>
+                        <li><b>Developer mode</b> асаагаад <b>Load unpacked</b> → задарсан хавтсыг сонгоно.</li>
                         <li v-if="extensionReady">Устгах: энэ товч эсвэл chrome://extensions → Remove.</li>
                     </ol>
                 </div>
