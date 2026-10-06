@@ -65,12 +65,41 @@ class AnnualLeaveNoticeTest extends TestCase
             ->assertSee('08 дугаар сарын 31-ний өдрөөс', false)
             ->assertSee('09 дүгээр сарын 18-ны өдрийг дуустал', false)
             ->assertSee('ажлын 15 өдрөөр олгов.', false)
+            ->assertSee('ЗӨВШӨӨРСӨН:')
             ->assertSee('АЙМГИЙН ЗАСАГ ДАРГЫН ТАМГЫН ГАЗРЫН')
             ->assertSee('ДАРГЫН АЛБАН ҮҮРГИЙГ ТҮР ОРЛОН ГҮЙЦЭТГЭГЧ')
             ->assertSee('М.МӨНХБАТ')
             ->assertSee('Б.Чинзүрх')
             ->assertSee('Залуучуудын хөгжил, оролцоо хариуцсан ажилтан')
             ->assertSee('Залуучуудын хөгжил, оролцоо хариуцсан ажилтан Б.Чинзүрхийн', false);
+    }
+
+    public function test_the_full_notice_combines_sentence_approver_and_own_lines_into_one_text(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        PhoneDirectoryEntry::create([
+            'person_name' => 'О.Батжаргал',
+            'position' => 'Аймгийн Засаг дарга',
+            'org_name' => 'АЗДТГ',
+        ]);
+
+        $row = AnnualLeave::create([
+            'user_id' => $admin->id,
+            'scope' => 'baiguullaga',
+            'org_name' => 'Байгаль орчны алба',
+            'position' => 'Байгаль орчны албаны дарга',
+            'person_name' => 'Ш.Амарбилэг',
+            'signer' => 'О.Батжаргал',
+        ]);
+
+        $text = \App\Support\AnnualLeaveNotice::fullText($row);
+
+        $this->assertStringContainsString('ЗӨВШӨӨРСӨН:', $text);
+        $this->assertStringContainsString('АЙМГИЙН ЗАСАГ ДАРГА', $text);
+        $this->assertStringContainsString('О.БАТЖАРГАЛ', $text);
+        $this->assertStringContainsString('БАЙГАЛЬ ОРЧНЫ АЛБАНЫ ДАРГА', $text);
+        $this->assertStringContainsString('Ш.АМАРБИЛЭГ', $text);
     }
 
     public function test_the_own_signature_line_shows_the_position_exactly_as_in_the_phone_directory(): void
@@ -88,7 +117,7 @@ class AnnualLeaveNoticeTest extends TestCase
         $this->actingAs($admin)
             ->get(route('annual-leaves.notice', $row))
             ->assertOk()
-            ->assertSee('Засаг дарга', false);
+            ->assertSee('ЗАСАГ ДАРГА');
 
         $this->assertSame(
             'Засаг дарга',
@@ -214,35 +243,7 @@ class AnnualLeaveNoticeTest extends TestCase
         $this->assertStringStartsWith('Төрийн албаны салбар зөвлөлийн Дорноговь аймаг дахь', $text);
     }
 
-    public function test_the_notice_text_can_be_edited_and_reset(): void
-    {
-        $admin = User::factory()->create(['is_admin' => true]);
-
-        $row = AnnualLeave::create([
-            'user_id' => $admin->id,
-            'scope' => 'baiguullaga',
-            'person_name' => 'Б.Чинзүрх',
-        ]);
-
-        $this->actingAs($admin)
-            ->patch(route('annual-leaves.notice.text', $row), ['notice_text' => 'Гараар бичсэн өгүүлбэр.'])
-            ->assertRedirect();
-
-        $this->assertSame('Гараар бичсэн өгүүлбэр.', $row->fresh()->notice_text);
-
-        $this->actingAs($admin)
-            ->get(route('annual-leaves.notice', $row))
-            ->assertOk()
-            ->assertSee('Гараар бичсэн өгүүлбэр.');
-
-        $this->actingAs($admin)
-            ->patch(route('annual-leaves.notice.text', $row), ['notice_text' => ''])
-            ->assertRedirect();
-
-        $this->assertNull($row->fresh()->notice_text);
-    }
-
-    public function test_the_approver_block_can_be_edited_and_reset(): void
+    public function test_the_whole_notice_can_be_edited_in_one_field_and_reset(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
 
@@ -255,7 +256,9 @@ class AnnualLeaveNoticeTest extends TestCase
         $row = AnnualLeave::create([
             'user_id' => $admin->id,
             'scope' => 'baiguullaga',
-            'person_name' => 'Б.Чинзүрх',
+            'org_name' => 'Байгаль орчны алба',
+            'position' => 'Байгаль орчны албаны дарга',
+            'person_name' => 'Ш.Амарбилэг',
             'signer' => 'О.Батжаргал',
         ]);
 
@@ -263,32 +266,33 @@ class AnnualLeaveNoticeTest extends TestCase
             ->get(route('annual-leaves.notice', $row))
             ->assertOk()
             ->assertSee('АЙМГИЙН ЗАСАГ ДАРГА')
-            ->assertSee('О.БАТЖАРГАЛ');
+            ->assertSee('О.БАТЖАРГАЛ')
+            ->assertSee('БАЙГАЛЬ ОРЧНЫ АЛБАНЫ ДАРГА')
+            ->assertSee('Ш.АМАРБИЛЭГ');
+
+        $full = "Гараар бичсэн бүхэл бичвэр.\n\nЗӨВШӨӨРСӨН:\nГАРААР ЗАСВАРЛАСАН ТУШААЛ\nХ.Хэн нэгэн";
 
         $this->actingAs($admin)
-            ->patch(route('annual-leaves.notice.approver', $row), [
-                'approver_block' => "Зөвшөөрсөн:\nГАРААР ЗАСВАРЛАСАН ТУШААЛ\nХ.Хэн нэгэн",
-            ])
+            ->patch(route('annual-leaves.notice.text', $row), ['notice_text' => $full])
             ->assertRedirect();
 
-        $this->assertSame(
-            "Зөвшөөрсөн:\nГАРААР ЗАСВАРЛАСАН ТУШААЛ\nХ.Хэн нэгэн",
-            $row->fresh()->approver_block_override,
-        );
+        $this->assertSame($full, $row->fresh()->notice_text);
+        $this->assertSame($full, \App\Support\AnnualLeaveNotice::fullText($row->fresh()));
 
         $this->actingAs($admin)
             ->get(route('annual-leaves.notice', $row))
             ->assertOk()
+            ->assertSee('Гараар бичсэн бүхэл бичвэр.')
             ->assertSee('ГАРААР ЗАСВАРЛАСАН ТУШААЛ')
             ->assertSee('Х.Хэн нэгэн')
             ->assertDontSee('АЙМГИЙН ЗАСАГ ДАРГА')
             ->assertDontSee('О.БАТЖАРГАЛ');
 
         $this->actingAs($admin)
-            ->patch(route('annual-leaves.notice.approver', $row), ['approver_block' => ''])
+            ->patch(route('annual-leaves.notice.text', $row), ['notice_text' => ''])
             ->assertRedirect();
 
-        $this->assertNull($row->fresh()->approver_block_override);
+        $this->assertNull($row->fresh()->notice_text);
 
         $this->actingAs($admin)
             ->get(route('annual-leaves.notice', $row))
@@ -317,55 +321,6 @@ class AnnualLeaveNoticeTest extends TestCase
         $this->assertSame('Ш.АМАРБИЛЭГ', \App\Support\AnnualLeaveNotice::approverName($row));
     }
 
-    public function test_the_own_block_can_be_edited_and_reset(): void
-    {
-        $admin = User::factory()->create(['is_admin' => true]);
-
-        $row = AnnualLeave::create([
-            'user_id' => $admin->id,
-            'scope' => 'baiguullaga',
-            'org_name' => 'Байгаль орчны алба',
-            'position' => 'Байгаль орчны албаны дарга',
-            'person_name' => 'Ш.Амарбилэг',
-        ]);
-
-        $this->actingAs($admin)
-            ->get(route('annual-leaves.notice', $row))
-            ->assertOk()
-            ->assertSee('Байгаль орчны албаны дарга')
-            ->assertSee('Ш.Амарбилэг');
-
-        $this->actingAs($admin)
-            ->patch(route('annual-leaves.notice.own', $row), [
-                'own_block' => "ГАРААР ЗАСВАРЛАСАН ТУШААЛ\nХ.Хэн нэгэн",
-            ])
-            ->assertRedirect();
-
-        $this->assertSame(
-            "ГАРААР ЗАСВАРЛАСАН ТУШААЛ\nХ.Хэн нэгэн",
-            $row->fresh()->own_block_override,
-        );
-
-        // Автомат бичвэрт (мэдэгдлийн гол өгүүлбэрт) анхны тушаал, нэр хэвээр
-        // байх ёстой — зөвхөн гарын үсгийн мөрийг нь дарж өөрчилсөн.
-        $this->assertSame(
-            "ГАРААР ЗАСВАРЛАСАН ТУШААЛ\nХ.Хэн нэгэн",
-            \App\Support\AnnualLeaveNotice::ownBlockText($row->fresh()),
-        );
-
-        $this->actingAs($admin)
-            ->patch(route('annual-leaves.notice.own', $row), ['own_block' => ''])
-            ->assertRedirect();
-
-        $this->assertNull($row->fresh()->own_block_override);
-
-        $this->actingAs($admin)
-            ->get(route('annual-leaves.notice', $row))
-            ->assertOk()
-            ->assertSee('Байгаль орчны албаны дарга')
-            ->assertSee('Ш.Амарбилэг');
-    }
-
     public function test_a_viewer_without_edit_access_cannot_change_the_text(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
@@ -389,14 +344,6 @@ class AnnualLeaveNoticeTest extends TestCase
 
         $this->actingAs($viewer)
             ->patch(route('annual-leaves.notice.text', $row), ['notice_text' => 'Оролдлого'])
-            ->assertForbidden();
-
-        $this->actingAs($viewer)
-            ->patch(route('annual-leaves.notice.approver', $row), ['approver_block' => 'Оролдлого'])
-            ->assertForbidden();
-
-        $this->actingAs($viewer)
-            ->patch(route('annual-leaves.notice.own', $row), ['own_block' => 'Оролдлого'])
             ->assertForbidden();
     }
 }

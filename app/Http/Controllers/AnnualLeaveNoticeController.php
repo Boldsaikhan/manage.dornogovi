@@ -29,9 +29,7 @@ class AnnualLeaveNoticeController extends Controller
         return view('annual-leaves.notice', [
             'annualLeave' => $annualLeave,
             'copies' => $copies,
-            'text' => AnnualLeaveNotice::text($annualLeave),
-            'approverBlockText' => AnnualLeaveNotice::approverBlockText($annualLeave),
-            'ownBlockText' => AnnualLeaveNotice::ownBlockText($annualLeave),
+            'text' => AnnualLeaveNotice::fullText($annualLeave),
             'number' => $this->rowNumber($annualLeave),
             'registeredOn' => $annualLeave->created_at,
             'format' => [
@@ -64,49 +62,17 @@ class AnnualLeaveNoticeController extends Controller
             ->count();
     }
 
-    /** Мэдэгдлийн бичвэрийг хуудсан дээр нь засна. */
+    /** Мэдэгдлийн бүхэл бичвэрийг (өгүүлбэр + гарын үсгүүд хамт) хуудсан дээр нь засна. */
     public function updateText(Request $request, AnnualLeave $annualLeave): RedirectResponse
     {
         abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
 
         $data = $request->validate([
-            'notice_text' => ['nullable', 'string', 'max:2000'],
+            'notice_text' => ['nullable', 'string', 'max:3000'],
         ], [], ['notice_text' => 'бичвэр']);
 
         $annualLeave->update([
             'notice_text' => trim((string) ($data['notice_text'] ?? '')) ?: null,
-        ]);
-
-        return back()->with('success', 'Хадгаллаа.');
-    }
-
-    /** «Зөвшөөрсөн» хэсгийг бүтнээр нь хуудсан дээр засна. */
-    public function updateApproverBlock(Request $request, AnnualLeave $annualLeave): RedirectResponse
-    {
-        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
-
-        $data = $request->validate([
-            'approver_block' => ['nullable', 'string', 'max:1000'],
-        ], [], ['approver_block' => 'бичвэр']);
-
-        $annualLeave->update([
-            'approver_block_override' => trim((string) ($data['approver_block'] ?? '')) ?: null,
-        ]);
-
-        return back()->with('success', 'Хадгаллаа.');
-    }
-
-    /** Амралт эдэлж буй хүний гарын үсгийн мөрийг хуудсан дээр засна. */
-    public function updateOwnBlock(Request $request, AnnualLeave $annualLeave): RedirectResponse
-    {
-        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
-
-        $data = $request->validate([
-            'own_block' => ['nullable', 'string', 'max:500'],
-        ], [], ['own_block' => 'бичвэр']);
-
-        $annualLeave->update([
-            'own_block_override' => trim((string) ($data['own_block'] ?? '')) ?: null,
         ]);
 
         return back()->with('success', 'Хадгаллаа.');
