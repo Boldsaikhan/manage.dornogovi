@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
@@ -246,6 +246,46 @@ const clearFilters = () => {
 
 watch(() => props.activeScope, () => clearFilters());
 
+/*
+ * Толгойн 3 мөрийн (гарчиг, дэд гарчиг, хайлт) бодит өндрийг хэмжиж
+ * sticky байрлалыг нь тохируулна — CSS-д тогтмол бичвэл фонт, мөр
+ * шилжилтээс хамаарч өндөр өөрчлөгдөхөд толгой давхцаж «эвдэрдэг».
+ */
+const sheetEl = ref(null);
+
+const syncStickyHead = () => {
+    const head = sheetEl.value?.querySelector('thead');
+
+    if (! head) return;
+
+    let top = 0;
+
+    Array.from(head.rows).forEach((row, index) => {
+        const offset = index === 0 ? 0 : Math.max(0, Math.round(top) - index);
+
+        Array.from(row.cells).forEach((cell) => {
+            cell.style.position = 'sticky';
+            cell.style.top = `${offset}px`;
+            cell.style.zIndex = String(30 - index);
+        });
+
+        top += row.getBoundingClientRect().height;
+    });
+};
+
+const scheduleStickySync = () => nextTick(() => requestAnimationFrame(syncStickyHead));
+
+watch(() => [props.rows.length, props.activeScope, hasFilters.value], scheduleStickySync);
+
+onMounted(() => {
+    scheduleStickySync();
+    // Фонт хожуу ачаалагдвал толгойн өндөр өөрчлөгддөг тул дахин нэг хэмжинэ.
+    setTimeout(syncStickyHead, 400);
+    window.addEventListener('resize', syncStickyHead);
+});
+
+onBeforeUnmount(() => window.removeEventListener('resize', syncStickyHead));
+
 const searchKey = (value) => String(value ?? '')
     .toLowerCase()
     .replace(/ө/g, 'о')
@@ -377,7 +417,7 @@ const visibleRows = computed(() => (
 
             <!-- Бүртгэлийн хүснэгт — .ui-register стандарт систем -->
             <TableScrollViewport v-else max-height="min(72vh, calc(100dvh - 11rem))">
-                <div class="ui-register">
+                <div ref="sheetEl" class="ui-register">
                 <div class="ui-register__banner">{{ registerTitle }}</div>
                 <table class="ui-register__table min-w-[113rem]">
                     <colgroup>
