@@ -210,8 +210,10 @@ const openSystemSettings = (sys) => {
 const onLinkedSystemClick = (sys, event) => {
     sidebarOpen.value = false;
 
-    // Мэдээлэл хадгалаагүй систем — шинэ таб нээхгүй, апп дотроо үлдэнэ.
-    if (sys.requires_login && ! sys.has_credential) {
+    // Мэдээлэл хадгалаагүй, эсвэл сан түгжээтэй үед шинэ таб нээхгүй,
+    // апп дотроо үлдэнэ — үгүй бол дарах тутамд сан нээхийг хүлээж
+    // зогссон хоосон шинэ таб дараалан нээгдэж, "үсэрдэггүй" мэт санагддаг.
+    if (sys.requires_login && (! sys.has_credential || ! vaultUnlocked.value)) {
         event.preventDefault();
         router.visit(route('systems.show', sys.id));
     }
