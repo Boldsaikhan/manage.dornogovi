@@ -234,7 +234,7 @@ class AnnualLeaveNotice
             return $typed;
         }
 
-        $org = trim((string) $row->org_name);
+        $org = self::normalizeShoutyOrgName(trim((string) $row->org_name));
         $position = trim((string) $row->position);
         $name = trim((string) $row->person_name);
 
@@ -301,6 +301,35 @@ class AnnualLeaveNotice
         $given = mb_substr($name, $dot + 1);
 
         return $given === '' ? $name : $prefix.MongolianCase::genitiveWord($given);
+    }
+
+    /**
+     * Байгууллагын нэрийг ТОМ ҮСГЭЭР бүхэлд нь бичсэн байвал (жишээ нь
+     * «ЗАМЫН-ҮҮД СУМ») жижиг үсэг рүү буулгана — эс бөгөөс
+     * MongolianCase::genitiveWord() үүнийг товчлол гэж андуурч
+     * («СУМ-ын» гэх мэт зурааст холбоос) буруу залгадаг байв. Зөвхөн
+     * бүхэлдээ том үсэгтэй үед л хөндөнө — хэвийн бичсэн нэрийг
+     * өөрчлөхгүй.
+     */
+    private static function normalizeShoutyOrgName(string $org): string
+    {
+        if ($org === '' || $org !== mb_strtoupper($org)) {
+            return $org;
+        }
+
+        $lower = mb_strtolower($org);
+
+        /*
+         * Зөвхөн эхний үсэг болон зураас доторх (Замын-Үүд мэт) үсгийг
+         * томруулна — дундах үгсийг (сум, аймаг гэх мэт ерөнхий нэр)
+         * жижиг хэвээр үлдээнэ, учир нь зөвхөн өгүүлбэрийн эхлэл болон
+         * хос нэрийн зурааст хэсэгт л том үсэг хэрэглэдэг.
+         */
+        return preg_replace_callback(
+            '/(^|-)(\p{L})/u',
+            fn (array $m) => $m[1].mb_strtoupper($m[2]),
+            $lower,
+        ) ?? $lower;
     }
 
     /**

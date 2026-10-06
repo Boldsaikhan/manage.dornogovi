@@ -301,6 +301,33 @@ class AnnualLeaveNoticeTest extends TestCase
         $this->assertStringStartsWith('Замын-Үүд сумын Засаг дарга Б.Сайнбаярын', $text);
     }
 
+    public function test_an_all_caps_org_name_is_lowered_and_joined_without_a_hyphen(): void
+    {
+        // Байгууллагын нэрийг бүхэлд нь ТОМ ҮСГЭЭР хадгалсан бол
+        // MongolianCase::genitiveWord() үүнийг товчлол (ЗДТГ мэт) гэж
+        // андуураад «СУМ-ын» гэж зурааст холбоос үүсгэдэг байв. Мөн
+        // бичвэр бүхэлдээ ТОМ ҮСГЭЭР харагддаг байсан. Одоо жижиг
+        // үсэг рүү буулгаж, зурааст холбоосгүйгээр шууд залгана.
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = AnnualLeave::create([
+            'user_id' => $admin->id,
+            'scope' => 'sum',
+            'org_name' => 'ЗАМЫН-ҮҮД СУМ',
+            'position' => 'Засаг дарга',
+            'person_name' => 'Б.Сайнбаяр',
+            'entitled_days' => 20,
+            'start_date' => '2026-10-12',
+            'end_date' => '2026-11-06',
+        ]);
+
+        $text = \App\Support\AnnualLeaveNotice::text($row);
+
+        $this->assertStringStartsWith('Замын-Үүд сумын Засаг дарга Б.Сайнбаярын', $text);
+        $this->assertStringNotContainsString('СУМ-ын', $text);
+        $this->assertStringNotContainsString('ЗАМЫН-ҮҮД', $text);
+    }
+
     public function test_the_whole_notice_can_be_edited_in_one_field_and_reset(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
