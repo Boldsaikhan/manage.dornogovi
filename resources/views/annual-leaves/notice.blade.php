@@ -362,6 +362,17 @@
             gapPlusBtn.disabled = gapMm >= GAP_MAX;
         };
 
+        // Дээд хувийг янзлах бүрт доод (хэвлэх) хувийг нэн даруй хуулна —
+        // хадгалахыг хүлээхгүйгээр хуудсан дээр шууд харагдана.
+        const mirrorCopies = () => {
+            otherBodyCopies.forEach((el) => { el.textContent = body.innerText.trim(); });
+            otherApproverTitleCopies.forEach((el) => { el.textContent = approverTitle.innerText.trim(); });
+            otherApproverNameCopies.forEach((el) => { el.textContent = approverName.innerText.trim(); });
+            otherOwnTitleCopies.forEach((el) => { el.textContent = ownTitle.innerText.trim(); });
+            otherOwnNameCopies.forEach((el) => { el.textContent = ownName.innerText.trim(); });
+            otherGridCopies.forEach((el) => { el.style.setProperty('--sig-gap', `${gapMm}mm`); });
+        };
+
         if (body && approverTitle && approverName && ownTitle && ownName && saveBtn) {
             let saved = combined();
 
@@ -370,12 +381,14 @@
             gapMinusBtn.addEventListener('click', () => {
                 gapMm = Math.max(GAP_MIN, gapMm - GAP_STEP);
                 applyGap();
+                mirrorCopies();
                 status.textContent = combined() === saved ? 'Бичвэр дээр дарж засна.' : 'Хадгалаагүй өөрчлөлт байна.';
             });
 
             gapPlusBtn.addEventListener('click', () => {
                 gapMm = Math.min(GAP_MAX, gapMm + GAP_STEP);
                 applyGap();
+                mirrorCopies();
                 status.textContent = combined() === saved ? 'Бичвэр дээр дарж засна.' : 'Хадгалаагүй өөрчлөлт байна.';
             });
 
@@ -389,12 +402,7 @@
 
                     if (response.ok) {
                         saved = combined();
-                        otherBodyCopies.forEach((el) => { el.textContent = body.innerText.trim(); });
-                        otherApproverTitleCopies.forEach((el) => { el.textContent = approverTitle.innerText.trim(); });
-                        otherApproverNameCopies.forEach((el) => { el.textContent = approverName.innerText.trim(); });
-                        otherOwnTitleCopies.forEach((el) => { el.textContent = ownTitle.innerText.trim(); });
-                        otherOwnNameCopies.forEach((el) => { el.textContent = ownName.innerText.trim(); });
-                        otherGridCopies.forEach((el) => { el.style.setProperty('--sig-gap', `${gapMm}mm`); });
+                        mirrorCopies();
                         status.textContent = 'Хадгаллаа.';
                     } else {
                         status.textContent = 'Хадгалж чадсангүй.';
@@ -431,6 +439,7 @@
             });
 
             const onInput = () => {
+                mirrorCopies();
                 status.textContent = combined() === saved
                     ? 'Бичвэр дээр дарж засна.'
                     : 'Хадгалаагүй өөрчлөлт байна.';
