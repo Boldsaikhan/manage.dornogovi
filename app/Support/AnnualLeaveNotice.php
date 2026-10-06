@@ -83,6 +83,26 @@ class AnnualLeaveNotice
     }
 
     /**
+     * Амралт эдэлж буй хүний гарын үсгийн бүхэл мөр (тушаал + нэр хамт) —
+     * мэдэгдлийн хуудсан дээр нэг доороо чөлөөтэй засварлана. Хэрэглэгч
+     * гараар засварласан бол тэрийг нь, эс бөгөөс бүртгэлийн мэдээллээс
+     * автоматаар үүсгэнэ.
+     */
+    public static function ownBlockText(AnnualLeave $row): string
+    {
+        $override = trim((string) $row->own_block_override);
+
+        if ($override !== '') {
+            return $override;
+        }
+
+        return implode("\n", [
+            self::ownPositionLine($row),
+            trim((string) $row->person_name),
+        ]);
+    }
+
+    /**
      * Мэдэгдлийн гол өгүүлбэрийг бүртгэлийн мэдээллээс бүрдүүлнэ.
      *
      * Гараар бичсэн бичвэр байвал түүнийг хэвээр нь авна.

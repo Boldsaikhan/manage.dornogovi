@@ -31,7 +31,7 @@ class AnnualLeaveNoticeController extends Controller
             'copies' => $copies,
             'text' => AnnualLeaveNotice::text($annualLeave),
             'approverBlockText' => AnnualLeaveNotice::approverBlockText($annualLeave),
-            'ownPositionLine' => AnnualLeaveNotice::ownPositionLine($annualLeave),
+            'ownBlockText' => AnnualLeaveNotice::ownBlockText($annualLeave),
             'number' => $this->rowNumber($annualLeave),
             'registeredOn' => $annualLeave->created_at,
             'format' => [
@@ -91,6 +91,22 @@ class AnnualLeaveNoticeController extends Controller
 
         $annualLeave->update([
             'approver_block_override' => trim((string) ($data['approver_block'] ?? '')) ?: null,
+        ]);
+
+        return back()->with('success', 'Хадгаллаа.');
+    }
+
+    /** Амралт эдэлж буй хүний гарын үсгийн мөрийг хуудсан дээр засна. */
+    public function updateOwnBlock(Request $request, AnnualLeave $annualLeave): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
+
+        $data = $request->validate([
+            'own_block' => ['nullable', 'string', 'max:500'],
+        ], [], ['own_block' => 'бичвэр']);
+
+        $annualLeave->update([
+            'own_block_override' => trim((string) ($data['own_block'] ?? '')) ?: null,
         ]);
 
         return back()->with('success', 'Хадгаллаа.');

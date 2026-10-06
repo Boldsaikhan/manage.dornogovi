@@ -184,43 +184,38 @@
 
         .notice .body-edit button.ghost { background: #fff; color: #1c55a5; }
 
-        .notice .approver .body-edit { justify-content: center; }
+        .notice .approver .body-edit,
+        .notice .own .body-edit { justify-content: center; }
 
-        .notice .sign {
+        .notice .own {
             margin-top: 4mm;
             margin-bottom: 5mm;
-        }
-
-        .notice .sign .row {
-            display: flex;
-            align-items: flex-end;
-        }
-
-        /*
-         * Тушаалын багана тогтмол өргөнтэй — текст 1 мөр, 2 мөр ямар ч
-         * байсан нэр үргэлж яг ижил зайд эхэлнэ (гарын үсэг зурах зай
-         * тушаалын урт/богиноос хамаарахгүйгээр тооцогдоно).
-         */
-        .notice .sign .title {
-            flex: 0 0 70mm;
-            max-width: 70mm;
             text-align: center;
-            text-transform: uppercase;
-            font-weight: normal;
         }
 
-        .notice .sign .name {
-            flex: 0 0 auto;
-            margin-left: 20mm;
-            white-space: nowrap;
+        /* Тушаал, нэр хоёулаа том үсгээр. */
+        .notice .own-block {
+            display: inline-block;
+            white-space: pre-line;
+            text-transform: uppercase;
         }
+
+        .notice .own-block[contenteditable='true'] {
+            outline: 1px dashed #94a3b8;
+            outline-offset: 2mm;
+            min-width: 50mm;
+            cursor: text;
+        }
+
+        .notice .own-block[contenteditable='true']:focus { outline-color: #1c55a5; }
 
         @media print {
             body { background: #fff; }
             .toolbar, .body-edit { display: none !important; }
             .page { margin: 0; box-shadow: none; }
             .notice .body[contenteditable='true'] { outline: none; }
-            .notice .approver-block[contenteditable='true'] { outline: none; }
+            .notice .approver-block[contenteditable='true'],
+            .notice .own-block[contenteditable='true'] { outline: none; }
         }
     </style>
 </head>
@@ -281,11 +276,22 @@
                     @endif
                 </div>
 
-                <div class="sign">
-                    <div class="row">
-                        <span class="title">{{ $ownPositionLine }}</span>
-                        <span class="name">{{ $annualLeave->person_name }}</span>
-                    </div>
+                <div class="own">
+                    @if ($i === 0 && $canEdit)
+                        <div
+                            class="own-block"
+                            contenteditable="true"
+                            id="own-block"
+                            spellcheck="false"
+                        >{{ $ownBlockText }}</div>
+                        <div class="body-edit">
+                            <button type="button" id="own-save">Хадгалах</button>
+                            <button type="button" id="own-reset" class="ghost">Дахин үүсгэх</button>
+                            <span id="own-status">Бичвэр дээр дарж засна.</span>
+                        </div>
+                    @else
+                        <div class="own-block" data-own-block-copy>{{ $ownBlockText }}</div>
+                    @endif
                 </div>
             </div>
         @endfor
@@ -448,6 +454,86 @@
 
             window.addEventListener('beforeunload', (event) => {
                 if (approverBlock.innerText.trim() !== savedApproverBlock) {
+                    event.preventDefault();
+                    event.returnValue = '';
+                }
+            });
+        }
+
+        const ownBlock = document.getElementById('own-block');
+        const ownSaveBtn = document.getElementById('own-save');
+        const ownResetBtn = document.getElementById('own-reset');
+        const ownStatus = document.getElementById('own-status');
+        const otherOwnBlocks = document.querySelectorAll('[data-own-block-copy]');
+
+        const sendOwnBlock = (text) => fetch(@json(route('annual-leaves.notice.own', $annualLeave)), {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ own_block: text }),
+        });
+
+        if (ownBlock && ownSaveBtn) {
+            let savedOwnBlock = ownBlock.innerText.trim();
+
+            ownSaveBtn.addEventListener('click', async () => {
+                ownSaveBtn.disabled = true;
+                ownStatus.textContent = 'Хадгалж байна…';
+
+                try {
+                    const text = ownBlock.innerText.trim();
+                    const response = await sendOwnBlock(text);
+
+                    if (response.ok) {
+                        savedOwnBlock = text;
+                        otherOwnBlocks.forEach((el) => { el.textContent = text; });
+                        ownStatus.textContent = 'Хадгаллаа.';
+                    } else {
+                        ownStatus.textContent = 'Хадгалж чадсангүй.';
+                    }
+                } catch (e) {
+                    ownStatus.textContent = 'Сүлжээгүй байна.';
+                } finally {
+                    ownSaveBtn.disabled = false;
+                }
+            });
+
+            ownResetBtn.addEventListener('click', async () => {
+                if (! confirm('Бичвэрийг бүртгэлийн мэдээллээс дахин үүсгэх үү?')) return;
+
+                ownResetBtn.disabled = true;
+                ownStatus.textContent = 'Дахин үүсгэж байна…';
+
+                try {
+                    const response = await sendOwnBlock('');
+
+                    if (! response.ok) {
+                        ownStatus.textContent = 'Дахин үүсгэж чадсангүй.';
+                        ownResetBtn.disabled = false;
+
+                        return;
+                    }
+
+                    savedOwnBlock = '';
+                    location.reload();
+                } catch (e) {
+                    ownStatus.textContent = 'Сүлжээгүй байна.';
+                    ownResetBtn.disabled = false;
+                }
+            });
+
+            ownBlock.addEventListener('input', () => {
+                ownStatus.textContent = ownBlock.innerText.trim() === savedOwnBlock
+                    ? 'Бичвэр дээр дарж засна.'
+                    : 'Хадгалаагүй өөрчлөлт байна.';
+            });
+
+            window.addEventListener('beforeunload', (event) => {
+                if (ownBlock.innerText.trim() !== savedOwnBlock) {
                     event.preventDefault();
                     event.returnValue = '';
                 }

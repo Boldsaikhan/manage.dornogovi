@@ -22,6 +22,7 @@ class AnnualLeave extends Model
         'end_date',
         'signer',
         'approver_block_override',
+        'own_block_override',
         'substitute_position',
         'substitute_name',
         'substitute_phone',
