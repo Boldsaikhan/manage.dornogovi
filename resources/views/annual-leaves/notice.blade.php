@@ -121,10 +121,13 @@
             text-align: center;
         }
 
+        /*
+         * Бүх агуулга (өгүүлбэр + Зөвшөөрсөн хэсэг + гарын үсэг) нэг
+         * бичвэрт — хэрэглэгч шууд дарж бүхэлд нь засварлана.
+         */
         .notice .body {
             margin: 0 0 2mm;
-            text-align: justify;
-            text-indent: 8mm;
+            white-space: pre-wrap;
         }
 
         /* Хуудсан дээрээ засах — хэвлэхэд ул мөр үлдэхгүй. */
@@ -136,29 +139,6 @@
         }
 
         .notice .body[contenteditable='true']:focus { outline-color: #1c55a5; }
-
-        .notice .approver {
-            margin-top: 4mm;
-            margin-bottom: 5mm;
-            text-align: center;
-        }
-
-        /* Тушаал, нэр хоёулаа том үсгээр — бичвэрийн доторх жинхэнэ үсгийн
-         * том, жижгээс үл хамаарна. */
-        .notice .approver-block {
-            display: inline-block;
-            white-space: pre-line;
-            text-transform: uppercase;
-        }
-
-        .notice .approver-block[contenteditable='true'] {
-            outline: 1px dashed #94a3b8;
-            outline-offset: 2mm;
-            min-width: 50mm;
-            cursor: text;
-        }
-
-        .notice .approver-block[contenteditable='true']:focus { outline-color: #1c55a5; }
 
         .notice .body-edit {
             margin: 0 0 8mm;
@@ -184,38 +164,11 @@
 
         .notice .body-edit button.ghost { background: #fff; color: #1c55a5; }
 
-        .notice .approver .body-edit,
-        .notice .own .body-edit { justify-content: center; }
-
-        .notice .own {
-            margin-top: 4mm;
-            margin-bottom: 5mm;
-            text-align: center;
-        }
-
-        /* Тушаал, нэр хоёулаа том үсгээр. */
-        .notice .own-block {
-            display: inline-block;
-            white-space: pre-line;
-            text-transform: uppercase;
-        }
-
-        .notice .own-block[contenteditable='true'] {
-            outline: 1px dashed #94a3b8;
-            outline-offset: 2mm;
-            min-width: 50mm;
-            cursor: text;
-        }
-
-        .notice .own-block[contenteditable='true']:focus { outline-color: #1c55a5; }
-
         @media print {
             body { background: #fff; }
             .toolbar, .body-edit { display: none !important; }
             .page { margin: 0; box-shadow: none; }
             .notice .body[contenteditable='true'] { outline: none; }
-            .notice .approver-block[contenteditable='true'],
-            .notice .own-block[contenteditable='true'] { outline: none; }
         }
     </style>
 </head>
@@ -243,56 +196,20 @@
                 </div>
 
                 @if ($i === 0 && $canEdit)
-                    <p
+                    <div
                         class="body"
                         contenteditable="true"
                         id="notice-body"
                         spellcheck="false"
-                    >{{ $text }}</p>
+                    >{{ $text }}</div>
                     <div class="body-edit">
                         <button type="button" id="notice-save">Хадгалах</button>
                         <button type="button" id="notice-reset" class="ghost">Дахин үүсгэх</button>
                         <span id="notice-status">Бичвэр дээр дарж засна.</span>
                     </div>
                 @else
-                    <p class="body" data-notice-copy>{{ $text ?: '……………………………………………………………………………………………………' }}</p>
+                    <div class="body" data-notice-copy>{{ $text ?: '……………………………………………………………………………………………………' }}</div>
                 @endif
-
-                <div class="approver">
-                    @if ($i === 0 && $canEdit)
-                        <div
-                            class="approver-block"
-                            contenteditable="true"
-                            id="approver-block"
-                            spellcheck="false"
-                        >{{ $approverBlockText }}</div>
-                        <div class="body-edit">
-                            <button type="button" id="approver-save">Хадгалах</button>
-                            <button type="button" id="approver-reset" class="ghost">Дахин үүсгэх</button>
-                            <span id="approver-status">Бичвэр дээр дарж засна.</span>
-                        </div>
-                    @else
-                        <div class="approver-block" data-approver-block-copy>{{ $approverBlockText }}</div>
-                    @endif
-                </div>
-
-                <div class="own">
-                    @if ($i === 0 && $canEdit)
-                        <div
-                            class="own-block"
-                            contenteditable="true"
-                            id="own-block"
-                            spellcheck="false"
-                        >{{ $ownBlockText }}</div>
-                        <div class="body-edit">
-                            <button type="button" id="own-save">Хадгалах</button>
-                            <button type="button" id="own-reset" class="ghost">Дахин үүсгэх</button>
-                            <span id="own-status">Бичвэр дээр дарж засна.</span>
-                        </div>
-                    @else
-                        <div class="own-block" data-own-block-copy>{{ $ownBlockText }}</div>
-                    @endif
-                </div>
             </div>
         @endfor
     </div>
@@ -374,166 +291,6 @@
             // Хадгалаагүй байхад хуудсаас гарахаас сэргийлнэ.
             window.addEventListener('beforeunload', (event) => {
                 if (body.innerText.trim() !== saved) {
-                    event.preventDefault();
-                    event.returnValue = '';
-                }
-            });
-        }
-
-        const approverBlock = document.getElementById('approver-block');
-        const approverSaveBtn = document.getElementById('approver-save');
-        const approverResetBtn = document.getElementById('approver-reset');
-        const approverStatus = document.getElementById('approver-status');
-        const otherApproverBlocks = document.querySelectorAll('[data-approver-block-copy]');
-
-        const sendApproverBlock = (text) => fetch(@json(route('annual-leaves.notice.approver', $annualLeave)), {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({ approver_block: text }),
-        });
-
-        if (approverBlock && approverSaveBtn) {
-            let savedApproverBlock = approverBlock.innerText.trim();
-
-            approverSaveBtn.addEventListener('click', async () => {
-                approverSaveBtn.disabled = true;
-                approverStatus.textContent = 'Хадгалж байна…';
-
-                try {
-                    const text = approverBlock.innerText.trim();
-                    const response = await sendApproverBlock(text);
-
-                    if (response.ok) {
-                        savedApproverBlock = text;
-                        otherApproverBlocks.forEach((el) => { el.textContent = text; });
-                        approverStatus.textContent = 'Хадгаллаа.';
-                    } else {
-                        approverStatus.textContent = 'Хадгалж чадсангүй.';
-                    }
-                } catch (e) {
-                    approverStatus.textContent = 'Сүлжээгүй байна.';
-                } finally {
-                    approverSaveBtn.disabled = false;
-                }
-            });
-
-            approverResetBtn.addEventListener('click', async () => {
-                if (! confirm('Бичвэрийг бүртгэлийн мэдээллээс дахин үүсгэх үү?')) return;
-
-                approverResetBtn.disabled = true;
-                approverStatus.textContent = 'Дахин үүсгэж байна…';
-
-                try {
-                    const response = await sendApproverBlock('');
-
-                    if (! response.ok) {
-                        approverStatus.textContent = 'Дахин үүсгэж чадсангүй.';
-                        approverResetBtn.disabled = false;
-
-                        return;
-                    }
-
-                    savedApproverBlock = '';
-                    location.reload();
-                } catch (e) {
-                    approverStatus.textContent = 'Сүлжээгүй байна.';
-                    approverResetBtn.disabled = false;
-                }
-            });
-
-            approverBlock.addEventListener('input', () => {
-                approverStatus.textContent = approverBlock.innerText.trim() === savedApproverBlock
-                    ? 'Бичвэр дээр дарж засна.'
-                    : 'Хадгалаагүй өөрчлөлт байна.';
-            });
-
-            window.addEventListener('beforeunload', (event) => {
-                if (approverBlock.innerText.trim() !== savedApproverBlock) {
-                    event.preventDefault();
-                    event.returnValue = '';
-                }
-            });
-        }
-
-        const ownBlock = document.getElementById('own-block');
-        const ownSaveBtn = document.getElementById('own-save');
-        const ownResetBtn = document.getElementById('own-reset');
-        const ownStatus = document.getElementById('own-status');
-        const otherOwnBlocks = document.querySelectorAll('[data-own-block-copy]');
-
-        const sendOwnBlock = (text) => fetch(@json(route('annual-leaves.notice.own', $annualLeave)), {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({ own_block: text }),
-        });
-
-        if (ownBlock && ownSaveBtn) {
-            let savedOwnBlock = ownBlock.innerText.trim();
-
-            ownSaveBtn.addEventListener('click', async () => {
-                ownSaveBtn.disabled = true;
-                ownStatus.textContent = 'Хадгалж байна…';
-
-                try {
-                    const text = ownBlock.innerText.trim();
-                    const response = await sendOwnBlock(text);
-
-                    if (response.ok) {
-                        savedOwnBlock = text;
-                        otherOwnBlocks.forEach((el) => { el.textContent = text; });
-                        ownStatus.textContent = 'Хадгаллаа.';
-                    } else {
-                        ownStatus.textContent = 'Хадгалж чадсангүй.';
-                    }
-                } catch (e) {
-                    ownStatus.textContent = 'Сүлжээгүй байна.';
-                } finally {
-                    ownSaveBtn.disabled = false;
-                }
-            });
-
-            ownResetBtn.addEventListener('click', async () => {
-                if (! confirm('Бичвэрийг бүртгэлийн мэдээллээс дахин үүсгэх үү?')) return;
-
-                ownResetBtn.disabled = true;
-                ownStatus.textContent = 'Дахин үүсгэж байна…';
-
-                try {
-                    const response = await sendOwnBlock('');
-
-                    if (! response.ok) {
-                        ownStatus.textContent = 'Дахин үүсгэж чадсангүй.';
-                        ownResetBtn.disabled = false;
-
-                        return;
-                    }
-
-                    savedOwnBlock = '';
-                    location.reload();
-                } catch (e) {
-                    ownStatus.textContent = 'Сүлжээгүй байна.';
-                    ownResetBtn.disabled = false;
-                }
-            });
-
-            ownBlock.addEventListener('input', () => {
-                ownStatus.textContent = ownBlock.innerText.trim() === savedOwnBlock
-                    ? 'Бичвэр дээр дарж засна.'
-                    : 'Хадгалаагүй өөрчлөлт байна.';
-            });
-
-            window.addEventListener('beforeunload', (event) => {
-                if (ownBlock.innerText.trim() !== savedOwnBlock) {
                     event.preventDefault();
                     event.returnValue = '';
                 }

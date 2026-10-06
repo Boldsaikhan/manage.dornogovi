@@ -49,29 +49,6 @@ class AnnualLeaveNotice
     }
 
     /**
-     * «ЗӨВШӨӨРСӨН:» бүхэл хэсгийн бичвэр (толгой + тушаал + нэр хамт) —
-     * мэдэгдлийн хуудсан дээр нэг доороо чөлөөтэй засварлана. Хэрэглэгч
-     * гараар засварласан бол тэрийг нь, эс бөгөөс бүртгэлийн мэдээллээс
-     * автоматаар үүсгэнэ.
-     */
-    public static function approverBlockText(AnnualLeave $row): string
-    {
-        $override = trim((string) $row->approver_block_override);
-
-        if ($override !== '') {
-            return $override;
-        }
-
-        $lines = array_merge(
-            ['Зөвшөөрсөн:'],
-            self::approverLines($row),
-            [self::approverName($row)],
-        );
-
-        return implode("\n", $lines);
-    }
-
-    /**
      * Амралт эдэлж буй хүний гарын үсгийн мөрөнд гарах албан тушаал —
      * утасны жагсаалтад байгаагаар нь, өөрчлөлтгүйгээр харуулна.
      */
@@ -83,23 +60,32 @@ class AnnualLeaveNotice
     }
 
     /**
-     * Амралт эдэлж буй хүний гарын үсгийн бүхэл мөр (тушаал + нэр хамт) —
-     * мэдэгдлийн хуудсан дээр нэг доороо чөлөөтэй засварлана. Хэрэглэгч
-     * гараар засварласан бол тэрийг нь, эс бөгөөс бүртгэлийн мэдээллээс
-     * автоматаар үүсгэнэ.
+     * Мэдэгдлийн хуудасны БҮХ агуулга (өгүүлбэр + Зөвшөөрсөн хэсэг +
+     * өөрийн гарын үсгийн мөр) нэг доороо — хуудсан дээр нэг талбарт
+     * чөлөөтэй засварлана. Хэрэглэгч гараар засварласан бол (notice_text)
+     * тэрийг нь бүхэлд нь, эс бөгөөс бүртгэлийн мэдээллээс автоматаар
+     * нэгтгэж үүсгэнэ.
      */
-    public static function ownBlockText(AnnualLeave $row): string
+    public static function fullText(AnnualLeave $row): string
     {
-        $override = trim((string) $row->own_block_override);
+        $override = trim((string) $row->notice_text);
 
         if ($override !== '') {
             return $override;
         }
 
-        return implode("\n", [
-            self::ownPositionLine($row),
-            trim((string) $row->person_name),
-        ]);
+        $parts = [
+            self::text($row),
+            '',
+            'ЗӨВШӨӨРСӨН:',
+            implode(' ', self::approverLines($row)),
+            self::approverName($row),
+            '',
+            mb_strtoupper(self::ownPositionLine($row)),
+            mb_strtoupper(trim((string) $row->person_name)),
+        ];
+
+        return implode("\n", $parts);
     }
 
     /**

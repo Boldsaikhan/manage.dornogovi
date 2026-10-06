@@ -119,8 +119,6 @@ Route::middleware('auth')->group(function () {
     Route::delete('/modules/annual-leaves/{annualLeave}', [AnnualLeaveController::class, 'destroy'])->name('annual-leaves.destroy');
     Route::get('/modules/annual-leaves/{annualLeave}/notice', [AnnualLeaveNoticeController::class, 'show'])->name('annual-leaves.notice');
     Route::patch('/modules/annual-leaves/{annualLeave}/notice-text', [AnnualLeaveNoticeController::class, 'updateText'])->name('annual-leaves.notice.text');
-    Route::patch('/modules/annual-leaves/{annualLeave}/notice-approver', [AnnualLeaveNoticeController::class, 'updateApproverBlock'])->name('annual-leaves.notice.approver');
-    Route::patch('/modules/annual-leaves/{annualLeave}/notice-own', [AnnualLeaveNoticeController::class, 'updateOwnBlock'])->name('annual-leaves.notice.own');
 
     Route::get('/modules/awards', [AwardController::class, 'index'])->name('awards.index');
     Route::get('/modules/awards/export', [AwardController::class, 'export'])->name('awards.export');
