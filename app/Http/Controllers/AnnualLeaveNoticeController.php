@@ -32,6 +32,7 @@ class AnnualLeaveNoticeController extends Controller
             'bodyText' => AnnualLeaveNotice::bodyPart($annualLeave),
             'signatureFields' => AnnualLeaveNotice::signatureFields($annualLeave),
             'signatureGapMm' => $annualLeave->signature_gap_mm ?? 10,
+            'signatureRowGapMm' => (float) ($annualLeave->signature_row_gap_mm ?? 3),
             'number' => $this->rowNumber($annualLeave),
             'registeredOn' => $annualLeave->created_at,
             'format' => [
@@ -72,11 +73,13 @@ class AnnualLeaveNoticeController extends Controller
         $data = $request->validate([
             'notice_text' => ['nullable', 'string', 'max:3000'],
             'signature_gap_mm' => ['nullable', 'integer', 'min:0', 'max:40'],
-        ], [], ['notice_text' => 'бичвэр', 'signature_gap_mm' => 'зай']);
+            'signature_row_gap_mm' => ['nullable', 'numeric', 'min:1', 'max:10'],
+        ], [], ['notice_text' => 'бичвэр', 'signature_gap_mm' => 'зай', 'signature_row_gap_mm' => 'мөр хоорондын зай']);
 
         $annualLeave->update([
             'notice_text' => trim((string) ($data['notice_text'] ?? '')) ?: null,
             'signature_gap_mm' => $data['signature_gap_mm'] ?? null,
+            'signature_row_gap_mm' => $data['signature_row_gap_mm'] ?? null,
         ]);
 
         return back()->with('success', 'Хадгаллаа.');
