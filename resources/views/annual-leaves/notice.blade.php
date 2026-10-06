@@ -187,8 +187,9 @@
          * тушаалын урт/богиноос хамаарахгүйгээр тооцогдоно).
          */
         .notice .sign .title {
-            flex: 0 0 45mm;
-            max-width: 45mm;
+            flex: 0 0 70mm;
+            max-width: 70mm;
+            text-align: center;
             text-transform: uppercase;
             font-weight: normal;
         }
