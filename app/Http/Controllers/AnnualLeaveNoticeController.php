@@ -73,7 +73,7 @@ class AnnualLeaveNoticeController extends Controller
         $data = $request->validate([
             'notice_text' => ['nullable', 'string', 'max:3000'],
             'signature_gap_mm' => ['nullable', 'integer', 'min:0', 'max:40'],
-            'signature_row_gap_mm' => ['nullable', 'numeric', 'min:1', 'max:10'],
+            'signature_row_gap_mm' => ['nullable', 'numeric', 'min:0', 'max:10'],
         ], [], ['notice_text' => 'бичвэр', 'signature_gap_mm' => 'зай', 'signature_row_gap_mm' => 'мөр хоорондын зай']);
 
         $annualLeave->update([
