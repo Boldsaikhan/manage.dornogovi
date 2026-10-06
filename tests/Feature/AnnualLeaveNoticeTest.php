@@ -317,6 +317,55 @@ class AnnualLeaveNoticeTest extends TestCase
         $this->assertSame('Ш.АМАРБИЛЭГ', \App\Support\AnnualLeaveNotice::approverName($row));
     }
 
+    public function test_the_own_block_can_be_edited_and_reset(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = AnnualLeave::create([
+            'user_id' => $admin->id,
+            'scope' => 'baiguullaga',
+            'org_name' => 'Байгаль орчны алба',
+            'position' => 'Байгаль орчны албаны дарга',
+            'person_name' => 'Ш.Амарбилэг',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('annual-leaves.notice', $row))
+            ->assertOk()
+            ->assertSee('Байгаль орчны албаны дарга')
+            ->assertSee('Ш.Амарбилэг');
+
+        $this->actingAs($admin)
+            ->patch(route('annual-leaves.notice.own', $row), [
+                'own_block' => "ГАРААР ЗАСВАРЛАСАН ТУШААЛ\nХ.Хэн нэгэн",
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(
+            "ГАРААР ЗАСВАРЛАСАН ТУШААЛ\nХ.Хэн нэгэн",
+            $row->fresh()->own_block_override,
+        );
+
+        // Автомат бичвэрт (мэдэгдлийн гол өгүүлбэрт) анхны тушаал, нэр хэвээр
+        // байх ёстой — зөвхөн гарын үсгийн мөрийг нь дарж өөрчилсөн.
+        $this->assertSame(
+            "ГАРААР ЗАСВАРЛАСАН ТУШААЛ\nХ.Хэн нэгэн",
+            \App\Support\AnnualLeaveNotice::ownBlockText($row->fresh()),
+        );
+
+        $this->actingAs($admin)
+            ->patch(route('annual-leaves.notice.own', $row), ['own_block' => ''])
+            ->assertRedirect();
+
+        $this->assertNull($row->fresh()->own_block_override);
+
+        $this->actingAs($admin)
+            ->get(route('annual-leaves.notice', $row))
+            ->assertOk()
+            ->assertSee('Байгаль орчны албаны дарга')
+            ->assertSee('Ш.Амарбилэг');
+    }
+
     public function test_a_viewer_without_edit_access_cannot_change_the_text(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
@@ -344,6 +393,10 @@ class AnnualLeaveNoticeTest extends TestCase
 
         $this->actingAs($viewer)
             ->patch(route('annual-leaves.notice.approver', $row), ['approver_block' => 'Оролдлого'])
+            ->assertForbidden();
+
+        $this->actingAs($viewer)
+            ->patch(route('annual-leaves.notice.own', $row), ['own_block' => 'Оролдлого'])
             ->assertForbidden();
     }
 }
