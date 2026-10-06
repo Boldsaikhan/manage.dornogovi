@@ -11,6 +11,7 @@ import QrScanButton from '@/Components/QrScanButton.vue';
 import AiPanel from '@/Components/AiPanel.vue';
 import AppLockGate from '@/Components/AppLockGate.vue';
 import Modal from '@/Components/Modal.vue';
+import { useTheme } from '@/utils/theme';
 
 defineProps({
     title: { type: String, default: '' },
@@ -23,6 +24,11 @@ const SIDEBAR_COLLAPSE_KEY = 'sidebar_collapsed';
 const AI_PANEL_KEY = 'ai_panel_open';
 const aiOpen = ref(false);
 const navTip = ref({ show: false, text: '', x: 0, y: 0 });
+
+const { mode: themeMode, cycle: cycleTheme } = useTheme();
+const themeLabel = computed(() => (
+    themeMode.value === 'light' ? 'Цайвар' : themeMode.value === 'dark' ? 'Бараан' : 'Систем'
+));
 
 onMounted(() => {
     publishSystemHosts();
@@ -97,6 +103,9 @@ const iconPaths = {
     graduation: 'M22 10L12 5 2 10l10 5 10-5zM6 12v5c0 2 3 3 6 3s6-1 6-3v-5',
     pencil: 'M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4 12.5-12.5z',
     chevronLeft: 'M15 18l-6-6 6-6',
+    sun: 'M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4M12 8a4 4 0 100 8 4 4 0 000-8z',
+    moon: 'M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z',
+    monitor: 'M3 5a1 1 0 011-1h16a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V5zM8 21h8M12 16v5',
     chevronRight: 'M9 18l6-6-6-6',
 };
 
@@ -221,22 +230,22 @@ const onLinkedSystemClick = (sys, event) => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-slate-100">
+    <div class="min-h-screen bg-slate-100 dark:bg-slate-950">
         <Head v-if="title" :title="title" />
         <aside
-            class="fixed inset-y-0 left-0 z-40 flex flex-col border-r border-slate-200/80 bg-white shadow-soft transition-[width,transform] duration-200 ease-out lg:translate-x-0"
+            class="fixed inset-y-0 left-0 z-40 flex flex-col border-r border-slate-200/80 bg-white shadow-soft transition-[width,transform] duration-200 ease-out dark:border-slate-800 dark:bg-slate-900 lg:translate-x-0"
             :class="[
                 sidebarOpen ? 'translate-x-0' : '-translate-x-full',
                 sidebarCollapsed ? 'w-[17.5rem] lg:w-[4.25rem]' : 'w-[17.5rem]',
             ]"
         >
             <div
-                class="relative flex h-[4.5rem] shrink-0 items-center border-b border-slate-100"
+                class="relative flex h-[4.5rem] shrink-0 items-center border-b border-slate-100 dark:border-slate-800"
                 :class="sidebarCollapsed ? 'lg:justify-center lg:px-2' : 'gap-1 px-3'"
             >
                 <Link
                     :href="route('dept.dashboard')"
-                    class="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-2 transition hover:bg-slate-50"
+                    class="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-2 transition hover:bg-slate-50 dark:hover:bg-slate-800"
                     :class="sidebarCollapsed ? 'lg:flex-none lg:justify-center lg:px-2' : ''"
                     :title="sidebarCollapsed ? 'manage дотоод систем' : undefined"
                 >
@@ -245,15 +254,15 @@ const onLinkedSystemClick = (sys, event) => {
                         class="min-w-0 leading-tight"
                         :class="sidebarCollapsed ? 'lg:hidden' : ''"
                     >
-                        <div class="truncate text-sm font-bold tracking-tight text-brand-navy-800">manage</div>
-                        <div class="text-[11px] font-medium tracking-wide text-slate-500">дотоод систем</div>
+                        <div class="truncate text-sm font-bold tracking-tight text-brand-navy-800 dark:text-brand-navy-300">manage</div>
+                        <div class="text-[11px] font-medium tracking-wide text-slate-500 dark:text-slate-400">дотоод систем</div>
                     </div>
                 </Link>
 
                 <button
                     type="button"
-                    class="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-brand-navy-700 lg:inline-flex"
-                    :class="sidebarCollapsed ? 'lg:absolute lg:-right-3 lg:top-[1.15rem] lg:z-50 lg:border lg:border-slate-200 lg:bg-white lg:shadow-sm' : ''"
+                    class="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-brand-navy-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-navy-300 lg:inline-flex"
+                    :class="sidebarCollapsed ? 'lg:absolute lg:-right-3 lg:top-[1.15rem] lg:z-50 lg:border lg:border-slate-200 lg:bg-white lg:shadow-sm dark:lg:border-slate-700 dark:lg:bg-slate-900' : ''"
                     :title="sidebarCollapsed ? 'Цэс нээх' : 'Цэс хураах'"
                     :aria-label="sidebarCollapsed ? 'Цэс нээх' : 'Цэс хураах'"
                     @click="toggleSidebarCollapse"
@@ -304,7 +313,7 @@ const onLinkedSystemClick = (sys, event) => {
                             <button
                                 v-if="! sidebarCollapsed"
                                 type="button"
-                                class="absolute right-1.5 rounded-lg p-1.5 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-brand-navy-700 focus:opacity-100 group-hover/sys:opacity-100"
+                                class="absolute right-1.5 rounded-lg p-1.5 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-brand-navy-700 focus:opacity-100 group-hover/sys:opacity-100 dark:hover:bg-slate-800 dark:hover:text-brand-navy-300"
                                 :title="sys.name + ' — нэвтрэх тохиргоо'"
                                 @click.stop.prevent="openSystemSettings(sys)"
                                 @mouseenter="showNavTip($event, 'Нэвтрэх тохиргоо')"
@@ -360,12 +369,39 @@ const onLinkedSystemClick = (sys, event) => {
 
 
             <div
-                class="space-y-1 border-t border-slate-100 p-3"
+                class="space-y-1 border-t border-slate-100 p-3 dark:border-slate-800"
                 :class="sidebarCollapsed ? 'lg:px-2' : ''"
             >
                 <button
                     type="button"
-                    class="flex w-full items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-left text-sm text-slate-600 transition hover:bg-slate-100"
+                    class="flex w-full items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-left text-sm text-slate-600 transition hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                    :class="sidebarCollapsed ? 'lg:relative lg:justify-center lg:px-0' : ''"
+                    :title="`Загвар: ${themeLabel} (солих)`"
+                    @mouseenter="showNavTip($event, `Загвар — ${themeLabel}`)"
+                    @mouseleave="hideNavTip"
+                    @click="cycleTheme"
+                >
+                    <svg v-if="themeMode === 'light'" class="h-5 w-5 shrink-0 text-brand-navy-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path :d="iconPaths.sun" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <svg v-else-if="themeMode === 'dark'" class="h-5 w-5 shrink-0 text-brand-navy-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path :d="iconPaths.moon" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <svg v-else class="h-5 w-5 shrink-0 text-brand-navy-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path :d="iconPaths.monitor" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <span class="flex-1 font-medium" :class="sidebarCollapsed ? 'lg:hidden' : ''">Загвар</span>
+                    <span
+                        class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                        :class="sidebarCollapsed ? 'lg:hidden' : ''"
+                    >
+                        {{ themeLabel }}
+                    </span>
+                </button>
+
+                <button
+                    type="button"
+                    class="flex w-full items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-left text-sm text-slate-600 transition hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                     :class="sidebarCollapsed ? 'lg:relative lg:justify-center lg:px-0' : ''"
                     :title="vaultUnlocked ? 'Сан хаах' : 'Сан нээх'"
                     @mouseenter="showNavTip($event, vaultUnlocked ? 'Сан — нээлттэй (хаах)' : 'Сан — түгжээтэй (нээх)')"
@@ -379,7 +415,9 @@ const onLinkedSystemClick = (sys, event) => {
                     <span
                         class="rounded-full px-2 py-0.5 text-[10px] font-semibold"
                         :class="[
-                            vaultUnlocked ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600',
+                            vaultUnlocked
+                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300'
+                                : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
                             sidebarCollapsed ? 'lg:hidden' : '',
                         ]"
                     >
@@ -429,9 +467,9 @@ const onLinkedSystemClick = (sys, event) => {
                     class="flex items-center justify-center gap-2 px-2 pt-2"
                     :class="sidebarCollapsed ? 'lg:hidden' : ''"
                 >
-                    <span class="h-px flex-1 bg-slate-100" />
+                    <span class="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
                     <OrnamentMark class="h-2.5 w-6 text-brand-orange-500" />
-                    <span class="h-px flex-1 bg-slate-100" />
+                    <span class="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
                 </div>
             </div>
         </aside>
@@ -455,15 +493,15 @@ const onLinkedSystemClick = (sys, event) => {
                 aiOpen ? 'xl:pr-[24rem]' : '',
             ]"
         >
-            <header class="sticky top-0 z-20 flex h-[4.5rem] items-center gap-2 border-b border-slate-200/80 bg-white/90 px-3 backdrop-blur-md sm:gap-4 sm:px-6">
-                <button class="shrink-0 rounded-xl p-2 text-brand-navy-700 hover:bg-slate-100 lg:hidden" @click="sidebarOpen = !sidebarOpen">
+            <header class="sticky top-0 z-20 flex h-[4.5rem] items-center gap-2 border-b border-slate-200/80 bg-white/90 px-3 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90 sm:gap-4 sm:px-6">
+                <button class="shrink-0 rounded-xl p-2 text-brand-navy-700 hover:bg-slate-100 dark:text-brand-navy-300 dark:hover:bg-slate-800 lg:hidden" @click="sidebarOpen = !sidebarOpen">
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24">
                         <path :d="sidebarOpen ? iconPaths.close : iconPaths.menu" />
                     </svg>
                 </button>
 
                 <div class="min-w-0 flex-1">
-                    <h1 class="text-sm font-bold leading-tight tracking-tight text-brand-navy-800 sm:text-base sm:leading-snug">
+                    <h1 class="text-sm font-bold leading-tight tracking-tight text-brand-navy-800 dark:text-brand-navy-200 sm:text-base sm:leading-snug">
                         <slot name="header">
                             <template v-if="title === 'Албан хаагчийн самбар'">
                                 <span class="block sm:inline">Албан хаагчийн</span>
@@ -481,7 +519,7 @@ const onLinkedSystemClick = (sys, event) => {
 
                     <Dropdown align="right" width="48">
                         <template #trigger>
-                            <button class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-sm transition hover:border-brand-navy-200 hover:bg-brand-navy-50">
+                            <button class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-sm transition hover:border-brand-navy-200 hover:bg-brand-navy-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-brand-navy-700 dark:hover:bg-slate-700">
                                 <span class="flex h-8 w-8 items-center justify-center rounded-full bg-brand-navy-600 text-xs font-bold text-white">
                                     {{ user.name.charAt(0) }}
                                 </span>

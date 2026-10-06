@@ -5,6 +5,22 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
+        {{--
+            Dark/light theme-ийг Vue ачаалахаас өмнө тохируулна — эс бөгөөс
+            хуудас нэг агшин цайвараар анивчаад (FOUC) дараа нь бараан руу
+            шилждэг.
+        --}}
+        <script>
+            (function () {
+                try {
+                    var saved = localStorage.getItem('manage-theme') || 'system';
+                    var dark = saved === 'dark'
+                        || (saved === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                    document.documentElement.classList.toggle('dark', dark);
+                } catch (e) {}
+            })();
+        </script>
+
         {{-- Утсан дээр PWA апп — хөтөч + standalone --}}
         <meta name="theme-color" content="#1c55a5">
         <meta name="mobile-web-app-capable" content="yes">

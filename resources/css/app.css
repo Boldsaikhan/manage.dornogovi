@@ -8,7 +8,7 @@
     }
 
     body {
-        @apply bg-slate-100 font-sans text-slate-800;
+        @apply bg-slate-100 font-sans text-slate-800 dark:bg-slate-950 dark:text-slate-200;
     }
 }
 
@@ -18,7 +18,7 @@
     }
 
     .ui-card {
-        @apply rounded-2xl border border-slate-200/80 bg-white shadow-soft;
+        @apply rounded-2xl border border-slate-200/80 bg-white shadow-soft dark:border-slate-800 dark:bg-slate-900;
     }
 
     .ui-card-pad {
@@ -26,21 +26,22 @@
     }
 
     .ui-title {
-        @apply text-lg font-bold tracking-tight text-brand-navy-800;
+        @apply text-lg font-bold tracking-tight text-brand-navy-800 dark:text-brand-navy-200;
     }
 
     .ui-subtitle {
-        @apply mt-1 text-sm text-slate-500;
+        @apply mt-1 text-sm text-slate-500 dark:text-slate-400;
     }
 
     .ui-label {
-        @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500;
+        @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400;
     }
 
     .ui-input {
         @apply w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800
             transition placeholder:text-slate-400
-            focus:border-brand-navy-600 focus:ring-4 focus:ring-brand-navy-600/10;
+            focus:border-brand-navy-600 focus:ring-4 focus:ring-brand-navy-600/10
+            dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500;
     }
 
     .ui-btn {
@@ -60,11 +61,13 @@
 
     .ui-btn-ghost {
         @apply ui-btn border-2 border-slate-200 bg-white text-slate-700
-            hover:border-brand-navy-300 hover:bg-slate-50 focus:ring-brand-navy-600/10;
+            hover:border-brand-navy-300 hover:bg-slate-50 focus:ring-brand-navy-600/10
+            dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200
+            dark:hover:border-brand-navy-600 dark:hover:bg-slate-700;
     }
 
     .ui-btn-danger {
-        @apply ui-btn text-red-600 hover:bg-red-50 focus:ring-red-500/20;
+        @apply ui-btn text-red-600 hover:bg-red-50 focus:ring-red-500/20 dark:text-red-400 dark:hover:bg-red-950/40;
     }
 
     .ui-stat {
@@ -72,11 +75,11 @@
     }
 
     .ui-stat-label {
-        @apply text-xs font-medium text-slate-500;
+        @apply text-xs font-medium text-slate-500 dark:text-slate-400;
     }
 
     .ui-stat-value {
-        @apply text-2xl font-bold tracking-tight text-brand-navy-800;
+        @apply text-2xl font-bold tracking-tight text-brand-navy-800 dark:text-brand-navy-200;
     }
 
     .ui-table-wrap {
@@ -88,32 +91,33 @@
     }
 
     .ui-table thead {
-        @apply bg-brand-navy-50 text-left text-xs font-semibold uppercase tracking-wide text-brand-navy-700;
+        @apply bg-brand-navy-50 text-left text-xs font-semibold uppercase tracking-wide text-brand-navy-700
+            dark:bg-slate-800 dark:text-brand-navy-200;
     }
 
     .ui-table th {
-        @apply border border-slate-200 px-2 py-1.5;
+        @apply border border-slate-200 px-2 py-1.5 dark:border-slate-700;
     }
 
     .ui-table td {
-        @apply border border-slate-200 px-1.5 py-0.5 align-top text-slate-700;
+        @apply border border-slate-200 px-1.5 py-0.5 align-top text-slate-700 dark:border-slate-800 dark:text-slate-300;
     }
 
     .ui-table tbody tr:nth-child(even) {
-        @apply bg-slate-50/60;
+        @apply bg-slate-50/60 dark:bg-slate-800/40;
     }
 
     .ui-table tbody tr:hover {
-        @apply bg-brand-navy-50/40;
+        @apply bg-brand-navy-50/40 dark:bg-slate-700/40;
     }
 
     /* Засах горимд — фокус орсон мөр бүхэлдээ бага зэрэг ялгарна */
     .ui-table tbody tr:focus-within {
-        @apply bg-sky-50;
+        @apply bg-sky-50 dark:bg-sky-950/40;
     }
 
     .ui-table tbody tr:focus-within:hover {
-        @apply bg-sky-50;
+        @apply bg-sky-50 dark:bg-sky-950/40;
     }
 
     /* Баруун талын багана — хэвтээ scroll-д хөдлөхгүй */
@@ -144,7 +148,7 @@
      */
     .ui-table--pin-actions thead .ui-sticky-progress,
     .ui-table--pin-actions thead .ui-sticky-actions {
-        @apply bg-brand-navy-50;
+        @apply bg-brand-navy-50 dark:bg-slate-800;
         z-index: 15;
     }
 
@@ -154,34 +158,34 @@
 
     .ui-table--pin-actions tbody td.ui-sticky-progress,
     .ui-table--pin-actions tbody td.ui-sticky-actions {
-        @apply bg-white;
+        @apply bg-white dark:bg-slate-900;
         z-index: 5;
         isolation: isolate;
     }
 
     .ui-table--pin-actions tbody tr:nth-child(even) td.ui-sticky-progress,
     .ui-table--pin-actions tbody tr:nth-child(even) td.ui-sticky-actions {
-        @apply bg-slate-50;
+        @apply bg-slate-50 dark:bg-slate-800/60;
     }
 
     .ui-table--pin-actions tbody tr:hover td.ui-sticky-progress,
     .ui-table--pin-actions tbody tr:hover td.ui-sticky-actions {
-        @apply bg-brand-navy-50;
+        @apply bg-brand-navy-50 dark:bg-slate-700;
     }
 
     .ui-table--pin-actions tbody tr.bg-brand-navy-50\/70 td.ui-sticky-progress,
     .ui-table--pin-actions tbody tr.bg-brand-navy-50\/70 td.ui-sticky-actions {
-        @apply bg-brand-navy-50;
+        @apply bg-brand-navy-50 dark:bg-slate-700;
     }
 
     .ui-table--pin-actions tbody tr:focus-within td.ui-sticky-progress,
     .ui-table--pin-actions tbody tr:focus-within td.ui-sticky-actions {
-        @apply bg-sky-50;
+        @apply bg-sky-50 dark:bg-sky-950/50;
     }
 
     .ui-table--pin-actions tbody tr:focus-within:hover td.ui-sticky-progress,
     .ui-table--pin-actions tbody tr:focus-within:hover td.ui-sticky-actions {
-        @apply bg-sky-50;
+        @apply bg-sky-50 dark:bg-sky-950/50;
     }
 
     /* Сонголтын товчнууд нэг мөрөнд — багтахгүй бол хажуу тийш гүйнэ */
@@ -276,7 +280,7 @@
     /* Хүснэгтийг дэлгэц дүүрэн харах бүрхүүл (тайлан, үүрэг даалгавар). */
     .ui-reports-table-overlay,
     .ui-table-overlay {
-        @apply fixed inset-0 z-50 flex min-h-0 flex-col bg-white p-3 sm:p-4;
+        @apply fixed inset-0 z-50 flex min-h-0 flex-col bg-white p-3 dark:bg-slate-900 sm:p-4;
     }
 
     html:has(.ui-page--tasks-table),
@@ -318,7 +322,9 @@
     .ui-icon-btn {
         @apply inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200
             bg-white text-slate-500 transition hover:bg-slate-50 hover:text-brand-navy-700
-            disabled:cursor-not-allowed disabled:opacity-50;
+            disabled:cursor-not-allowed disabled:opacity-50
+            dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400
+            dark:hover:bg-slate-700 dark:hover:text-brand-navy-200;
     }
 
     .ui-icon-btn--danger {
@@ -354,7 +360,8 @@
     .ui-table-input {
         @apply w-full rounded-none border-0 bg-transparent px-1 py-0.5 text-sm leading-snug text-slate-800
             shadow-none ring-0 placeholder:text-slate-400
-            focus:bg-white focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-navy-400/40;
+            focus:bg-white focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-navy-400/40
+            dark:text-slate-200 dark:focus:bg-slate-800;
     }
 
     .ui-table-input-2 {
@@ -381,7 +388,8 @@
     .ui-sheet-clear {
         @apply absolute right-0.5 top-0.5 z-10 hidden h-5 w-5 items-center justify-center
             rounded-full bg-white/90 text-[11px] leading-none text-slate-400 shadow-sm
-            transition hover:bg-rose-50 hover:text-rose-600;
+            transition hover:bg-rose-50 hover:text-rose-600
+            dark:bg-slate-800/90 dark:hover:bg-rose-950/60 dark:hover:text-rose-400;
     }
 
     .ui-sheet-cell:hover .ui-sheet-clear,
@@ -390,21 +398,22 @@
     }
 
     .ui-sheet-cell.is-editable:hover:not(.is-editing) {
-        @apply bg-sky-50/80;
+        @apply bg-sky-50/80 dark:bg-sky-950/40;
     }
 
     .ui-sheet-cell.is-editing {
-        @apply z-[1] bg-white ring-2 ring-inset ring-brand-navy-500/35;
+        @apply z-[1] bg-white ring-2 ring-inset ring-brand-navy-500/35 dark:bg-slate-800;
     }
 
     .ui-sheet-display {
-        @apply px-1.5 py-1 text-sm leading-snug text-slate-800;
+        @apply px-1.5 py-1 text-sm leading-snug text-slate-800 dark:text-slate-200;
     }
 
     .ui-sheet-editor {
         @apply block w-full min-h-[2.35rem] resize-none border-0 bg-transparent px-1.5 py-1
             text-sm leading-snug text-slate-800 shadow-none outline-none ring-0
-            focus:border-0 focus:outline-none focus:ring-0;
+            focus:border-0 focus:outline-none focus:ring-0
+            dark:text-slate-200;
         max-width: 100%;
         min-width: 0;
         box-sizing: border-box;
@@ -436,21 +445,22 @@
      * ээлжилсэн өнгө бүгд бэлэн).
      */
     .ui-register {
-        @apply min-w-full bg-white;
+        @apply min-w-full bg-white dark:bg-slate-900;
     }
 
     .ui-register__banner {
-        @apply border-b border-slate-200 bg-brand-navy-50/80 px-4 py-2.5 text-center text-sm font-semibold tracking-wide text-brand-navy-900;
+        @apply border-b border-slate-200 bg-brand-navy-50/80 px-4 py-2.5 text-center text-sm font-semibold tracking-wide text-brand-navy-900
+            dark:border-slate-700 dark:bg-slate-800 dark:text-brand-navy-200;
     }
 
     .ui-register__table {
-        @apply w-full border-collapse text-center text-[12px] leading-snug text-slate-800;
+        @apply w-full border-collapse text-center text-[12px] leading-snug text-slate-800 dark:text-slate-200;
         table-layout: fixed;
     }
 
     .ui-register th,
     .ui-register td {
-        @apply border-b border-r border-slate-200;
+        @apply border-b border-r border-slate-200 dark:border-slate-700;
     }
 
     .ui-register th:last-child,
@@ -459,7 +469,8 @@
     }
 
     .ui-register thead th {
-        @apply bg-brand-navy-50 px-2 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-600;
+        @apply bg-brand-navy-50 px-2 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-600
+            dark:bg-slate-800 dark:text-slate-300;
         vertical-align: middle;
     }
 
@@ -503,7 +514,7 @@
     /* Зүүн ирмэг — хөндлөн гүйлгэхэд ч хүрээ тасрахгүй. */
     .ui-register th:first-child,
     .ui-register td:first-child {
-        @apply border-l border-slate-200;
+        @apply border-l border-slate-200 dark:border-slate-700;
     }
 
     .ui-register thead tr:first-child th:first-child {
@@ -522,6 +533,49 @@
             0 2px 3px -2px rgb(15 23 42 / 0.18);
     }
 
+    /*
+     * Бараан горимд дээрх inset box-shadow хүрээнүүдийг slate-200/300 бус
+     * бараан хувилбараар (slate-700/600) дахин зурна.
+     */
+    .dark .ui-register thead th {
+        box-shadow:
+            inset -1px 0 0 rgb(51 65 85),
+            inset 0 -1px 0 rgb(51 65 85);
+    }
+
+    .dark .ui-register thead th:last-child {
+        box-shadow: inset 0 -1px 0 rgb(51 65 85);
+    }
+
+    .dark .ui-register thead tr:first-child th {
+        box-shadow:
+            inset -1px 0 0 rgb(51 65 85),
+            inset 0 1px 0 rgb(71 85 105),
+            inset 0 -1px 0 rgb(51 65 85);
+    }
+
+    .dark .ui-register thead tr:first-child th:last-child {
+        box-shadow:
+            inset 0 1px 0 rgb(71 85 105),
+            inset 0 -1px 0 rgb(51 65 85);
+    }
+
+    .dark .ui-register thead tr:first-child th:first-child {
+        box-shadow:
+            inset 1px 0 0 rgb(51 65 85),
+            inset -1px 0 0 rgb(51 65 85),
+            inset 0 1px 0 rgb(71 85 105),
+            inset 0 -1px 0 rgb(51 65 85);
+    }
+
+    .dark .ui-register thead tr.ui-filters th:first-child {
+        box-shadow:
+            inset 1px 0 0 rgb(51 65 85),
+            inset -1px 0 0 rgb(51 65 85),
+            inset 0 -1px 0 rgb(71 85 105),
+            0 2px 3px -2px rgb(0 0 0 / 0.4);
+    }
+
     .ui-register thead tr:first-child th {
         position: sticky;
         top: 0;
@@ -538,17 +592,19 @@
         position: sticky;
         top: 2.65rem;
         z-index: 13;
-        @apply bg-brand-navy-50 py-1.5 text-[10px] font-medium normal-case tracking-normal text-slate-500;
+        @apply bg-brand-navy-50 py-1.5 text-[10px] font-medium normal-case tracking-normal text-slate-500
+            dark:bg-slate-800 dark:text-slate-400;
     }
 
     .ui-register thead tr:nth-child(3) th {
         position: sticky;
         z-index: 12;
-        @apply bg-brand-navy-50 py-0.5 text-[10px] font-normal normal-case text-slate-400;
+        @apply bg-brand-navy-50 py-0.5 text-[10px] font-normal normal-case text-slate-400
+            dark:bg-slate-800 dark:text-slate-500;
     }
 
     .ui-register__head-group--issued {
-        @apply bg-sky-50 text-sky-900;
+        @apply bg-sky-50 text-sky-900 dark:bg-sky-950/60 dark:text-sky-200;
     }
 
     /*
@@ -559,7 +615,7 @@
     thead tr.ui-filters th {
         position: sticky;
         z-index: 11;
-        @apply bg-brand-navy-100 px-1 py-1 align-middle;
+        @apply bg-brand-navy-100 px-1 py-1 align-middle dark:bg-slate-700;
         box-shadow:
             inset -1px 0 0 rgb(226 232 240),
             inset 0 -1px 0 rgb(203 213 225),
@@ -572,9 +628,23 @@
             0 2px 3px -2px rgb(15 23 42 / 0.18);
     }
 
+    .dark thead tr.ui-filters th {
+        box-shadow:
+            inset -1px 0 0 rgb(71 85 105),
+            inset 0 -1px 0 rgb(71 85 105),
+            0 2px 3px -2px rgb(0 0 0 / 0.4);
+    }
+
+    .dark thead tr.ui-filters th:last-child {
+        box-shadow:
+            inset 0 -1px 0 rgb(71 85 105),
+            0 2px 3px -2px rgb(0 0 0 / 0.4);
+    }
+
     .ui-filters input {
         @apply w-full rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[11px] font-normal
-            normal-case text-slate-700 placeholder-slate-300 outline-none transition;
+            normal-case text-slate-700 placeholder-slate-300 outline-none transition
+            dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500;
     }
 
     .ui-filters input:focus {
@@ -586,23 +656,23 @@
     }
 
     .ui-register__head-group--numbers {
-        @apply bg-emerald-50 text-emerald-900;
+        @apply bg-emerald-50 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200;
     }
 
     .ui-register__head-group--void {
-        @apply bg-amber-50 text-amber-900;
+        @apply bg-amber-50 text-amber-900 dark:bg-amber-950/60 dark:text-amber-200;
     }
 
     .ui-register tbody tr:nth-child(even) td:not(.ui-register__cell--muted) {
-        @apply bg-slate-50/50;
+        @apply bg-slate-50/50 dark:bg-slate-800/40;
     }
 
     .ui-register tbody tr:hover td:not(.ui-register__cell--muted) {
-        @apply bg-sky-50/70;
+        @apply bg-sky-50/70 dark:bg-sky-950/40;
     }
 
     .ui-register tbody tr:focus-within td:not(.ui-register__cell--muted) {
-        @apply bg-sky-50/80;
+        @apply bg-sky-50/80 dark:bg-sky-950/50;
     }
 
     .ui-register__cell {
@@ -610,15 +680,15 @@
     }
 
     .ui-register__cell--no {
-        @apply px-1.5 py-1.5 text-center text-xs font-semibold tabular-nums text-slate-500;
+        @apply px-1.5 py-1.5 text-center text-xs font-semibold tabular-nums text-slate-500 dark:text-slate-400;
     }
 
     .ui-register__cell--muted {
-        @apply bg-slate-100/80;
+        @apply bg-slate-100/80 dark:bg-slate-800/80;
     }
 
     .ui-register__empty {
-        @apply px-4 py-12 text-sm text-slate-400;
+        @apply px-4 py-12 text-sm text-slate-400 dark:text-slate-500;
     }
 
     .ui-register table {
@@ -645,11 +715,11 @@
     }
 
     .ui-register .ui-sheet-cell.is-editing {
-        @apply z-[1] bg-white ring-2 ring-inset ring-brand-navy-500/35;
+        @apply z-[1] bg-white ring-2 ring-inset ring-brand-navy-500/35 dark:bg-slate-800;
     }
 
     .ui-register .ui-sheet-cell.is-editable:hover:not(.is-editing) {
-        @apply bg-sky-50/80;
+        @apply bg-sky-50/80 dark:bg-sky-950/40;
     }
 
     .ui-icon-btn {
@@ -659,16 +729,18 @@
 
     .ui-nav-link {
         @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600
-            transition hover:bg-brand-navy-50 hover:text-brand-navy-700;
+            transition hover:bg-brand-navy-50 hover:text-brand-navy-700
+            dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-navy-200;
     }
 
     .ui-nav-link-active {
         @apply bg-brand-navy-600 text-white shadow-md shadow-brand-navy-600/25
-            hover:bg-brand-navy-600 hover:text-white;
+            hover:bg-brand-navy-600 hover:text-white
+            dark:bg-brand-navy-600 dark:text-white dark:hover:bg-brand-navy-600;
     }
 
     .ui-section-label {
-        @apply !mt-4 px-3 pb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400;
+        @apply !mt-4 px-3 pb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500;
     }
 
     nav > .ui-section-label:first-child {
