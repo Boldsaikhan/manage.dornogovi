@@ -104,6 +104,31 @@ class SystemSettingsTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_register_a_system_with_a_long_login_url(): void
+    {
+        // «Data too long for column 'login_url'» 500 алдаа гарч байсан —
+        // validate нь 2000 тэмдэгт хүртэл зөвшөөрдөг байхад багана нь
+        // varchar(255) байсан тул 255-аас урт URL оруулахад бүтэлгүйтдэг байв.
+        $longLoginUrl = 'https://example.gov.mn/login?token='.str_repeat('a', 300);
+
+        $this->actingAs(User::factory()->create(['is_admin' => true]))
+            ->post(route('admin.systems.store'), [
+                'name' => 'Урт URL систем',
+                'url' => 'https://example.gov.mn',
+                'login_url' => $longLoginUrl,
+                'login_method' => System::LOGIN_MANUAL,
+                'is_active' => true,
+                'requires_login' => true,
+                'is_internal' => false,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('systems', [
+            'name' => 'Урт URL систем',
+            'login_url' => $longLoginUrl,
+        ]);
+    }
+
     public function test_admin_can_delete_a_system(): void
     {
         $system = $this->system();
