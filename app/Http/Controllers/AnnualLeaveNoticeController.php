@@ -31,6 +31,7 @@ class AnnualLeaveNoticeController extends Controller
             'copies' => $copies,
             'bodyText' => AnnualLeaveNotice::bodyPart($annualLeave),
             'signatureFields' => AnnualLeaveNotice::signatureFields($annualLeave),
+            'signatureGapMm' => $annualLeave->signature_gap_mm ?? 10,
             'number' => $this->rowNumber($annualLeave),
             'registeredOn' => $annualLeave->created_at,
             'format' => [
@@ -70,10 +71,12 @@ class AnnualLeaveNoticeController extends Controller
 
         $data = $request->validate([
             'notice_text' => ['nullable', 'string', 'max:3000'],
-        ], [], ['notice_text' => 'бичвэр']);
+            'signature_gap_mm' => ['nullable', 'integer', 'min:0', 'max:40'],
+        ], [], ['notice_text' => 'бичвэр', 'signature_gap_mm' => 'зай']);
 
         $annualLeave->update([
             'notice_text' => trim((string) ($data['notice_text'] ?? '')) ?: null,
+            'signature_gap_mm' => $data['signature_gap_mm'] ?? null,
         ]);
 
         return back()->with('success', 'Хадгаллаа.');

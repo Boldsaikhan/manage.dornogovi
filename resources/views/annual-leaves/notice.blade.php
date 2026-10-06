@@ -147,7 +147,7 @@
         .notice .signatures-grid {
             display: grid;
             grid-template-columns: max-content max-content;
-            column-gap: 10mm;
+            column-gap: var(--sig-gap, 10mm);
             row-gap: 3mm;
             justify-content: center;
         }
@@ -202,6 +202,30 @@
 
         .notice .body-edit button.ghost { background: #fff; color: #1c55a5; }
 
+        .notice .gap-control {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: auto;
+        }
+
+        .notice .gap-control button {
+            width: 22px;
+            height: 22px;
+            padding: 0;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #fff;
+            color: #1c55a5;
+            font-size: 13px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .notice .gap-control button[disabled] { opacity: .4; cursor: default; }
+
+        .notice .gap-control span { min-width: 34px; text-align: center; }
+
         @media print {
             body { background: #fff; }
             .toolbar, .body-edit { display: none !important; }
@@ -244,7 +268,7 @@
                     >{{ $bodyText }}</div>
                     <div class="signatures-wrap">
                         <div class="signatures-header">ЗӨВШӨӨРСӨН:</div>
-                        <div class="signatures-grid">
+                        <div class="signatures-grid" id="notice-signatures-grid" style="--sig-gap: {{ $signatureGapMm }}mm">
                             <div class="sig-title" contenteditable="true" id="notice-approver-title" spellcheck="false">{{ $signatureFields['approverTitle'] }}</div>
                             <div class="sig-name" contenteditable="true" id="notice-approver-name" spellcheck="false">{{ $signatureFields['approverName'] }}</div>
                             <div class="sig-spacer"></div>
@@ -256,12 +280,18 @@
                         <button type="button" id="notice-save">Хадгалах</button>
                         <button type="button" id="notice-reset" class="ghost">Дахин үүсгэх</button>
                         <span id="notice-status">Бичвэр дээр дарж засна.</span>
+                        <span class="gap-control">
+                            <span>Зай:</span>
+                            <button type="button" id="notice-gap-minus">−</button>
+                            <span id="notice-gap-value">{{ $signatureGapMm }} мм</span>
+                            <button type="button" id="notice-gap-plus">+</button>
+                        </span>
                     </div>
                 @else
                     <div class="body" data-notice-body-copy>{{ $bodyText ?: '……………………………………………………………………………………………………' }}</div>
                     <div class="signatures-wrap">
                         <div class="signatures-header">ЗӨВШӨӨРСӨН:</div>
-                        <div class="signatures-grid">
+                        <div class="signatures-grid" data-notice-signatures-grid-copy style="--sig-gap: {{ $signatureGapMm }}mm">
                             <div class="sig-title" data-notice-approver-title-copy>{{ $signatureFields['approverTitle'] }}</div>
                             <div class="sig-name" data-notice-approver-name-copy>{{ $signatureFields['approverName'] }}</div>
                             <div class="sig-spacer"></div>
@@ -280,15 +310,25 @@
         const approverName = document.getElementById('notice-approver-name');
         const ownTitle = document.getElementById('notice-own-title');
         const ownName = document.getElementById('notice-own-name');
+        const grid = document.getElementById('notice-signatures-grid');
         const saveBtn = document.getElementById('notice-save');
         const resetBtn = document.getElementById('notice-reset');
         const status = document.getElementById('notice-status');
+        const gapMinusBtn = document.getElementById('notice-gap-minus');
+        const gapPlusBtn = document.getElementById('notice-gap-plus');
+        const gapValue = document.getElementById('notice-gap-value');
         // Хоёр дахь хувь байвал зэрэг шинэчилнэ — хуудас дахин ачаалахгүй.
         const otherBodyCopies = document.querySelectorAll('[data-notice-body-copy]');
         const otherApproverTitleCopies = document.querySelectorAll('[data-notice-approver-title-copy]');
         const otherApproverNameCopies = document.querySelectorAll('[data-notice-approver-name-copy]');
         const otherOwnTitleCopies = document.querySelectorAll('[data-notice-own-title-copy]');
         const otherOwnNameCopies = document.querySelectorAll('[data-notice-own-name-copy]');
+        const otherGridCopies = document.querySelectorAll('[data-notice-signatures-grid-copy]');
+
+        const GAP_MIN = 0;
+        const GAP_MAX = 40;
+        const GAP_STEP = 2;
+        let gapMm = {{ (int) $signatureGapMm }};
 
         // Тушаал, нэрийг нэг таб тэмдэгтээр тусгаарлаж хадгална (харагдах
         // байрлалыг grid хариуцна, энэ зөвхөн утга тусгаарлах тэмдэг).
@@ -300,9 +340,9 @@
         ].join('\n');
 
         // Хэсгүүдийг нэг хоосон мөрөөр холбоод ганц notice_text болгож хадгална.
-        const combined = () => `${body.innerText.trim()}\n\n${signaturesText()}`;
+        const combined = () => `${body.innerText.trim()}\n\n${signaturesText()}|${gapMm}`;
 
-        const send = (text) => fetch(@json(route('annual-leaves.notice.text', $annualLeave)), {
+        const send = (text, gap) => fetch(@json(route('annual-leaves.notice.text', $annualLeave)), {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -310,27 +350,49 @@
                 'X-Requested-With': 'XMLHttpRequest',
                 'Accept': 'application/json',
             },
-            body: JSON.stringify({ notice_text: text }),
+            body: JSON.stringify({ notice_text: text, signature_gap_mm: gap }),
         });
+
+        const applyGap = () => {
+            grid.style.setProperty('--sig-gap', `${gapMm}mm`);
+            gapValue.textContent = `${gapMm} мм`;
+            gapMinusBtn.disabled = gapMm <= GAP_MIN;
+            gapPlusBtn.disabled = gapMm >= GAP_MAX;
+        };
 
         if (body && approverTitle && approverName && ownTitle && ownName && saveBtn) {
             let saved = combined();
+
+            applyGap();
+
+            gapMinusBtn.addEventListener('click', () => {
+                gapMm = Math.max(GAP_MIN, gapMm - GAP_STEP);
+                applyGap();
+                status.textContent = combined() === saved ? 'Бичвэр дээр дарж засна.' : 'Хадгалаагүй өөрчлөлт байна.';
+            });
+
+            gapPlusBtn.addEventListener('click', () => {
+                gapMm = Math.min(GAP_MAX, gapMm + GAP_STEP);
+                applyGap();
+                status.textContent = combined() === saved ? 'Бичвэр дээр дарж засна.' : 'Хадгалаагүй өөрчлөлт байна.';
+            });
 
             saveBtn.addEventListener('click', async () => {
                 saveBtn.disabled = true;
                 status.textContent = 'Хадгалж байна…';
 
                 try {
-                    const text = combined();
-                    const response = await send(text);
+                    const text = `${body.innerText.trim()}\n\n${signaturesText()}`;
+                    const response = await send(text, gapMm);
 
                     if (response.ok) {
-                        saved = text;
+                        saved = combined();
                         otherBodyCopies.forEach((el) => { el.textContent = body.innerText.trim(); });
                         otherApproverTitleCopies.forEach((el) => { el.textContent = approverTitle.innerText.trim(); });
                         otherApproverNameCopies.forEach((el) => { el.textContent = approverName.innerText.trim(); });
                         otherOwnTitleCopies.forEach((el) => { el.textContent = ownTitle.innerText.trim(); });
                         otherOwnNameCopies.forEach((el) => { el.textContent = ownName.innerText.trim(); });
+                        otherGridCopies.forEach((el) => { el.style.setProperty('--sig-gap', `${gapMm}mm`); });
                         status.textContent = 'Хадгаллаа.';
                     } else {
                         status.textContent = 'Хадгалж чадсангүй.';
@@ -349,7 +411,7 @@
                 status.textContent = 'Дахин үүсгэж байна…';
 
                 try {
-                    const response = await send('');
+                    const response = await send('', null);
 
                     if (! response.ok) {
                         status.textContent = 'Дахин үүсгэж чадсангүй.';
