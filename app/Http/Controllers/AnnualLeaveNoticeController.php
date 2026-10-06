@@ -29,7 +29,8 @@ class AnnualLeaveNoticeController extends Controller
         return view('annual-leaves.notice', [
             'annualLeave' => $annualLeave,
             'copies' => $copies,
-            'text' => AnnualLeaveNotice::fullText($annualLeave),
+            'bodyText' => AnnualLeaveNotice::bodyPart($annualLeave),
+            'signaturesText' => AnnualLeaveNotice::signaturesPart($annualLeave),
             'number' => $this->rowNumber($annualLeave),
             'registeredOn' => $annualLeave->created_at,
             'format' => [

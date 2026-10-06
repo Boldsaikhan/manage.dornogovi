@@ -121,24 +121,32 @@
             text-align: center;
         }
 
-        /*
-         * Бүх агуулга (өгүүлбэр + Зөвшөөрсөн хэсэг + гарын үсэг) нэг
-         * бичвэрт — хэрэглэгч шууд дарж бүхэлд нь засварлана.
-         */
+        /* Өгүүлбэр — урд талдаа таб зайтай, 2 талдаа тэнцүүлсэн (justify). */
         .notice .body {
+            margin: 0 0 4mm;
+            white-space: pre-wrap;
+            text-align: justify;
+            text-indent: 8mm;
+        }
+
+        /* Зөвшөөрсөн хэсэг + гарын үсэг — голлуулсан, таб зайг хадгална. */
+        .notice .signatures {
             margin: 0 0 2mm;
             white-space: pre-wrap;
+            text-align: center;
         }
 
         /* Хуудсан дээрээ засах — хэвлэхэд ул мөр үлдэхгүй. */
-        .notice .body[contenteditable='true'] {
+        .notice .body[contenteditable='true'],
+        .notice .signatures[contenteditable='true'] {
             outline: 1px dashed #94a3b8;
             outline-offset: 2mm;
             min-height: 12mm;
             cursor: text;
         }
 
-        .notice .body[contenteditable='true']:focus { outline-color: #1c55a5; }
+        .notice .body[contenteditable='true']:focus,
+        .notice .signatures[contenteditable='true']:focus { outline-color: #1c55a5; }
 
         .notice .body-edit {
             margin: 0 0 8mm;
@@ -168,7 +176,8 @@
             body { background: #fff; }
             .toolbar, .body-edit { display: none !important; }
             .page { margin: 0; box-shadow: none; }
-            .notice .body[contenteditable='true'] { outline: none; }
+            .notice .body[contenteditable='true'],
+            .notice .signatures[contenteditable='true'] { outline: none; }
         }
     </style>
 </head>
@@ -201,14 +210,21 @@
                         contenteditable="true"
                         id="notice-body"
                         spellcheck="false"
-                    >{{ $text }}</div>
+                    >{{ $bodyText }}</div>
+                    <div
+                        class="signatures"
+                        contenteditable="true"
+                        id="notice-signatures"
+                        spellcheck="false"
+                    >{{ $signaturesText }}</div>
                     <div class="body-edit">
                         <button type="button" id="notice-save">Хадгалах</button>
                         <button type="button" id="notice-reset" class="ghost">Дахин үүсгэх</button>
                         <span id="notice-status">Бичвэр дээр дарж засна.</span>
                     </div>
                 @else
-                    <div class="body" data-notice-copy>{{ $text ?: '……………………………………………………………………………………………………' }}</div>
+                    <div class="body" data-notice-body-copy>{{ $bodyText ?: '……………………………………………………………………………………………………' }}</div>
+                    <div class="signatures" data-notice-signatures-copy>{{ $signaturesText }}</div>
                 @endif
             </div>
         @endfor
@@ -216,11 +232,16 @@
 
     <script>
         const body = document.getElementById('notice-body');
+        const signatures = document.getElementById('notice-signatures');
         const saveBtn = document.getElementById('notice-save');
         const resetBtn = document.getElementById('notice-reset');
         const status = document.getElementById('notice-status');
         // Хоёр дахь хувь байвал зэрэг шинэчилнэ — хуудас дахин ачаалахгүй.
-        const otherCopies = document.querySelectorAll('[data-notice-copy]');
+        const otherBodyCopies = document.querySelectorAll('[data-notice-body-copy]');
+        const otherSignaturesCopies = document.querySelectorAll('[data-notice-signatures-copy]');
+
+        // Хоёр хэсгийг нэг хоосон мөрөөр холбоод ганц notice_text болгож хадгална.
+        const combined = () => `${body.innerText.trim()}\n\n${signatures.innerText.trim()}`;
 
         const send = (text) => fetch(@json(route('annual-leaves.notice.text', $annualLeave)), {
             method: 'PATCH',
@@ -233,20 +254,21 @@
             body: JSON.stringify({ notice_text: text }),
         });
 
-        if (body && saveBtn) {
-            let saved = body.innerText.trim();
+        if (body && signatures && saveBtn) {
+            let saved = combined();
 
             saveBtn.addEventListener('click', async () => {
                 saveBtn.disabled = true;
                 status.textContent = 'Хадгалж байна…';
 
                 try {
-                    const text = body.innerText.trim();
+                    const text = combined();
                     const response = await send(text);
 
                     if (response.ok) {
                         saved = text;
-                        otherCopies.forEach((el) => { el.textContent = text; });
+                        otherBodyCopies.forEach((el) => { el.textContent = body.innerText.trim(); });
+                        otherSignaturesCopies.forEach((el) => { el.textContent = signatures.innerText.trim(); });
                         status.textContent = 'Хадгаллаа.';
                     } else {
                         status.textContent = 'Хадгалж чадсангүй.';
@@ -282,15 +304,18 @@
                 }
             });
 
-            body.addEventListener('input', () => {
-                status.textContent = body.innerText.trim() === saved
+            const onInput = () => {
+                status.textContent = combined() === saved
                     ? 'Бичвэр дээр дарж засна.'
                     : 'Хадгалаагүй өөрчлөлт байна.';
-            });
+            };
+
+            body.addEventListener('input', onInput);
+            signatures.addEventListener('input', onInput);
 
             // Хадгалаагүй байхад хуудсаас гарахаас сэргийлнэ.
             window.addEventListener('beforeunload', (event) => {
-                if (body.innerText.trim() !== saved) {
+                if (combined() !== saved) {
                     event.preventDefault();
                     event.returnValue = '';
                 }

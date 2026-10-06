@@ -61,7 +61,8 @@ class AnnualLeaveNotice
 
     /**
      * Мэдэгдлийн хуудасны БҮХ агуулга (өгүүлбэр + Зөвшөөрсөн хэсэг +
-     * өөрийн гарын үсгийн мөр) нэг доороо — хуудсан дээр нэг талбарт
+     * өөрийн гарын үсгийн мөр) нэг доороо — хуудсан дээр хоёр (өгүүлбэр,
+     * гарын үсэг) хэсэгтэйгээр боловч нэг л Хадгалах/Дахин үүсгэх товчоор
      * чөлөөтэй засварлана. Хэрэглэгч гараар засварласан бол (notice_text)
      * тэрийг нь бүхэлд нь, эс бөгөөс бүртгэлийн мэдээллээс автоматаар
      * нэгтгэж үүсгэнэ.
@@ -74,18 +75,60 @@ class AnnualLeaveNotice
             return $override;
         }
 
-        $parts = [
-            self::text($row),
-            '',
-            'ЗӨВШӨӨРСӨН:',
-            implode(' ', self::approverLines($row)),
-            self::approverName($row),
-            '',
-            mb_strtoupper(self::ownPositionLine($row)),
-            mb_strtoupper(trim((string) $row->person_name)),
-        ];
+        return self::bodyPart($row)."\n\n".self::signaturesPart($row);
+    }
 
-        return implode("\n", $parts);
+    /**
+     * Мэдэгдлийн өгүүлбэр хэсэг — 2 талдаа тэнцүүлсэн (justify), урд
+     * талдаа мөр шилжсэн таб зайтай харагдана.
+     */
+    public static function bodyPart(AnnualLeave $row): string
+    {
+        $split = self::splitOverride($row);
+
+        return $split !== null ? $split[0] : self::text($row);
+    }
+
+    /**
+     * «Зөвшөөрсөн» хэсэг + өөрийн гарын үсгийн мөр — голлуулж харуулна.
+     * Тушаал, нэрийн хооронд 4 таб зай байна.
+     */
+    public static function signaturesPart(AnnualLeave $row): string
+    {
+        $split = self::splitOverride($row);
+
+        if ($split !== null) {
+            return $split[1];
+        }
+
+        $tab = str_repeat("\t", 4);
+
+        return implode("\n", [
+            'ЗӨВШӨӨРСӨН:',
+            implode(' ', self::approverLines($row)).$tab.self::approverName($row),
+            '',
+            mb_strtoupper(self::ownPositionLine($row)).$tab.mb_strtoupper(trim((string) $row->person_name)),
+        ]);
+    }
+
+    /**
+     * Хадгалсан бичвэрийг эхний хоосон мөрөөр нь өгүүлбэр, гарын үсгийн
+     * хэсэг болгон хуваана (засварлах хоёр талбарт тус тусад нь харуулахын
+     * тулд).
+     *
+     * @return array{0: string, 1: string}|null
+     */
+    private static function splitOverride(AnnualLeave $row): ?array
+    {
+        $override = trim((string) $row->notice_text, "\n");
+
+        if ($override === '') {
+            return null;
+        }
+
+        $pieces = preg_split('/\n[ \t]*\n/', $override, 2);
+
+        return [trim($pieces[0] ?? ''), trim($pieces[1] ?? '')];
     }
 
     /**
