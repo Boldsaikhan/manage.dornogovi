@@ -51,8 +51,6 @@
 
         .toolbar .primary { background: #1c55a5; border-color: #1c55a5; color: #fff; }
         .toolbar .active { border-color: #1c55a5; font-weight: 700; }
-        .toolbar .divider { width: 1px; height: 20px; background: #cbd5e1; }
-        .toolbar .gap-value { min-width: 3.5em; text-align: center; font-weight: 600; color: #334155; }
 
         .page {
             width: {{ $format['width'] }}mm;
@@ -139,13 +137,25 @@
 
         .notice .body[contenteditable='true']:focus { outline-color: #1c55a5; }
 
-        .notice .sign .title[contenteditable='true'] {
+        .notice .approver {
+            margin-top: 4mm;
+            margin-bottom: 5mm;
+            text-align: center;
+        }
+
+        .notice .approver-block {
+            display: inline-block;
+            white-space: pre-line;
+        }
+
+        .notice .approver-block[contenteditable='true'] {
             outline: 1px dashed #94a3b8;
-            outline-offset: 1mm;
+            outline-offset: 2mm;
+            min-width: 50mm;
             cursor: text;
         }
 
-        .notice .sign .title[contenteditable='true']:focus { outline-color: #1c55a5; }
+        .notice .approver-block[contenteditable='true']:focus { outline-color: #1c55a5; }
 
         .notice .body-edit {
             margin: 0 0 8mm;
@@ -170,6 +180,8 @@
         .notice .body-edit button[disabled] { opacity: .6; cursor: default; }
 
         .notice .body-edit button.ghost { background: #fff; color: #1c55a5; }
+
+        .notice .approver .body-edit { justify-content: center; }
 
         .notice .sign {
             margin-top: 4mm;
@@ -196,7 +208,7 @@
 
         .notice .sign .name {
             flex: 0 0 auto;
-            margin-left: {{ $signGap }}mm;
+            margin-left: 20mm;
             white-space: nowrap;
         }
 
@@ -205,7 +217,7 @@
             .toolbar, .body-edit { display: none !important; }
             .page { margin: 0; box-shadow: none; }
             .notice .body[contenteditable='true'] { outline: none; }
-            .notice .sign .title[contenteditable='true'] { outline: none; }
+            .notice .approver-block[contenteditable='true'] { outline: none; }
         }
     </style>
 </head>
@@ -216,13 +228,6 @@
         @foreach ([1, 2] as $option)
             <a href="{{ request()->fullUrlWithQuery(['copies' => $option]) }}" class="{{ $copies === $option ? 'active' : '' }}">{{ $option }}</a>
         @endforeach
-
-        <span class="divider"></span>
-
-        <span>Тушаал — нэрний зай:</span>
-        <a href="{{ request()->fullUrlWithQuery(['gap' => max(5, $signGap - 5)]) }}" title="Багасгах">−</a>
-        <span class="gap-value">{{ $signGap }} мм</span>
-        <a href="{{ request()->fullUrlWithQuery(['gap' => min(60, $signGap + 5)]) }}" title="Ихэсгэх">+</a>
     </div>
 
     <div class="page {{ $copies === 2 ? 'page--split' : '' }}">
@@ -255,29 +260,21 @@
                     <p class="body" data-notice-copy>{{ $text ?: '……………………………………………………………………………………………………' }}</p>
                 @endif
 
-                <div class="sign">
-                    <div class="row">
-                        <span class="title">Зөвшөөрсөн:</span>
-                    </div>
-                    <div class="row">
-                        @if ($i === 0 && $canEdit)
-                            <span
-                                class="title"
-                                contenteditable="true"
-                                id="approver-title"
-                                spellcheck="false"
-                            >{{ implode(' ', $approverLines) }}</span>
-                        @else
-                            <span class="title" data-approver-title-copy>{{ implode(' ', $approverLines) }}</span>
-                        @endif
-                        <span class="name">{{ $approverName ?: '/ ……………… /' }}</span>
-                    </div>
+                <div class="approver">
                     @if ($i === 0 && $canEdit)
+                        <div
+                            class="approver-block"
+                            contenteditable="true"
+                            id="approver-block"
+                            spellcheck="false"
+                        >{{ $approverBlockText }}</div>
                         <div class="body-edit">
-                            <button type="button" id="approver-title-save">Хадгалах</button>
-                            <button type="button" id="approver-title-reset" class="ghost">Дахин үүсгэх</button>
-                            <span id="approver-title-status">Бичвэр дээр дарж засна.</span>
+                            <button type="button" id="approver-block-save">Хадгалах</button>
+                            <button type="button" id="approver-block-reset" class="ghost">Дахин үүсгэх</button>
+                            <span id="approver-block-status">Бичвэр дээр дарж засна.</span>
                         </div>
+                    @else
+                        <div class="approver-block" data-approver-block-copy>{{ $approverBlockText }}</div>
                     @endif
                 </div>
 
@@ -374,13 +371,13 @@
             });
         }
 
-        const approverTitle = document.getElementById('approver-title');
-        const approverSaveBtn = document.getElementById('approver-title-save');
-        const approverResetBtn = document.getElementById('approver-title-reset');
-        const approverStatus = document.getElementById('approver-title-status');
-        const otherApproverTitles = document.querySelectorAll('[data-approver-title-copy]');
+        const approverBlock = document.getElementById('approver-block');
+        const approverSaveBtn = document.getElementById('approver-block-save');
+        const approverResetBtn = document.getElementById('approver-block-reset');
+        const approverStatus = document.getElementById('approver-block-status');
+        const otherApproverBlocks = document.querySelectorAll('[data-approver-block-copy]');
 
-        const sendApproverTitle = (text) => fetch(@json(route('annual-leaves.notice.approver-title', $annualLeave)), {
+        const sendApproverBlock = (text) => fetch(@json(route('annual-leaves.notice.approver', $annualLeave)), {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -388,23 +385,23 @@
                 'X-Requested-With': 'XMLHttpRequest',
                 'Accept': 'application/json',
             },
-            body: JSON.stringify({ approver_title: text }),
+            body: JSON.stringify({ approver_block: text }),
         });
 
-        if (approverTitle && approverSaveBtn) {
-            let savedApproverTitle = approverTitle.innerText.trim();
+        if (approverBlock && approverSaveBtn) {
+            let savedApproverBlock = approverBlock.innerText.trim();
 
             approverSaveBtn.addEventListener('click', async () => {
                 approverSaveBtn.disabled = true;
                 approverStatus.textContent = 'Хадгалж байна…';
 
                 try {
-                    const text = approverTitle.innerText.trim();
-                    const response = await sendApproverTitle(text);
+                    const text = approverBlock.innerText.trim();
+                    const response = await sendApproverBlock(text);
 
                     if (response.ok) {
-                        savedApproverTitle = text;
-                        otherApproverTitles.forEach((el) => { el.textContent = text; });
+                        savedApproverBlock = text;
+                        otherApproverBlocks.forEach((el) => { el.textContent = text; });
                         approverStatus.textContent = 'Хадгаллаа.';
                     } else {
                         approverStatus.textContent = 'Хадгалж чадсангүй.';
@@ -423,7 +420,7 @@
                 approverStatus.textContent = 'Дахин үүсгэж байна…';
 
                 try {
-                    const response = await sendApproverTitle('');
+                    const response = await sendApproverBlock('');
 
                     if (! response.ok) {
                         approverStatus.textContent = 'Дахин үүсгэж чадсангүй.';
@@ -432,7 +429,7 @@
                         return;
                     }
 
-                    savedApproverTitle = '';
+                    savedApproverBlock = '';
                     location.reload();
                 } catch (e) {
                     approverStatus.textContent = 'Сүлжээгүй байна.';
@@ -440,14 +437,14 @@
                 }
             });
 
-            approverTitle.addEventListener('input', () => {
-                approverStatus.textContent = approverTitle.innerText.trim() === savedApproverTitle
+            approverBlock.addEventListener('input', () => {
+                approverStatus.textContent = approverBlock.innerText.trim() === savedApproverBlock
                     ? 'Бичвэр дээр дарж засна.'
                     : 'Хадгалаагүй өөрчлөлт байна.';
             });
 
             window.addEventListener('beforeunload', (event) => {
-                if (approverTitle.innerText.trim() !== savedApproverTitle) {
+                if (approverBlock.innerText.trim() !== savedApproverBlock) {
                     event.preventDefault();
                     event.returnValue = '';
                 }
