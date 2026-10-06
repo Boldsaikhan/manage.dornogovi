@@ -101,9 +101,10 @@ class AnnualLeaveNoticeTest extends TestCase
         $this->assertStringContainsString('БАЙГАЛЬ ОРЧНЫ АЛБАНЫ ДАРГА', $text);
         $this->assertStringContainsString('Ш.АМАРБИЛЭГ', $text);
 
-        // Тушаал, нэрийн хооронд 4 таб зай байна (ижил мөрөнд).
-        $this->assertStringContainsString("АЙМГИЙН ЗАСАГ ДАРГА\t\t\t\tО.БАТЖАРГАЛ", $text);
-        $this->assertStringContainsString("БАЙГАЛЬ ОРЧНЫ АЛБАНЫ ДАРГА\t\t\t\tШ.АМАРБИЛЭГ", $text);
+        // Тушаал, нэрийн хооронд зай байна (ижил мөрөнд, таб биш — тасрашгүй зай).
+        $gap = str_repeat("\u{00A0}", 6);
+        $this->assertStringContainsString("АЙМГИЙН ЗАСАГ ДАРГА{$gap}О.БАТЖАРГАЛ", $text);
+        $this->assertStringContainsString("БАЙГАЛЬ ОРЧНЫ АЛБАНЫ ДАРГА{$gap}Ш.АМАРБИЛЭГ", $text);
     }
 
     public function test_the_own_signature_line_shows_the_position_exactly_as_in_the_phone_directory(): void
