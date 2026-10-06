@@ -35,34 +35,6 @@ class AnnualLeaveNoticeTest extends TestCase
             ->assertSee('<span class="filled">24</span>-ны өдөр', false);
     }
 
-    public function test_the_signature_gap_can_be_adjusted_via_query_param(): void
-    {
-        $admin = User::factory()->create(['is_admin' => true]);
-
-        $row = AnnualLeave::create([
-            'user_id' => $admin->id,
-            'scope' => 'baiguullaga',
-            'person_name' => 'Б.Чинзүрх',
-        ]);
-
-        $this->actingAs($admin)
-            ->get(route('annual-leaves.notice', $row))
-            ->assertOk()
-            ->assertSee('margin-left: 20mm;', false);
-
-        $this->actingAs($admin)
-            ->get(route('annual-leaves.notice', $row, absolute: false).'?gap=35')
-            ->assertOk()
-            ->assertSee('margin-left: 35mm;', false)
-            ->assertSee('35 мм', false);
-
-        // Хязгаараас гадуур утга 5-60мм хооронд хайчлагдана.
-        $this->actingAs($admin)
-            ->get(route('annual-leaves.notice', $row, absolute: false).'?gap=999')
-            ->assertOk()
-            ->assertSee('margin-left: 60mm;', false);
-    }
-
     public function test_the_notice_shows_the_auto_generated_text_and_signatures(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
@@ -270,7 +242,7 @@ class AnnualLeaveNoticeTest extends TestCase
         $this->assertNull($row->fresh()->notice_text);
     }
 
-    public function test_the_approver_title_can_be_edited_and_reset(): void
+    public function test_the_approver_block_can_be_edited_and_reset(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
 
@@ -290,25 +262,27 @@ class AnnualLeaveNoticeTest extends TestCase
         $this->actingAs($admin)
             ->get(route('annual-leaves.notice', $row))
             ->assertOk()
-            ->assertSee('АЙМГИЙН ЗАСАГ ДАРГА');
+            ->assertSee('АЙМГИЙН ЗАСАГ ДАРГА')
+            ->assertSee('О.Батжаргал');
 
         $this->actingAs($admin)
-            ->patch(route('annual-leaves.notice.approver-title', $row), ['approver_title' => 'ГАРААР ЗАСВАРЛАСАН ТУШААЛ'])
+            ->patch(route('annual-leaves.notice.approver', $row), ['approver_block' => "ГАРААР ЗАСВАРЛАСАН БИЧВЭР\nХ.Хэн нэгэн"])
             ->assertRedirect();
 
-        $this->assertSame('ГАРААР ЗАСВАРЛАСАН ТУШААЛ', $row->fresh()->approver_title_override);
+        $this->assertSame("ГАРААР ЗАСВАРЛАСАН БИЧВЭР\nХ.Хэн нэгэн", $row->fresh()->approver_block_override);
 
         $this->actingAs($admin)
             ->get(route('annual-leaves.notice', $row))
             ->assertOk()
-            ->assertSee('ГАРААР ЗАСВАРЛАСАН ТУШААЛ')
+            ->assertSee('ГАРААР ЗАСВАРЛАСАН БИЧВЭР')
+            ->assertSee('Х.Хэн нэгэн')
             ->assertDontSee('АЙМГИЙН ЗАСАГ ДАРГА');
 
         $this->actingAs($admin)
-            ->patch(route('annual-leaves.notice.approver-title', $row), ['approver_title' => ''])
+            ->patch(route('annual-leaves.notice.approver', $row), ['approver_block' => ''])
             ->assertRedirect();
 
-        $this->assertNull($row->fresh()->approver_title_override);
+        $this->assertNull($row->fresh()->approver_block_override);
 
         $this->actingAs($admin)
             ->get(route('annual-leaves.notice', $row))
@@ -342,7 +316,7 @@ class AnnualLeaveNoticeTest extends TestCase
             ->assertForbidden();
 
         $this->actingAs($viewer)
-            ->patch(route('annual-leaves.notice.approver-title', $row), ['approver_title' => 'Оролдлого'])
+            ->patch(route('annual-leaves.notice.approver', $row), ['approver_block' => 'Оролдлого'])
             ->assertForbidden();
     }
 }

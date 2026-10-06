@@ -24,19 +24,13 @@ class AnnualLeaveNoticeController extends Controller
         $copies = (int) $request->query('copies', 2);
         $copies = in_array($copies, [1, 2], true) ? $copies : 2;
 
-        // Тушаал ба нэрийн хоорондох зай — гарын үсэг зурах хэрэгцээнд тааруулж болно.
-        $signGap = (int) $request->query('gap', 20);
-        $signGap = max(5, min(60, $signGap));
-
         $format = DocumentFormat::defaultFormat();
 
         return view('annual-leaves.notice', [
             'annualLeave' => $annualLeave,
             'copies' => $copies,
-            'signGap' => $signGap,
             'text' => AnnualLeaveNotice::text($annualLeave),
-            'approverLines' => AnnualLeaveNotice::approverLines($annualLeave),
-            'approverName' => AnnualLeaveNotice::approverName($annualLeave),
+            'approverBlockText' => AnnualLeaveNotice::approverBlockText($annualLeave),
             'ownPositionLine' => AnnualLeaveNotice::ownPositionLine($annualLeave),
             'number' => $this->rowNumber($annualLeave),
             'registeredOn' => $annualLeave->created_at,
@@ -86,17 +80,17 @@ class AnnualLeaveNoticeController extends Controller
         return back()->with('success', 'Хадгаллаа.');
     }
 
-    /** «Зөвшөөрсөн» хэсгийн толгой бичвэрийг хуудсан дээр нь засна. */
-    public function updateApproverTitle(Request $request, AnnualLeave $annualLeave): RedirectResponse
+    /** «Зөвшөөрсөн» хэсгийг бүтнээр нь хуудсан дээр засна. */
+    public function updateApproverBlock(Request $request, AnnualLeave $annualLeave): RedirectResponse
     {
         abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
 
         $data = $request->validate([
-            'approver_title' => ['nullable', 'string', 'max:500'],
-        ], [], ['approver_title' => 'толгой бичвэр']);
+            'approver_block' => ['nullable', 'string', 'max:1000'],
+        ], [], ['approver_block' => 'бичвэр']);
 
         $annualLeave->update([
-            'approver_title_override' => trim((string) ($data['approver_title'] ?? '')) ?: null,
+            'approver_block_override' => trim((string) ($data['approver_block'] ?? '')) ?: null,
         ]);
 
         return back()->with('success', 'Хадгаллаа.');
