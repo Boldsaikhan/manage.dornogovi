@@ -72,7 +72,10 @@ class ModuleResourceController extends Controller
         $scopeTabs = [];
         $counts = collect();
         if ($scopes) {
-            $counts = $modelClass::query()
+            $countsQuery = $modelClass::query();
+            ModuleOwnScope::apply($countsQuery, $request->user(), $module);
+
+            $counts = $countsQuery
                 ->selectRaw("{$scopeColumn} as scope_key, count(*) as aggregate")
                 ->groupBy($scopeColumn)
                 ->pluck('aggregate', 'scope_key');
@@ -122,7 +125,10 @@ class ModuleResourceController extends Controller
             'fields' => $config['fields'],
             'directory' => $this->directoryFor($config),
             'rows' => $rows,
-            'rowActions' => $config['row_actions'] ?? [],
+            // Хэвлэх зэрэг мөр дээрх үйлдлийг зөвхөн засах эрхтэй хэрэглэгчид харуулна.
+            'rowActions' => ModuleAccess::canEdit($request->user(), $module)
+                ? ($config['row_actions'] ?? [])
+                : [],
             // Тусгай маягттай модуль (жишээ нь томилолтын удирдамж) — A4 хэлбэрээр бөглөнө.
             'formLayout' => $config['form_layout'] ?? null,
             'formMeta' => $this->formMeta($config, $activeScope),

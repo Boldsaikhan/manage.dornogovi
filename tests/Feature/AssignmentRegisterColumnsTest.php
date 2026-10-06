@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\TravelAssignment;
 use App\Models\User;
+use App\Models\UserModulePermission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -85,5 +86,62 @@ class AssignmentRegisterColumnsTest extends TestCase
         $this->actingAs($admin)
             ->get(route('assignments.index'))
             ->assertInertia(fn (AssertableInertia $page) => $page->where('rows.0.day_count', '1'));
+    }
+
+    public function test_own_scoped_viewer_sees_only_their_own_counts_and_no_row_actions(): void
+    {
+        // «Харах (хамааралтай)» эрхтэй хэрэглэгч зөвхөн өөрийн мөрүүдийг
+        // харах ёстой — таб дээрх нийт дугаарууд ч бусдын бүртгэлийг
+        // илчлэхгүй, мөн засах эрхгүй тул хэвлэх зэрэг мөрийн үйлдэл
+        // харагдахгүй байх ёстой.
+        $viewer = User::factory()->create(['is_admin' => false]);
+
+        UserModulePermission::create([
+            'user_id' => $viewer->id,
+            'module_key' => 'assignments',
+            'level' => 'view_own',
+        ]);
+
+        TravelAssignment::create([
+            'user_id' => $viewer->id,
+            'approver' => 'governor',
+            'destination' => 'Замын-Үүд',
+            'start_date' => '2026-09-10',
+            'end_date' => '2026-09-10',
+            'status' => 'approved',
+        ]);
+
+        $other = User::factory()->create();
+        TravelAssignment::create([
+            'user_id' => $other->id,
+            'approver' => 'governor',
+            'destination' => 'Сайншанд',
+            'start_date' => '2026-09-10',
+            'end_date' => '2026-09-10',
+            'status' => 'approved',
+        ]);
+        TravelAssignment::create([
+            'user_id' => $other->id,
+            'approver' => 'chief',
+            'destination' => 'Эрдэнэ',
+            'start_date' => '2026-09-10',
+            'end_date' => '2026-09-10',
+            'status' => 'approved',
+        ]);
+
+        $this->actingAs($viewer->fresh())
+            ->get(route('assignments.index'))
+            ->assertInertia(function (AssertableInertia $page) {
+                $props = $page->toArray()['props'];
+
+                $this->assertCount(1, $props['rows']);
+
+                $tabs = collect($props['scopeTabs'])->keyBy('value');
+                $this->assertSame(1, $tabs['all']['count']);
+                $this->assertSame(1, $tabs['governor']['count']);
+                $this->assertSame(0, $tabs['chief']['count']);
+
+                $this->assertSame([], $props['rowActions']);
+            });
     }
 }
