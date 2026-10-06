@@ -150,6 +150,8 @@
             column-gap: var(--sig-gap, 10mm);
             row-gap: 3mm;
             justify-content: center;
+            /* Тушаал 2 мөрт үсэрвэл нэр нь доод (сүүлийн) мөртэй нь зэрэгцэнэ. */
+            align-items: end;
         }
 
         .notice .signatures-grid .sig-title,
