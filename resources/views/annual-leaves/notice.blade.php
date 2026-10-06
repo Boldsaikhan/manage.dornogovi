@@ -129,9 +129,12 @@
             text-indent: 8mm;
         }
 
-        /* Зөвшөөрсөн хэсэг + гарын үсэг — голлуулсан. */
+        /*
+         * Зөвшөөрсөн хэсэг + гарын үсэг — дээд талдаа өгүүлбэрээс ялгарах
+         * нэг мөр (line-height) зай авна.
+         */
         .notice .signatures-wrap {
-            margin: 0 0 2mm;
+            margin: {{ $format['spacing'] }}em 0 2mm;
         }
 
         /*
@@ -355,7 +358,7 @@
         const GAP_STEP = 2;
         let gapMm = {{ (int) $signatureGapMm }};
 
-        const ROW_GAP_MIN = 1;
+        const ROW_GAP_MIN = 0;
         const ROW_GAP_MAX = 10;
         const ROW_GAP_STEP = 0.5;
         let rowGapMm = {{ (float) $signatureRowGapMm }};
