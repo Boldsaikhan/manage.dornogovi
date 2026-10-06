@@ -48,7 +48,10 @@ class AnnualLeaveController extends Controller
         }
         ModuleOwnScope::apply($query, $request->user(), self::MODULE);
 
-        $counts = AnnualLeave::query()
+        $countsQuery = AnnualLeave::query();
+        ModuleOwnScope::apply($countsQuery, $request->user(), self::MODULE);
+
+        $counts = $countsQuery
             ->selectRaw('scope, count(*) as aggregate')
             ->groupBy('scope')
             ->pluck('aggregate', 'scope');
