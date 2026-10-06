@@ -134,15 +134,13 @@
             margin: 0 0 2mm;
         }
 
-        .notice .signatures-header {
-            text-align: center;
-            margin-bottom: 3mm;
-        }
-
         /*
          * Тушаал, нэрийн баганыг grid-ээр зохионо — багана тус бүр хамгийн
          * өргөн агуулгадаа тохируулан өргөнждөг тул хоёр мөрийн тушаал
          * (зүүн талдаа), нэр (зүүн талдаа) тус бүр нэг шугаманд зэрэгцэнэ.
+         * «ЗӨВШӨӨРСӨН:» гарчгийг энэ grid-ийн эхний (тушаалын) баганад
+         * мөр болгон оруулсан тул албан тушаалтай яг зүүн талаараа
+         * зэрэгцэнэ.
          */
         .notice .signatures-grid {
             display: grid;
@@ -152,6 +150,12 @@
             justify-content: center;
             /* Тушаал 2 мөрт үсэрвэл нэр нь доод (сүүлийн) мөртэй нь зэрэгцэнэ. */
             align-items: end;
+        }
+
+        .notice .signatures-grid .sig-caption {
+            grid-column: 1;
+            text-align: left;
+            margin-bottom: 1mm;
         }
 
         .notice .signatures-grid .sig-title,
@@ -269,8 +273,9 @@
                         spellcheck="false"
                     >{{ $bodyText }}</div>
                     <div class="signatures-wrap">
-                        <div class="signatures-header">ЗӨВШӨӨРСӨН:</div>
                         <div class="signatures-grid" id="notice-signatures-grid" style="--sig-gap: {{ $signatureGapMm }}mm">
+                            <div class="sig-caption">ЗӨВШӨӨРСӨН:</div>
+                            <div></div>
                             <div class="sig-title" contenteditable="true" id="notice-approver-title" spellcheck="false">{{ $signatureFields['approverTitle'] }}</div>
                             <div class="sig-name" contenteditable="true" id="notice-approver-name" spellcheck="false">{{ $signatureFields['approverName'] }}</div>
                             <div class="sig-spacer"></div>
@@ -292,8 +297,9 @@
                 @else
                     <div class="body" data-notice-body-copy>{{ $bodyText ?: '……………………………………………………………………………………………………' }}</div>
                     <div class="signatures-wrap">
-                        <div class="signatures-header">ЗӨВШӨӨРСӨН:</div>
                         <div class="signatures-grid" data-notice-signatures-grid-copy style="--sig-gap: {{ $signatureGapMm }}mm">
+                            <div class="sig-caption">ЗӨВШӨӨРСӨН:</div>
+                            <div></div>
                             <div class="sig-title" data-notice-approver-title-copy>{{ $signatureFields['approverTitle'] }}</div>
                             <div class="sig-name" data-notice-approver-name-copy>{{ $signatureFields['approverName'] }}</div>
                             <div class="sig-spacer"></div>
