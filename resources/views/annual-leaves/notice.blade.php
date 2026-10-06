@@ -143,19 +143,33 @@
             text-align: center;
         }
 
-        .notice .approver-block {
-            display: inline-block;
-            white-space: pre-line;
+        .notice .approver-label {
+            margin-bottom: 1mm;
         }
 
-        .notice .approver-block[contenteditable='true'] {
+        /* Тушаал — том үсгээр, нэрээс ялгарахаар энгийн жинтэй. */
+        .notice .approver-title {
+            text-transform: uppercase;
+            font-weight: normal;
+        }
+
+        /* Нэр — тушаалаас тодоор ялгарч харагдана. */
+        .notice .approver-name {
+            margin-top: 1mm;
+            font-weight: 700;
+        }
+
+        .notice .approver-title[contenteditable='true'],
+        .notice .approver-name[contenteditable='true'] {
+            display: inline-block;
             outline: 1px dashed #94a3b8;
-            outline-offset: 2mm;
+            outline-offset: 1.5mm;
             min-width: 50mm;
             cursor: text;
         }
 
-        .notice .approver-block[contenteditable='true']:focus { outline-color: #1c55a5; }
+        .notice .approver-title[contenteditable='true']:focus,
+        .notice .approver-name[contenteditable='true']:focus { outline-color: #1c55a5; }
 
         .notice .body-edit {
             margin: 0 0 8mm;
@@ -217,7 +231,8 @@
             .toolbar, .body-edit { display: none !important; }
             .page { margin: 0; box-shadow: none; }
             .notice .body[contenteditable='true'] { outline: none; }
-            .notice .approver-block[contenteditable='true'] { outline: none; }
+            .notice .approver-title[contenteditable='true'],
+            .notice .approver-name[contenteditable='true'] { outline: none; }
         }
     </style>
 </head>
@@ -261,20 +276,28 @@
                 @endif
 
                 <div class="approver">
+                    <div class="approver-label">Зөвшөөрсөн:</div>
                     @if ($i === 0 && $canEdit)
                         <div
-                            class="approver-block"
+                            class="approver-title"
                             contenteditable="true"
-                            id="approver-block"
+                            id="approver-title"
                             spellcheck="false"
-                        >{{ $approverBlockText }}</div>
+                        >{{ implode(' ', $approverLines) }}</div>
+                        <div
+                            class="approver-name"
+                            contenteditable="true"
+                            id="approver-name"
+                            spellcheck="false"
+                        >{{ $approverName }}</div>
                         <div class="body-edit">
-                            <button type="button" id="approver-block-save">Хадгалах</button>
-                            <button type="button" id="approver-block-reset" class="ghost">Дахин үүсгэх</button>
-                            <span id="approver-block-status">Бичвэр дээр дарж засна.</span>
+                            <button type="button" id="approver-save">Хадгалах</button>
+                            <button type="button" id="approver-reset" class="ghost">Дахин үүсгэх</button>
+                            <span id="approver-status">Бичвэр дээр дарж засна.</span>
                         </div>
                     @else
-                        <div class="approver-block" data-approver-block-copy>{{ $approverBlockText }}</div>
+                        <div class="approver-title" data-approver-title-copy>{{ implode(' ', $approverLines) }}</div>
+                        <div class="approver-name" data-approver-name-copy>{{ $approverName }}</div>
                     @endif
                 </div>
 
@@ -371,13 +394,15 @@
             });
         }
 
-        const approverBlock = document.getElementById('approver-block');
-        const approverSaveBtn = document.getElementById('approver-block-save');
-        const approverResetBtn = document.getElementById('approver-block-reset');
-        const approverStatus = document.getElementById('approver-block-status');
-        const otherApproverBlocks = document.querySelectorAll('[data-approver-block-copy]');
+        const approverTitle = document.getElementById('approver-title');
+        const approverName = document.getElementById('approver-name');
+        const approverSaveBtn = document.getElementById('approver-save');
+        const approverResetBtn = document.getElementById('approver-reset');
+        const approverStatus = document.getElementById('approver-status');
+        const otherApproverTitles = document.querySelectorAll('[data-approver-title-copy]');
+        const otherApproverNames = document.querySelectorAll('[data-approver-name-copy]');
 
-        const sendApproverBlock = (text) => fetch(@json(route('annual-leaves.notice.approver', $annualLeave)), {
+        const sendApprover = (title, name) => fetch(@json(route('annual-leaves.notice.approver', $annualLeave)), {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -385,23 +410,27 @@
                 'X-Requested-With': 'XMLHttpRequest',
                 'Accept': 'application/json',
             },
-            body: JSON.stringify({ approver_block: text }),
+            body: JSON.stringify({ approver_title: title, approver_name: name }),
         });
 
-        if (approverBlock && approverSaveBtn) {
-            let savedApproverBlock = approverBlock.innerText.trim();
+        if (approverTitle && approverName && approverSaveBtn) {
+            let savedApproverTitle = approverTitle.innerText.trim();
+            let savedApproverName = approverName.innerText.trim();
 
             approverSaveBtn.addEventListener('click', async () => {
                 approverSaveBtn.disabled = true;
                 approverStatus.textContent = 'Хадгалж байна…';
 
                 try {
-                    const text = approverBlock.innerText.trim();
-                    const response = await sendApproverBlock(text);
+                    const title = approverTitle.innerText.trim();
+                    const name = approverName.innerText.trim();
+                    const response = await sendApprover(title, name);
 
                     if (response.ok) {
-                        savedApproverBlock = text;
-                        otherApproverBlocks.forEach((el) => { el.textContent = text; });
+                        savedApproverTitle = title;
+                        savedApproverName = name;
+                        otherApproverTitles.forEach((el) => { el.textContent = title; });
+                        otherApproverNames.forEach((el) => { el.textContent = name; });
                         approverStatus.textContent = 'Хадгаллаа.';
                     } else {
                         approverStatus.textContent = 'Хадгалж чадсангүй.';
@@ -420,7 +449,7 @@
                 approverStatus.textContent = 'Дахин үүсгэж байна…';
 
                 try {
-                    const response = await sendApproverBlock('');
+                    const response = await sendApprover('', '');
 
                     if (! response.ok) {
                         approverStatus.textContent = 'Дахин үүсгэж чадсангүй.';
@@ -429,7 +458,8 @@
                         return;
                     }
 
-                    savedApproverBlock = '';
+                    savedApproverTitle = '';
+                    savedApproverName = '';
                     location.reload();
                 } catch (e) {
                     approverStatus.textContent = 'Сүлжээгүй байна.';
@@ -437,14 +467,21 @@
                 }
             });
 
-            approverBlock.addEventListener('input', () => {
-                approverStatus.textContent = approverBlock.innerText.trim() === savedApproverBlock
+            const onApproverInput = () => {
+                const unchanged = approverTitle.innerText.trim() === savedApproverTitle
+                    && approverName.innerText.trim() === savedApproverName;
+
+                approverStatus.textContent = unchanged
                     ? 'Бичвэр дээр дарж засна.'
                     : 'Хадгалаагүй өөрчлөлт байна.';
-            });
+            };
+
+            approverTitle.addEventListener('input', onApproverInput);
+            approverName.addEventListener('input', onApproverInput);
 
             window.addEventListener('beforeunload', (event) => {
-                if (approverBlock.innerText.trim() !== savedApproverBlock) {
+                if (approverTitle.innerText.trim() !== savedApproverTitle
+                    || approverName.innerText.trim() !== savedApproverName) {
                     event.preventDefault();
                     event.returnValue = '';
                 }
