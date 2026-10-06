@@ -30,8 +30,7 @@ class AnnualLeaveNoticeController extends Controller
             'annualLeave' => $annualLeave,
             'copies' => $copies,
             'text' => AnnualLeaveNotice::text($annualLeave),
-            'approverLines' => AnnualLeaveNotice::approverLines($annualLeave),
-            'approverName' => AnnualLeaveNotice::approverName($annualLeave),
+            'approverBlockText' => AnnualLeaveNotice::approverBlockText($annualLeave),
             'ownPositionLine' => AnnualLeaveNotice::ownPositionLine($annualLeave),
             'number' => $this->rowNumber($annualLeave),
             'registeredOn' => $annualLeave->created_at,
@@ -81,19 +80,17 @@ class AnnualLeaveNoticeController extends Controller
         return back()->with('success', 'Хадгаллаа.');
     }
 
-    /** «Зөвшөөрсөн» хэсгийн тушаал, нэрийг хуудсан дээр засна. */
+    /** «Зөвшөөрсөн» хэсгийг бүтнээр нь хуудсан дээр засна. */
     public function updateApproverBlock(Request $request, AnnualLeave $annualLeave): RedirectResponse
     {
         abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
 
         $data = $request->validate([
-            'approver_title' => ['nullable', 'string', 'max:500'],
-            'approver_name' => ['nullable', 'string', 'max:255'],
-        ], [], ['approver_title' => 'тушаал', 'approver_name' => 'нэр']);
+            'approver_block' => ['nullable', 'string', 'max:1000'],
+        ], [], ['approver_block' => 'бичвэр']);
 
         $annualLeave->update([
-            'approver_title_override' => trim((string) ($data['approver_title'] ?? '')) ?: null,
-            'approver_name_override' => trim((string) ($data['approver_name'] ?? '')) ?: null,
+            'approver_block_override' => trim((string) ($data['approver_block'] ?? '')) ?: null,
         ]);
 
         return back()->with('success', 'Хадгаллаа.');
