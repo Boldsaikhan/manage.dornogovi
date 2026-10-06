@@ -146,7 +146,7 @@
             display: grid;
             grid-template-columns: max-content max-content;
             column-gap: var(--sig-gap, 10mm);
-            row-gap: 3mm;
+            row-gap: var(--sig-row-gap, 3mm);
             justify-content: center;
             /* Тушаал 2 мөрт үсэрвэл нэр нь доод (сүүлийн) мөртэй нь зэрэгцэнэ. */
             align-items: end;
@@ -208,11 +208,17 @@
 
         .notice .body-edit button.ghost { background: #fff; color: #1c55a5; }
 
+        .notice .gap-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-left: auto;
+        }
+
         .notice .gap-control {
             display: flex;
             align-items: center;
             gap: 4px;
-            margin-left: auto;
         }
 
         .notice .gap-control button {
@@ -273,7 +279,7 @@
                         spellcheck="false"
                     >{{ $bodyText }}</div>
                     <div class="signatures-wrap">
-                        <div class="signatures-grid" id="notice-signatures-grid" style="--sig-gap: {{ $signatureGapMm }}mm">
+                        <div class="signatures-grid" id="notice-signatures-grid" style="--sig-gap: {{ $signatureGapMm }}mm; --sig-row-gap: {{ $signatureRowGapMm }}mm">
                             <div class="sig-caption">ЗӨВШӨӨРСӨН:</div>
                             <div></div>
                             <div class="sig-title" contenteditable="true" id="notice-approver-title" spellcheck="false">{{ $signatureFields['approverTitle'] }}</div>
@@ -287,17 +293,25 @@
                         <button type="button" id="notice-save">Хадгалах</button>
                         <button type="button" id="notice-reset" class="ghost">Дахин үүсгэх</button>
                         <span id="notice-status">Бичвэр дээр дарж засна.</span>
-                        <span class="gap-control">
-                            <span>Зай:</span>
-                            <button type="button" id="notice-gap-minus">−</button>
-                            <span id="notice-gap-value">{{ $signatureGapMm }} мм</span>
-                            <button type="button" id="notice-gap-plus">+</button>
+                        <span class="gap-controls">
+                            <span class="gap-control">
+                                <span>Зай:</span>
+                                <button type="button" id="notice-gap-minus">−</button>
+                                <span id="notice-gap-value">{{ $signatureGapMm }} мм</span>
+                                <button type="button" id="notice-gap-plus">+</button>
+                            </span>
+                            <span class="gap-control">
+                                <span>Мөр зай:</span>
+                                <button type="button" id="notice-row-gap-minus">−</button>
+                                <span id="notice-row-gap-value">{{ rtrim(rtrim(number_format($signatureRowGapMm, 1), '0'), '.') }} мм</span>
+                                <button type="button" id="notice-row-gap-plus">+</button>
+                            </span>
                         </span>
                     </div>
                 @else
                     <div class="body" data-notice-body-copy>{{ $bodyText ?: '……………………………………………………………………………………………………' }}</div>
                     <div class="signatures-wrap">
-                        <div class="signatures-grid" data-notice-signatures-grid-copy style="--sig-gap: {{ $signatureGapMm }}mm">
+                        <div class="signatures-grid" data-notice-signatures-grid-copy style="--sig-gap: {{ $signatureGapMm }}mm; --sig-row-gap: {{ $signatureRowGapMm }}mm">
                             <div class="sig-caption">ЗӨВШӨӨРСӨН:</div>
                             <div></div>
                             <div class="sig-title" data-notice-approver-title-copy>{{ $signatureFields['approverTitle'] }}</div>
@@ -325,6 +339,9 @@
         const gapMinusBtn = document.getElementById('notice-gap-minus');
         const gapPlusBtn = document.getElementById('notice-gap-plus');
         const gapValue = document.getElementById('notice-gap-value');
+        const rowGapMinusBtn = document.getElementById('notice-row-gap-minus');
+        const rowGapPlusBtn = document.getElementById('notice-row-gap-plus');
+        const rowGapValue = document.getElementById('notice-row-gap-value');
         // Хоёр дахь хувь байвал зэрэг шинэчилнэ — хуудас дахин ачаалахгүй.
         const otherBodyCopies = document.querySelectorAll('[data-notice-body-copy]');
         const otherApproverTitleCopies = document.querySelectorAll('[data-notice-approver-title-copy]');
@@ -338,6 +355,12 @@
         const GAP_STEP = 2;
         let gapMm = {{ (int) $signatureGapMm }};
 
+        const ROW_GAP_MIN = 1;
+        const ROW_GAP_MAX = 10;
+        const ROW_GAP_STEP = 0.5;
+        let rowGapMm = {{ (float) $signatureRowGapMm }};
+        const formatRowGap = (value) => (Math.round(value * 10) / 10).toString();
+
         // Тушаал, нэрийг нэг таб тэмдэгтээр тусгаарлаж хадгална (харагдах
         // байрлалыг grid хариуцна, энэ зөвхөн утга тусгаарлах тэмдэг).
         const signaturesText = () => [
@@ -348,9 +371,9 @@
         ].join('\n');
 
         // Хэсгүүдийг нэг хоосон мөрөөр холбоод ганц notice_text болгож хадгална.
-        const combined = () => `${body.innerText.trim()}\n\n${signaturesText()}|${gapMm}`;
+        const combined = () => `${body.innerText.trim()}\n\n${signaturesText()}|${gapMm}|${rowGapMm}`;
 
-        const send = (text, gap) => fetch(@json(route('annual-leaves.notice.text', $annualLeave)), {
+        const send = (text, gap, rowGap) => fetch(@json(route('annual-leaves.notice.text', $annualLeave)), {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -358,7 +381,7 @@
                 'X-Requested-With': 'XMLHttpRequest',
                 'Accept': 'application/json',
             },
-            body: JSON.stringify({ notice_text: text, signature_gap_mm: gap }),
+            body: JSON.stringify({ notice_text: text, signature_gap_mm: gap, signature_row_gap_mm: rowGap }),
         });
 
         const applyGap = () => {
@@ -366,6 +389,11 @@
             gapValue.textContent = `${gapMm} мм`;
             gapMinusBtn.disabled = gapMm <= GAP_MIN;
             gapPlusBtn.disabled = gapMm >= GAP_MAX;
+
+            grid.style.setProperty('--sig-row-gap', `${rowGapMm}mm`);
+            rowGapValue.textContent = `${formatRowGap(rowGapMm)} мм`;
+            rowGapMinusBtn.disabled = rowGapMm <= ROW_GAP_MIN;
+            rowGapPlusBtn.disabled = rowGapMm >= ROW_GAP_MAX;
         };
 
         // Дээд хувийг янзлах бүрт доод (хэвлэх) хувийг нэн даруй хуулна —
@@ -376,7 +404,10 @@
             otherApproverNameCopies.forEach((el) => { el.textContent = approverName.innerText.trim(); });
             otherOwnTitleCopies.forEach((el) => { el.textContent = ownTitle.innerText.trim(); });
             otherOwnNameCopies.forEach((el) => { el.textContent = ownName.innerText.trim(); });
-            otherGridCopies.forEach((el) => { el.style.setProperty('--sig-gap', `${gapMm}mm`); });
+            otherGridCopies.forEach((el) => {
+                el.style.setProperty('--sig-gap', `${gapMm}mm`);
+                el.style.setProperty('--sig-row-gap', `${rowGapMm}mm`);
+            });
         };
 
         if (body && approverTitle && approverName && ownTitle && ownName && saveBtn) {
@@ -398,13 +429,27 @@
                 status.textContent = combined() === saved ? 'Бичвэр дээр дарж засна.' : 'Хадгалаагүй өөрчлөлт байна.';
             });
 
+            rowGapMinusBtn.addEventListener('click', () => {
+                rowGapMm = Math.max(ROW_GAP_MIN, Math.round((rowGapMm - ROW_GAP_STEP) * 10) / 10);
+                applyGap();
+                mirrorCopies();
+                status.textContent = combined() === saved ? 'Бичвэр дээр дарж засна.' : 'Хадгалаагүй өөрчлөлт байна.';
+            });
+
+            rowGapPlusBtn.addEventListener('click', () => {
+                rowGapMm = Math.min(ROW_GAP_MAX, Math.round((rowGapMm + ROW_GAP_STEP) * 10) / 10);
+                applyGap();
+                mirrorCopies();
+                status.textContent = combined() === saved ? 'Бичвэр дээр дарж засна.' : 'Хадгалаагүй өөрчлөлт байна.';
+            });
+
             saveBtn.addEventListener('click', async () => {
                 saveBtn.disabled = true;
                 status.textContent = 'Хадгалж байна…';
 
                 try {
                     const text = `${body.innerText.trim()}\n\n${signaturesText()}`;
-                    const response = await send(text, gapMm);
+                    const response = await send(text, gapMm, rowGapMm);
 
                     if (response.ok) {
                         saved = combined();
@@ -427,7 +472,7 @@
                 status.textContent = 'Дахин үүсгэж байна…';
 
                 try {
-                    const response = await send('', null);
+                    const response = await send('', null, null);
 
                     if (! response.ok) {
                         status.textContent = 'Дахин үүсгэж чадсангүй.';
