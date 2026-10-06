@@ -25,7 +25,10 @@ class AwardController extends Controller
         $year = $this->normalizeYear($request->query('year'));
         $subtype = $this->normalizeSubtypeFilter($tab, (string) $request->query('subtype', ''));
 
-        $counts = Award::query()
+        $countsQuery = Award::query();
+        ModuleOwnScope::apply($countsQuery, $request->user(), self::MODULE);
+
+        $counts = $countsQuery
             ->selectRaw('category, count(*) as aggregate')
             ->groupBy('category')
             ->pluck('aggregate', 'category');

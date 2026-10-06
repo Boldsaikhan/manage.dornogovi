@@ -44,7 +44,10 @@ class LeaveController extends Controller
         }
         ModuleOwnScope::apply($query, $request->user(), self::MODULE);
 
-        $counts = Leave::query()
+        $countsQuery = Leave::query();
+        ModuleOwnScope::apply($countsQuery, $request->user(), self::MODULE);
+
+        $counts = $countsQuery
             ->selectRaw('scope, count(*) as aggregate')
             ->groupBy('scope')
             ->pluck('aggregate', 'scope');

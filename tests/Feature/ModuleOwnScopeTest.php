@@ -57,6 +57,67 @@ class ModuleOwnScopeTest extends TestCase
                 ->where('rows.0.person_name', 'Б. Болдсайхан'));
     }
 
+    public function test_user_with_view_own_sees_own_scoped_tab_counts_not_global_totals(): void
+    {
+        // Таб дээрх «Нийт»/«Байгууллага» гэх мэт тоонууд нь бусдын
+        // бүртгэлийг хамарсан глобал тоо биш, зөвхөн тухайн хэрэглэгчид
+        // хамаарах мөрийн тоо байх ёстой — өмнө нь жагсаалт хоосон байхад
+        // ч таб дээр глобал тоо харуулж байсан.
+        $viewer = User::factory()->create(['name' => 'Б. Болдсайхан']);
+        UserModulePermission::create([
+            'user_id' => $viewer->id,
+            'module_key' => 'leaves',
+            'level' => 'view_own',
+        ]);
+
+        Leave::create([
+            'user_id' => $viewer->id,
+            'person_name' => 'Б. Болдсайхан',
+            'scope' => 'baiguullaga',
+            'org_name' => 'Тест',
+            'type' => 'eeljiin',
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->toDateString(),
+            'days' => 1,
+            'status' => 'approved',
+        ]);
+
+        // Бусдын бүртгэлүүд — тоонд орохгүй байх ёстой.
+        Leave::create([
+            'user_id' => User::factory()->create()->id,
+            'person_name' => 'Д. Баттуяа',
+            'scope' => 'baiguullaga',
+            'org_name' => 'Тест',
+            'type' => 'eeljiin',
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->toDateString(),
+            'days' => 1,
+            'status' => 'approved',
+        ]);
+        Leave::create([
+            'user_id' => User::factory()->create()->id,
+            'person_name' => 'Э. Энхбат',
+            'scope' => 'agentlag',
+            'org_name' => 'Тест',
+            'type' => 'eeljiin',
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->toDateString(),
+            'days' => 1,
+            'status' => 'approved',
+        ]);
+
+        $this->actingAs($viewer)
+            ->get(route('leaves.index', ['scope' => 'all']))
+            ->assertOk()
+            ->assertInertia(function ($page) {
+                $tabs = collect($page->toArray()['props']['tabs'])->keyBy('value');
+
+                $this->assertSame(1, $tabs['all']['count']);
+                $this->assertSame(1, $tabs['baiguullaga']['count']);
+                $this->assertSame(0, $tabs['agentlag']['count']);
+            });
+    }
+
     public function test_admin_can_save_own_scope_permission_on_user(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
