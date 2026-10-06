@@ -85,6 +85,21 @@ const statCards = computed(() => [
     },
 ]);
 
+// Хүснэгтэд ашигладагтай ижил монгол нэрээр төлвийг харуулна (код хэвээр биш).
+const STATUS_LABELS = {
+    pending: 'Хүлээгдэж буй',
+    approved: 'Зөвшөөрсөн',
+    rejected: 'Татгалзсан',
+    done: 'Дууссан',
+    draft: 'Ноорог',
+    active: 'Идэвхтэй',
+    final: 'Батлагдсан',
+};
+
+function statusLabel(status) {
+    return STATUS_LABELS[status] ?? status ?? '—';
+}
+
 const activeCard = computed(() => statCards.value.find((card) => card.key === selectedKey.value) ?? null);
 
 function selectCard(card) {
@@ -160,7 +175,7 @@ function selectCard(card) {
                         class="flex justify-between gap-2 border-b border-slate-100 pb-2"
                     >
                         <span class="text-slate-700">{{ row.user?.name || '—' }} · {{ row.type }}</span>
-                        <span class="text-slate-400">{{ row.status }}</span>
+                        <span class="text-slate-400">{{ statusLabel(row.status) }}</span>
                     </li>
                     <li v-if="!recentLeaves.length" class="text-slate-400">Бүртгэл алга</li>
                 </ul>
@@ -174,7 +189,7 @@ function selectCard(card) {
                         <span class="text-slate-700">
                             {{ row.user?.name || '—' }} · {{ row.destination || '—' }}
                         </span>
-                        <span class="text-slate-400">{{ row.status }}</span>
+                        <span class="text-slate-400">{{ statusLabel(row.status) }}</span>
                     </li>
                     <li v-if="!recentAssignments.length" class="text-slate-400">Бүртгэл алга</li>
                 </ul>
@@ -189,7 +204,7 @@ function selectCard(card) {
                             {{ row.title || '—' }}
                             <span v-if="row.year" class="text-slate-400">· {{ row.year }}</span>
                         </span>
-                        <span class="text-slate-400">{{ row.status }}</span>
+                        <span class="text-slate-400">{{ statusLabel(row.status) }}</span>
                     </li>
                     <li v-if="!recentPlans.length" class="text-slate-400">Бүртгэл алга</li>
                 </ul>
