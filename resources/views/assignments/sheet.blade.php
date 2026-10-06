@@ -477,7 +477,7 @@
         </li>
         <li>
             <span class="label">Бүрэлдэхүүн:</span>
-            {!! $fill($assignment->composition ?: $assignment->user?->name) !!}
+            {!! $fill($assignment->composition) !!}
         </li>
         <li>
             <span class="label">Хугацаа:</span>

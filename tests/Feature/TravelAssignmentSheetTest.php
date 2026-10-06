@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\TravelAssignment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
@@ -44,6 +45,35 @@ class TravelAssignmentSheetTest extends TestCase
             ->assertSee('Албан томилолтоор ажиллах төсөв')
             ->assertSee('Түлш, шатахуун')
             ->assertSee('Томилолтын тайлан');
+    }
+
+    public function test_composition_shows_a_blank_fill_in_line_when_not_set_instead_of_the_assignees_own_name(): void
+    {
+        // Өмнө нь «Бүрэлдэхүүн» хоосон үед томилолт авч буй хүний өөрийнх нь
+        // нэрээр орлуулж харуулдаг байсан — энэ нь буруу бөгөөд шинэ
+        // (хараахан бөглөгдөөгүй) мөрийн маягт дээр хэвлэхэд өөрийнх нь
+        // нэр гэнэт гарч ирдэг байв. Одоо бусад талбаруудтай адил цэгэн
+        // зураастай хоосон мөр гарч, гараар бичих боломжтой байх ёстой.
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $assignment = TravelAssignment::create([
+            'user_id' => User::factory()->create(['name' => 'Ц.Энхтунгалаг'])->id,
+            'approver' => 'governor',
+            'destination' => 'Эрдэнэ сум',
+            'start_date' => '2026-10-07',
+            'end_date' => '2026-10-07',
+            'status' => 'pending',
+        ]);
+
+        $html = $this->actingAs($admin)
+            ->get(route('assignments.sheet', $assignment))
+            ->assertOk()
+            ->getContent();
+
+        $compositionSegment = Str::between($html, 'Бүрэлдэхүүн:', 'Хугацаа:');
+
+        $this->assertStringContainsString('class="dots"', $compositionSegment);
+        $this->assertStringNotContainsString('Ц.Энхтунгалаг', $compositionSegment);
     }
 
     public function test_each_approver_gets_its_own_header(): void
