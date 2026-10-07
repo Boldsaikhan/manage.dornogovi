@@ -134,7 +134,7 @@
          * нэг мөр (line-height) зай авна.
          */
         .notice .signatures-wrap {
-            margin: {{ $format['spacing'] }}em 0 2mm;
+            margin: {{ $format['spacing'] * 2 }}em 0 2mm;
         }
 
         /*
