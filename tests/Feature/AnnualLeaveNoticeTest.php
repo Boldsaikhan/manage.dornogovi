@@ -328,6 +328,31 @@ class AnnualLeaveNoticeTest extends TestCase
         $this->assertStringNotContainsString('ЗАМЫН-ҮҮД', $text);
     }
 
+    public function test_the_body_text_names_the_organisation_even_when_the_position_shares_a_generic_classifier_word(): void
+    {
+        // «Захиргаа» (алба, хэлтэс мэтийн ерөнхий ангиллын нэр) байгууллагын
+        // нэрний төгсгөлд байхад тушаалд ч («Захиргааны дарга») давхацдаг
+        // тул энэ нэг үг таарсан гэдгээр байгууллагын онцлог (Дорноговь
+        // Орон сууц ОНӨАТҮГ) нэрийг огт орхигдуулж байв.
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = AnnualLeave::create([
+            'user_id' => $admin->id,
+            'scope' => 'baiguullaga',
+            'org_name' => 'Дорноговь Орон сууц ОНӨАТҮГ-ын захиргаа',
+            'position' => 'Захиргааны дарга',
+            'person_name' => 'Н.Энхцэцэг',
+            'entitled_days' => 22,
+            'start_date' => '2026-04-06',
+            'end_date' => '2026-05-05',
+        ]);
+
+        $text = \App\Support\AnnualLeaveNotice::text($row);
+
+        $this->assertStringContainsString('ОНӨАТҮГ', $text);
+        $this->assertStringStartsWith('Дорноговь Орон сууц ОНӨАТҮГ-ын захиргааны', $text);
+    }
+
     public function test_the_whole_notice_can_be_edited_in_one_field_and_reset(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

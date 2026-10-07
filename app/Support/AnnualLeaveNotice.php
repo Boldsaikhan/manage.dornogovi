@@ -343,20 +343,48 @@ class AnnualLeaveNotice
      */
     private static function orgAlreadyNamedIn(string $position, string $org): bool
     {
-        static $genericWords = [
-            'аймаг', 'аймгийн', 'сум', 'сумын', 'алба', 'албаны', 'газар', 'газрын',
-            'хэлтэс', 'хэлтсийн', 'яам', 'яамны', 'зөвлөл', 'зөвлөлийн', 'дахь',
-            'байгууллага', 'байгууллагын', 'агентлаг', 'агентлагийн',
-        ];
-
         $words = preg_split('/[\s,.]+/u', $org, -1, PREG_SPLIT_NO_EMPTY) ?: [];
 
         foreach ($words as $word) {
-            if (mb_strlen($word) < 3 || in_array(mb_strtolower($word), $genericWords, true)) {
+            if (mb_strlen($word) < 3 || self::isGenericOrgWord($word)) {
                 continue;
             }
 
             if (mb_stripos($position, $word) !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Байгууллагын төрлийг заасан ерөнхий (онцлог бус) үг эсэхийг шалгана
+     * — «захиргаа», «хэлтэс», «алба» гэх мэт үгс олон янзын байгууллагад
+     * давтагддаг тул тухайн байгууллагыг тодорхойлж чадахгүй. Ийм үг
+     * тушаалын бичвэрт тохиолдлоо гээд (жишээ нь «Захиргааны дарга» дотор
+     * «захиргаа») байгууллагын нэрийг бүхэлд нь нэрлэгдсэн гэж андуурахгүй
+     * байхын тулд MongolianCase-ийн түгээмэл үгийн жагсаалтыг (мөн тэдгээрийн
+     * харьяалахын тийн ялгалтай хэлбэрийг) ашиглана — тусад нь дутуу
+     * жагсаалт хөтлөхгүй.
+     */
+    private static function isGenericOrgWord(string $word): bool
+    {
+        static $extra = ['дахь'];
+
+        $lower = mb_strtolower($word);
+        $exceptions = MongolianCase::exceptions();
+
+        if (isset($exceptions[$lower]) || in_array($lower, $exceptions, true) || in_array($lower, $extra, true)) {
+            return true;
+        }
+
+        foreach (['гийн', 'гын', 'ийн', 'ний', 'ын', 'ны', 'ий', 'ы'] as $ending) {
+            if (mb_strlen($lower) <= mb_strlen($ending)) {
+                continue;
+            }
+
+            if (str_ends_with($lower, $ending) && isset($exceptions[mb_substr($lower, 0, -mb_strlen($ending))])) {
                 return true;
             }
         }
