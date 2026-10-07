@@ -79,23 +79,19 @@
         }
 
         /*
-         * А5 хэмжээтэй тэнцүү хувь болгон хуваахдаа агуулгыг дээд, доод
-         * хэсгийн голд нь байрлуулж, дээд/доод хоосон зайг тэнцүүлнэ —
-         * эс бөгөөс агуулга дээд талдаа наалдаж, доод тал нь хоосон
-         * харагддаг байв.
+         * А5 хэмжээтэй тэнцүү хувь болгон хуваана — бичиг хэргийн
+         * стандартын дагуу хувь бүр (тасдаж авахад) дээд талаасаа
+         * {{ $format['top'] }}мм зайтай байна.
          */
         .page--split .notice {
             flex: 1 1 50%;
             min-height: 0;
             overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
         }
 
         .page--split .notice + .notice {
             margin-top: 0;
-            padding-top: 6mm;
+            padding-top: {{ $format['top'] }}mm;
         }
 
         .page--split .notice:first-child {
