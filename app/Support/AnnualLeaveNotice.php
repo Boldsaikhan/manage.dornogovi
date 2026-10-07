@@ -64,7 +64,13 @@ class AnnualLeaveNotice
         $org = self::normalizeShoutyOrgName(trim((string) $row->org_name));
 
         if ($org !== '' && ! self::orgAlreadyNamedIn($position, $org)) {
-            return MongolianCase::genitive($org).' '.$position;
+            /*
+             * Зайгаар биш мөр шилжилтээр холбоно — эс бөгөөс байгууллагын
+             * нэр багтахгүй үед CSS чөлөөтэй хаанаас ч (нэрийг дундуур нь
+             * ч) таслаж болдог байв. Ингэснээр нэр үргэлж бүтнээрээ нэг
+             * мөрөнд, тушаал нь дараагийн мөрөнд байна.
+             */
+            return MongolianCase::genitive($org)."\n".$position;
         }
 
         return $position;
@@ -167,21 +173,41 @@ class AnnualLeaveNotice
     }
 
     /**
-     * Нэг (тушаал+нэр нэг мөрт, одоогийн хэлбэр) эсвэл хоёр (тушаал, нэр
-     * тус тусдаа мөрт, хуучин хэлбэр) мөр бүхий блокийг тушаал, нэр болгон
-     * хуваана.
+     * Тушаал (олон мөрт ч байж болно, жишээ нь байгууллагын нэр урт
+     * болоход тусдаа мөрөнд шилждэг) + нэрийг нэг блокоос задлана.
+     * Одоогийн хэлбэрт тэдгээрийг нэг таб тэмдэгтээр тусгаарладаг тул
+     * блок доторх СҮҮЛИЙН таб тэмдэгтээр нь хуваана (тушаалд өөрөө таб
+     * орохгүй) — ингэснээр тушаал хэдэн мөрт байсан ч зөв ялгарна.
+     * Хуучнаар хадгалсан өгөгдөлд таб огт байхгүй, тушаал, нэр тус
+     * тусдаа мөрөнд байсан тул энэ тохиолдолд сүүлийн хоосон бус мөрийг
+     * нэр гэж үзнэ.
      *
      * @return array{0: string, 1: string}
      */
     private static function splitSignatureBlock(string $block): array
     {
+        $block = trim($block, "\n");
+
+        if ($block === '') {
+            return ['', ''];
+        }
+
+        $tabPos = mb_strrpos($block, "\t");
+
+        if ($tabPos !== false) {
+            return [
+                trim(mb_substr($block, 0, $tabPos)),
+                trim(mb_substr($block, $tabPos + 1)),
+            ];
+        }
+
         $lines = array_values(array_filter(
-            preg_split('/\n/', trim($block)),
+            preg_split('/\n/', $block),
             fn (string $line) => trim($line) !== '',
         ));
 
         if (count($lines) >= 2) {
-            return [trim($lines[0]), trim($lines[1])];
+            return [trim($lines[0]), trim($lines[array_key_last($lines)])];
         }
 
         return self::splitSignatureLine($lines[0] ?? '');

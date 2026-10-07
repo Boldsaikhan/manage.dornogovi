@@ -151,15 +151,18 @@ class AnnualLeaveNoticeTest extends TestCase
             'person_name' => 'Г.Ганбүрэн',
         ]);
 
+        // Байгууллагын нэр, тушаалыг зайгаар биш мөр шилжилтээр холбоно —
+        // эс бөгөөс урт нэр хаанаас ч (нэрийг дундуур нь ч) таслагдаж болно.
         $this->assertSame(
-            'Улаанбадрах сумын Засаг дарга',
+            "Улаанбадрах сумын\nЗасаг дарга",
             \App\Support\AnnualLeaveNotice::ownPositionLine($row->fresh()),
         );
 
         $this->actingAs($admin)
             ->get(route('annual-leaves.notice', $row))
             ->assertOk()
-            ->assertSee('УЛААНБАДРАХ СУМЫН ЗАСАГ ДАРГА');
+            ->assertSee('УЛААНБАДРАХ СУМЫН')
+            ->assertSee('ЗАСАГ ДАРГА');
     }
 
     public function test_the_own_signature_line_falls_back_when_there_is_no_position(): void
@@ -354,6 +357,37 @@ class AnnualLeaveNoticeTest extends TestCase
 
         $this->assertStringContainsString('ОНӨАТҮГ', $text);
         $this->assertStringStartsWith('Дорноговь Орон сууц ОНӨАТҮГ-ын захиргааны', $text);
+    }
+
+    public function test_an_own_title_that_wraps_onto_a_new_line_survives_a_save_and_reload(): void
+    {
+        // ownPositionLine() нь урт байгууллагын нэртэй тушаалыг мөр
+        // шилжилтээр (\n) холбодог болсон — Хадгалах дарахад энэ олон
+        // мөрт тушаал нэг таб-аар нэрээс тусгаарлагдсан хэвээр зөв
+        // хадгалагдаж, дахин ачаалахад мөн зөв задарч харагдах ёстой.
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = AnnualLeave::create([
+            'user_id' => $admin->id,
+            'scope' => 'baiguullaga',
+            'org_name' => 'Дорноговь Орон сууц ОНӨАТҮГ-ын захиргаа',
+            'position' => 'Захиргааны дарга',
+            'person_name' => 'Н.Энхцэцэг',
+        ]);
+
+        $fields = \App\Support\AnnualLeaveNotice::signatureFields($row);
+        $this->assertSame("ДОРНОГОВЬ ОРОН СУУЦ ОНӨАТҮГ-ЫН ЗАХИРГААНЫ\nЗАХИРГААНЫ ДАРГА", $fields['ownTitle']);
+
+        $saved = \App\Support\AnnualLeaveNotice::fullText($row);
+
+        $this->actingAs($admin)
+            ->patch(route('annual-leaves.notice.text', $row), ['notice_text' => $saved])
+            ->assertRedirect();
+
+        $reparsed = \App\Support\AnnualLeaveNotice::signatureFields($row->fresh());
+
+        $this->assertSame($fields['ownTitle'], $reparsed['ownTitle']);
+        $this->assertSame('Н.ЭНХЦЭЦЭГ', $reparsed['ownName']);
     }
 
     public function test_the_whole_notice_can_be_edited_in_one_field_and_reset(): void
