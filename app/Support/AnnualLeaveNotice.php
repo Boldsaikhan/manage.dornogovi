@@ -50,13 +50,24 @@ class AnnualLeaveNotice
 
     /**
      * Амралт эдэлж буй хүний гарын үсгийн мөрөнд гарах албан тушаал —
-     * утасны жагсаалтад байгаагаар нь, өөрчлөлтгүйгээр харуулна.
+     * бичвэрийн өгүүлбэртэй адил («Засаг дарга» мэт богино тушаал
+     * байгууллага/сумынхаа нэрийг агуулаагүй бол урдаа нэмж залгана).
      */
     public static function ownPositionLine(AnnualLeave $row): string
     {
         $position = trim((string) $row->position);
 
-        return $position !== '' ? $position : 'Албан хаагч';
+        if ($position === '') {
+            return 'Албан хаагч';
+        }
+
+        $org = self::normalizeShoutyOrgName(trim((string) $row->org_name));
+
+        if ($org !== '' && ! self::orgAlreadyNamedIn($position, $org)) {
+            return MongolianCase::genitive($org).' '.$position;
+        }
+
+        return $position;
     }
 
     /**

@@ -136,8 +136,11 @@ class AnnualLeaveNoticeTest extends TestCase
         $this->assertSame('Ш.АМАРБИЛЭГ', $fields['ownName']);
     }
 
-    public function test_the_own_signature_line_shows_the_position_exactly_as_in_the_phone_directory(): void
+    public function test_the_own_signature_line_names_the_organisation_when_the_short_position_does_not_already_name_it(): void
     {
+        // Өгүүлбэртэй адил — «Засаг дарга» мэт богино тушаал сумынхаа
+        // нэрийг агуулдаггүй тул доод (өөрийн гарын үсгийн) мөрөнд ч
+        // байгууллагын нэр харагдах ёстой, өмнө нь энд огт гардаггүй байв.
         $admin = User::factory()->create(['is_admin' => true]);
 
         $row = AnnualLeave::create([
@@ -148,15 +151,15 @@ class AnnualLeaveNoticeTest extends TestCase
             'person_name' => 'Г.Ганбүрэн',
         ]);
 
+        $this->assertSame(
+            'Улаанбадрах сумын Засаг дарга',
+            \App\Support\AnnualLeaveNotice::ownPositionLine($row->fresh()),
+        );
+
         $this->actingAs($admin)
             ->get(route('annual-leaves.notice', $row))
             ->assertOk()
-            ->assertSee('ЗАСАГ ДАРГА');
-
-        $this->assertSame(
-            'Засаг дарга',
-            \App\Support\AnnualLeaveNotice::ownPositionLine($row->fresh()),
-        );
+            ->assertSee('УЛААНБАДРАХ СУМЫН ЗАСАГ ДАРГА');
     }
 
     public function test_the_own_signature_line_falls_back_when_there_is_no_position(): void
