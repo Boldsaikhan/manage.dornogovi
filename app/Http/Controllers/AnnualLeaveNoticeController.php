@@ -31,7 +31,7 @@ class AnnualLeaveNoticeController extends Controller
             'copies' => $copies,
             'bodyText' => AnnualLeaveNotice::bodyPart($annualLeave),
             'signatureFields' => AnnualLeaveNotice::signatureFields($annualLeave),
-            'signatureGapMm' => $annualLeave->signature_gap_mm ?? 10,
+            'signatureGapMm' => $annualLeave->signature_gap_mm ?? 30,
             'signatureRowGapMm' => (float) ($annualLeave->signature_row_gap_mm ?? 0),
             'number' => $this->rowNumber($annualLeave),
             'registeredOn' => $annualLeave->created_at,
