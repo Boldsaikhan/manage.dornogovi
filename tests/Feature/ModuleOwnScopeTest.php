@@ -162,6 +162,35 @@ class ModuleOwnScopeTest extends TestCase
             ->value('level'));
     }
 
+    public function test_a_role_with_a_long_label_can_save_permissions(): void
+    {
+        // roles.key нь 64 тэмдэгт хүртэл боловч role_permissions.role нь
+        // 32-оор хязгаарлагдмал байсан тул урт нэртэй (admin-ээс нэмсэн)
+        // роль дээр эрх хадгалахад "Data too long for column 'role'" 500
+        // алдаа гардаг байв.
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $longLabel = 'Мэргэжилтэн - Үүрэг даалгавар эрхтэй';
+        $this->assertGreaterThan(32, mb_strlen(\App\Models\Role::keyFor($longLabel)));
+
+        $this->actingAs($admin)
+            ->post(route('admin.roles.store'), ['label' => $longLabel])
+            ->assertRedirect();
+
+        $role = \App\Models\Role::query()->where('label', $longLabel)->firstOrFail();
+
+        $this->actingAs($admin)
+            ->patch(route('admin.roles.update', $role->key), [
+                'permissions' => ['tasks' => 'view_own'],
+            ])
+            ->assertRedirect();
+
+        $this->assertSame('view_own', \App\Models\RolePermission::query()
+            ->where('role', $role->key)
+            ->where('module_key', 'tasks')
+            ->value('level'));
+    }
+
     public function test_tasks_index_accepts_relation_query_without_type_error(): void
     {
         $user = User::factory()->create(['is_admin' => true]);
