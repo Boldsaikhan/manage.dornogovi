@@ -149,7 +149,7 @@
             display: grid;
             grid-template-columns: max-content max-content;
             column-gap: var(--sig-gap, 10mm);
-            row-gap: var(--sig-row-gap, 3mm);
+            row-gap: var(--sig-row-gap, 0mm);
             justify-content: center;
             /* Тушаал 2 мөрт үсэрвэл нэр нь доод (сүүлийн) мөртэй нь зэрэгцэнэ. */
             align-items: end;
