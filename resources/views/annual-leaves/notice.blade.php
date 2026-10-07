@@ -78,10 +78,19 @@
             flex-direction: column;
         }
 
+        /*
+         * А5 хэмжээтэй тэнцүү хувь болгон хуваахдаа агуулгыг дээд, доод
+         * хэсгийн голд нь байрлуулж, дээд/доод хоосон зайг тэнцүүлнэ —
+         * эс бөгөөс агуулга дээд талдаа наалдаж, доод тал нь хоосон
+         * харагддаг байв.
+         */
         .page--split .notice {
             flex: 1 1 50%;
             min-height: 0;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         .page--split .notice + .notice {
