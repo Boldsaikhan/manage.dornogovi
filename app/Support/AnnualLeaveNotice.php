@@ -18,6 +18,27 @@ class AnnualLeaveNotice
     ];
 
     /**
+     * Байгууллагын нэрийн харьяалахын тийн ялгалтай сүүлийн үг, тушаалын
+     * эхний үг ижил (жишээ нь «...газрын» + «Газрын дарга») бол тушаалын
+     * давтагдсан эхний үгийг хасна — эс бөгөөс «...газрын Газрын дарга»
+     * мэт давхардал үүснэ («...газрын дарга» гэж үлдэнэ).
+     */
+    private static function dropDuplicateLeadingWord(string $position, string $orgGenitive): string
+    {
+        $orgWords = preg_split('/\s+/u', trim($orgGenitive)) ?: [];
+        $lastOrgWord = mb_strtolower(rtrim((string) end($orgWords), '.,'));
+
+        $firstSpace = mb_strpos($position, ' ');
+        $firstWord = $firstSpace === false ? $position : mb_substr($position, 0, $firstSpace);
+
+        if ($lastOrgWord === '' || mb_strtolower(rtrim($firstWord, '.,')) !== $lastOrgWord) {
+            return $position;
+        }
+
+        return $firstSpace === false ? '' : trim(mb_substr($position, $firstSpace + 1));
+    }
+
+    /**
      * Зөвшөөрсөн албан тушаалтны толгойн бичвэр — «Зөвшөөрсөн» баганад
      * сонгосон хүний өөрийнх нь албан тушаалаар, үгүй бол урьдач
      * (ЗДТГ-ын дарга) бичвэрээр үүсгэнэ.
@@ -70,7 +91,10 @@ class AnnualLeaveNotice
              * ч) таслаж болдог байв. Ингэснээр нэр үргэлж бүтнээрээ нэг
              * мөрөнд, тушаал нь дараагийн мөрөнд байна.
              */
-            return MongolianCase::genitive($org)."\n".$position;
+            $orgGenitive = MongolianCase::genitive($org);
+            $rest = self::dropDuplicateLeadingWord($position, $orgGenitive);
+
+            return $rest !== '' ? $orgGenitive."\n".$rest : $orgGenitive;
         }
 
         return $position;
@@ -290,10 +314,16 @@ class AnnualLeaveNotice
 
         if ($position !== '') {
             if ($org !== '' && ! self::orgAlreadyNamedIn($position, $org)) {
-                $parts[] = MongolianCase::genitive($org);
-            }
+                $orgGenitive = MongolianCase::genitive($org);
+                $parts[] = $orgGenitive;
+                $rest = self::dropDuplicateLeadingWord($position, $orgGenitive);
 
-            $parts[] = $position;
+                if ($rest !== '') {
+                    $parts[] = $rest;
+                }
+            } else {
+                $parts[] = $position;
+            }
         } elseif ($org !== '') {
             $parts[] = MongolianCase::genitive($org);
         }

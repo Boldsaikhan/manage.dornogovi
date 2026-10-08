@@ -152,7 +152,16 @@
          */
         .notice .signatures-grid {
             display: grid;
-            grid-template-columns: max-content max-content;
+            /*
+             * minmax(0, max-content) — өргөн агуулгадаа тохируулан
+             * өргөснө, гэвч хуудасны өргөнөөс хэтрэхгүйгээр агшиж,
+             * дотор нь мөр шилждэг (pre-wrap). max-content ганцаараа бол
+             * хэтэрхий урт тушаал/байгууллагын нэрийг хэвээр нь (мөр
+             * шилжүүлэлгүйгээр) гаргаж, хуудаснаас гадуур алга болдог
+             * байв.
+             */
+            grid-template-columns: minmax(0, max-content) minmax(0, max-content);
+            max-width: 100%;
             column-gap: var(--sig-gap, 30mm);
             row-gap: var(--sig-row-gap, 0mm);
             justify-content: center;

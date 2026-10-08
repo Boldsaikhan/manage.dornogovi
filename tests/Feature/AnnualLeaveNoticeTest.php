@@ -356,7 +356,40 @@ class AnnualLeaveNoticeTest extends TestCase
         $text = \App\Support\AnnualLeaveNotice::text($row);
 
         $this->assertStringContainsString('ОНӨАТҮГ', $text);
-        $this->assertStringStartsWith('Дорноговь Орон сууц ОНӨАТҮГ-ын захиргааны', $text);
+        $this->assertStringStartsWith('Дорноговь Орон сууц ОНӨАТҮГ-ын захиргааны дарга', $text);
+        // «захиргааны» зэрэгцсэн давтагдахгүй.
+        $this->assertSame(1, substr_count(mb_strtolower($text), 'захиргааны'));
+    }
+
+    public function test_the_body_text_does_not_repeat_the_classifier_word_shared_by_the_org_and_position(): void
+    {
+        // «Газрын харилцаа, ... газар» нэртэй байгууллагын тушаал «Газрын
+        // дарга» бол хоёулаа «газар/газрын» гэдэг нэг язгуураас тул
+        // «...газрын Газрын дарга» гэж давхарч бичигддэг байв.
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $row = AnnualLeave::create([
+            'user_id' => $admin->id,
+            'scope' => 'baiguullaga',
+            'org_name' => 'Газрын харилцаа, барилга хот байгуулалтын газар',
+            'position' => 'Газрын дарга',
+            'person_name' => 'Л.Олзбаяр',
+            'entitled_days' => 20,
+            'start_date' => '2026-07-20',
+            'end_date' => '2026-08-14',
+        ]);
+
+        $text = \App\Support\AnnualLeaveNotice::text($row);
+
+        $this->assertStringStartsWith('Газрын харилцаа, барилга хот байгуулалтын газрын дарга', $text);
+        // Байгууллагын нэр өөрөө "газрын" гэдэг үгийг эхэнд (Газрын
+        // харилцаа) болон төгсгөлд (...газрын, "газар"-ын тийн ялгал)
+        // хоёуланд нь агуулдаг тул 2 удаа гарна — зөвхөн тушаалаас
+        // давхарласан 3 дахь тохиолдол л байх ёсгүй.
+        $this->assertSame(2, substr_count(mb_strtolower($text), 'газрын'));
+
+        $ownTitle = \App\Support\AnnualLeaveNotice::ownPositionLine($row);
+        $this->assertSame("Газрын харилцаа, барилга хот байгуулалтын газрын\nдарга", $ownTitle);
     }
 
     public function test_an_own_title_that_wraps_onto_a_new_line_survives_a_save_and_reload(): void
@@ -365,6 +398,7 @@ class AnnualLeaveNoticeTest extends TestCase
         // шилжилтээр (\n) холбодог болсон — Хадгалах дарахад энэ олон
         // мөрт тушаал нэг таб-аар нэрээс тусгаарлагдсан хэвээр зөв
         // хадгалагдаж, дахин ачаалахад мөн зөв задарч харагдах ёстой.
+        // («Захиргааны» давхар давтагдахгүй — dropDuplicateLeadingWord().)
         $admin = User::factory()->create(['is_admin' => true]);
 
         $row = AnnualLeave::create([
@@ -376,7 +410,7 @@ class AnnualLeaveNoticeTest extends TestCase
         ]);
 
         $fields = \App\Support\AnnualLeaveNotice::signatureFields($row);
-        $this->assertSame("ДОРНОГОВЬ ОРОН СУУЦ ОНӨАТҮГ-ЫН ЗАХИРГААНЫ\nЗАХИРГААНЫ ДАРГА", $fields['ownTitle']);
+        $this->assertSame("ДОРНОГОВЬ ОРОН СУУЦ ОНӨАТҮГ-ЫН ЗАХИРГААНЫ\nДАРГА", $fields['ownTitle']);
 
         $saved = \App\Support\AnnualLeaveNotice::fullText($row);
 
