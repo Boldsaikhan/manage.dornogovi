@@ -21,6 +21,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Contracts\View\View;
@@ -760,19 +761,27 @@ class DecreeController extends Controller
 
             $person = PersonName::short(trim((string) ($data['person_name'] ?? '')));
 
-            // Тоо ширхэгээс хамааруулж хэвлэмэл хуудасны дугаарыг бодно.
-            $data = $this->applyBlankNumbering($data);
+            /*
+             * Хоёр хүн бараг нэг зэрэг хадгалбал хоёулаа хуучин (өөр нэг
+             * нь аль хэдийн авсан) дугаараас дараагийн мужийг тооцож,
+             * ижил дугаар давхар олгогдох эрсдэлтэй — тоо ширхэгээс
+             * хамааруулж дугаар бодоод, тэр дороо хадгалах хүртэл цоожилно.
+             */
+            $created = Cache::lock('decree-blank-numbering', 10)->block(5, function () use ($data, $person, $request) {
+                // Тоо ширхэгээс хамааруулж хэвлэмэл хуудасны дугаарыг бодно.
+                $data = $this->applyBlankNumbering($data);
 
-            $created = Decree::query()->create([
-                ...$data,
-                'person_name' => $person !== '' ? $person : null,
-                'issued_on' => $data['issued_on'] ?? null,
-                'category' => 'blank',
-                'kind' => 'blank',
-                'title' => $person !== '' ? $person : '',
-                'number' => null,
-                'created_by' => $request->user()->id,
-            ]);
+                return Decree::query()->create([
+                    ...$data,
+                    'person_name' => $person !== '' ? $person : null,
+                    'issued_on' => $data['issued_on'] ?? null,
+                    'category' => 'blank',
+                    'kind' => 'blank',
+                    'title' => $person !== '' ? $person : '',
+                    'number' => null,
+                    'created_by' => $request->user()->id,
+                ]);
+            });
 
             $this->log($created, 'created', 'Бланкны мөр «Мөр нэмэх» товчоор нэмэгдлээ.');
 
@@ -879,20 +888,36 @@ class DecreeController extends Controller
                 }
             }
 
-            // Тоо ширхэг өөрчлөгдвөл бүлгийн онцгой байдал болон дугаарлалтыг дахин бодно.
-            $qtyTouched = (bool) array_intersect(array_keys($data), [
+            /*
+             * Тоо ширхэг өөрчлөгдвөл бүлгийн онцгой байдал болон
+             * дугаарлалтыг дахин бодно. Нэрийг зөвхөн ХООСНООС бөглөх
+             * (анх удаа хуваарилах) эсвэл бөглөснөөс ХООСЛОХ (цэвэрлэх)
+             * үед л дахин бодно — аль хэдийн дугаар авсан мөрийн нэрийг
+             * ЗАСАХ (жишээ нь алдаа тохируулах) нь шинэ дугаар авах ёсгүй,
+             * эс бөгөөс олгосон цаасны дугаар дэмий солигдож, хуучин нь
+             * хэрэглэгдэхгүй үлдэж («алга болсон» дугаар) байв.
+             */
+            $personNameTouched = array_key_exists('person_name', $data);
+            $personWasEmpty = trim((string) $decree->person_name) === '';
+            $personNowEmpty = $personNameTouched && trim((string) ($data['person_name'] ?? '')) === '';
+            $personEmptinessChanged = $personNameTouched && ($personWasEmpty !== $personNowEmpty);
+
+            $qtyTouched = $personEmptinessChanged || (bool) array_intersect(array_keys($data), [
                 'qty_zahiramj', 'qty_zahiramj_mn', 'qty_tushaal', 'qty_tushaal_mn',
                 'qty_assignment', 'qty_assignment_mn', 'qty_council', 'qty_council_mn',
                 'num_zahiramj', 'num_tushaal',
-                // Нэр цэвэрлэгдвэл мөрийн бүх утга дагаж цэвэрлэгдэнэ.
-                'person_name',
             ]);
 
             if ($qtyTouched) {
-                $data = $this->applyBlankNumbering($data, $decree);
+                // Хоёр хүн бараг нэг зэрэг хадгалбал ижил дугаар давхар
+                // олгогдохоос сэргийлж дугаар бодоод, хадгалах хүртэл цоожилно.
+                Cache::lock('decree-blank-numbering', 10)->block(5, function () use (&$data, $decree, $request) {
+                    $data = $this->applyBlankNumbering($data, $decree);
+                    $this->saveWithUndo($request, $decree, $data);
+                });
+            } else {
+                $this->saveWithUndo($request, $decree, $data);
             }
-
-            $this->saveWithUndo($request, $decree, $data);
         } else {
             $data = $request->validate([
                 'kind' => ['sometimes', 'nullable', Rule::in(self::DOC_KINDS)],

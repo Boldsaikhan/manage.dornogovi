@@ -134,4 +134,38 @@ class DecreeBlankNumberingTest extends TestCase
         $this->assertSame(4, $fresh->qty_zahiramj);
         $this->assertSame('1-4', $fresh->num_zahiramj);
     }
+
+    public function test_correcting_the_name_on_an_already_numbered_row_does_not_reassign_a_new_number(): void
+    {
+        // Алдаа засах мэт нэр ЗАСАХ (хоосноос бөглөх биш) нь аль хэдийн
+        // олгосон цаасны дугаарыг дахин бодож, хуучин дугаарыг "алга
+        // болгож" (хэрэглэгдэхгүй үлдээж), шинэ дугаар олгодог байв.
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->post(route('decrees.store'), [
+            'tab' => 'blank',
+            'person_name' => 'Б.Ауюш',
+            'qty_zahiramj' => 2,
+        ])->assertRedirect();
+
+        $first = Decree::query()->firstOrFail();
+        $this->assertSame('1-2', $first->num_zahiramj);
+
+        // Өөр хүнд дугаар олгогдоно — дараагийн мужаас эхэлнэ.
+        $this->actingAs($admin)->post(route('decrees.store'), [
+            'tab' => 'blank',
+            'person_name' => 'Ц.Батсугир',
+            'qty_zahiramj' => 2,
+        ])->assertRedirect();
+
+        // Эхний мөрийн нэрэн дэх алдааг засна (хоосноос бөглөхгүй, зөвхөн
+        // нэрийг нь тохируулна) — дугаар өөрчлөгдөх ёсгүй.
+        $this->actingAs($admin)
+            ->patch(route('decrees.update', $first), ['person_name' => 'Б.Аюуш'])
+            ->assertRedirect();
+
+        $fresh = $first->fresh();
+        $this->assertSame('Б.Аюуш', $fresh->person_name);
+        $this->assertSame('1-2', $fresh->num_zahiramj);
+    }
 }
