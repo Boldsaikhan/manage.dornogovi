@@ -423,6 +423,37 @@ class AssignmentRegisterExportTest extends TestCase
         $this->assertNull($row->destination);
     }
 
+    public function test_a_blank_row_does_not_link_the_creating_admin_as_the_traveller(): void
+    {
+        // Хоосон мөр нэмэгчдийн олонх нь өөрийн биш, бусад албан хаагчийн
+        // томилолтыг бүртгэдэг — user_id нь үүсгэгч админд холбогдвол
+        // «Овог нэр» хараахан сонгоогүй атал админы ӨӨРИЙНХ нь нэр, албан
+        // тушаал хүснэгтэд санамсаргүй харагддаг байв.
+        $admin = User::factory()->create([
+            'is_admin' => true,
+            'name' => 'Ү.Үндсэн админ',
+            'position' => 'Хэвлэл, мэдээлэл, олон нийт харилцах асуудал хариуцсан мэргэжилтэн',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('modules.store', ['module' => 'assignments']), [
+                'blank' => true,
+                'approver' => 'governor',
+            ])
+            ->assertRedirect();
+
+        $row = TravelAssignment::query()->latest('id')->first();
+
+        $this->assertNull($row->user_id);
+        $this->assertSame($admin->department_id, $row->department_id);
+
+        $this->actingAs($admin)
+            ->get(route('assignments.index'))
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->where('rows.0.user_name', '—')
+                ->where('rows.0.user_position', '—'));
+    }
+
     public function test_the_leadership_list_falls_back_to_the_position(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
