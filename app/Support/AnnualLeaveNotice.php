@@ -85,16 +85,22 @@ class AnnualLeaveNotice
         $org = self::normalizeShoutyOrgName(trim((string) $row->org_name));
 
         if ($org !== '' && ! self::orgAlreadyNamedIn($position, $org)) {
-            /*
-             * Зайгаар биш мөр шилжилтээр холбоно — эс бөгөөс байгууллагын
-             * нэр багтахгүй үед CSS чөлөөтэй хаанаас ч (нэрийг дундуур нь
-             * ч) таслаж болдог байв. Ингэснээр нэр үргэлж бүтнээрээ нэг
-             * мөрөнд, тушаал нь дараагийн мөрөнд байна.
-             */
             $orgGenitive = MongolianCase::genitive($org);
             $rest = self::dropDuplicateLeadingWord($position, $orgGenitive);
 
-            return $rest !== '' ? $orgGenitive."\n".$rest : $orgGenitive;
+            if ($rest === '') {
+                return $orgGenitive;
+            }
+
+            /*
+             * Байгууллагын нэрийн сүүлийн үг, тушаалын үлдэгдлийг (жишээ
+             * нь «...ГАЗРЫН» + «ДАРГА») тасрашгүй зайгаар холбоно —
+             * эс бөгөөс урт нэр мөр шилжихэд тэдгээр нь тус тусдаа мөрөнд
+             * (нэг нь ганцаараа орфанаар) хуваагдаж, уншихад эвгүй харагддаг
+             * байв. Ингэснээр мөр шилжих шаардлагатай болоход л тэдгээрийг
+             * хамт доош нь шилжүүлнэ.
+             */
+            return $orgGenitive."\u{00A0}".$rest;
         }
 
         return $position;

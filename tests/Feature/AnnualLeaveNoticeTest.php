@@ -151,10 +151,11 @@ class AnnualLeaveNoticeTest extends TestCase
             'person_name' => 'Г.Ганбүрэн',
         ]);
 
-        // Байгууллагын нэр, тушаалыг зайгаар биш мөр шилжилтээр холбоно —
-        // эс бөгөөс урт нэр хаанаас ч (нэрийг дундуур нь ч) таслагдаж болно.
+        // Байгууллагын нэрийн сүүлийн үг, тушаалыг тасрашгүй зайгаар
+        // холбоно — эс бөгөөс мөр шилжихэд тэдгээр нь тусдаа мөрөнд
+        // (нэг нь ганцаараа) хуваагдаж болно.
         $this->assertSame(
-            "Улаанбадрах сумын\nЗасаг дарга",
+            "Улаанбадрах сумын\u{00A0}Засаг дарга",
             \App\Support\AnnualLeaveNotice::ownPositionLine($row->fresh()),
         );
 
@@ -389,16 +390,17 @@ class AnnualLeaveNoticeTest extends TestCase
         $this->assertSame(2, substr_count(mb_strtolower($text), 'газрын'));
 
         $ownTitle = \App\Support\AnnualLeaveNotice::ownPositionLine($row);
-        $this->assertSame("Газрын харилцаа, барилга хот байгуулалтын газрын\nдарга", $ownTitle);
+        $this->assertSame("Газрын харилцаа, барилга хот байгуулалтын газрын\u{00A0}дарга", $ownTitle);
     }
 
-    public function test_an_own_title_that_wraps_onto_a_new_line_survives_a_save_and_reload(): void
+    public function test_an_own_title_with_a_non_breaking_glue_survives_a_save_and_reload(): void
     {
-        // ownPositionLine() нь урт байгууллагын нэртэй тушаалыг мөр
-        // шилжилтээр (\n) холбодог болсон — Хадгалах дарахад энэ олон
-        // мөрт тушаал нэг таб-аар нэрээс тусгаарлагдсан хэвээр зөв
-        // хадгалагдаж, дахин ачаалахад мөн зөв задарч харагдах ёстой.
-        // («Захиргааны» давхар давтагдахгүй — dropDuplicateLeadingWord().)
+        // ownPositionLine() нь урт байгууллагын нэртэй тушаалын сүүлийн
+        // холбоос цэгийг (байгууллагын нэр + тушаалын үлдэгдэл) тасрашгүй
+        // зайгаар холбодог болсон — Хадгалах дарахад энэ тушаал нэг
+        // таб-аар нэрээс тусгаарлагдсан хэвээр зөв хадгалагдаж, дахин
+        // ачаалахад мөн зөв задарч харагдах ёстой («Захиргааны» давхар
+        // давтагдахгүй — dropDuplicateLeadingWord()).
         $admin = User::factory()->create(['is_admin' => true]);
 
         $row = AnnualLeave::create([
@@ -410,7 +412,7 @@ class AnnualLeaveNoticeTest extends TestCase
         ]);
 
         $fields = \App\Support\AnnualLeaveNotice::signatureFields($row);
-        $this->assertSame("ДОРНОГОВЬ ОРОН СУУЦ ОНӨАТҮГ-ЫН ЗАХИРГААНЫ\nДАРГА", $fields['ownTitle']);
+        $this->assertSame("ДОРНОГОВЬ ОРОН СУУЦ ОНӨАТҮГ-ЫН ЗАХИРГААНЫ\u{00A0}ДАРГА", $fields['ownTitle']);
 
         $saved = \App\Support\AnnualLeaveNotice::fullText($row);
 
