@@ -128,6 +128,14 @@ return [
             'own_scope' => 'user_id',
         ],
         [
+            'key' => 'foreign-trips',
+            'label' => 'Гадаадад зорчих хүсэлт',
+            'route' => 'foreign-trips.index',
+            'group' => 'hr',
+            'icon' => 'globe',
+            'own_scope' => 'person_name',
+        ],
+        [
             'key' => 'phone_directory',
             'label' => 'Утасны жагсаалт',
             'route' => 'phone-directory.index',
