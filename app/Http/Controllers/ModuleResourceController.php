@@ -1130,6 +1130,9 @@ class ModuleResourceController extends Controller
                 'user_id' => $user->id,
                 'department_id' => $user->department_id,
             ]),
+            'attach_department' => array_merge($data, [
+                'department_id' => $user->department_id,
+            ]),
             'attach_creator' => array_merge($data, [
                 'created_by' => $user->id,
             ]),
