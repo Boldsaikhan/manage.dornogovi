@@ -26,6 +26,7 @@ use App\Http\Controllers\PwaManifestController;
 use App\Http\Controllers\RegulationCategoryController;
 use App\Http\Controllers\SystemViewController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\ForeignTripPrintController;
 use App\Http\Controllers\TravelAssignmentSheetController;
 use App\Http\Controllers\UndoController;
 use App\Http\Controllers\VaultController;
@@ -155,6 +156,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/document-standards', [DocumentStandardController::class, 'storeStandard'])->name('document-standards.store');
     Route::delete('/document-standards/{standard}', [DocumentStandardController::class, 'destroyStandard'])->name('document-standards.destroy');
     Route::get('/modules/plans', [ModuleResourceController::class, 'index'])->name('plans.index');
+    Route::get('/modules/foreign-trips', [ModuleResourceController::class, 'index'])->name('foreign-trips.index');
+    Route::get('/modules/foreign-trips/{foreignTrip}/print', [ForeignTripPrintController::class, 'show'])->name('foreign-trips.print');
     Route::get('/modules/meetings', [ModuleResourceController::class, 'index'])->name('meetings.index');
     Route::get('/modules/reports', [ReportCatalogController::class, 'index'])->name('reports.index');
     Route::get('/modules/reports/{report}/export', [ReportCatalogController::class, 'export'])->name('reports.export');
