@@ -98,6 +98,12 @@ const redo = () => {
  */
 const kindTabs = computed(() => props.kinds);
 
+/** Удирдлагын байнгын хэсгүүд — устгах боломжгүй, жагсаалтын эхэнд. */
+const leadershipTabs = computed(() => kindTabs.value.filter((item) => item.is_locked));
+
+/** Хэрэглэгчийн үүсгэсэн хэсгүүд. */
+const createdTabs = computed(() => kindTabs.value.filter((item) => ! item.is_locked));
+
 const hasKinds = computed(() => kindTabs.value.length > 0);
 
 const isDirective = computed(() => (props.source?.layout || props.kind) !== 'prep_plan');
@@ -1539,7 +1545,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                         Эх файл
                     </a>
                     <button
-                        v-if="canManage && kindTabs.length > 1"
+                        v-if="canManage && kindTabs.length > 1 && ! source.is_locked"
                         type="button"
                         class="ui-btn-ghost w-full text-red-600 sm:w-auto"
                         :disabled="deletingKind"
@@ -1828,12 +1834,32 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                 :class="viewMode === 'table' ? 'ui-tasks-table-shell lg:grid-rows-[minmax(0,1fr)]' : ''"
             >
                 <aside class="ui-card min-h-0 max-h-full self-start overflow-y-auto p-3">
+                    <template v-if="leadershipTabs.length">
+                        <p class="mb-2 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                            Удирдлага
+                        </p>
+                        <nav class="mb-4 space-y-0.5">
+                            <Link
+                                v-for="item in leadershipTabs"
+                                :key="item.key"
+                                :href="route('tasks.index', { kind: item.key })"
+                                class="block rounded-lg px-2.5 py-2 text-sm transition"
+                                :class="kind === item.key
+                                    ? 'bg-brand-navy-600 font-semibold text-white'
+                                    : 'text-slate-700 hover:bg-slate-100'"
+                                @click.prevent="switchKind(item.key)"
+                            >
+                                {{ item.label }}
+                            </Link>
+                        </nav>
+                    </template>
+
                     <p class="mb-2 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
                         Үүсгэсэн үүрэг даалгавар
                     </p>
                     <nav class="space-y-0.5">
                         <Link
-                            v-for="item in kindTabs"
+                            v-for="item in createdTabs"
                             :key="item.key"
                             :href="route('tasks.index', { kind: item.key })"
                             class="block rounded-lg px-2.5 py-2 text-sm transition"

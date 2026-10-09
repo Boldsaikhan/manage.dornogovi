@@ -49,6 +49,7 @@ class TaskController extends Controller
                         'name' => 'Үүрэг даалгавар',
                         'layout' => TaskSource::KEY_DIRECTIVE,
                         'is_system' => true,
+                        'is_locked' => false,
                         'columns' => (new TaskSource(['key' => TaskSource::KEY_DIRECTIVE, 'layout' => TaskSource::KEY_DIRECTIVE]))->resolvedColumns(),
                     ],
                     'columnChoices' => TaskSource::columnCatalog(),
@@ -112,6 +113,7 @@ class TaskController extends Controller
                 'name' => $source->name,
                 'layout' => $source->layout ?: $source->key,
                 'is_system' => $source->isSystem(),
+                'is_locked' => $source->isLocked(),
                 'columns' => $source->resolvedColumns(),
             ],
             'columnChoices' => TaskSource::columnCatalog(),
@@ -919,6 +921,13 @@ class TaskController extends Controller
 
         $model = TaskSource::query()->where('key', $source)->firstOrFail();
 
+        // Удирдлагын байнгын хэсгүүдийг устгахыг хориглоно.
+        if ($model->isLocked()) {
+            return back()->withErrors([
+                'source' => sprintf('«%s» бол байнгын хэсэг — устгах боломжгүй.', $model->name),
+            ]);
+        }
+
         // Бүгдийг устгавал хуудас хоосорно — дор хаяж нэгийг үлдээнэ.
         if (TaskSource::query()->count() <= 1) {
             return back()->withErrors([
@@ -956,7 +965,7 @@ class TaskController extends Controller
     }
 
     /**
-     * @return list<array{key: string, label: string, layout: string, is_system: bool}>
+     * @return list<array{key: string, label: string, layout: string, is_system: bool, is_locked: bool}>
      */
     /**
      * Тухайн хэрэглэгч энэ хэсгийг харах эрхтэй эсэх.
@@ -1002,6 +1011,7 @@ class TaskController extends Controller
                 'label' => $source->name,
                 'layout' => $source->layout ?: $source->key,
                 'is_system' => $source->isSystem(),
+                'is_locked' => $source->isLocked(),
             ])
             ->values()
             ->all();

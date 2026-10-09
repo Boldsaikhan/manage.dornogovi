@@ -103,9 +103,25 @@ class TaskSourceColumnsTest extends TestCase
         $this->assertDatabaseMissing('task_sources', ['id' => $prep->id]);
     }
 
+    public function test_leadership_sections_cannot_be_deleted(): void
+    {
+        $admin = $this->admin();
+
+        foreach (array_keys(TaskSource::LEADERSHIP) as $key) {
+            $this->actingAs($admin)
+                ->delete(route('tasks.sources.destroy', $key))
+                ->assertSessionHasErrors('source');
+
+            $this->assertDatabaseHas('task_sources', ['key' => $key]);
+        }
+    }
+
     public function test_last_section_cannot_be_deleted(): void
     {
         $admin = $this->admin();
+
+        // Удирдлагын байнгын хэсгүүд устахгүй тул тэднийг шууд хасна.
+        TaskSource::query()->whereIn('key', array_keys(TaskSource::LEADERSHIP))->delete();
 
         // Нэгээс бусдыг нь устгана.
         $keep = TaskSource::query()->orderBy('id')->firstOrFail();
