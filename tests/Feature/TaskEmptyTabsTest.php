@@ -74,8 +74,18 @@ class TaskEmptyTabsTest extends TestCase
         $this->actingAs($admin)
             ->get(route('tasks.index', ['kind' => 'directive']))
             ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('kinds.0.key', 'directive')
-                ->where('kinds.0.label', 'Үүрэг чиглэл'));
+            ->assertInertia(function (AssertableInertia $page): void {
+                $kinds = collect($page->toArray()['props']['kinds']);
+
+                // Удирдлагын байнгын хэсгүүд эхэнд, дараа нь бусад.
+                $this->assertSame(
+                    array_keys(TaskSource::LEADERSHIP),
+                    $kinds->take(count(TaskSource::LEADERSHIP))->pluck('key')->all(),
+                );
+
+                $directive = $kinds->firstWhere('key', 'directive');
+                $this->assertNotNull($directive);
+                $this->assertSame('Үүрэг чиглэл', $directive['label']);
+            });
     }
 }

@@ -14,6 +14,17 @@ class TaskSource extends Model
 
     public const LAYOUTS = [self::KEY_DIRECTIVE, self::KEY_PREP_PLAN];
 
+    /**
+     * Удирдлагын байнгын хэсгүүд — устгах боломжгүй.
+     *
+     * @var array<string, string>
+     */
+    public const LEADERSHIP = [
+        'governor' => 'Аймгийн Засаг дарга',
+        'vice_governor' => 'Засаг даргын орлогч',
+        'chief_of_staff' => 'Тамгын газрын дарга',
+    ];
+
     public const COLUMN_SECTOR = 'sector';
 
     public const COLUMN_MEASURE = 'measure';
@@ -50,6 +61,14 @@ class TaskSource extends Model
     public function isSystem(): bool
     {
         return in_array($this->key, [self::KEY_DIRECTIVE, self::KEY_PREP_PLAN], true);
+    }
+
+    /**
+     * Удирдлагын хэсгийг устгах, нэрийг нь солихыг хориглоно.
+     */
+    public function isLocked(): bool
+    {
+        return array_key_exists((string) $this->key, self::LEADERSHIP);
     }
 
     public function isPrepLayout(): bool
