@@ -1827,7 +1827,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                 class="grid min-h-0 gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]"
                 :class="viewMode === 'table' ? 'ui-tasks-table-shell lg:grid-rows-[minmax(0,1fr)]' : ''"
             >
-                <aside class="ui-card min-h-0 overflow-y-auto p-3">
+                <aside class="ui-card min-h-0 max-h-full self-start overflow-y-auto p-3">
                     <p class="mb-2 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
                         Үүсгэсэн үүрэг даалгавар
                     </p>
