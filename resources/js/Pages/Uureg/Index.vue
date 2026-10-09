@@ -25,6 +25,7 @@ const props = defineProps({
     canExport: { type: Boolean, default: false },
     canImport: { type: Boolean, default: false },
     undoCount: { type: Number, default: 0 },
+    redoCount: { type: Number, default: 0 },
 });
 
 /*
@@ -59,6 +60,7 @@ const logTone = (action) => ({
 }[action] ?? 'bg-slate-100 text-slate-600');
 
 const undoing = ref(false);
+const redoing = ref(false);
 
 const undo = () => {
     if (undoing.value || props.undoCount < 1) {
@@ -70,6 +72,21 @@ const undo = () => {
         preserveScroll: true,
         onFinish: () => {
             undoing.value = false;
+        },
+    });
+};
+
+/** Буцаасан үйлдлийг эргүүлж хийнэ. */
+const redo = () => {
+    if (redoing.value || props.redoCount < 1) {
+        return;
+    }
+
+    redoing.value = true;
+    router.post(route('redo.store'), {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            redoing.value = false;
         },
     });
 };
@@ -1356,6 +1373,20 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                             <path d="M4 9h10a6 6 0 010 12h-3" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                         Буцаах<span v-if="undoCount"> ({{ undoCount }})</span>
+                    </button>
+                    <button
+                        v-if="canEdit || canEditProgress"
+                        type="button"
+                        class="ui-btn-ghost w-full sm:w-auto"
+                        :disabled="redoCount < 1 || redoing"
+                        :title="redoCount ? 'Буцаасан үйлдлийг дахин хийх' : 'Дахин хийх үйлдэл алга'"
+                        @click="redo"
+                    >
+                        <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path d="M15 14l5-5-5-5" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M20 9H10a6 6 0 000 12h3" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        Дахин<span v-if="redoCount"> ({{ redoCount }})</span>
                     </button>
                     <button
                         v-if="hasKinds"

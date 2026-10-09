@@ -56,7 +56,10 @@ class TaskController extends Controller
                     'documents' => [],
                     'people' => $this->phoneDirectoryPeople(),
                     ...ModuleAccess::taskPagePermissions($user),
-                    'undoCount' => EditUndo::query()->where('user_id', $user->id)->count(),
+                    'undoCount' => EditUndo::query()->where('user_id', $user->id)
+                        ->where('kind', EditUndo::UNDO)->count(),
+                    'redoCount' => EditUndo::query()->where('user_id', $user->id)
+                        ->where('kind', EditUndo::REDO)->count(),
                 ]);
             }
 
@@ -116,7 +119,10 @@ class TaskController extends Controller
             'documents' => $documents,
             'people' => $this->phoneDirectoryPeople(),
             ...ModuleAccess::taskPagePermissions($user),
-            'undoCount' => EditUndo::query()->where('user_id', $user->id)->count(),
+            'undoCount' => EditUndo::query()->where('user_id', $user->id)
+                        ->where('kind', EditUndo::UNDO)->count(),
+                    'redoCount' => EditUndo::query()->where('user_id', $user->id)
+                        ->where('kind', EditUndo::REDO)->count(),
         ]);
     }
 
