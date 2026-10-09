@@ -298,11 +298,22 @@ class TaskController extends Controller
             $text = $measure;
         }
 
+        $responsible = PersonName::shortList($data['responsible'] ?? null) ?: null;
+
+        /*
+         * Зөвхөн өөрт хамааралтай мөрийг хардаг хэрэглэгч шинэ мөр нэмэхэд
+         * хариуцагчийг нь өөрөөр нь тавина — эс бөгөөс нэмсэн мөр нь өөрт
+         * нь харагдахгүй алга болно.
+         */
+        if ($responsible === null && ModuleAccess::scopeOwnOnly($request->user(), 'tasks')) {
+            $responsible = PersonName::shortList($request->user()->name) ?: $request->user()->name;
+        }
+
         $task = $source->tasks()->create([
             'text' => $text,
             'measure' => $measure !== '' ? $measure : null,
             'period' => $data['period'] ?? null,
-            'responsible' => PersonName::shortList($data['responsible'] ?? null) ?: null,
+            'responsible' => $responsible,
             'collaborator' => PersonName::shortList($data['collaborator'] ?? null) ?: null,
             'sector' => $data['sector'] ?? null,
             'sort_order' => $next,
