@@ -8,7 +8,7 @@ import TaskPeriodCell from '@/Components/TaskPeriodCell.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import TaskCalendar from '@/Components/TaskCalendar.vue';
 import { expandPersonNames, GROUP_LABELS } from '@/utils/soumGovernors';
-import { formatTaskPeriodMd, isTaskDone, isTaskOverdue, isTaskPending } from '@/utils/taskPeriod';
+import { formatTaskPeriodMd, isTaskDone, isTaskOverdue, isTaskPending, parseTaskPeriod } from '@/utils/taskPeriod';
 
 const props = defineProps({
     kind: { type: String, required: true },
@@ -890,6 +890,22 @@ const hasColumnFilters = computed(
 
 const clearColumnFilters = () => Object.keys(columnFilters).forEach((k) => (columnFilters[k] = ''));
 
+/** Олон мөрөнд нэг дор оруулах хугацаа — огноогоор сонгоно. */
+const bulkPeriodStart = ref('');
+const bulkPeriodEnd = ref('');
+
+watch([bulkPeriodStart, bulkPeriodEnd], () => {
+    if (bulkPeriodEnd.value && bulkPeriodStart.value && bulkPeriodEnd.value < bulkPeriodStart.value) {
+        bulkPeriodEnd.value = bulkPeriodStart.value;
+    }
+
+    const start = bulkPeriodStart.value;
+    const end = bulkPeriodEnd.value || start;
+
+    bulk.period = start ? formatTaskPeriodMd(start, end) : '';
+    markBulkField('period', bulk.period);
+});
+
 // Багана өөрчлөгдвөл (өөр таб, өөр загвар) түлхүүрүүдийг шинэчилнэ.
 watch(
     tableColumns,
@@ -946,6 +962,22 @@ const matchesColumnFilters = (task) => Object.entries(columnFilters).every(([key
     if (text === '') return true;
 
     const column = tableColumns.value.find((col) => col.key === key);
+
+    /*
+     * «Хугацаа» баганад огноо сонгоно — тухайн өдрийг хамарсан
+     * үүрэг чиглэлүүд үлдэнэ (08.01–09.30 гэх мэт мөрийг задалж үзнэ).
+     */
+    if (column?.type === 'period') {
+        const parsed = parseTaskPeriod(task[column.field] ?? '', new Date(text).getFullYear());
+
+        if (! parsed || parsed.unparsed || ! parsed.start || ! parsed.end) {
+            return false;
+        }
+
+        const target = new Date(text).getTime();
+
+        return parsed.start.getTime() <= target && target <= parsed.end.getTime();
+    }
 
     return searchKey(task[column?.field ?? key]).includes(searchKey(text));
 });
@@ -1059,6 +1091,8 @@ const clearSelection = () => {
 
 const resetBulkForm = () => {
     bulk.period = '';
+    bulkPeriodStart.value = '';
+    bulkPeriodEnd.value = '';
     bulk.responsible = '';
     bulk.collaborator = '';
     bulk.note = '';
@@ -1893,13 +1927,22 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                             <input v-model="bulkApply.period" type="checkbox" class="rounded border-slate-300 text-brand-navy-600" />
                             Хугацаа
                         </span>
-                        <input
-                            v-model="bulk.period"
-                            type="text"
-                            class="ui-input w-full text-sm"
-                            placeholder="Ж: 08.01–09.30"
-                            @input="markBulkField('period', bulk.period)"
-                        />
+                        <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-1">
+                            <input
+                                v-model="bulkPeriodStart"
+                                type="date"
+                                class="ui-input w-full min-w-0 !px-2 text-sm"
+                                aria-label="Эхлэх огноо"
+                            />
+                            <span class="text-center text-slate-400">—</span>
+                            <input
+                                v-model="bulkPeriodEnd"
+                                type="date"
+                                class="ui-input w-full min-w-0 !px-2 text-sm"
+                                :min="bulkPeriodStart || undefined"
+                                aria-label="Дуусах огноо"
+                            />
+                        </div>
                     </label>
                     <label v-if="hasColumn('responsible')" class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-2">
                         <span class="flex items-center gap-2 text-xs font-medium text-slate-600">
@@ -2056,6 +2099,14 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                             </th>
                             <th v-for="col in tableColumns" :key="'f-' + col.key">
                                 <input
+                                    v-if="col.type === 'period'"
+                                    v-model="columnFilters[col.key]"
+                                    type="date"
+                                    :aria-label="col.label + ' — огноогоор шүүх'"
+                                    title="Сонгосон огноог хамарсан үүрэг чиглэлүүд"
+                                />
+                                <input
+                                    v-else
                                     v-model="columnFilters[col.key]"
                                     type="search"
                                     placeholder="Хайх"
