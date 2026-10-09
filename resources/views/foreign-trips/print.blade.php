@@ -22,23 +22,9 @@
                 : '<span class="line"></span><span class="line"></span>';
         };
     @endphp
+    @include('partials.print-shell')
+
     <style>
-        /* Хэмжээ, зай, фонтыг «Бичиг хэргийн стандарт»-аас авна. */
-        @page {
-            size: {{ $format['width'] }}mm {{ $format['height'] }}mm;
-            margin: {{ $format['top'] }}mm {{ $format['right'] }}mm {{ $format['bottom'] }}mm {{ $format['left'] }}mm;
-        }
-
-        * { box-sizing: border-box; }
-
-        body {
-            margin: 0;
-            font-family: "{{ $format['font'] }}", Arial, Helvetica, sans-serif;
-            font-size: {{ $format['size'] }}pt;
-            line-height: {{ $format['spacing'] }};
-            color: #000;
-        }
-
         .addressee {
             text-align: right;
             margin-bottom: 10mm;
@@ -82,12 +68,13 @@
             text-align: center;
         }
 
-        @media print {
-            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        }
     </style>
 </head>
 <body>
+
+@include('partials.print-toolbar')
+
+<div class="page">
     <div class="addressee">
         <span class="dots"></span> БАЙГУУЛЛАГЫН ДАРГА <span class="dots" style="min-width: 15mm;"></span> ТАНАА
     </div>
@@ -132,5 +119,6 @@
     <div class="signature">
         ХҮСЭЛТ ГАРГАСАН: <span class="dots" style="min-width: 40mm;"></span> / <span class="dots" style="min-width: 40mm;"></span> /
     </div>
+</div>
 </body>
 </html>
