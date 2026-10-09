@@ -1791,7 +1791,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
             <!-- Олон мөрөнд ижил мэдээлэл оруулах -->
             <div
                 v-if="canEdit && selectedCount && viewMode === 'table'"
-                class="sticky top-2 z-20 rounded-2xl border border-brand-navy-200 bg-white/95 p-3 shadow-soft backdrop-blur"
+                class="sticky top-2 z-10 rounded-2xl border border-brand-navy-200 bg-white/95 p-3 shadow-soft backdrop-blur"
             >
                 <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
                     <p class="text-sm font-semibold text-brand-navy-800">
@@ -1932,7 +1932,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                     </colgroup>
                     <thead>
                         <tr>
-                            <th v-if="canEdit" class="sticky top-0 z-20 bg-brand-navy-50 text-center">
+                            <th v-if="canEdit" class="sticky top-0 z-10 bg-brand-navy-50 text-center">
                                 <input
                                     type="checkbox"
                                     class="rounded border-slate-300 text-brand-navy-600"
@@ -1942,16 +1942,16 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                                     @change="toggleSelectAll"
                                 />
                             </th>
-                            <th class="sticky top-0 z-20 bg-brand-navy-50 text-center">№</th>
+                            <th class="sticky top-0 z-10 bg-brand-navy-50 text-center">№</th>
                             <th
                                 v-for="col in tableColumns"
                                 :key="'h-' + col.key"
-                                class="sticky top-0 z-20 bg-brand-navy-50"
+                                class="sticky top-0 z-10 bg-brand-navy-50"
                             >
                                 {{ col.label }}
                             </th>
-                            <th class="sticky top-0 z-20 bg-brand-navy-50 text-center ui-sticky-progress">Биелэлтийн хувь</th>
-                            <th v-if="canEdit" class="sticky top-0 z-20 bg-brand-navy-50 text-center ui-sticky-actions" />
+                            <th class="sticky top-0 z-10 bg-brand-navy-50 text-center ui-sticky-progress">Биелэлтийн хувь</th>
+                            <th v-if="canEdit" class="sticky top-0 z-10 bg-brand-navy-50 text-center ui-sticky-actions" />
                         </tr>
                         <!-- Багана тус бүрд хайх мөр -->
                         <tr class="ui-filters">
