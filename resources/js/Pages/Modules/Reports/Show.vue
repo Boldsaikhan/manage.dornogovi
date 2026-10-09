@@ -316,9 +316,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                         <th
                                             v-for="col in report.columns"
                                             :key="col.key"
-                                            class="sticky top-0 z-20 bg-brand-navy-50 px-2 py-2 text-[11px] leading-tight normal-case tracking-normal"
+                                            class="sticky top-0 z-10 bg-brand-navy-50 px-2 py-2 text-[11px] leading-tight normal-case tracking-normal"
                                             :class="[
-                                                isPinnedColumn(col.key) ? 'sticky left-0 z-30 bg-brand-navy-50 shadow-[2px_0_6px_-2px_rgba(15,23,42,0.12)]' : '',
+                                                isPinnedColumn(col.key) ? 'sticky left-0 z-[11] bg-brand-navy-50 shadow-[2px_0_6px_-2px_rgba(15,23,42,0.12)]' : '',
                                                 isCenteredColumn(col.key) ? 'text-center' : 'text-left',
                                             ]"
                                         >

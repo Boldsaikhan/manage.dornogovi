@@ -251,7 +251,12 @@ const syncStickyHead = () => {
         Array.from(row.cells).forEach((cell) => {
             cell.style.position = 'sticky';
             cell.style.top = `${offset}px`;
-            cell.style.zIndex = String(30 - index);
+            /*
+             * 20-оос доош — толгойн самбар (header, z-20) дээр нь байх
+             * ёстой. Үгүй бол мэдэгдэл, хэрэглэгчийн цэс зэрэг нь наалдсан
+             * хүснэгтийн толгойн ард нуугдана. CSS-тэй (14, 13, 12…) ижил.
+             */
+            cell.style.zIndex = String(14 - index);
         });
 
         top += row.getBoundingClientRect().height;

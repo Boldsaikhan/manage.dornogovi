@@ -652,7 +652,7 @@ const saveAi = () => {
 
         <div
             v-if="notice"
-            class="sticky top-[4.75rem] z-30 mb-4 rounded-xl border px-4 py-3 text-sm shadow-md"
+            class="sticky top-[4.75rem] z-10 mb-4 rounded-xl border px-4 py-3 text-sm shadow-md"
             :class="noticeClass"
             role="status"
         >

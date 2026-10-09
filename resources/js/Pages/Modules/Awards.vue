@@ -301,7 +301,7 @@ const colAlign = (col) => {
                             <th
                                 v-for="col in columns"
                                 :key="col.key"
-                                class="sticky top-0 z-20 bg-brand-navy-50"
+                                class="sticky top-0 z-10 bg-brand-navy-50"
                                 :class="colAlign(col) === 'center' ? 'text-center' : ''"
                             >
                                 <template v-if="col.lines?.length">
@@ -313,7 +313,7 @@ const colAlign = (col) => {
                                 </template>
                                 <template v-else>{{ col.label }}</template>
                             </th>
-                            <th v-if="canManage" class="sticky top-0 z-20 bg-brand-navy-50 text-center" />
+                            <th v-if="canManage" class="sticky top-0 z-10 bg-brand-navy-50 text-center" />
                         </tr>
                     </thead>
 
