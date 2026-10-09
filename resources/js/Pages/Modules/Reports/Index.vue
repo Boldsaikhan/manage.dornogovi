@@ -31,10 +31,6 @@ const sectionNavItems = computed(() => {
 
     <AuthenticatedLayout :title="title">
         <div class="ui-page">
-            <div class="mb-4">
-                <h2 class="ui-title">{{ title }}</h2>
-                <p v-if="subtitle" class="ui-subtitle">{{ subtitle }}</p>
-            </div>
 
             <div class="mb-4">
                 <ReportSectionTabs

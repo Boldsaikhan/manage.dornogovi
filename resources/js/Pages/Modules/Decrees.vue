@@ -708,13 +708,7 @@ const docColumnCount = computed(() => {
 <template>
     <AuthenticatedLayout title="Захирамж, тушаал">
         <div class="ui-page">
-            <div class="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                    <h2 class="ui-title">Захирамж, тушаал</h2>
-                    <p class="ui-subtitle">
-                        Мөрийг нэмээд нүдэн дээр дарж шууд бөглөнө.
-                    </p>
-                </div>
+            <div class="flex flex-wrap items-end justify-end gap-3">
                 <div class="flex flex-wrap gap-2">
                     <button
                         v-if="canManage"

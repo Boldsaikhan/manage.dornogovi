@@ -114,12 +114,6 @@ function selectCard(card) {
 <template>
     <AuthenticatedLayout title="Албан хаагчийн самбар">
         <div class="ui-page">
-            <div>
-                <h2 class="ui-title">
-                    {{ department?.name || (isAdmin ? 'Бүх хэлтэс (админ)' : 'Хэлтэс сонгоогүй') }}
-                </h2>
-                <p class="ui-subtitle">Албан хаагчийн товч үзүүлэлт, явц.</p>
-            </div>
 
             <AppExtensionManager notify-only />
 

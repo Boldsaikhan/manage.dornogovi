@@ -1411,11 +1411,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
 
     <AuthenticatedLayout :title="source.name">
         <div class="ui-page" :class="viewMode === 'table' ? 'ui-page--tasks-table' : ''">
-            <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-                <div class="min-w-0">
-                    <h2 class="ui-title">Үүрэг даалгавар</h2>
-                    <p class="ui-subtitle">Word файлын хүснэгтийг уншиж, мөр бүрийг шууд засварлана.</p>
-                </div>
+            <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-end">
                 <div
                     v-if="hasKinds"
                     class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center"

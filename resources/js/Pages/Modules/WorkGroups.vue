@@ -45,10 +45,6 @@ const bumpProgress = (task, value) => {
 <template>
     <AuthenticatedLayout title="Ажлын хэсэг">
         <div class="ui-page">
-            <div>
-                <h2 class="ui-title">Ажлын хэсэг</h2>
-                <p class="ui-subtitle">Хяналт, үүрэг даалгаврын бүтэцтэй адил хэсэг.</p>
-            </div>
 
             <form v-if="canManage" class="ui-card flex flex-wrap gap-2 p-4" @submit.prevent="createGroup">
                 <input v-model="groupForm.name" required placeholder="Ажлын хэсгийн нэр" class="ui-input min-w-[220px] flex-1" />

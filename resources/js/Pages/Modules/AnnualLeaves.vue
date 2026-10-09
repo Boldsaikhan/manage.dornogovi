@@ -333,13 +333,7 @@ const visibleRows = computed(() => (
 <template>
     <AuthenticatedLayout title="Ээлжийн амралт">
         <div class="ui-page">
-            <div class="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                    <h2 class="ui-title">Ээлжийн амралт</h2>
-                    <p class="ui-subtitle">
-                        Албан хаагчдын ээлжийн амралтын хоног, огноо, эзгүй хугацаанд орлох хүнийг бүртгэнэ.
-                    </p>
-                </div>
+            <div class="flex flex-wrap items-end justify-end gap-3">
                 <div class="flex flex-wrap items-center gap-2">
                     <button
                         v-if="hasAuditLog"

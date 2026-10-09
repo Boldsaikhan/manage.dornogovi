@@ -498,14 +498,7 @@ const closeDirectoryForm = () => {
 <template>
     <AuthenticatedLayout title="Утасны жагсаалт">
         <div class="ui-page">
-            <div class="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                    <h2 class="ui-title">Утасны жагсаалт</h2>
-                    <p class="ui-subtitle">
-                        Байгууллага, албан хаагчдын ажлын өрөө болон гар утасны нэгдсэн жагсаалт.
-                        Нийт {{ total }} бүртгэл.
-                    </p>
-                </div>
+            <div class="flex flex-wrap items-end justify-end gap-3">
                 <div class="flex flex-wrap gap-2">
                     <a
                         v-if="isDirectory && total"

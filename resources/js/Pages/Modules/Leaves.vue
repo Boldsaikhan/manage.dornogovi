@@ -319,13 +319,7 @@ const visibleRows = computed(() => (
 <template>
     <AuthenticatedLayout title="Чөлөөний бүртгэл">
         <div class="ui-page">
-            <div class="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                    <h2 class="ui-title">Чөлөөний бүртгэл</h2>
-                    <p class="ui-subtitle">
-                        Албан хаагчдын чөлөөний хуудсыг загварын дагуу бөглөж, A4 цаасанд 6 ширхэгээр харна.
-                    </p>
-                </div>
+            <div class="flex flex-wrap items-end justify-end gap-3">
                 <div class="flex flex-wrap items-center gap-2">
                     <label class="flex items-center gap-2 text-sm text-slate-600">
                         <span>Хэвлэх:</span>

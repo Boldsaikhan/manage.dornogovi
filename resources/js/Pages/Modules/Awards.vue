@@ -190,13 +190,7 @@ const colAlign = (col) => {
 <template>
     <AuthenticatedLayout title="Шагнал">
         <div class="ui-page">
-            <div class="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                    <h2 class="ui-title">Шагнал</h2>
-                    <p class="ui-subtitle">
-                        Төрийн дээд, аймгийн Засаг даргын болон бусад шагналын бүртгэл.
-                    </p>
-                </div>
+            <div class="flex flex-wrap items-end justify-end gap-3">
                 <div class="flex flex-wrap items-center gap-2">
                     <a :href="exportUrl" class="ui-btn-ghost">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
