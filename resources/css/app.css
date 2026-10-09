@@ -135,6 +135,7 @@
     .ui-table--pin-actions .ui-sticky-progress {
         right: var(--pin-actions-width);
         box-shadow: -6px 0 8px -6px rgba(15, 23, 42, 0.1);
+        @apply border-l border-brand-navy-200 dark:border-slate-700;
     }
 
     .ui-table--pin-actions .ui-sticky-actions {
@@ -148,7 +149,7 @@
      */
     .ui-table--pin-actions thead .ui-sticky-progress,
     .ui-table--pin-actions thead .ui-sticky-actions {
-        @apply bg-brand-navy-50 dark:bg-slate-800;
+        @apply bg-brand-navy-100 dark:bg-slate-800;
         z-index: 15;
     }
 
@@ -158,24 +159,24 @@
 
     .ui-table--pin-actions tbody td.ui-sticky-progress,
     .ui-table--pin-actions tbody td.ui-sticky-actions {
-        @apply bg-white dark:bg-slate-900;
+        @apply bg-brand-navy-50/60 dark:bg-slate-800;
         z-index: 5;
         isolation: isolate;
     }
 
     .ui-table--pin-actions tbody tr:nth-child(even) td.ui-sticky-progress,
     .ui-table--pin-actions tbody tr:nth-child(even) td.ui-sticky-actions {
-        @apply bg-slate-50 dark:bg-slate-800/60;
+        @apply bg-brand-navy-50 dark:bg-slate-800/80;
     }
 
     .ui-table--pin-actions tbody tr:hover td.ui-sticky-progress,
     .ui-table--pin-actions tbody tr:hover td.ui-sticky-actions {
-        @apply bg-brand-navy-50 dark:bg-slate-700;
+        @apply bg-brand-navy-100 dark:bg-slate-700;
     }
 
     .ui-table--pin-actions tbody tr.bg-brand-navy-50\/70 td.ui-sticky-progress,
     .ui-table--pin-actions tbody tr.bg-brand-navy-50\/70 td.ui-sticky-actions {
-        @apply bg-brand-navy-50 dark:bg-slate-700;
+        @apply bg-brand-navy-100 dark:bg-slate-700;
     }
 
     .ui-table--pin-actions tbody tr:focus-within td.ui-sticky-progress,
