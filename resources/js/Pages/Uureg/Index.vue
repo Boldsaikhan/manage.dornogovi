@@ -130,7 +130,11 @@ const hasColumn = (key) => tableColumns.value.some((col) => col.key === key);
 
 const columnLabel = (key, fallback) => tableColumns.value.find((col) => col.key === key)?.label || fallback;
 
-const viewMode = ref('table');
+/*
+ * Цэс дээр дарахад шууд цаглалтаар харагдана. Цаглалтын тоон дээр
+ * дарж тухайн хугацааны үүргүүдийг хүснэгтээр үзнэ.
+ */
+const viewMode = ref('calendar');
 
 /** Хүснэгтийг дэлгэц дүүрэн харах (Esc дарж хаана). */
 const tableExpanded = ref(false);
@@ -688,6 +692,7 @@ const highlightedTaskId = ref(null);
 
 const focusTaskRow = (task) => {
     filter.value = null;
+    periodFilter.value = null;
     showDashboard.value = false;
     viewMode.value = 'table';
     highlightedTaskId.value = task.id;
@@ -824,6 +829,28 @@ const clearFilter = () => {
     filter.value = null;
 };
 
+/** Цаглалтын нүднээс сонгосон хугацааны шүүлт — { label, ids: Set }. */
+const periodFilter = ref(null);
+
+/** Цаглалтын тоон дээр дарахад хүснэгт нь тэр үүргүүдээр шүүгдэнэ. */
+const showTasksFromCalendar = ({ label, ids }) => {
+    filter.value = null;
+    statusFilter.value = null;
+    showDashboard.value = false;
+    periodFilter.value = ids && label ? { label, ids: new Set(ids) } : null;
+    viewMode.value = 'table';
+};
+
+const clearPeriodFilter = () => {
+    periodFilter.value = null;
+};
+
+/** Хүснэгтээс цаглалт руу буцах. */
+const backToCalendar = () => {
+    periodFilter.value = null;
+    viewMode.value = 'calendar';
+};
+
 const toggleStatusFilter = (key) => {
     statusFilter.value = statusFilter.value === key ? null : key;
 };
@@ -936,6 +963,10 @@ const visibleTasks = computed(() => {
         }));
     }
 
+    if (periodFilter.value) {
+        list = list.filter((task) => periodFilter.value.ids.has(task.id));
+    }
+
     if (hasColumnFilters.value) {
         list = list.filter(matchesColumnFilters);
     }
@@ -969,7 +1000,7 @@ const loadMoreTasks = () => {
 const tableTasks = computed(() => visibleTasks.value.slice(0, renderLimit.value));
 const hasMoreTasks = computed(() => renderLimit.value < visibleTasks.value.length);
 
-watch([visibleTasks, () => props.kind, statusFilter, filter], resetRenderLimit, { deep: true });
+watch([visibleTasks, () => props.kind, statusFilter, filter, periodFilter], resetRenderLimit, { deep: true });
 
 /** Олон мөр сонгоод нэг дор мэдээлэл оруулах */
 const selectedIds = ref([]);
@@ -1092,8 +1123,9 @@ watch(
     () => {
         clearSelection();
         resetBulkForm();
-        viewMode.value = 'table';
+        viewMode.value = 'calendar';
         statusFilter.value = null;
+        periodFilter.value = null;
     },
 );
 
@@ -1122,6 +1154,7 @@ const addRow = () => {
             // Шүүлтүүр идэвхтэй бол шинэ хоосон мөр нуугдана.
             filter.value = null;
             statusFilter.value = null;
+            periodFilter.value = null;
             showDashboard.value = false;
             viewMode.value = 'table';
 
@@ -1410,6 +1443,15 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                             />
                         </svg>
                         {{ tableExpanded ? 'Хаах' : 'Дэлгэц дүүрэн' }}
+                    </button>
+                    <button
+                        v-if="hasKinds"
+                        type="button"
+                        class="ui-btn-ghost w-full sm:w-auto"
+                        :title="viewMode === 'calendar' ? 'Бүх үүрэг даалгаврыг хүснэгтээр харах' : 'Цаглалт руу буцах'"
+                        @click="viewMode === 'calendar' ? showTasksFromCalendar({ label: null, ids: null }) : backToCalendar()"
+                    >
+                        {{ viewMode === 'calendar' ? 'Хүснэгт' : 'Цаглалт' }}
                     </button>
                     <button
                         v-if="hasKinds"
@@ -1769,14 +1811,19 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
             <!-- Цаглалт / төлөвлөгөө -->
             <TaskCalendar
                 v-if="hasKinds && viewMode === 'calendar'"
-                :tasks="visibleTasks"
+                :tasks="tasks"
                 @focus-task="focusTaskRow"
+                @show-tasks="showTasksFromCalendar"
             />
 
             <div v-if="hasKinds && viewMode === 'table'" class="ui-tasks-table-shell">
             <!-- Идэвхтэй шүүлт -->
-            <div v-if="filter || statusFilter" class="flex flex-wrap items-center gap-2 text-sm">
-                <span v-if="filter || statusFilter" class="text-slate-500">Шүүлт:</span>
+            <div v-if="filter || statusFilter || periodFilter" class="flex flex-wrap items-center gap-2 text-sm">
+                <span class="text-slate-500">Шүүлт:</span>
+                <span v-if="periodFilter" class="inline-flex items-center gap-2 rounded-full bg-brand-orange-500 px-3 py-1 font-medium text-white">
+                    {{ periodFilter.label }}
+                    <button type="button" class="text-white/80 hover:text-white" @click="clearPeriodFilter">✕</button>
+                </span>
                 <span v-if="filter" class="inline-flex items-center gap-2 rounded-full bg-brand-navy-600 px-3 py-1 font-medium text-white">
                     {{ filter.label }}
                     <button type="button" class="text-white/80 hover:text-white" @click="clearFilter">✕</button>
