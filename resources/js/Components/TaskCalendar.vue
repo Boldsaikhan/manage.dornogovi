@@ -143,7 +143,7 @@ const showDay = (cell) => {
                                 title="Бүх үүрэг даалгаврыг хүснэгтээр харах"
                                 @click="showAll"
                             >
-                                {{ props.tasks.length }}
+                                Нийт {{ props.tasks.length }} — бүгдийг харах
                             </button>
                         </td>
                         <td
