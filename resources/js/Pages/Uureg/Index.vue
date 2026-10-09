@@ -1533,32 +1533,6 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
             <p v-if="uploadForm.errors.file" class="text-sm text-red-600">{{ uploadForm.errors.file }}</p>
             <p v-if="kindError" class="text-sm text-red-600">{{ kindError }}</p>
 
-            <!-- Харах эрхтэй үүрэг даалгавар байхгүй бол таб огт гаргахгүй. -->
-            <div
-                v-if="hasKinds || canManage"
-                class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:rounded-2xl sm:border sm:border-slate-200 sm:bg-white sm:p-1.5 sm:shadow-soft sm:[&::-webkit-scrollbar]:auto [&::-webkit-scrollbar]:hidden"
-            >
-                <Link
-                    v-for="item in kindTabs"
-                    :key="item.key"
-                    :href="route('tasks.index', { kind: item.key })"
-                    class="shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm font-semibold transition sm:px-4"
-                    :class="kind === item.key
-                        ? 'bg-brand-navy-600 text-white shadow-md shadow-brand-navy-600/20'
-                        : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 sm:border-0'"
-                    @click.prevent="switchKind(item.key)"
-                >
-                    {{ item.label }}
-                </Link>
-                <button
-                    v-if="canManage"
-                    type="button"
-                    class="shrink-0 whitespace-nowrap rounded-xl border border-dashed border-brand-navy-300 px-3.5 py-2.5 text-sm font-semibold text-brand-navy-600 transition hover:bg-brand-navy-50 sm:px-4"
-                    @click="showNewKind = ! showNewKind"
-                >
-                    + Үүрэг даалгавар нэмэх
-                </button>
-            </div>
 
             <!-- Хоосон төлөв — хуурамч таб харуулахын оронд тайлбарлана. -->
             <div
@@ -1808,15 +1782,80 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                 </div>
             </div>
 
-            <!-- Цаглалт / төлөвлөгөө -->
-            <TaskCalendar
-                v-if="hasKinds && viewMode === 'calendar'"
-                :tasks="tasks"
-                @focus-task="focusTaskRow"
-                @show-tasks="showTasksFromCalendar"
-            />
+            <!-- Зүүн талын навигац: үүсгэсэн үүрэг даалгавар + харагдац -->
+            <div
+                v-if="hasKinds"
+                class="grid min-h-0 gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]"
+                :class="viewMode === 'table' ? 'ui-tasks-table-shell lg:grid-rows-[minmax(0,1fr)]' : ''"
+            >
+                <aside class="ui-card min-h-0 overflow-y-auto p-3">
+                    <p class="mb-2 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                        Үүсгэсэн үүрэг даалгавар
+                    </p>
+                    <nav class="space-y-0.5">
+                        <Link
+                            v-for="item in kindTabs"
+                            :key="item.key"
+                            :href="route('tasks.index', { kind: item.key })"
+                            class="block rounded-lg px-2.5 py-2 text-sm transition"
+                            :class="kind === item.key
+                                ? 'bg-brand-navy-600 font-semibold text-white'
+                                : 'text-slate-700 hover:bg-slate-100'"
+                            @click.prevent="switchKind(item.key)"
+                        >
+                            {{ item.label }}
+                        </Link>
+                        <button
+                            v-if="canManage"
+                            type="button"
+                            class="block w-full rounded-lg border border-dashed border-brand-navy-300 px-2.5 py-2 text-left text-sm font-semibold text-brand-navy-600 transition hover:bg-brand-navy-50"
+                            @click="showNewKind = ! showNewKind"
+                        >
+                            + Үүрэг даалгавар нэмэх
+                        </button>
+                    </nav>
 
-            <div v-if="hasKinds && viewMode === 'table'" class="ui-tasks-table-shell">
+                    <p class="mb-2 mt-4 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                        Харагдац
+                    </p>
+                    <nav class="space-y-0.5">
+                        <button
+                            type="button"
+                            class="block w-full rounded-lg px-2.5 py-2 text-left text-sm transition"
+                            :class="viewMode === 'calendar'
+                                ? 'bg-brand-navy-600 font-semibold text-white'
+                                : 'text-slate-700 hover:bg-slate-100'"
+                            @click="backToCalendar"
+                        >
+                            Цаглалт / төлөвлөгөө
+                        </button>
+                        <button
+                            type="button"
+                            class="block w-full rounded-lg px-2.5 py-2 text-left text-sm transition"
+                            :class="viewMode === 'table'
+                                ? 'bg-brand-navy-600 font-semibold text-white'
+                                : 'text-slate-700 hover:bg-slate-100'"
+                            @click="showTasksFromCalendar({ label: null, ids: null })"
+                        >
+                            Хүснэгт
+                            <span class="ml-1 text-xs opacity-80">({{ tasks.length }})</span>
+                        </button>
+                    </nav>
+                </aside>
+
+                <section
+                    class="flex min-h-0 flex-col gap-2"
+                    :class="viewMode === 'table' ? 'overflow-hidden' : ''"
+                >
+                    <!-- Цаглалт / төлөвлөгөө -->
+                    <TaskCalendar
+                        v-if="viewMode === 'calendar'"
+                        :tasks="tasks"
+                        @focus-task="focusTaskRow"
+                        @show-tasks="showTasksFromCalendar"
+                    />
+
+                    <template v-if="viewMode === 'table'">
             <!-- Идэвхтэй шүүлт -->
             <div v-if="filter || statusFilter || periodFilter" class="flex flex-wrap items-center gap-2 text-sm">
                 <span class="text-slate-500">Шүүлт:</span>
@@ -2116,6 +2155,8 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                 </div>
             </TableScrollViewport>
             </div>
+                    </template>
+                </section>
             </div>
         </div>
 
