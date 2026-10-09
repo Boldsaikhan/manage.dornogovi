@@ -1411,11 +1411,12 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
 
     <AuthenticatedLayout :title="source.name">
         <div class="ui-page" :class="viewMode === 'table' ? 'ui-page--tasks-table' : ''">
-            <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-end">
-                <div
-                    v-if="hasKinds"
-                    class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center"
-                >
+            <!-- Үйлдлийн товчнууд зөвхөн хүснэгтэд, өөрчлөлт оруулах үед хэрэгтэй. -->
+            <div
+                v-if="hasKinds && viewMode === 'table'"
+                class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-end"
+            >
+                <div class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
                     <input
                         ref="fileInput"
                         type="file"
@@ -1572,12 +1573,20 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                 <p class="text-sm font-semibold text-slate-700">Танд хамаарах үүрэг даалгавар алга.</p>
                 <p class="mt-1 text-xs text-slate-500">
                     <template v-if="canManage">
-                        «+ Үүрэг даалгавар нэмэх» дарж шинэ хэсэг үүсгэнэ үү.
+                        Доорх товчоор шинэ хэсэг үүсгэнэ үү.
                     </template>
                     <template v-else>
                         Танд үүрэг оногдмогц энд харагдана.
                     </template>
                 </p>
+                <button
+                    v-if="canManage"
+                    type="button"
+                    class="ui-btn-accent mt-3"
+                    @click="showNewKind = ! showNewKind"
+                >
+                    + Үүрэг даалгавар нэмэх
+                </button>
             </div>
 
             <section
