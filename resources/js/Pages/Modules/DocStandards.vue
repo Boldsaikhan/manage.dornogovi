@@ -62,14 +62,7 @@ const contentSize = (d) => ({
 <template>
     <AuthenticatedLayout title="Бичиг хэргийн стандарт">
         <div class="ui-page">
-            <div class="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                    <h2 class="ui-title">Бичиг хэргийн стандарт</h2>
-                    <p class="ui-subtitle">
-                        Албан хэрэг хөтлөлтийн журмын дагуу A4, A5 хуудасны тохиргоог тааруулна.
-                        Системээс гаргаж байгаа бүх Word файл үндсэн стандартын дагуу үүснэ.
-                    </p>
-                </div>
+            <div class="flex flex-wrap items-end justify-end gap-3">
                 <button v-if="canManage" type="button" class="ui-btn-accent" @click="showStandardForm = !showStandardForm">
                     {{ showStandardForm ? 'Хаах' : 'Заавар нэмэх' }}
                 </button>

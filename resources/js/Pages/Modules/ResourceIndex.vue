@@ -665,11 +665,7 @@ const destroyRow = (id) => {
 <template>
     <AuthenticatedLayout :title="title">
         <div class="ui-page">
-            <div class="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                    <h2 class="ui-title">{{ title }}</h2>
-                    <p class="ui-subtitle">{{ description }}</p>
-                </div>
+            <div class="flex flex-wrap items-end justify-end gap-3">
                 <!-- Товчнууд хоорондоо зууралдаж, баруун талд бөөгнөрнө. -->
                 <div class="flex flex-wrap items-center gap-1.5">
                 <button
