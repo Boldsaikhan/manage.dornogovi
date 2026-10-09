@@ -135,6 +135,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/modules/regulations/categories/{category}', [RegulationCategoryController::class, 'update'])->name('regulations.categories.update');
     Route::delete('/modules/regulations/categories/{category}', [RegulationCategoryController::class, 'destroy'])->name('regulations.categories.destroy');
     Route::post('/undo', [UndoController::class, 'store'])->name('undo.store');
+    Route::post('/redo', [UndoController::class, 'redo'])->name('redo.store');
 
     Route::get('/modules/decrees', [DecreeController::class, 'index'])->name('decrees.index');
     Route::get('/modules/decrees/logs', [DecreeController::class, 'logs'])->name('decrees.logs');

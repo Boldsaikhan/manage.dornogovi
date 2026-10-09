@@ -193,7 +193,10 @@ class DecreeController extends Controller
             'canImportFile' => isset(self::KIND_TABS[$tab])
                 && ModuleAccess::canEdit($request->user(), $this->tabKey($tab))
                 && ModuleAccess::canEdit($request->user(), 'decrees:import'),
-            'undoCount' => EditUndo::query()->where('user_id', $request->user()->id)->count(),
+            'undoCount' => EditUndo::query()->where('user_id', $request->user()->id)
+                ->where('kind', EditUndo::UNDO)->count(),
+            'redoCount' => EditUndo::query()->where('user_id', $request->user()->id)
+                ->where('kind', EditUndo::REDO)->count(),
         ]);
     }
 

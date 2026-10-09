@@ -30,12 +30,14 @@ class TaskUndoTest extends TestCase
             ->assertRedirect();
 
         $this->assertSame('Өөрчилсөн үүрэг', $task->fresh()->text);
-        $this->assertSame(1, EditUndo::query()->count());
+        $this->assertSame(1, EditUndo::query()->where('kind', EditUndo::UNDO)->count());
 
         $this->actingAs($admin)->post(route('undo.store'))->assertRedirect();
 
         $this->assertSame('Анхны үүрэг', $task->fresh()->text);
-        $this->assertSame(0, EditUndo::query()->count());
+        $this->assertSame(0, EditUndo::query()->where('kind', EditUndo::UNDO)->count());
+        // Буцаасан үйлдэл «дахин хийх» стект шилжинэ.
+        $this->assertSame(1, EditUndo::query()->where('kind', EditUndo::REDO)->count());
     }
 
     public function test_deleted_row_can_be_restored(): void
@@ -55,7 +57,7 @@ class TaskUndoTest extends TestCase
             ->assertRedirect();
 
         $this->assertDatabaseMissing('tasks', ['id' => $task->id]);
-        $this->assertSame(1, EditUndo::query()->count());
+        $this->assertSame(1, EditUndo::query()->where('kind', EditUndo::UNDO)->count());
 
         $this->actingAs($admin)->post(route('undo.store'))->assertRedirect();
 

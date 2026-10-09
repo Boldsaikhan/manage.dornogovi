@@ -53,13 +53,15 @@ class DecreeUndoTest extends TestCase
             ->assertRedirect();
 
         $this->assertSame('Өөрчилсөн гарчиг', $decree->fresh()->title);
-        $this->assertSame(1, EditUndo::query()->count());
+        $this->assertSame(1, EditUndo::query()->where('kind', EditUndo::UNDO)->count());
 
         // Дахин ачаалсан ч түүх сервэрт хадгалагдана
         $this->actingAs($admin)->post(route('undo.store'))->assertRedirect();
 
         $this->assertSame('Анхны гарчиг', $decree->fresh()->title);
-        $this->assertSame(0, EditUndo::query()->count());
+        $this->assertSame(0, EditUndo::query()->where('kind', EditUndo::UNDO)->count());
+        // Буцаасан үйлдэл «дахин хийх» стект шилжинэ.
+        $this->assertSame(1, EditUndo::query()->where('kind', EditUndo::REDO)->count());
     }
 
     public function test_history_keeps_only_last_ten(): void
@@ -80,7 +82,7 @@ class DecreeUndoTest extends TestCase
                 ->assertRedirect();
         }
 
-        $this->assertSame(EditUndo::KEEP, EditUndo::query()->count());
+        $this->assertSame(EditUndo::KEEP, EditUndo::query()->where('kind', EditUndo::UNDO)->count());
 
         // Сүүлийн үйлдлийг буцаахад өмнөх утга сэргэнэ
         $this->actingAs($admin)->post(route('undo.store'))->assertRedirect();
