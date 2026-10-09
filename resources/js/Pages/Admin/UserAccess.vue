@@ -439,7 +439,9 @@ const roleSummary = (roleKey) => {
     }
 
     const manage = entries.filter(([, l]) => l === 'manage' || l === 'manage_own').length;
-    const edit = entries.filter(([, l]) => l === 'edit' || l === 'edit_own').length;
+    const edit = entries.filter(
+        ([, l]) => l === 'edit' || l === 'edit_own' || l === 'add_own',
+    ).length;
 
     return entries.length + ' модуль нээлттэй · ' + edit + ' оруулах · ' + manage + ' удирдах';
 };
@@ -452,11 +454,13 @@ const levelOptions = (module) => {
         const labels = {
             view_own: 'Харах (хамааралтай)',
             edit_own: 'Оруулах (хамааралтай)',
+            // Хамааралтайгаа хардаг ч шинэ мөр нэмж чадна.
+            add_own: 'Нэмэх, оруулах (хамааралтай)',
             manage_own: 'Удирдах (хамааралтай)',
         };
         const levels = Array.isArray(module.own_levels) && module.own_levels.length
             ? module.own_levels
-            : ['view_own', 'edit_own', 'manage_own'];
+            : ['view_own', 'edit_own', 'add_own', 'manage_own'];
 
         levels.forEach((value) => {
             if (labels[value]) {

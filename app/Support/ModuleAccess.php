@@ -17,7 +17,12 @@ class ModuleAccess
      *
      * @var list<string>
      */
-    public const LEVELS = ['view', 'edit', 'manage', 'view_own', 'edit_own', 'manage_own', 'closed'];
+    /**
+     * «add_own» — зөвхөн өөрт хамааралтай мөрийг хардаг ч шинэ мөр нэмж,
+     * бөглөж чадна. «edit_own» нь зөвхөн хэрэгжилт бичдэг тул хоорондоо
+     * ялгаатай.
+     */
+    public const LEVELS = ['view', 'edit', 'manage', 'view_own', 'edit_own', 'add_own', 'manage_own', 'closed'];
 
     /** Дэд хэсгийг эх модулиасаа үл хамааран хаах утга. */
     public const LEVEL_CLOSED = 'closed';
@@ -174,7 +179,7 @@ class ModuleAccess
 
         $level = self::level($user, $moduleKey);
 
-        return in_array($level, ['edit', 'manage', 'edit_own', 'manage_own'], true);
+        return in_array($level, ['edit', 'manage', 'edit_own', 'add_own', 'manage_own'], true);
     }
 
     /**
@@ -319,7 +324,7 @@ class ModuleAccess
                 continue;
             }
 
-            if (in_array($level, ['view_own', 'edit_own', 'manage_own'], true) && ! self::supportsOwnScope($module)) {
+            if (self::isOwnLevel($level) && ! self::supportsOwnScope($module)) {
                 continue;
             }
 
@@ -374,7 +379,7 @@ class ModuleAccess
             return false;
         }
 
-        return in_array(self::level($user, $moduleKey), ['view_own', 'edit_own', 'manage_own'], true);
+        return self::isOwnLevel(self::level($user, $moduleKey));
     }
 
     public static function manageOwnOnly(?User $user, string $moduleKey): bool
@@ -393,7 +398,7 @@ class ModuleAccess
 
     public static function isOwnLevel(?string $level): bool
     {
-        return in_array($level, ['view_own', 'edit_own', 'manage_own'], true);
+        return in_array($level, ['view_own', 'edit_own', 'add_own', 'manage_own'], true);
     }
 
     public static function levelLabel(?string $level): string
@@ -403,6 +408,7 @@ class ModuleAccess
             'manage' => 'Удирдах (бүгд)',
             'manage_own' => 'Удирдах (хамааралтай)',
             'edit' => 'Оруулах (бүгд)',
+            'add_own' => 'Нэмэх, оруулах (хамааралтай)',
             'edit_own' => 'Оруулах (хамааралтай)',
             'view' => 'Харах (бүгд)',
             'view_own' => 'Харах (хамааралтай)',
