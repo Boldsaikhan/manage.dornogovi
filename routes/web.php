@@ -107,6 +107,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/modules/leaves', [LeaveController::class, 'index'])->name('leaves.index');
     Route::get('/modules/leaves/export', [LeaveController::class, 'export'])->name('leaves.export');
     Route::get('/modules/leaves/logs', [LeaveController::class, 'logs'])->name('leaves.logs');
+    Route::patch('/modules/leaves/limits', [LeaveController::class, 'updateLimits'])->name('leaves.limits.update');
     Route::post('/modules/leaves', [LeaveController::class, 'store'])->name('leaves.store');
     Route::patch('/modules/leaves/{leave}', [LeaveController::class, 'update'])->name('leaves.update');
     Route::delete('/modules/leaves/{leave}', [LeaveController::class, 'destroy'])->name('leaves.destroy');

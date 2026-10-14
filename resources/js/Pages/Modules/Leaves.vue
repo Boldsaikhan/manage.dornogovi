@@ -15,8 +15,67 @@ const props = defineProps({
     scopes: { type: Object, default: () => ({}) },
     types: { type: Object, default: () => ({}) },
     signers: { type: Object, default: () => ({}) },
+    limits: { type: Array, default: () => [] },
+    limitPayOptions: { type: Object, default: () => ({}) },
     hasAuditLog: { type: Boolean, default: false },
 });
+
+/*
+ * Чөлөө олгох лимит (журмын 5.4) — тохиргооны цонхонд засна.
+ *
+ * Хуулбарыг нь засаж байгаад «Хадгалах» дарж илгээнэ, болихоор
+ * сервер дээрх жагсаалт хэвээр үлдэнэ.
+ */
+const showLimits = ref(false);
+const limitRows = ref([]);
+const limitSaving = ref(false);
+
+const payEntries = computed(() => Object.entries(props.limitPayOptions));
+
+const openLimits = () => {
+    limitRows.value = props.limits.map((row) => ({ ...row }));
+    showLimits.value = true;
+};
+
+const addLimitRow = () => {
+    limitRows.value.push({ code: '', label: '', limit: '', pay: 'tsalintai' });
+};
+
+const removeLimitRow = (index) => {
+    limitRows.value.splice(index, 1);
+};
+
+const saveLimits = () => {
+    limitSaving.value = true;
+
+    router.patch(route('leaves.limits.update'), { limits: limitRows.value }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            showLimits.value = false;
+        },
+        onFinish: () => {
+            limitSaving.value = false;
+        },
+    });
+};
+
+const resetLimits = () => {
+    if (! confirm('Журмын анхны лимит рүү буцаах уу? Хийсэн өөрчлөлт устана.')) {
+        return;
+    }
+
+    limitSaving.value = true;
+
+    router.patch(route('leaves.limits.update'), { reset: true }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            limitRows.value = props.limits.map((row) => ({ ...row }));
+        },
+        onFinish: () => {
+            limitSaving.value = false;
+        },
+    });
+};
 
 const view = ref('table'); // 'table' | 'sheet'
 const previewCopies = ref(6);
@@ -330,6 +389,14 @@ const visibleRows = computed(() => (
                             <option :value="6">6</option>
                         </select>
                     </label>
+                    <button
+                        type="button"
+                        class="ui-btn-ghost whitespace-nowrap"
+                        title="Журмын дагуу чөлөө олгох лимитийг харах, засах"
+                        @click="openLimits"
+                    >
+                        Чөлөөний лимит
+                    </button>
                     <button
                         v-if="hasAuditLog"
                         type="button"
@@ -702,6 +769,106 @@ const visibleRows = computed(() => (
         </div>
 
         <!-- Өөрчлөлтийн түүх -->
+        <!-- Чөлөө олгох лимитийн тохиргоо (журмын 5.4) -->
+        <Modal :show="showLimits" max-width="5xl" @close="showLimits = false">
+            <div class="ui-card-pad space-y-4">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h3 class="ui-title text-base">Чөлөө олгох лимит</h3>
+                        <p class="ui-subtitle">
+                            Хөдөлмөрийн дотоод журмын 5.4-р заалт. Журам шинэчлэгдвэл энд засна.
+                        </p>
+                    </div>
+                    <button type="button" class="ui-btn-ghost" @click="showLimits = false">Хаах</button>
+                </div>
+
+                <div class="ui-table-wrap max-h-[60vh] overflow-y-auto">
+                    <table class="ui-table">
+                        <thead>
+                            <tr>
+                                <th class="w-20">№</th>
+                                <th>Чөлөөний төрөл</th>
+                                <th class="w-56">Хугацаа</th>
+                                <th class="w-32">Цалин</th>
+                                <th v-if="canManage" class="w-12" />
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(row, index) in limitRows" :key="'limit-' + index">
+                                <td>
+                                    <input
+                                        v-model="row.code"
+                                        type="text"
+                                        class="ui-input w-full !py-1 text-sm"
+                                        :disabled="! canManage"
+                                        placeholder="5.4.x"
+                                    />
+                                </td>
+                                <td>
+                                    <textarea
+                                        v-model="row.label"
+                                        rows="2"
+                                        class="ui-input w-full !py-1 text-sm"
+                                        :disabled="! canManage"
+                                        placeholder="Чөлөөний төрөл"
+                                    />
+                                </td>
+                                <td>
+                                    <input
+                                        v-model="row.limit"
+                                        type="text"
+                                        class="ui-input w-full !py-1 text-sm"
+                                        :disabled="! canManage"
+                                        placeholder="Ажлын 5 хоног хүртэл"
+                                    />
+                                </td>
+                                <td>
+                                    <select
+                                        v-model="row.pay"
+                                        class="ui-input w-full !py-1 text-sm"
+                                        :disabled="! canManage"
+                                    >
+                                        <option v-for="[value, label] in payEntries" :key="value" :value="value">
+                                            {{ label }}
+                                        </option>
+                                    </select>
+                                </td>
+                                <td v-if="canManage" class="text-center">
+                                    <button
+                                        type="button"
+                                        class="ui-icon-btn ui-icon-btn--danger"
+                                        title="Мөр устгах"
+                                        @click="removeLimitRow(index)"
+                                    >
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path d="M6 7h12M9 7V5h6v2m-7 0 1 12h6l1-12" stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr v-if="! limitRows.length">
+                                <td :colspan="canManage ? 5 : 4" class="!py-10 text-center text-slate-400">
+                                    Лимит тохируулаагүй байна.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div v-if="canManage" class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" class="ui-btn-ghost" @click="addLimitRow">+ Мөр нэмэх</button>
+                        <button type="button" class="ui-btn-ghost" :disabled="limitSaving" @click="resetLimits">
+                            Журмын анхны жагсаалт
+                        </button>
+                    </div>
+                    <button type="button" class="ui-btn-accent" :disabled="limitSaving" @click="saveLimits">
+                        {{ limitSaving ? 'Хадгалж байна…' : 'Хадгалах' }}
+                    </button>
+                </div>
+            </div>
+        </Modal>
+
         <Modal :show="showLogs" max-width="4xl" @close="showLogs = false">
             <div class="p-5">
                 <div class="mb-4 flex items-start justify-between gap-3">
