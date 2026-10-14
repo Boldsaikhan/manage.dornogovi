@@ -88,6 +88,30 @@ class ForeignTripTest extends TestCase
                 ->where('formMeta.people.0.value', 'Б.Гантөмөр'));
     }
 
+    public function test_the_destination_country_is_chosen_from_a_list(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->get(route('foreign-trips.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('inlineFields.destination_country.type', 'select')
+                ->where('inlineFields.destination_country.options.Солонгос', 'Солонгос'));
+
+        $row = ForeignTrip::create(['scope' => 'baiguullaga']);
+
+        // Жагсаалтад байхгүй улсыг хүлээж авахгүй.
+        $this->actingAs($admin)
+            ->post(route('modules.field', ['module' => 'foreign-trips', 'id' => $row->id]), [
+                'field' => 'destination_country',
+                'value' => 'Атлантис',
+            ])
+            ->assertSessionHasErrors('value');
+
+        $this->assertNull($row->fresh()->destination_country);
+    }
+
     public function test_choosing_a_name_fills_in_the_position_and_the_organisation(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
