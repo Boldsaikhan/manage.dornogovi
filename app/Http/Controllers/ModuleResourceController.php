@@ -640,6 +640,16 @@ class ModuleResourceController extends Controller
                 : null;
         }
 
+        /*
+         * Байгууллага, хэлтэс нь ч нэрээсээ хамаарна — утасны
+         * жагсаалтад бүртгэлтэй байгууллагыг нь шууд тавина.
+         */
+        if (! empty($column['edit_sync_org'])) {
+            $values['org_name'] = filled($values[$name])
+                ? PhoneDirectoryEntry::orgFor((string) $values[$name])
+                : null;
+        }
+
         $changes = $this->changedFields($row, $values, $config);
 
         $row->update($values);
