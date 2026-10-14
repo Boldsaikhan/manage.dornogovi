@@ -14,6 +14,11 @@ class LeaveLimits
 {
     public const SETTING_KEY = 'leaves.limits';
 
+    /** Жилд олгох цалинтай чөлөөний дээд хоног (журмын 5.4.11). */
+    public const PAID_DAYS_KEY = 'leaves.paid_days_per_year';
+
+    public const PAID_DAYS_DEFAULT = 5;
+
     /** Цалингийн төлөв — хүснэгтийн сүүлийн багана. */
     public const PAY = [
         'tsalintai' => 'Цалинтай',
@@ -111,6 +116,38 @@ class LeaveLimits
     }
 
     /**
+     * Жилд олгох цалинтай чөлөөний дээд хоног.
+     *
+     * 0 бол хязгаарлахгүй.
+     */
+    public static function paidDaysPerYear(): int
+    {
+        if (self::$paidDays !== null) {
+            return self::$paidDays;
+        }
+
+        try {
+            $raw = AppSetting::query()->where('key', self::PAID_DAYS_KEY)->value('value');
+        } catch (\Throwable $e) {
+            $raw = null;
+        }
+
+        return self::$paidDays = $raw === null || $raw === ''
+            ? self::PAID_DAYS_DEFAULT
+            : max(0, (int) $raw);
+    }
+
+    public static function savePaidDaysPerYear(int $days): void
+    {
+        AppSetting::query()->updateOrCreate(
+            ['key' => self::PAID_DAYS_KEY],
+            ['value' => (string) max(0, $days)],
+        );
+
+        self::forget();
+    }
+
+    /**
      * @param  array<int, mixed>  $rows
      */
     public static function save(array $rows): void
@@ -128,7 +165,9 @@ class LeaveLimits
     /** Журмын анхны жагсаалт руу буцаана. */
     public static function reset(): void
     {
-        AppSetting::query()->where('key', self::SETTING_KEY)->delete();
+        AppSetting::query()
+            ->whereIn('key', [self::SETTING_KEY, self::PAID_DAYS_KEY])
+            ->delete();
 
         self::forget();
     }
@@ -136,7 +175,10 @@ class LeaveLimits
     public static function forget(): void
     {
         self::$cache = null;
+        self::$paidDays = null;
     }
+
+    private static ?int $paidDays = null;
 
     /**
      * Хоосон мөрийг хасч, талбаруудыг цэгцэлнэ.

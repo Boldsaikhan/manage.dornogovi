@@ -34,6 +34,7 @@ class Leave extends Model
         'slip_number',
         'signer',
         'type',
+        'limit_exceeded',
         'start_date',
         'end_date',
         'days',
@@ -47,6 +48,7 @@ class Leave extends Model
         return [
             'start_date' => 'date',
             'end_date' => 'date',
+            'limit_exceeded' => 'boolean',
         ];
     }
 

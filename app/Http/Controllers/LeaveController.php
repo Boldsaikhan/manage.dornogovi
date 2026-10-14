@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Leave;
 use App\Models\PhoneDirectoryEntry;
 use App\Support\DocxTableWriter;
+use App\Support\LeaveBalance;
 use App\Support\LeaveLimits;
 use App\Support\ModuleAccess;
 use App\Support\ModuleOwnScope;
@@ -74,6 +75,7 @@ class LeaveController extends Controller
             // Журмын 5.4-р заалтын чөлөө олгох лимит — тохиргооноос засна.
             'limits' => LeaveLimits::all(),
             'limitPayOptions' => LeaveLimits::PAY,
+            'paidDaysPerYear' => LeaveLimits::paidDaysPerYear(),
             'hasAuditLog' => true,
         ]);
     }
@@ -93,15 +95,24 @@ class LeaveController extends Controller
             'limits.*.label' => ['nullable', 'string', 'max:1000'],
             'limits.*.limit' => ['nullable', 'string', 'max:255'],
             'limits.*.pay' => ['nullable', Rule::in(array_keys(LeaveLimits::PAY))],
+            'paid_days_per_year' => ['sometimes', 'integer', 'min:0', 'max:365'],
         ]);
 
         if ($request->boolean('reset')) {
             LeaveLimits::reset();
+            LeaveBalance::reapplyAll();
 
             return back()->with('success', 'Журмын анхны лимит сэргээгдлээ.');
         }
 
         LeaveLimits::save($data['limits'] ?? []);
+
+        if (array_key_exists('paid_days_per_year', $data)) {
+            LeaveLimits::savePaidDaysPerYear((int) $data['paid_days_per_year']);
+        }
+
+        // Лимит өөрчлөгдвөл бүх бүртгэлийг дахин тооцно.
+        LeaveBalance::reapplyAll();
 
         return back()->with('success', 'Чөлөөний лимит хадгалагдлаа.');
     }
@@ -280,6 +291,10 @@ class LeaveController extends Controller
             'department_id' => $request->user()->department_id,
         ]);
 
+        // Жилийн цалинтай чөлөөний лимит хэтэрвэл «Цалингүй» болно.
+        LeaveBalance::reapplyFor($leave);
+        $leave->refresh();
+
         $this->log($leave, 'created');
 
         if (filled($data['person_name'] ?? null)) {
@@ -332,6 +347,9 @@ class LeaveController extends Controller
 
         $leave->save();
 
+        LeaveBalance::reapplyFor($leave);
+        $leave->refresh();
+
         if ($changes !== []) {
             $this->log($leave, 'updated', $changes);
         }
@@ -345,8 +363,14 @@ class LeaveController extends Controller
         abort_unless(ModuleOwnScope::allows($request->user(), self::MODULE, $leave), 403);
 
         $scope = $leave->scope ?: 'baiguullaga';
+        $person = $leave->person_name;
+        $year = $leave->start_date ? Carbon::parse($leave->start_date)->year : null;
+
         $this->log($leave, 'deleted');
         $leave->delete();
+
+        // Мөр хасагдсан тул үлдсэн мөрүүдийн лимит сулрах боломжтой.
+        LeaveBalance::reapply($person, $year);
 
         return redirect()
             ->route('leaves.index', ['scope' => $scope])
@@ -372,6 +396,8 @@ class LeaveController extends Controller
             'signer_title' => $leave->signerTitle(),
             'type' => $leave->type,
             'type_label' => $leave->typeLabel(),
+            // Лимит хэтэрсэн мөрийн төрлийг солих боломжгүй.
+            'limit_exceeded' => (bool) $leave->limit_exceeded,
             'start_date' => optional($start)?->format('Y-m-d'),
             'end_date' => optional($leave->end_date)?->format('Y-m-d'),
             'year' => optional($start)?->format('Y'),
