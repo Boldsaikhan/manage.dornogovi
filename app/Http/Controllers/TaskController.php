@@ -1012,6 +1012,9 @@ class TaskController extends Controller
                 'layout' => $source->layout ?: $source->key,
                 'is_system' => $source->isSystem(),
                 'is_locked' => $source->isLocked(),
+                'is_leadership' => $source->isLeadership(),
+                // Албан тушаалыг хашиж буй хүний нэр — утасны жагсаалтаас.
+                'holder' => $source->leaderName(),
             ])
             ->values()
             ->all();
