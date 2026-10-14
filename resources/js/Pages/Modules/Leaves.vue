@@ -17,6 +17,7 @@ const props = defineProps({
     signers: { type: Object, default: () => ({}) },
     limits: { type: Array, default: () => [] },
     limitPayOptions: { type: Object, default: () => ({}) },
+    paidDaysPerYear: { type: Number, default: 5 },
     hasAuditLog: { type: Boolean, default: false },
 });
 
@@ -28,12 +29,14 @@ const props = defineProps({
  */
 const showLimits = ref(false);
 const limitRows = ref([]);
+const limitPaidDays = ref(0);
 const limitSaving = ref(false);
 
 const payEntries = computed(() => Object.entries(props.limitPayOptions));
 
 const openLimits = () => {
     limitRows.value = props.limits.map((row) => ({ ...row }));
+    limitPaidDays.value = props.paidDaysPerYear;
     showLimits.value = true;
 };
 
@@ -48,7 +51,10 @@ const removeLimitRow = (index) => {
 const saveLimits = () => {
     limitSaving.value = true;
 
-    router.patch(route('leaves.limits.update'), { limits: limitRows.value }, {
+    router.patch(route('leaves.limits.update'), {
+        limits: limitRows.value,
+        paid_days_per_year: limitPaidDays.value,
+    }, {
         preserveScroll: true,
         onSuccess: () => {
             showLimits.value = false;
@@ -70,6 +76,7 @@ const resetLimits = () => {
         preserveScroll: true,
         onSuccess: () => {
             limitRows.value = props.limits.map((row) => ({ ...row }));
+            limitPaidDays.value = props.paidDaysPerYear;
         },
         onFinish: () => {
             limitSaving.value = false;
@@ -601,8 +608,20 @@ const visibleRows = computed(() => (
                                 />
                             </td>
                             <td class="px-1.5 py-1.5">
+                                <!-- Лимит хэтэрсэн бол «Цалингүй» тогтсон — солихгүй. -->
+                                <span
+                                    v-if="row.limit_exceeded"
+                                    class="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700"
+                                    :title="`Жилийн цалинтай чөлөөний лимит (${paidDaysPerYear} хоног) хэтэрсэн тул цалингүй болсон.`"
+                                >
+                                    {{ row.type_label }}
+                                    <svg class="h-3 w-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path d="M7 11V8a5 5 0 0110 0v3" stroke-linecap="round" />
+                                        <rect x="5" y="11" width="14" height="9" rx="2" />
+                                    </svg>
+                                </span>
                                 <select
-                                    v-if="rowEditable && drafts[row.id]"
+                                    v-else-if="rowEditable && drafts[row.id]"
                                     v-model="drafts[row.id].type"
                                     class="w-full border-0 bg-transparent text-[11px] outline-none focus:bg-sky-50"
                                     @change="saveField(row.id, 'type', drafts[row.id].type)"
@@ -781,6 +800,22 @@ const visibleRows = computed(() => (
                     </div>
                     <button type="button" class="ui-btn-ghost" @click="showLimits = false">Хаах</button>
                 </div>
+
+                <label class="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 p-3 text-sm">
+                    <span class="font-semibold text-slate-700">Жилд олгох цалинтай чөлөө:</span>
+                    <input
+                        v-model.number="limitPaidDays"
+                        type="number"
+                        min="0"
+                        max="365"
+                        class="ui-input w-24 !py-1 text-sm"
+                        :disabled="! canManage"
+                    />
+                    <span class="text-slate-600">хоног</span>
+                    <span class="text-xs text-slate-500">
+                        Хэтэрсэн чөлөө автоматаар «Цалингүй» болж, төрлийг нь солих боломжгүй. 0 = хязгаарлахгүй.
+                    </span>
+                </label>
 
                 <div class="ui-table-wrap max-h-[60vh] overflow-y-auto">
                     <table class="ui-table">
