@@ -30,7 +30,7 @@ class AnnualLeaveController extends Controller
     private const SCOPES = [
         'agentlag' => 'Агентлаг',
         'sum' => 'Сумд',
-        'baiguullaga' => 'Байгууллага',
+        'baiguullaga' => 'АЗДТГ',
     ];
 
     public function index(Request $request): Response

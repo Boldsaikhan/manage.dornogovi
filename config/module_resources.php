@@ -14,7 +14,7 @@ return [
             'udirdlaga' => 'Аймгийн удирдлагууд',
             'agentlag' => 'Агентлаг',
             'sum' => 'Сумд',
-            'baiguullaga' => 'Байгууллага',
+            'baiguullaga' => 'АЗДТГ',
         ],
         'columns' => [
             ['key' => 'person_label', 'label' => 'Албан хаагч'],
@@ -30,7 +30,7 @@ return [
                 'udirdlaga' => 'Аймгийн удирдлагууд',
                 'agentlag' => 'Агентлаг',
                 'sum' => 'Сумд',
-                'baiguullaga' => 'Байгууллага',
+                'baiguullaga' => 'АЗДТГ',
             ]],
             ['name' => 'org_name', 'label' => 'Агентлаг / сум / байгууллага', 'type' => 'directory_org', 'scope_field' => 'scope'],
             ['name' => 'person_name', 'label' => 'Дарга / албан хаагч', 'type' => 'directory_person', 'depends_on' => 'org_name'],
@@ -258,7 +258,7 @@ return [
         'scopes' => [
             'agentlag' => 'Агентлаг',
             'sum' => 'Сумд',
-            'baiguullaga' => 'Байгууллага',
+            'baiguullaga' => 'АЗДТГ',
         ],
         'row_number' => 'Д/д',
         'columns' => [
