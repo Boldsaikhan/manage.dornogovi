@@ -628,6 +628,10 @@ class ModuleResourceController extends Controller
             $rules[] = Rule::in(array_keys($field['options'] ?? []));
         } elseif (($field['type'] ?? '') === 'date') {
             $rules[] = 'date';
+        } elseif (($field['type'] ?? '') === 'number') {
+            // Зөвхөн тоо — хүний тоо, зардлын хэмжээ гэх мэт.
+            $rules[] = 'numeric';
+            $rules[] = 'min:0';
         } else {
             $rules[] = 'string';
             $rules[] = 'max:5000';
