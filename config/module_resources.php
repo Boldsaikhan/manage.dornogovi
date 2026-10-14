@@ -280,7 +280,7 @@ return [
             ['name' => 'person_name', 'label' => 'Овог нэр', 'type' => 'text'],
             ['name' => 'position', 'label' => 'Албан тушаал', 'type' => 'text'],
             ['name' => 'org_name', 'label' => 'Байгууллага / хэлтэс', 'type' => 'text'],
-            ['name' => 'destination_country', 'label' => 'Очих улс', 'type' => 'text'],
+            ['name' => 'destination_country', 'label' => 'Очих улс', 'type' => 'select', 'options' => \App\Support\Countries::options()],
             ['name' => 'start_date', 'label' => 'Эхлэх', 'type' => 'date'],
             ['name' => 'end_date', 'label' => 'Дуусах', 'type' => 'date'],
             ['name' => 'reason', 'label' => '2. Гадаад улсад зорчих болсон шалтгаан', 'type' => 'textarea'],
