@@ -69,6 +69,25 @@ class ForeignTripTest extends TestCase
         $this->assertSame('Солонгос', $fresh->destination_country);
     }
 
+    public function test_the_name_cell_gets_the_phone_directory_as_options(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        PhoneDirectoryEntry::create([
+            'org_name' => 'Санхүүгийн хэлтэс',
+            'person_name' => 'Б.Гантөмөр',
+            'position' => 'Ахлах мэргэжилтэн',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('foreign-trips.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('inlineFields.person_name.people', true)
+                ->has('formMeta.people', 1)
+                ->where('formMeta.people.0.value', 'Б.Гантөмөр'));
+    }
+
     public function test_choosing_a_name_fills_in_the_position_and_the_organisation(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

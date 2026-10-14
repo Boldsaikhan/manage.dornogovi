@@ -994,6 +994,7 @@ const destroyRow = (id) => {
                                             : (inlineFor(col.key).type === 'number' ? 'number' : 'text')"
                                         :options="inlineFor(col.key).people ? (formMeta.people ?? null) : null"
                                         :align="col.align === 'left' ? 'left' : 'center'"
+                                        :placeholder="inlineFor(col.key).people ? 'Нэр сонгох…' : ''"
                                         empty-label="—"
                                         @commit="(v) => saveInline(row, col.key, v)"
                                     />
