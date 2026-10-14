@@ -112,6 +112,32 @@ class ForeignTripTest extends TestCase
         $this->assertNull($row->fresh()->destination_country);
     }
 
+    public function test_the_companion_count_and_the_cost_take_numbers_only(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $row = ForeignTrip::create(['scope' => 'baiguullaga']);
+
+        foreach (['companions' => '3', 'funding_source' => '1500000'] as $field => $value) {
+            $this->actingAs($admin)
+                ->post(route('modules.field', ['module' => 'foreign-trips', 'id' => $row->id]), [
+                    'field' => $field,
+                    'value' => $value,
+                ])
+                ->assertRedirect();
+
+            $this->actingAs($admin)
+                ->post(route('modules.field', ['module' => 'foreign-trips', 'id' => $row->id]), [
+                    'field' => $field,
+                    'value' => 'хоёр хүн',
+                ])
+                ->assertSessionHasErrors('value');
+        }
+
+        $fresh = $row->fresh();
+        $this->assertSame('3', $fresh->companions);
+        $this->assertSame('1500000', $fresh->funding_source);
+    }
+
     public function test_choosing_a_name_fills_in_the_position_and_the_organisation(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
