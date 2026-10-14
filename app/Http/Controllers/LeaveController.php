@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Leave;
 use App\Models\PhoneDirectoryEntry;
 use App\Support\DocxTableWriter;
+use App\Support\LeaveLimits;
 use App\Support\ModuleAccess;
 use App\Support\ModuleOwnScope;
 use App\Support\PdfTableWriter;
@@ -70,8 +71,39 @@ class LeaveController extends Controller
             'scopes' => self::SCOPES,
             'types' => Leave::TYPES,
             'signers' => Leave::signerOptions(),
+            // Журмын 5.4-р заалтын чөлөө олгох лимит — тохиргооноос засна.
+            'limits' => LeaveLimits::all(),
+            'limitPayOptions' => LeaveLimits::PAY,
             'hasAuditLog' => true,
         ]);
+    }
+
+    /**
+     * Чөлөө олгох лимитийн тохиргоог хадгална.
+     */
+    public function updateLimits(Request $request): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canManage($request->user(), self::MODULE)
+            || $request->user()->is_admin, 403);
+
+        $data = $request->validate([
+            'reset' => ['sometimes', 'boolean'],
+            'limits' => ['array'],
+            'limits.*.code' => ['nullable', 'string', 'max:20'],
+            'limits.*.label' => ['nullable', 'string', 'max:1000'],
+            'limits.*.limit' => ['nullable', 'string', 'max:255'],
+            'limits.*.pay' => ['nullable', Rule::in(array_keys(LeaveLimits::PAY))],
+        ]);
+
+        if ($request->boolean('reset')) {
+            LeaveLimits::reset();
+
+            return back()->with('success', 'Журмын анхны лимит сэргээгдлээ.');
+        }
+
+        LeaveLimits::save($data['limits'] ?? []);
+
+        return back()->with('success', 'Чөлөөний лимит хадгалагдлаа.');
     }
 
     /**
