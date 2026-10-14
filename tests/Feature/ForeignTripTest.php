@@ -192,6 +192,9 @@ class ForeignTripTest extends TestCase
         $this->actingAs($admin)
             ->get(route('foreign-trips.print', $trip))
             ->assertOk()
+            // «ХҮСЭЛТ ГАРГАСАН» мөрөнд хүсэлт гаргагчийн нэр бичигдэнэ.
+            ->assertSee('ХҮСЭЛТ ГАРГАСАН', false)
+            ->assertSeeInOrder(['ХҮСЭЛТ ГАРГАСАН', 'Б.Гантөмөр'], false)
             ->assertSee('Гадаад улсад зорчих хүсэлт', false)
             ->assertSee('Санхүүгийн хэлтэс')
             ->assertSee('Ахлах мэргэжилтэн')
