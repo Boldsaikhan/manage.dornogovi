@@ -103,11 +103,39 @@ class TaskSourceColumnsTest extends TestCase
         $this->assertDatabaseMissing('task_sources', ['id' => $prep->id]);
     }
 
+    public function test_the_leadership_sections_show_the_officer_from_the_phone_directory(): void
+    {
+        \App\Models\PhoneDirectoryEntry::create([
+            'org_name' => 'Аймгийн Засаг даргын Тамгын газар',
+            'person_name' => 'О.Батжаргал',
+            'position' => 'Аймгийн Засаг дарга',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->get(route('tasks.index', ['kind' => 'governor']))
+            ->assertOk()
+            ->assertInertia(function (AssertableInertia $page): void {
+                $governor = collect($page->toArray()['props']['kinds'])
+                    ->firstWhere('key', 'governor');
+
+                $this->assertSame('Аймгийн Засаг дарга', $governor['label']);
+                $this->assertTrue($governor['is_leadership']);
+                $this->assertSame('О.Батжаргал', $governor['holder']);
+
+                $department = collect($page->toArray()['props']['kinds'])
+                    ->firstWhere('key', TaskSource::KEY_DEPARTMENT);
+
+                $this->assertSame(TaskSource::DEPARTMENT_NAME, $department['label']);
+                $this->assertFalse($department['is_leadership']);
+                $this->assertTrue($department['is_locked']);
+            });
+    }
+
     public function test_leadership_sections_cannot_be_deleted(): void
     {
         $admin = $this->admin();
 
-        foreach (array_keys(TaskSource::LEADERSHIP) as $key) {
+        foreach ([...array_keys(TaskSource::LEADERSHIP), TaskSource::KEY_DEPARTMENT] as $key) {
             $this->actingAs($admin)
                 ->delete(route('tasks.sources.destroy', $key))
                 ->assertSessionHasErrors('source');
@@ -120,8 +148,10 @@ class TaskSourceColumnsTest extends TestCase
     {
         $admin = $this->admin();
 
-        // Удирдлагын байнгын хэсгүүд устахгүй тул тэднийг шууд хасна.
-        TaskSource::query()->whereIn('key', array_keys(TaskSource::LEADERSHIP))->delete();
+        // Байнгын хэсгүүд устахгүй тул тэднийг шууд хасна.
+        TaskSource::query()
+            ->whereIn('key', [...array_keys(TaskSource::LEADERSHIP), TaskSource::KEY_DEPARTMENT])
+            ->delete();
 
         // Нэгээс бусдыг нь устгана.
         $keep = TaskSource::query()->orderBy('id')->firstOrFail();

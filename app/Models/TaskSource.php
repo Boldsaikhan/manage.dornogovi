@@ -15,15 +15,22 @@ class TaskSource extends Model
     public const LAYOUTS = [self::KEY_DIRECTIVE, self::KEY_PREP_PLAN];
 
     /**
-     * Удирдлагын байнгын хэсгүүд — устгах боломжгүй.
+     * Удирдлагаас өгсөн үүрэг даалгавар — албан тушаал тус бүрээр.
+     *
+     * Утасны жагсаалтаас тухайн албан тушаалтны нэрийг олж харуулна.
      *
      * @var array<string, string>
      */
     public const LEADERSHIP = [
         'governor' => 'Аймгийн Засаг дарга',
-        'vice_governor' => 'Засаг даргын орлогч',
-        'chief_of_staff' => 'Тамгын газрын дарга',
+        'vice_governor' => 'Аймгийн Засаг даргын орлогч',
+        'chief_of_staff' => 'Аймгийн Засаг даргын Тамгын газрын дарга',
     ];
+
+    /** Хэлтсийн үүрэг даалгаврын байнгын хэсэг. */
+    public const KEY_DEPARTMENT = 'department_tasks';
+
+    public const DEPARTMENT_NAME = 'Хэлтсийн үүрэг даалгавар';
 
     public const COLUMN_SECTOR = 'sector';
 
@@ -68,7 +75,22 @@ class TaskSource extends Model
      */
     public function isLocked(): bool
     {
+        return $this->isLeadership() || $this->key === self::KEY_DEPARTMENT;
+    }
+
+    public function isLeadership(): bool
+    {
         return array_key_exists((string) $this->key, self::LEADERSHIP);
+    }
+
+    /**
+     * Удирдлагын хэсэгт тухайн албан тушаалыг хашиж буй хүний нэр.
+     */
+    public function leaderName(): ?string
+    {
+        return $this->isLeadership()
+            ? PhoneDirectoryEntry::holderFor($this->name)
+            : null;
     }
 
     public function isPrepLayout(): bool

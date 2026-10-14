@@ -98,8 +98,13 @@ const redo = () => {
  */
 const kindTabs = computed(() => props.kinds);
 
-/** Удирдлагын байнгын хэсгүүд — устгах боломжгүй, жагсаалтын эхэнд. */
-const leadershipTabs = computed(() => kindTabs.value.filter((item) => item.is_locked));
+/** Удирдлагаас өгсөн үүрэг даалгавар — албан тушаал тус бүрээр. */
+const leadershipTabs = computed(() => kindTabs.value.filter((item) => item.is_leadership));
+
+/** Хэлтсийн үүрэг даалгавар. */
+const departmentTabs = computed(
+    () => kindTabs.value.filter((item) => item.is_locked && ! item.is_leadership),
+);
 
 /** Хэрэглэгчийн үүсгэсэн хэсгүүд. */
 const createdTabs = computed(() => kindTabs.value.filter((item) => ! item.is_locked));
@@ -1836,11 +1841,38 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                 <aside class="ui-card min-h-0 max-h-full self-start overflow-y-auto p-3">
                     <template v-if="leadershipTabs.length">
                         <p class="mb-2 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                            Удирдлага
+                            Удирдлагаас өгсөн үүрэг даалгавар
                         </p>
                         <nav class="mb-4 space-y-0.5">
                             <Link
                                 v-for="item in leadershipTabs"
+                                :key="item.key"
+                                :href="route('tasks.index', { kind: item.key })"
+                                class="block rounded-lg px-2.5 py-2 text-sm transition"
+                                :class="kind === item.key
+                                    ? 'bg-brand-navy-600 font-semibold text-white'
+                                    : 'text-slate-700 hover:bg-slate-100'"
+                                @click.prevent="switchKind(item.key)"
+                            >
+                                {{ item.label }}
+                                <span
+                                    v-if="item.holder"
+                                    class="mt-0.5 block text-xs"
+                                    :class="kind === item.key ? 'text-white/80' : 'text-slate-500'"
+                                >
+                                    {{ item.holder }}
+                                </span>
+                            </Link>
+                        </nav>
+                    </template>
+
+                    <template v-if="departmentTabs.length">
+                        <p class="mb-2 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                            Хэлтсийн үүрэг даалгавар
+                        </p>
+                        <nav class="mb-4 space-y-0.5">
+                            <Link
+                                v-for="item in departmentTabs"
                                 :key="item.key"
                                 :href="route('tasks.index', { kind: item.key })"
                                 class="block rounded-lg px-2.5 py-2 text-sm transition"

@@ -112,6 +112,48 @@ class PhoneDirectoryEntry extends Model
      *
      * Богино («Б.Болд») ба бүтэн («Болдын Болд») нэр хоёуланг таниулна.
      */
+    /**
+     * Албан тушаалаар нь тухайн албан хаагчийн нэрийг олно.
+     *
+     * Эхлээд яг таарахыг, дараа нь агуулж байгааг хайна — утасны
+     * жагсаалтад «Аймгийн Засаг даргын орлогч» гэх мэт бүтэн бичигддэг.
+     */
+    public static function holderFor(?string $position): ?string
+    {
+        $needle = self::normalizePosition($position);
+
+        if ($needle === '') {
+            return null;
+        }
+
+        $rows = static::query()
+            ->whereNotNull('person_name')
+            ->orderBy('org_order')
+            ->orderBy('sort_order')
+            ->get(['person_name', 'position']);
+
+        $exact = $rows->first(
+            fn (self $row) => self::normalizePosition($row->position) === $needle,
+        );
+
+        $entry = $exact ?? $rows->first(function (self $row) use ($needle) {
+            $value = self::normalizePosition($row->position);
+
+            return $value !== '' && str_contains($value, $needle);
+        });
+
+        $name = trim((string) ($entry->person_name ?? ''));
+
+        return $name !== '' ? $name : null;
+    }
+
+    private static function normalizePosition(?string $value): string
+    {
+        $value = preg_replace('/\s+/u', ' ', trim((string) $value)) ?? '';
+
+        return mb_strtolower($value);
+    }
+
     public static function positionFor(?string $name): ?string
     {
         $needle = trim((string) $name);
