@@ -262,9 +262,10 @@ return [
         ],
         'row_number' => 'Д/д',
         'columns' => [
-            ['key' => 'person_name', 'label' => 'Овог нэр', 'single_line' => true, 'width' => '9%', 'edit' => 'person_name', 'edit_people' => true, 'edit_sync_position' => true],
-            ['key' => 'position', 'label' => 'Албан тушаал', 'width' => '10%', 'edit' => 'position'],
-            ['key' => 'org_name', 'label' => 'Байгууллага / хэлтэс', 'width' => '10%', 'edit' => 'org_name'],
+            ['key' => 'person_name', 'label' => 'Овог нэр', 'single_line' => true, 'width' => '9%', 'edit' => 'person_name', 'edit_people' => true, 'edit_sync_position' => true, 'edit_sync_org' => true],
+            // Албан тушаал, байгууллага нь нэрээс хамаарна — гараар засахгүй.
+            ['key' => 'position', 'label' => 'Албан тушаал', 'width' => '10%'],
+            ['key' => 'org_name', 'label' => 'Байгууллага / хэлтэс', 'width' => '10%'],
             ['key' => 'destination_country', 'label' => 'Очих улс', 'width' => '7%', 'edit' => 'destination_country'],
             ['key' => 'start_date', 'label' => 'Эхлэх', 'width' => '6%', 'date' => true, 'edit' => 'start_date', 'edit_type' => 'date'],
             ['key' => 'end_date', 'label' => 'Дуусах', 'width' => '6%', 'date' => true, 'edit' => 'end_date', 'edit_type' => 'date'],

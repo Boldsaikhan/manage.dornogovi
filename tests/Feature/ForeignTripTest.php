@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Department;
 use App\Models\ForeignTrip;
+use App\Models\PhoneDirectoryEntry;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
@@ -66,6 +67,42 @@ class ForeignTripTest extends TestCase
         $fresh = $row->fresh();
         $this->assertSame('Б.Гантөмөр', $fresh->person_name);
         $this->assertSame('Солонгос', $fresh->destination_country);
+    }
+
+    public function test_choosing_a_name_fills_in_the_position_and_the_organisation(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        PhoneDirectoryEntry::create([
+            'org_name' => 'Санхүүгийн хэлтэс',
+            'person_name' => 'Б.Гантөмөр',
+            'position' => 'Ахлах мэргэжилтэн',
+        ]);
+
+        $row = ForeignTrip::create(['scope' => 'baiguullaga']);
+
+        $this->actingAs($admin)
+            ->post(route('modules.field', ['module' => 'foreign-trips', 'id' => $row->id]), [
+                'field' => 'person_name',
+                'value' => 'Б.Гантөмөр',
+            ])
+            ->assertRedirect();
+
+        $fresh = $row->fresh();
+        $this->assertSame('Ахлах мэргэжилтэн', $fresh->position);
+        $this->assertSame('Санхүүгийн хэлтэс', $fresh->org_name);
+
+        // Нэрийг арилгахад хоёулаа арилна.
+        $this->actingAs($admin)
+            ->post(route('modules.field', ['module' => 'foreign-trips', 'id' => $row->id]), [
+                'field' => 'person_name',
+                'value' => '',
+            ])
+            ->assertRedirect();
+
+        $fresh = $row->fresh();
+        $this->assertNull($fresh->position);
+        $this->assertNull($fresh->org_name);
     }
 
     public function test_the_print_form_shows_the_filled_fields_and_blank_dots_for_the_rest(): void
