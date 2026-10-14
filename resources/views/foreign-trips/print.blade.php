@@ -68,6 +68,11 @@
             text-align: center;
         }
 
+        /* Гарын үсэг, нэрийн зай — бөглөсөн ч, хоосон ч ижил өргөн. */
+        .signature .dots,
+        .signature .filled { min-width: 40mm; }
+        .signature .filled { display: inline-block; text-align: center; }
+
     </style>
 </head>
 <body>
@@ -117,7 +122,8 @@
     </ol>
 
     <div class="signature">
-        ХҮСЭЛТ ГАРГАСАН: <span class="dots" style="min-width: 40mm;"></span> / <span class="dots" style="min-width: 40mm;"></span> /
+        ХҮСЭЛТ ГАРГАСАН: <span class="dots"></span>
+        / {!! $fill($trip->person_name) !!} /
     </div>
 </div>
 </body>
