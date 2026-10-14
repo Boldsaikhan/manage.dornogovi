@@ -147,7 +147,16 @@ class ModuleResourceController extends Controller
     private function formMeta(array $config, string $activeScope): array
     {
         if (($config['form_layout'] ?? null) !== 'assignment_sheet') {
-            return [];
+            /*
+             * Маягтгүй бүртгэл ч нэрийн нүдэнд сонголт гаргана —
+             * «edit_people» багана байвал утасны жагсаалтыг дамжуулна.
+             */
+            $needsPeople = collect($config['columns'] ?? [])
+                ->contains(fn (array $column) => ! empty($column['edit_people']));
+
+            return $needsPeople
+                ? ['people' => PhoneDirectoryEntry::peopleOptions()]
+                : [];
         }
 
         return [
