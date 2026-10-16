@@ -131,6 +131,25 @@ class TaskSourceColumnsTest extends TestCase
             });
     }
 
+    public function test_the_permanent_sections_sort_first_without_negative_order(): void
+    {
+        $locked = [...array_keys(TaskSource::LEADERSHIP), TaskSource::KEY_DEPARTMENT];
+
+        /*
+         * sort_order нь unsigned багана — сөрөг утга MySQL дээр
+         * migration-ийг зогсоодог.
+         */
+        $this->assertSame(0, TaskSource::query()->where('sort_order', '<', 0)->count());
+
+        $ordered = TaskSource::query()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->pluck('key')
+            ->all();
+
+        $this->assertSame($locked, array_slice($ordered, 0, count($locked)));
+    }
+
     public function test_leadership_sections_cannot_be_deleted(): void
     {
         $admin = $this->admin();

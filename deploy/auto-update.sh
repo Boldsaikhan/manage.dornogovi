@@ -116,7 +116,12 @@ cd "${WEB_ROOT}"
 # (Үгүй бол шинэ тохиргооны утгууд migration дотор хоосон ирдэг.)
 php artisan config:clear
 
-php artisan migrate --force
+# Migration бүтэлгүйтвэл схем хуучнаараа үлдэж, шинэ код 500 өгдөг тул
+# логт тод тэмдэглэнэ (set -e нь энд зогсооно).
+if ! php artisan migrate --force; then
+    echo "!! $(date '+%F %T') [${BRANCH}] MIGRATION БҮТЭЛГҮЙТЛЭЭ — схем шинэчлэгдсэнгүй." >&2
+    exit 1
+fi
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache

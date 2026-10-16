@@ -11,7 +11,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $order = -count(TaskSource::LEADERSHIP) - 1;
+        $order = 0;
 
         foreach (TaskSource::LEADERSHIP as $key => $name) {
             $source = TaskSource::query()->firstOrNew(['key' => $key]);
