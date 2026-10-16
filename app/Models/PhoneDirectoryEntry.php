@@ -208,6 +208,30 @@ class PhoneDirectoryEntry extends Model
     }
 
     /** Нэрээр нь харьяалах байгууллагыг олно. */
+    /** Хэлтсүүдийг багтаасан толгой байгууллага. */
+    public const PARENT_ORG = 'Аймгийн Засаг даргын Тамгын газар';
+
+    /**
+     * Албан хаагчийн ажлын газрыг «байгууллага» ба «хэлтэс» болгон ялгана.
+     *
+     * Утасны жагсаалтад хэлтэс нь өөрөө «байгууллага» болж бүртгэгддэг
+     * тул хэлтэс бол толгой байгууллагыг нь нөхөж өгнө.
+     *
+     * @return array{org: string, unit: string}
+     */
+    public static function placeFor(?string $name): array
+    {
+        $org = trim((string) (self::orgFor($name) ?? ''));
+
+        if ($org === '') {
+            return ['org' => '', 'unit' => ''];
+        }
+
+        return self::looksLikeDepartment($org)
+            ? ['org' => self::PARENT_ORG, 'unit' => $org]
+            : ['org' => $org, 'unit' => ''];
+    }
+
     public static function orgFor(?string $name): ?string
     {
         $needle = trim((string) $name);
