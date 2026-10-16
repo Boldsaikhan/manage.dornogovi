@@ -123,6 +123,60 @@ class LeaveRuleLimitTest extends TestCase
             ->assertSessionHasErrors('rule_code');
     }
 
+    public function test_days_cannot_be_raised_past_the_rule_limit(): void
+    {
+        $admin = $this->admin();
+
+        $leave = $this->leave('2026-02-02', 2, 'Y');
+
+        // 5 хоногийн лимит — 5 хүртэл боломжтой.
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $leave), ['days' => 5])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(5, $leave->fresh()->days);
+
+        // 6 бол хэтэрнэ — хадгалагдахгүй.
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $leave), ['days' => 6])
+            ->assertSessionHasErrors(['rule_code', 'days']);
+
+        $this->assertSame(5, $leave->fresh()->days);
+    }
+
+    public function test_days_are_capped_against_what_others_already_used(): void
+    {
+        $admin = $this->admin();
+
+        $this->leave('2026-02-02', 3, 'Y');
+        $second = $this->leave('2026-06-02', 1, 'Y');
+
+        // 3 + 2 = 5 — яг багтана.
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $second), ['days' => 2])
+            ->assertSessionHasNoErrors();
+
+        // 3 + 3 = 6 — хэтэрнэ.
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $second), ['days' => 3])
+            ->assertSessionHasErrors('days');
+
+        $this->assertSame(2, $second->fresh()->days);
+    }
+
+    public function test_a_per_occasion_rule_caps_the_days_too(): void
+    {
+        $admin = $this->admin();
+
+        $leave = $this->leave('2026-02-02', 1, 'O');
+
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $leave), ['days' => 3])
+            ->assertSessionHasErrors('days');
+
+        $this->assertSame(1, $leave->fresh()->days);
+    }
+
     public function test_the_register_reports_how_many_days_are_used(): void
     {
         $admin = $this->admin();

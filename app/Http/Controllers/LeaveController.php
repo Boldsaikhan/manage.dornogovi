@@ -325,6 +325,12 @@ class LeaveController extends Controller
             'department_id' => $request->user()->department_id,
         ]);
 
+        if ($error = $this->ruleLimitError($leave)) {
+            $leave->delete();
+
+            return back()->withErrors(['rule_code' => $error]);
+        }
+
         // Жилийн цалинтай чөлөөний лимит хэтэрвэл «Цалингүй» болно.
         LeaveBalance::reapplyFor($leave);
         $leave->refresh();
@@ -396,7 +402,7 @@ class LeaveController extends Controller
 
         // Лимитээс хэтэрсэн заалтыг сонгох боломжгүй.
         if ($error = $this->ruleLimitError($leave)) {
-            return back(303)->withErrors(['rule_code' => $error]);
+            return back(303)->withErrors(['rule_code' => $error, 'days' => $error]);
         }
 
         if (array_key_exists('start_date', $data) || array_key_exists('days', $data)) {
@@ -469,11 +475,22 @@ class LeaveController extends Controller
             return null;
         }
 
+        $all = Leave::query()->get(
+            LeaveSchema::only(['id', 'person_name', 'rule_code', 'start_date', 'days']),
+        );
+
+        $used = $rule['period'] === 'once'
+            ? 0
+            : LeaveRuleUsage::usedDays($rule, $leave, $all, $person);
+
+        $left = max(0, (int) $rule['days'] - $used);
+
         return sprintf(
-            '«%s %s» заалтын лимит (%s) хэтэрсэн тул сонгох боломжгүй.',
+            '«%s» заалтаар %s. Боломжит үлдэгдэл %d хоног — %d хоног олгох боломжгүй.',
             $rule['code'],
-            $rule['label'],
-            LeaveLimits::limitText($rule),
+            mb_strtolower(LeaveLimits::limitText($rule)),
+            $left,
+            max(0, (int) $leave->days),
         );
     }
 
