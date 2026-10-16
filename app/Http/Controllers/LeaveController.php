@@ -258,6 +258,7 @@ class LeaveController extends Controller
         $data = $request->validate([
             'scope' => ['nullable', Rule::in(array_keys(self::SCOPES))],
             'org_name' => ['nullable', 'string', 'max:255'],
+            'unit_name' => ['nullable', 'string', 'max:255'],
             'person_name' => ['nullable', 'string', 'max:255'],
             'slip_number' => ['nullable', 'string', 'max:50'],
             'signer' => ['nullable', Rule::in(array_keys(Leave::signerOptions()))],
@@ -275,9 +276,13 @@ class LeaveController extends Controller
         $days = (int) ($data['days'] ?? 1);
         $end = $start->copy()->addDays($days - 1);
 
+        // Нэрээ сонгосон бол байгууллага, хэлтсийг утасны жагсаалтаас нөхнө.
+        $place = PhoneDirectoryEntry::placeFor($data['person_name'] ?? null);
+
         $leave = Leave::query()->create([
             'scope' => $scope,
-            'org_name' => $data['org_name'] ?? null,
+            'org_name' => $data['org_name'] ?? ($place['org'] ?: null),
+            'unit_name' => $data['unit_name'] ?? ($place['unit'] ?: null),
             'person_name' => $data['person_name'] ?? null,
             'slip_number' => $data['slip_number'] ?? null,
             'signer' => $data['signer'] ?? null,
@@ -326,6 +331,7 @@ class LeaveController extends Controller
         $data = $request->validate([
             'scope' => ['sometimes', Rule::in(array_keys(self::SCOPES))],
             'org_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'unit_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'person_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'slip_number' => ['sometimes', 'nullable', 'string', 'max:50'],
             'signer' => ['sometimes', 'nullable', Rule::in(array_keys(Leave::signerOptions()))],
@@ -334,6 +340,17 @@ class LeaveController extends Controller
             'days' => ['sometimes', 'integer', 'min:1', 'max:365'],
             'reason' => ['sometimes', 'nullable', 'string', 'max:2000'],
         ]);
+
+        /*
+         * Албан хаагчийг сонгоход байгууллага, хэлтэс нь автоматаар
+         * бөглөгдөнө. Нэрийг арилгахад хоёулаа цэвэрлэгдэнэ.
+         */
+        if (array_key_exists('person_name', $data)) {
+            $place = PhoneDirectoryEntry::placeFor($data['person_name']);
+
+            $data['org_name'] = $place['org'] ?: null;
+            $data['unit_name'] = $place['unit'] ?: null;
+        }
 
         $changes = $this->changedFields($leave, $data);
 
@@ -389,7 +406,9 @@ class LeaveController extends Controller
             'scope' => $leave->scope,
             'scope_label' => self::SCOPES[$leave->scope] ?? $leave->scope,
             'org_name' => $leave->org_name,
-            'unit' => $this->unitName($leave->org_name),
+            'unit_name' => $leave->unit_name,
+            // Хуудасны харагдацад гарах богино нэр.
+            'unit' => $leave->unit_name ?: $this->unitName($leave->org_name),
             /*
              * Бүртгэл хөтлөгчийн нэрийг орлуулахгүй — хоосон мөр нэмэхэд
              * «Албан хаагч» багана хоосон байж, хайж сонгоно.

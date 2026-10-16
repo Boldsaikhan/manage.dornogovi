@@ -61,6 +61,56 @@ class LeavePaidDayLimitTest extends TestCase
             ->assertInertia(fn ($page) => $page->where('rows.0.person_name', ''));
     }
 
+    public function test_choosing_the_officer_fills_the_organisation_and_the_unit(): void
+    {
+        $admin = $this->admin();
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'org_name' => 'Төрийн захиргааны удирдлагын хэлтэс',
+            'person_name' => 'А.Номин',
+            'position' => 'Мэргэжилтэн',
+        ]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'org_name' => 'Эрүүл мэндийн газар',
+            'person_name' => 'Б.Болд',
+            'position' => 'Дарга',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('leaves.store'), ['scope' => 'baiguullaga'])
+            ->assertRedirect();
+
+        $leave = Leave::query()->sole();
+
+        // Хэлтсийн ажилтан — толгой байгууллага нь нөхөгдөнө.
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $leave), ['person_name' => 'А.Номин'])
+            ->assertRedirect();
+
+        $fresh = $leave->fresh();
+        $this->assertSame(\App\Models\PhoneDirectoryEntry::PARENT_ORG, $fresh->org_name);
+        $this->assertSame('Төрийн захиргааны удирдлагын хэлтэс', $fresh->unit_name);
+
+        // Агентлагийн ажилтан — хэлтэс хоосон.
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $leave), ['person_name' => 'Б.Болд'])
+            ->assertRedirect();
+
+        $fresh = $leave->fresh();
+        $this->assertSame('Эрүүл мэндийн газар', $fresh->org_name);
+        $this->assertNull($fresh->unit_name);
+
+        // Нэрийг арилгахад хоёулаа цэвэрлэгдэнэ.
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $leave), ['person_name' => ''])
+            ->assertRedirect();
+
+        $fresh = $leave->fresh();
+        $this->assertNull($fresh->org_name);
+        $this->assertNull($fresh->unit_name);
+    }
+
     public function test_leave_over_the_yearly_cap_becomes_unpaid(): void
     {
         $admin = $this->admin();

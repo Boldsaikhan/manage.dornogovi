@@ -239,7 +239,7 @@ const logTone = (action) => ({
  * үүсээд, дараа нь нүд бүрийг {@see saveField} горимоор нэг нэгээр нь
  * хадгална.
  */
-const DRAFT_FIELDS = ['org_name', 'person_name', 'type', 'start_date', 'days', 'reason', 'signer'];
+const DRAFT_FIELDS = ['org_name', 'unit_name', 'person_name', 'type', 'start_date', 'days', 'reason', 'signer'];
 
 const drafts = reactive({});
 
@@ -325,6 +325,7 @@ const registerTitle = computed(() => {
  */
 const filters = reactive({
     org_name: '',
+    unit_name: '',
     person_name: '',
     type_label: '',
     start_date: '',
@@ -514,7 +515,8 @@ const visibleRows = computed(() => (
                     <colgroup>
                         <col style="width: 2.5rem" />
                         <col style="width: 3rem" />
-                        <col style="width: 18rem" />
+                        <col style="width: 13rem" />
+                        <col style="width: 12rem" />
                         <col style="width: 10rem" />
                         <col style="width: 8rem" />
                         <col style="width: 6rem" />
@@ -536,7 +538,8 @@ const visibleRows = computed(() => (
                                 />
                             </th>
                             <th rowspan="2">Д/д</th>
-                            <th rowspan="2">Байгууллага /<br>хэлтэс</th>
+                            <th rowspan="2">Байгууллага</th>
+                            <th rowspan="2">Хэлтэс</th>
                             <th rowspan="2">Албан хаагч</th>
                             <th rowspan="2">Төрөл</th>
                             <th colspan="3" class="ui-register__head-group--issued">Чөлөөний хугацаа</th>
@@ -564,6 +567,7 @@ const visibleRows = computed(() => (
                                 <span v-else class="text-[10px] text-slate-300">Хайх</span>
                             </th>
                             <th><input v-model="filters.org_name" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.unit_name" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.person_name" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.type_label" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.start_date" type="search" placeholder="2026.09" /></th>
@@ -585,6 +589,7 @@ const visibleRows = computed(() => (
                                 />
                             </td>
                             <td class="ui-register__cell--no">{{ row.seq }}</td>
+                            <!-- Байгууллага, хэлтэс нь албан хаагчаас хамаарна. -->
                             <td :class="cellClass">
                                 <SheetCell
                                     v-if="drafts[row.id]"
@@ -594,6 +599,16 @@ const visibleRows = computed(() => (
                                     empty-label=""
                                     placeholder="Байгууллага…"
                                     @commit="(v) => saveField(row.id, 'org_name', v)"
+                                />
+                            </td>
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].unit_name"
+                                    :editable="rowEditable"
+                                    empty-label=""
+                                    placeholder="Хэлтэс…"
+                                    @commit="(v) => saveField(row.id, 'unit_name', v)"
                                 />
                             </td>
                             <td :class="cellClass">

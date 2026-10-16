@@ -30,6 +30,7 @@ class Leave extends Model
         'department_id',
         'scope',
         'org_name',
+        'unit_name',
         'person_name',
         'slip_number',
         'signer',
