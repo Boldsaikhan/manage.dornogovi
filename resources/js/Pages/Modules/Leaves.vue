@@ -5,6 +5,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import SheetCell from '@/Components/SheetCell.vue';
+import LeaveRulePicker from '@/Components/LeaveRulePicker.vue';
 
 const props = defineProps({
     activeScope: { type: String, default: 'baiguullaga' },
@@ -39,34 +40,6 @@ const periodEntries = computed(() => Object.entries(props.limitPeriodOptions));
 
 /** Журмын нэрийг кодоор нь олох. */
 const ruleLabel = (code) => props.rules.find((r) => r.code === code)?.label || '';
-
-/**
- * «Жилд ажлын 5 хоногоос 3-ыг авсан, 2 үлдсэн» гэх мэт тайлбар.
- *
- * «Тохиолдол бүрт» заалтад хуримтлал байхгүй тул зөвхөн дээд хязгаарыг
- * харуулна.
- */
-const ruleUsageText = (row, rule) => {
-    if (! rule?.days) {
-        return 'хоног заагаагүй';
-    }
-
-    if (rule.period === 'once') {
-        return `${rule.period_label.toLowerCase()} ${rule.days} хоног хүртэл`;
-    }
-
-    const used = Number((row?.rule_usage || {})[rule.code] ?? 0);
-    const left = Math.max(0, rule.days - used);
-
-    return `${rule.period_label.toLowerCase()} ${rule.days} хоногоос ${used} авсан, ${left} үлдсэн`;
-};
-
-/** Мөрөнд сонгосон заалтын тайлбар. */
-const selectedRuleUsage = (row) => {
-    const rule = props.rules.find((r) => r.code === row.rule_code);
-
-    return rule ? ruleUsageText(row, rule) : '';
-};
 
 const openLimits = () => {
     limitRows.value = props.limits.map((row) => ({ ...row }));
@@ -684,34 +657,17 @@ const visibleRows = computed(() => (
                                 </select>
                                 <span v-else class="ui-clamp-2">{{ row.type_label }}</span>
                             </td>
-                            <!-- Журмын заалт — лимит дүүрсэн заалт сонгогдохгүй. -->
+                            <!-- Журмын заалт — хүснэгтээр сонгоно. -->
                             <td class="px-1.5 py-1.5">
-                                <select
-                                    v-if="rowEditable && drafts[row.id]"
+                                <LeaveRulePicker
+                                    v-if="drafts[row.id]"
                                     v-model="drafts[row.id].rule_code"
-                                    class="w-full border-0 bg-transparent text-[11px] outline-none focus:bg-sky-50"
-                                    @change="saveField(row.id, 'rule_code', drafts[row.id].rule_code)"
-                                >
-                                    <option value="">— сонгох —</option>
-                                    <option
-                                        v-for="rule in rules"
-                                        :key="rule.code"
-                                        :value="rule.code"
-                                        :disabled="(row.blocked_rules || []).includes(rule.code)"
-                                    >
-                                        {{ rule.label }} — {{ ruleUsageText(row, rule) }}<template
-                                            v-if="(row.blocked_rules || []).includes(rule.code)"
-                                        > · лимит дүүрсэн</template>
-                                    </option>
-                                </select>
-                                <span v-else class="ui-clamp-2">{{ row.rule_label || '—' }}</span>
-                                <!-- Сонгосон заалтын үлдэгдэл. -->
-                                <span
-                                    v-if="row.rule_code && selectedRuleUsage(row)"
-                                    class="mt-0.5 block text-[10px] leading-tight text-slate-500"
-                                >
-                                    {{ selectedRuleUsage(row) }}
-                                </span>
+                                    :rules="rules"
+                                    :usage="row.rule_usage || {}"
+                                    :blocked="row.blocked_rules || []"
+                                    :editable="rowEditable"
+                                    @commit="(v) => saveField(row.id, 'rule_code', v)"
+                                />
                             </td>
                             <td :class="cellClass">
                                 <SheetCell
