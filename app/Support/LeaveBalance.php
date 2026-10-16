@@ -121,6 +121,12 @@ class LeaveBalance
 
     private static ?bool $ready = null;
 
+    /** Тестийн хооронд цээжилсэн төлвийг хаяна. */
+    public static function forget(): void
+    {
+        self::$ready = null;
+    }
+
     /**
      * Мөрийн хүн, жилээр нь дахин тооцно.
      */
