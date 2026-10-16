@@ -695,6 +695,7 @@ const visibleRows = computed(() => (
                                     :rules="rules"
                                     :usage="row.rule_usage || {}"
                                     :blocked="row.blocked_rules || []"
+                                    :row-days="row.days || 0"
                                     :editable="rowEditable"
                                     @commit="(v) => saveField(row.id, 'rule_code', v)"
                                 />
