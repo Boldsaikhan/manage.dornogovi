@@ -95,6 +95,9 @@ class LeaveController extends Controller
                     'code' => $rule['code'],
                     'label' => $rule['code'].' '.$rule['label'],
                     'limit_text' => LeaveLimits::limitText($rule),
+                    'period' => $rule['period'],
+                    'period_label' => LeaveLimits::PERIODS[$rule['period']] ?? '',
+                    'days' => (int) $rule['days'],
                 ])
                 ->values(),
             'paidDaysPerYear' => LeaveLimits::paidDaysPerYear(),
@@ -504,6 +507,10 @@ class LeaveController extends Controller
             'blocked_rules' => $all === null || ! LeaveSchema::hasRules()
                 ? []
                 : LeaveRuleUsage::blockedCodes($leave, $all),
+            // Заалт тус бүрээр тухайн хугацаанд авсан хоног.
+            'rule_usage' => $all === null || ! LeaveSchema::hasRules()
+                ? []
+                : LeaveRuleUsage::usageFor($leave, $all),
             // Лимит хэтэрсэн мөрийн төрлийг солих боломжгүй.
             'limit_exceeded' => (bool) $leave->getAttribute('limit_exceeded'),
             'start_date' => optional($start)?->format('Y-m-d'),

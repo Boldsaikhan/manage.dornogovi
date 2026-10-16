@@ -123,6 +123,32 @@ class LeaveRuleLimitTest extends TestCase
             ->assertSessionHasErrors('rule_code');
     }
 
+    public function test_the_register_reports_how_many_days_are_used(): void
+    {
+        $admin = $this->admin();
+
+        $this->leave('2026-02-02', 3, 'Y');
+        $this->leave('2026-01-10', 2, 'Q');
+        $this->leave('2026-06-02', 1);
+
+        $this->actingAs($admin)
+            ->get(route('leaves.index'))
+            ->assertOk()
+            ->assertInertia(function (AssertableInertia $page): void {
+                $fresh = collect($page->toArray()['props']['rows'])
+                    ->firstWhere('rule_code', null);
+
+                // Жилийн заалтаар 3 хоног авсан.
+                $this->assertSame(3, $fresh['rule_usage']['Y']);
+
+                // Улирал өөр тул улирлын заалтын хуримтлал 0.
+                $this->assertSame(0, $fresh['rule_usage']['Q']);
+
+                // «Тохиолдол бүрт» заалтад хуримтлал байхгүй.
+                $this->assertSame(0, $fresh['rule_usage']['O']);
+            });
+    }
+
     public function test_the_register_marks_the_blocked_rules(): void
     {
         $admin = $this->admin();

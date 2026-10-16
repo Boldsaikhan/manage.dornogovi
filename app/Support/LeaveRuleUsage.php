@@ -47,6 +47,37 @@ class LeaveRuleUsage
     }
 
     /**
+     * Заалт тус бүрээр тухайн хугацаанд авсан хоног.
+     *
+     * «Тохиолдол бүрт» заалтад хуримтлал байхгүй тул 0 буцаана.
+     *
+     * @param  Collection<int, Leave>  $all
+     * @return array<string, int>
+     */
+    public static function usageFor(Leave $leave, Collection $all): array
+    {
+        $person = trim((string) $leave->person_name);
+
+        if ($person === '') {
+            return [];
+        }
+
+        $out = [];
+
+        foreach (LeaveLimits::all() as $rule) {
+            if ($rule['code'] === '') {
+                continue;
+            }
+
+            $out[$rule['code']] = $rule['period'] === 'once'
+                ? 0
+                : self::usedDays($rule, $leave, $all, $person);
+        }
+
+        return $out;
+    }
+
+    /**
      * Энэ мөрийг энэ заалтаар олговол лимит хэтрэх үү.
      *
      * @param  array{code: string, period: string, days: int}  $rule
@@ -81,7 +112,7 @@ class LeaveRuleUsage
      * @param  array{code: string, period: string, days: int}  $rule
      * @param  Collection<int, Leave>  $all
      */
-    private static function usedDays(array $rule, Leave $leave, Collection $all, string $person): int
+    public static function usedDays(array $rule, Leave $leave, Collection $all, string $person): int
     {
         $window = self::window($rule['period'], $leave->start_date);
 
