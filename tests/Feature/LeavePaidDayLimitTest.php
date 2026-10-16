@@ -42,6 +42,25 @@ class LeavePaidDayLimitTest extends TestCase
         return Leave::query()->latest('id')->firstOrFail();
     }
 
+    public function test_a_new_blank_row_is_empty(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)
+            ->post(route('leaves.store'), ['scope' => 'baiguullaga'])
+            ->assertRedirect();
+
+        $leave = Leave::query()->sole();
+
+        $this->assertNull($leave->person_name);
+
+        $this->actingAs($admin)
+            ->get(route('leaves.index'))
+            ->assertOk()
+            // Бүртгэл хөтлөгчийн нэр мөрөнд орж ирэхгүй.
+            ->assertInertia(fn ($page) => $page->where('rows.0.person_name', ''));
+    }
+
     public function test_leave_over_the_yearly_cap_becomes_unpaid(): void
     {
         $admin = $this->admin();

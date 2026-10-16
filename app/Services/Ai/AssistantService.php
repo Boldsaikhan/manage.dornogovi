@@ -216,6 +216,8 @@ class AssistantService
 
             $leave = Leave::create([
                 'user_id' => $user->id,
+                // Чөлөө авч буй хүн нь хүсэлт гаргасан албан хаагч өөрөө.
+                'person_name' => $user->name,
                 'department_id' => $user->department_id,
                 'type' => $validated['type'] ?? 'chuluu',
                 'start_date' => $validated['start_date'],

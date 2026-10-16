@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Leave;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Жилийн цалинтай чөлөөний лимитийг хэрэгжүүлнэ.
@@ -27,7 +28,7 @@ class LeaveBalance
     {
         $person = trim((string) $person);
 
-        if ($person === '' || ! $year) {
+        if ($person === '' || ! $year || ! self::ready()) {
             return;
         }
 
@@ -78,6 +79,10 @@ class LeaveBalance
      */
     public static function reapplyAll(): void
     {
+        if (! self::ready()) {
+            return;
+        }
+
         Leave::query()
             ->whereNotNull('person_name')
             ->whereNotNull('start_date')
@@ -94,6 +99,27 @@ class LeaveBalance
                     ->each(fn (int $year) => self::reapply($person, $year));
             });
     }
+
+    /**
+     * Багана нь бэлэн эсэх.
+     *
+     * Шинэ migration ажиллаж амжаагүй сервер дээр бүртгэл хадгалах нь
+     * алдаа өгөхгүй — лимит түр идэвхгүй байна.
+     */
+    private static function ready(): bool
+    {
+        if (self::$ready !== null) {
+            return self::$ready;
+        }
+
+        try {
+            return self::$ready = Schema::hasColumn('leaves', 'limit_exceeded');
+        } catch (\Throwable $e) {
+            return self::$ready = false;
+        }
+    }
+
+    private static ?bool $ready = null;
 
     /**
      * Мөрийн хүн, жилээр нь дахин тооцно.
