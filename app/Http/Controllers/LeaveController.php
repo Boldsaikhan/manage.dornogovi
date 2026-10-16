@@ -9,6 +9,7 @@ use App\Support\DocxTableWriter;
 use App\Support\LeaveBalance;
 use App\Support\LeaveLimits;
 use App\Support\LeaveRuleUsage;
+use App\Support\LeaveSchema;
 use App\Support\ModuleAccess;
 use App\Support\ModuleOwnScope;
 use App\Support\PdfTableWriter;
@@ -68,7 +69,9 @@ class LeaveController extends Controller
          * Журмын сонголтыг хаахад бүх бүртгэл хэрэгтэй — лимитийг
          * хүн, хугацааны хүрээгээр тоолно.
          */
-        $allLeaves = Leave::query()->get(['id', 'person_name', 'rule_code', 'start_date', 'days']);
+        $allLeaves = Leave::query()->get(
+            LeaveSchema::only(['id', 'person_name', 'rule_code', 'start_date', 'days']),
+        );
 
         $rows = $leaves->map(fn (Leave $leave) => $this->serialize($leave, $allLeaves));
 
@@ -85,8 +88,8 @@ class LeaveController extends Controller
             'limits' => LeaveLimits::all(),
             'limitPayOptions' => LeaveLimits::PAY,
             'limitPeriodOptions' => LeaveLimits::PERIODS,
-            // «Журам» баганын сонголт.
-            'rules' => collect(LeaveLimits::all())
+            // «Журам» баганын сонголт (багана бэлэн үед).
+            'rules' => ! LeaveSchema::hasRules() ? [] : collect(LeaveLimits::all())
                 ->filter(fn (array $rule) => $rule['code'] !== '')
                 ->map(fn (array $rule) => [
                     'code' => $rule['code'],
@@ -303,7 +306,9 @@ class LeaveController extends Controller
         $leave = Leave::query()->create([
             'scope' => $scope,
             'org_name' => $data['org_name'] ?? ($place['org'] ?: null),
-            'unit_name' => $data['unit_name'] ?? ($place['unit'] ?: null),
+            ...(LeaveSchema::hasUnit()
+                ? ['unit_name' => $data['unit_name'] ?? ($place['unit'] ?: null)]
+                : []),
             'person_name' => $data['person_name'] ?? null,
             'slip_number' => $data['slip_number'] ?? null,
             'signer' => $data['signer'] ?? null,
@@ -371,7 +376,15 @@ class LeaveController extends Controller
             $place = PhoneDirectoryEntry::placeFor($data['person_name']);
 
             $data['org_name'] = $place['org'] ?: null;
-            $data['unit_name'] = $place['unit'] ?: null;
+
+            if (LeaveSchema::hasUnit()) {
+                $data['unit_name'] = $place['unit'] ?: null;
+            }
+        }
+
+        // Багана бэлэн биш бол журмын кодыг хүлээж авахгүй.
+        if (! LeaveSchema::hasRules()) {
+            unset($data['rule_code']);
         }
 
         $changes = $this->changedFields($leave, $data);
@@ -429,6 +442,10 @@ class LeaveController extends Controller
      */
     private function ruleLimitError(Leave $leave): ?string
     {
+        if (! LeaveSchema::hasRules()) {
+            return null;
+        }
+
         $rule = LeaveLimits::find($leave->rule_code);
 
         if ($rule === null || (int) $rule['days'] <= 0) {
@@ -441,7 +458,9 @@ class LeaveController extends Controller
             return null;
         }
 
-        $all = Leave::query()->get(['id', 'person_name', 'rule_code', 'start_date', 'days']);
+        $all = Leave::query()->get(
+            LeaveSchema::only(['id', 'person_name', 'rule_code', 'start_date', 'days']),
+        );
 
         if (! LeaveRuleUsage::exceeds($rule, $leave, $all, $person, max(0, (int) $leave->days))) {
             return null;
@@ -467,9 +486,9 @@ class LeaveController extends Controller
             'scope' => $leave->scope,
             'scope_label' => self::SCOPES[$leave->scope] ?? $leave->scope,
             'org_name' => $leave->org_name,
-            'unit_name' => $leave->unit_name,
+            'unit_name' => $leave->getAttribute('unit_name'),
             // Хуудасны харагдацад гарах богино нэр.
-            'unit' => $leave->unit_name ?: $this->unitName($leave->org_name),
+            'unit' => $leave->getAttribute('unit_name') ?: $this->unitName($leave->org_name),
             /*
              * Бүртгэл хөтлөгчийн нэрийг орлуулахгүй — хоосон мөр нэмэхэд
              * «Албан хаагч» багана хоосон байж, хайж сонгоно.
@@ -480,11 +499,13 @@ class LeaveController extends Controller
             'signer_title' => $leave->signerTitle(),
             'type' => $leave->type,
             'type_label' => $leave->typeLabel(),
-            'rule_code' => $leave->rule_code,
+            'rule_code' => $leave->getAttribute('rule_code'),
             // Лимит хэтрэх заалтууд — сонголтод хаалттай гарна.
-            'blocked_rules' => $all === null ? [] : LeaveRuleUsage::blockedCodes($leave, $all),
+            'blocked_rules' => $all === null || ! LeaveSchema::hasRules()
+                ? []
+                : LeaveRuleUsage::blockedCodes($leave, $all),
             // Лимит хэтэрсэн мөрийн төрлийг солих боломжгүй.
-            'limit_exceeded' => (bool) $leave->limit_exceeded,
+            'limit_exceeded' => (bool) $leave->getAttribute('limit_exceeded'),
             'start_date' => optional($start)?->format('Y-m-d'),
             'end_date' => optional($leave->end_date)?->format('Y-m-d'),
             'year' => optional($start)?->format('Y'),
