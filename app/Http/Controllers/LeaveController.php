@@ -390,7 +390,11 @@ class LeaveController extends Controller
             'scope_label' => self::SCOPES[$leave->scope] ?? $leave->scope,
             'org_name' => $leave->org_name,
             'unit' => $this->unitName($leave->org_name),
-            'person_name' => $leave->person_name ?: ($leave->user?->name ?? ''),
+            /*
+             * Бүртгэл хөтлөгчийн нэрийг орлуулахгүй — хоосон мөр нэмэхэд
+             * «Албан хаагч» багана хоосон байж, хайж сонгоно.
+             */
+            'person_name' => (string) ($leave->person_name ?? ''),
             'slip_number' => $leave->slip_number,
             'signer' => $leave->signer,
             'signer_title' => $leave->signerTitle(),
