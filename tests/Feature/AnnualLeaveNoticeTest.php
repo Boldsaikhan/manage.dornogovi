@@ -66,6 +66,8 @@ class AnnualLeaveNoticeTest extends TestCase
             ->assertSee('09 дүгээр сарын 18-ны өдрийг дуустал', false)
             ->assertSee('ажлын 15 өдрөөр олгов.', false)
             ->assertSee('ЗӨВШӨӨРСӨН:')
+            // Доод блокийн дээр танилцсан гэсэн гарчиг.
+            ->assertSee('ТАНИЛЦСАН:')
             ->assertSee('АЙМГИЙН ЗАСАГ ДАРГЫН ТАМГЫН ГАЗРЫН')
             ->assertSee('ДАРГЫН АЛБАН ҮҮРГИЙГ ТҮР ОРЛОН ГҮЙЦЭТГЭГЧ')
             ->assertSee('М.МӨНХБАТ')

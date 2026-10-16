@@ -186,6 +186,11 @@
             height: 1mm;
         }
 
+        /* Доод гарын үсгийн блокийн гарчиг — дээрээсээ зайтай. */
+        .notice .signatures-grid .sig-caption--own {
+            margin-top: 3mm;
+        }
+
         /* Хуудсан дээрээ засах — хэвлэхэд ул мөр үлдэхгүй. */
         .notice .body[contenteditable='true'],
         .notice .sig-title[contenteditable='true'],
@@ -301,7 +306,8 @@
                             <div></div>
                             <div class="sig-title" contenteditable="true" id="notice-approver-title" spellcheck="false">{{ $signatureFields['approverTitle'] }}</div>
                             <div class="sig-name" contenteditable="true" id="notice-approver-name" spellcheck="false">{{ $signatureFields['approverName'] }}</div>
-                            <div class="sig-spacer"></div>
+                            <div class="sig-caption sig-caption--own">ТАНИЛЦСАН:</div>
+                            <div></div>
                             <div class="sig-title" contenteditable="true" id="notice-own-title" spellcheck="false">{{ $signatureFields['ownTitle'] }}</div>
                             <div class="sig-name" contenteditable="true" id="notice-own-name" spellcheck="false">{{ $signatureFields['ownName'] }}</div>
                         </div>
@@ -333,7 +339,8 @@
                             <div></div>
                             <div class="sig-title" data-notice-approver-title-copy>{{ $signatureFields['approverTitle'] }}</div>
                             <div class="sig-name" data-notice-approver-name-copy>{{ $signatureFields['approverName'] }}</div>
-                            <div class="sig-spacer"></div>
+                            <div class="sig-caption sig-caption--own">ТАНИЛЦСАН:</div>
+                            <div></div>
                             <div class="sig-title" data-notice-own-title-copy>{{ $signatureFields['ownTitle'] }}</div>
                             <div class="sig-name" data-notice-own-name-copy>{{ $signatureFields['ownName'] }}</div>
                         </div>
