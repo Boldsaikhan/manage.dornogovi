@@ -12,6 +12,8 @@ const props = defineProps({
     rules: { type: Array, default: () => [] },
     usage: { type: Object, default: () => ({}) },
     blocked: { type: Array, default: () => [] },
+    /** Энэ мөрийн хоног — «Тохиолдол бүрт» заалтын зарцуулалт. */
+    rowDays: { type: [Number, String], default: 0 },
     editable: { type: Boolean, default: true },
 });
 
@@ -26,18 +28,25 @@ const selected = computed(() => props.rules.find((rule) => rule.code === props.m
 
 const isBlocked = (code) => props.blocked.includes(code);
 
-const usedDays = (rule) => (rule.period === 'once' ? null : Number(props.usage[rule.code] ?? 0));
+/**
+ * Зарцуулсан хоног.
+ *
+ * «Тохиолдол бүрт» заалтад хуримтлал байхгүй тул энэ мөрийн өөрийнх нь
+ * хоногийг тооцно — нэг удаад хэд олгож байгаа нь тэр.
+ */
+const usedDays = (rule) => (rule.period === 'once'
+    ? Math.max(0, Number(props.rowDays) || 0)
+    : Number(props.usage[rule.code] ?? 0));
 
-const leftDays = (rule) => {
-    const used = usedDays(rule);
+/** Хоног заагаагүй заалтад үлдэгдэл утгагүй. */
+const hasCap = (rule) => Number(rule.days) > 0;
 
-    return used === null ? null : Math.max(0, rule.days - used);
-};
+const leftDays = (rule) => (hasCap(rule) ? Math.max(0, rule.days - usedDays(rule)) : null);
 
-/** «Жилд 5 хоног», «Тохиолдол бүрт 1 хоног», «Хоног заагаагүй». */
-const limitText = (rule) => (rule.days
+/** «Жилд 5 хоног», «Тохиолдол бүрт 1 хоног», «Улиралд — хязгааргүй». */
+const limitText = (rule) => (hasCap(rule)
     ? `${rule.period_label} ${rule.days} хоног`
-    : `${rule.period_label} — заагаагүй`);
+    : `${rule.period_label} — хязгааргүй`);
 
 /** Нүдний доор гарах богино тайлбар. */
 const summary = computed(() => {
@@ -47,11 +56,11 @@ const summary = computed(() => {
         return '';
     }
 
-    const left = leftDays(rule);
+    if (! hasCap(rule)) {
+        return limitText(rule);
+    }
 
-    return left === null
-        ? limitText(rule)
-        : `${rule.days} хоногоос ${usedDays(rule)} авсан, ${left} үлдсэн`;
+    return `${rule.days} хоногоос ${usedDays(rule)} авсан, ${leftDays(rule)} үлдсэн`;
 });
 
 const place = () => {
@@ -213,10 +222,11 @@ onBeforeUnmount(stop);
                                     </span>
                                 </td>
                                 <td class="whitespace-nowrap text-center">{{ limitText(rule) }}</td>
-                                <td class="text-center">{{ usedDays(rule) === null ? '—' : usedDays(rule) }}</td>
+                                <td class="text-center">{{ usedDays(rule) }}</td>
                                 <td class="text-center">
-                                    <span :class="leftDays(rule) === 0 ? 'font-semibold text-rose-600' : ''">
-                                        {{ leftDays(rule) === null ? '—' : leftDays(rule) }}
+                                    <span v-if="! hasCap(rule)" class="text-slate-400">хязгааргүй</span>
+                                    <span v-else :class="leftDays(rule) === 0 ? 'font-semibold text-rose-600' : ''">
+                                        {{ leftDays(rule) }}
                                     </span>
                                 </td>
                             </tr>
