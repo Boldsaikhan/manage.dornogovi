@@ -35,6 +35,7 @@ class Leave extends Model
         'slip_number',
         'signer',
         'type',
+        'rule_code',
         'limit_exceeded',
         'start_date',
         'end_date',

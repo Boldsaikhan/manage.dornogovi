@@ -17,6 +17,8 @@ const props = defineProps({
     signers: { type: Object, default: () => ({}) },
     limits: { type: Array, default: () => [] },
     limitPayOptions: { type: Object, default: () => ({}) },
+    limitPeriodOptions: { type: Object, default: () => ({}) },
+    rules: { type: Array, default: () => [] },
     paidDaysPerYear: { type: Number, default: 5 },
     hasAuditLog: { type: Boolean, default: false },
 });
@@ -33,6 +35,10 @@ const limitPaidDays = ref(0);
 const limitSaving = ref(false);
 
 const payEntries = computed(() => Object.entries(props.limitPayOptions));
+const periodEntries = computed(() => Object.entries(props.limitPeriodOptions));
+
+/** Журмын нэрийг кодоор нь олох. */
+const ruleLabel = (code) => props.rules.find((r) => r.code === code)?.label || '';
 
 const openLimits = () => {
     limitRows.value = props.limits.map((row) => ({ ...row }));
@@ -41,7 +47,7 @@ const openLimits = () => {
 };
 
 const addLimitRow = () => {
-    limitRows.value.push({ code: '', label: '', limit: '', pay: 'tsalintai' });
+    limitRows.value.push({ code: '', label: '', period: 'year', days: 0, pay: 'tsalintai' });
 };
 
 const removeLimitRow = (index) => {
@@ -239,7 +245,7 @@ const logTone = (action) => ({
  * үүсээд, дараа нь нүд бүрийг {@see saveField} горимоор нэг нэгээр нь
  * хадгална.
  */
-const DRAFT_FIELDS = ['org_name', 'unit_name', 'person_name', 'type', 'start_date', 'days', 'reason', 'signer'];
+const DRAFT_FIELDS = ['org_name', 'unit_name', 'person_name', 'type', 'rule_code', 'start_date', 'days', 'reason', 'signer'];
 
 const drafts = reactive({});
 
@@ -326,6 +332,7 @@ const registerTitle = computed(() => {
 const filters = reactive({
     org_name: '',
     unit_name: '',
+    rule_label: '',
     person_name: '',
     type_label: '',
     start_date: '',
@@ -364,6 +371,7 @@ const rowsWithSignerLabel = computed(() => props.rows.map((row, index) => ({
     ...row,
     seq: props.rows.length - index,
     signer_label: props.signers[row.signer] || '',
+    rule_label: ruleLabel(row.rule_code),
 })));
 
 const matchesFilters = (row) => Object.entries(filters).every(([field, needle]) => {
@@ -519,6 +527,7 @@ const visibleRows = computed(() => (
                         <col style="width: 12rem" />
                         <col style="width: 10rem" />
                         <col style="width: 8rem" />
+                        <col style="width: 14rem" />
                         <col style="width: 6rem" />
                         <col style="width: 5rem" />
                         <col style="width: 6rem" />
@@ -542,6 +551,7 @@ const visibleRows = computed(() => (
                             <th rowspan="2">Хэлтэс</th>
                             <th rowspan="2">Албан хаагч</th>
                             <th rowspan="2">Төрөл</th>
+                            <th rowspan="2">Журам</th>
                             <th colspan="3" class="ui-register__head-group--issued">Чөлөөний хугацаа</th>
                             <th rowspan="2">Үндэслэл</th>
                             <th rowspan="2">Орлон гарын<br>үсэг зурсан</th>
@@ -570,6 +580,7 @@ const visibleRows = computed(() => (
                             <th><input v-model="filters.unit_name" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.person_name" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.type_label" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.rule_label" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.start_date" type="search" placeholder="2026.09" /></th>
                             <th><input v-model="filters.days" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.end_date" type="search" placeholder="2026.09" /></th>
@@ -644,6 +655,28 @@ const visibleRows = computed(() => (
                                     <option v-for="[value, label] in typeEntries" :key="value" :value="value">{{ label }}</option>
                                 </select>
                                 <span v-else class="ui-clamp-2">{{ row.type_label }}</span>
+                            </td>
+                            <!-- Журмын заалт — лимит дүүрсэн заалт сонгогдохгүй. -->
+                            <td class="px-1.5 py-1.5">
+                                <select
+                                    v-if="rowEditable && drafts[row.id]"
+                                    v-model="drafts[row.id].rule_code"
+                                    class="w-full border-0 bg-transparent text-[11px] outline-none focus:bg-sky-50"
+                                    @change="saveField(row.id, 'rule_code', drafts[row.id].rule_code)"
+                                >
+                                    <option value="">— сонгох —</option>
+                                    <option
+                                        v-for="rule in rules"
+                                        :key="rule.code"
+                                        :value="rule.code"
+                                        :disabled="(row.blocked_rules || []).includes(rule.code)"
+                                    >
+                                        {{ rule.label }} ({{ rule.limit_text }})<template
+                                            v-if="(row.blocked_rules || []).includes(rule.code)"
+                                        > — лимит дүүрсэн</template>
+                                    </option>
+                                </select>
+                                <span v-else class="ui-clamp-2">{{ row.rule_label || '—' }}</span>
                             </td>
                             <td :class="cellClass">
                                 <SheetCell
@@ -838,7 +871,8 @@ const visibleRows = computed(() => (
                             <tr>
                                 <th class="w-20">№</th>
                                 <th>Чөлөөний төрөл</th>
-                                <th class="w-56">Хугацаа</th>
+                                <th class="w-36">Давтамж</th>
+                                <th class="w-28">Хоног</th>
                                 <th class="w-32">Цалин</th>
                                 <th v-if="canManage" class="w-12" />
                             </tr>
@@ -864,12 +898,25 @@ const visibleRows = computed(() => (
                                     />
                                 </td>
                                 <td>
-                                    <input
-                                        v-model="row.limit"
-                                        type="text"
+                                    <select
+                                        v-model="row.period"
                                         class="ui-input w-full !py-1 text-sm"
                                         :disabled="! canManage"
-                                        placeholder="Ажлын 5 хоног хүртэл"
+                                    >
+                                        <option v-for="[value, label] in periodEntries" :key="value" :value="value">
+                                            {{ label }}
+                                        </option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <input
+                                        v-model.number="row.days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        class="ui-input w-full !py-1 text-sm"
+                                        :disabled="! canManage"
+                                        title="0 = хоног заагаагүй"
                                     />
                                 </td>
                                 <td>
@@ -897,7 +944,7 @@ const visibleRows = computed(() => (
                                 </td>
                             </tr>
                             <tr v-if="! limitRows.length">
-                                <td :colspan="canManage ? 5 : 4" class="!py-10 text-center text-slate-400">
+                                <td :colspan="canManage ? 6 : 5" class="!py-10 text-center text-slate-400">
                                     Лимит тохируулаагүй байна.
                                 </td>
                             </tr>

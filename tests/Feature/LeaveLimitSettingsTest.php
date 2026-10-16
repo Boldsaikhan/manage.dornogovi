@@ -32,7 +32,10 @@ class LeaveLimitSettingsTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->has('limits', count(LeaveLimits::DEFAULTS))
                 ->where('limits.0.code', '5.4.3')
+                ->where('limits.0.period', 'quarter')
                 ->where('limits.0.pay', 'none')
+                ->where('limitPeriodOptions.quarter', 'Улиралд')
+                ->has('rules', count(LeaveLimits::DEFAULTS))
                 ->where('limitPayOptions.tsalintai', 'Цалинтай'));
     }
 
@@ -43,9 +46,9 @@ class LeaveLimitSettingsTest extends TestCase
         $this->actingAs($admin)
             ->patch(route('leaves.limits.update'), [
                 'limits' => [
-                    ['code' => '5.4.3', 'label' => 'Нэгжийн даргын олгох чөлөө', 'limit' => 'Улиралд 2 удаа', 'pay' => 'tsalingui'],
+                    ['code' => '5.4.3', 'label' => 'Нэгжийн даргын олгох чөлөө', 'period' => 'quarter', 'days' => 2, 'pay' => 'tsalingui'],
                     // Нэргүй мөр хадгалагдахгүй.
-                    ['code' => '5.4.4', 'label' => '  ', 'limit' => 'Жилд 5 хоног', 'pay' => 'tsalintai'],
+                    ['code' => '5.4.4', 'label' => '  ', 'period' => 'year', 'days' => 5, 'pay' => 'tsalintai'],
                 ],
             ])
             ->assertRedirect();
@@ -54,8 +57,10 @@ class LeaveLimitSettingsTest extends TestCase
         $saved = LeaveLimits::all();
 
         $this->assertCount(1, $saved);
-        $this->assertSame('Улиралд 2 удаа', $saved[0]['limit']);
+        $this->assertSame('quarter', $saved[0]['period']);
+        $this->assertSame(2, $saved[0]['days']);
         $this->assertSame('tsalingui', $saved[0]['pay']);
+        $this->assertSame('Улиралд ажлын 2 хоног хүртэл', LeaveLimits::limitText($saved[0]));
 
         $this->actingAs($admin)
             ->patch(route('leaves.limits.update'), ['reset' => true])
