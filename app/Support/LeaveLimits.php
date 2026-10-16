@@ -19,6 +19,14 @@ class LeaveLimits
 
     public const PAID_DAYS_DEFAULT = 5;
 
+    /** Лимит тоолох давтамж. */
+    public const PERIODS = [
+        'year' => 'Жилд',
+        'quarter' => 'Улиралд',
+        'month' => 'Сард',
+        'once' => 'Тохиолдол бүрт',
+    ];
+
     /** Цалингийн төлөв — хүснэгтийн сүүлийн багана. */
     public const PAY = [
         'tsalintai' => 'Цалинтай',
@@ -29,72 +37,81 @@ class LeaveLimits
     /**
      * Журамд заасан анхны лимитүүд.
      *
-     * @var list<array{code: string, label: string, limit: string, pay: string}>
+     * @var list<array{code: string, label: string, period: string, days: int, pay: string}>
      */
     public const DEFAULTS = [
         [
             'code' => '5.4.3',
             'label' => 'Нэгжийн даргын олгох чөлөө',
-            'limit' => 'Улиралд 1 удаа (хоног заагаагүй)',
+            'period' => 'quarter',
+            'days' => 0,
             'pay' => 'none',
         ],
         [
             'code' => '5.4.4',
             'label' => 'Нэгжийн даргатай зөвшилцөж Тамгын газрын даргын олгох чөлөө',
-            'limit' => 'Жилд ажлын 2–5 хоног хүртэл',
+            'period' => 'year',
+            'days' => 5,
             'pay' => 'tsalintai',
         ],
         [
             'code' => '5.4.5',
             'label' => 'Эцэг эх, хадам эцэг эх, эхнэр/нөхөр, үр хүүхэд, ач зээ, төрсөн ах эгч дүү, өвөө эмээ нас барах, хүндээр өвчлөх, эмнэлгийн магадлагаагаар асрах шаардлагатай болох, байгалийн гамшигт нэрвэгдэх',
-            'limit' => 'Ажлын 5 хоног хүртэл',
+            'period' => 'once',
+            'days' => 5,
             'pay' => 'tsalintai',
         ],
         [
             'code' => '5.4.6',
             'label' => 'Өөрт болон ар гэрт тохиолдсон баяр ёслол (гэрлэх, шинэ гэр/орон сууцанд орох, ургийн баяр)',
-            'limit' => '1 өдөр',
+            'period' => 'once',
+            'days' => 1,
             'pay' => 'tsalintai',
         ],
         [
             'code' => '5.4.7',
             'label' => 'Эхнэр нь хүүхэд төрүүлсэн',
-            'limit' => 'Ажлын 10 хоног',
+            'period' => 'once',
+            'days' => 10,
             'pay' => 'tsalintai',
         ],
         [
             'code' => '5.4.8',
             'label' => 'Гэр бүлийн гишүүнд гачигдал зовлон тохиолдож, асрах эсвэл гадаад/дотоод эмчилгээнд авч явах шаардлагатайг эмнэлэг нотолсон',
-            'limit' => 'Ажлын 10 хоног хүртэл',
+            'period' => 'once',
+            'days' => 10,
             'pay' => 'tsalintai',
         ],
         [
             'code' => '5.4.9',
             'label' => 'Хүүхдийн төрсөн өдөр',
-            'limit' => '1 өдөр',
+            'period' => 'once',
+            'days' => 1,
             'pay' => 'tsalintai',
         ],
         [
             'code' => '5.4.11',
             'label' => 'Дээрх (5.4.5–5.4.9)-өөс бусад тохиолдолд дарга нарын олгох чөлөө',
-            'limit' => 'Жилд ажлын 5 хоногоос илүүгүй',
+            'period' => 'year',
+            'days' => 5,
             'pay' => 'tsalintai',
         ],
         [
             'code' => '5.4.12',
             'label' => 'Хувийн зардлаар бакалавр, магистр, докторын зэрэг олгох сургалтад суралцаж буй үед (суралцах, бүтээл хийх)',
-            'limit' => 'Жилд 1 удаа, ажлын 15 хоног хүртэл',
+            'period' => 'year',
+            'days' => 15,
             'pay' => 'tsalintai',
         ],
     ];
 
-    /** @var list<array{code: string, label: string, limit: string, pay: string}>|null */
+    /** @var list<array{code: string, label: string, period: string, days: int, pay: string}>|null */
     private static ?array $cache = null;
 
     /**
      * Хадгалсан лимитүүд, эс бөгөөс анхны жагсаалт.
      *
-     * @return list<array{code: string, label: string, limit: string, pay: string}>
+     * @return list<array{code: string, label: string, period: string, days: int, pay: string}>
      */
     public static function all(): array
     {
@@ -181,10 +198,62 @@ class LeaveLimits
     private static ?int $paidDays = null;
 
     /**
+     * Нэг журмыг кодоор нь олно.
+     *
+     * @return array{code: string, label: string, period: string, days: int, pay: string}|null
+     */
+    public static function find(?string $code): ?array
+    {
+        $code = trim((string) $code);
+
+        if ($code === '') {
+            return null;
+        }
+
+        foreach (self::all() as $row) {
+            if ($row['code'] === $code) {
+                return $row;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * «Жилд ажлын 5 хоног хүртэл» гэх мэт уншихад ойлгомжтой бичвэр.
+     *
+     * @param  array{period: string, days: int}  $row
+     */
+    public static function limitText(array $row): string
+    {
+        $period = self::PERIODS[$row['period']] ?? '';
+        $days = (int) ($row['days'] ?? 0);
+
+        if ($days <= 0) {
+            return trim($period.' (хоног заагаагүй)');
+        }
+
+        return trim($period.' ажлын '.$days.' хоног хүртэл');
+    }
+
+    /** Хуучин чөлөөт бичвэрээс давтамжийг таана. */
+    private static function guessPeriod(string $text): string
+    {
+        $text = mb_strtolower($text);
+
+        return match (true) {
+            str_contains($text, 'улирал') => 'quarter',
+            str_contains($text, 'сард') => 'month',
+            str_contains($text, 'жилд') => 'year',
+            default => 'once',
+        };
+    }
+
+    /**
      * Хоосон мөрийг хасч, талбаруудыг цэгцэлнэ.
      *
      * @param  array<int, mixed>  $rows
-     * @return list<array{code: string, label: string, limit: string, pay: string}>
+     * @return list<array{code: string, label: string, period: string, days: int, pay: string}>
      */
     private static function normalize(array $rows): array
     {
@@ -203,11 +272,25 @@ class LeaveLimits
             }
 
             $pay = (string) ($row['pay'] ?? 'tsalintai');
+            $period = (string) ($row['period'] ?? '');
+
+            /*
+             * Хуучин хадгалсан хэлбэрт «limit» нь чөлөөт бичвэр байсан.
+             * Тоог нь салгаж авна, давтамжийг нь бичвэрээс таана.
+             */
+            if (! array_key_exists($period, self::PERIODS)) {
+                $period = self::guessPeriod((string) ($row['limit'] ?? ''));
+            }
+
+            $days = array_key_exists('days', $row)
+                ? (int) $row['days']
+                : (int) (preg_replace('/\D+/', '', (string) ($row['limit'] ?? '')) ?: 0);
 
             $out[] = [
                 'code' => trim((string) ($row['code'] ?? '')),
                 'label' => $label,
-                'limit' => trim((string) ($row['limit'] ?? '')),
+                'period' => $period,
+                'days' => max(0, min(365, $days)),
                 'pay' => array_key_exists($pay, self::PAY) ? $pay : 'tsalintai',
             ];
         }

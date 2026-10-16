@@ -8,6 +8,7 @@ use App\Models\PhoneDirectoryEntry;
 use App\Support\DocxTableWriter;
 use App\Support\LeaveBalance;
 use App\Support\LeaveLimits;
+use App\Support\LeaveRuleUsage;
 use App\Support\ModuleAccess;
 use App\Support\ModuleOwnScope;
 use App\Support\PdfTableWriter;
@@ -61,7 +62,15 @@ class LeaveController extends Controller
             $tabs[] = ['value' => $key, 'label' => $label, 'count' => (int) ($counts[$key] ?? 0)];
         }
 
-        $rows = $query->limit(300)->get()->map(fn (Leave $leave) => $this->serialize($leave));
+        $leaves = $query->limit(300)->get();
+
+        /*
+         * Журмын сонголтыг хаахад бүх бүртгэл хэрэгтэй — лимитийг
+         * хүн, хугацааны хүрээгээр тоолно.
+         */
+        $allLeaves = Leave::query()->get(['id', 'person_name', 'rule_code', 'start_date', 'days']);
+
+        $rows = $leaves->map(fn (Leave $leave) => $this->serialize($leave, $allLeaves));
 
         return Inertia::render('Modules/Leaves', [
             'activeScope' => $scope,
@@ -75,6 +84,16 @@ class LeaveController extends Controller
             // Журмын 5.4-р заалтын чөлөө олгох лимит — тохиргооноос засна.
             'limits' => LeaveLimits::all(),
             'limitPayOptions' => LeaveLimits::PAY,
+            'limitPeriodOptions' => LeaveLimits::PERIODS,
+            // «Журам» баганын сонголт.
+            'rules' => collect(LeaveLimits::all())
+                ->filter(fn (array $rule) => $rule['code'] !== '')
+                ->map(fn (array $rule) => [
+                    'code' => $rule['code'],
+                    'label' => $rule['code'].' '.$rule['label'],
+                    'limit_text' => LeaveLimits::limitText($rule),
+                ])
+                ->values(),
             'paidDaysPerYear' => LeaveLimits::paidDaysPerYear(),
             'hasAuditLog' => true,
         ]);
@@ -93,7 +112,8 @@ class LeaveController extends Controller
             'limits' => ['array'],
             'limits.*.code' => ['nullable', 'string', 'max:20'],
             'limits.*.label' => ['nullable', 'string', 'max:1000'],
-            'limits.*.limit' => ['nullable', 'string', 'max:255'],
+            'limits.*.period' => ['nullable', Rule::in(array_keys(LeaveLimits::PERIODS))],
+            'limits.*.days' => ['nullable', 'integer', 'min:0', 'max:365'],
             'limits.*.pay' => ['nullable', Rule::in(array_keys(LeaveLimits::PAY))],
             'paid_days_per_year' => ['sometimes', 'integer', 'min:0', 'max:365'],
         ]);
@@ -263,6 +283,7 @@ class LeaveController extends Controller
             'slip_number' => ['nullable', 'string', 'max:50'],
             'signer' => ['nullable', Rule::in(array_keys(Leave::signerOptions()))],
             'type' => ['nullable', Rule::in(array_keys(Leave::TYPES))],
+            'rule_code' => ['nullable', 'string', 'max:20'],
             'start_date' => ['nullable', 'date'],
             'days' => ['nullable', 'integer', 'min:1', 'max:365'],
             'reason' => ['nullable', 'string', 'max:2000'],
@@ -336,6 +357,7 @@ class LeaveController extends Controller
             'slip_number' => ['sometimes', 'nullable', 'string', 'max:50'],
             'signer' => ['sometimes', 'nullable', Rule::in(array_keys(Leave::signerOptions()))],
             'type' => ['sometimes', Rule::in(array_keys(Leave::TYPES))],
+            'rule_code' => ['sometimes', 'nullable', 'string', 'max:20'],
             'start_date' => ['sometimes', 'date'],
             'days' => ['sometimes', 'integer', 'min:1', 'max:365'],
             'reason' => ['sometimes', 'nullable', 'string', 'max:2000'],
@@ -355,6 +377,11 @@ class LeaveController extends Controller
         $changes = $this->changedFields($leave, $data);
 
         $leave->fill($data);
+
+        // Лимитээс хэтэрсэн заалтыг сонгох боломжгүй.
+        if ($error = $this->ruleLimitError($leave)) {
+            return back(303)->withErrors(['rule_code' => $error]);
+        }
 
         if (array_key_exists('start_date', $data) || array_key_exists('days', $data)) {
             $start = Carbon::parse($leave->start_date)->startOfDay();
@@ -397,7 +424,41 @@ class LeaveController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function serialize(Leave $leave): array
+    /**
+     * Сонгосон журмын лимит хэтэрсэн эсэх — хэтэрсэн бол алдааны бичвэр.
+     */
+    private function ruleLimitError(Leave $leave): ?string
+    {
+        $rule = LeaveLimits::find($leave->rule_code);
+
+        if ($rule === null || (int) $rule['days'] <= 0) {
+            return null;
+        }
+
+        $person = trim((string) $leave->person_name);
+
+        if ($person === '') {
+            return null;
+        }
+
+        $all = Leave::query()->get(['id', 'person_name', 'rule_code', 'start_date', 'days']);
+
+        if (! LeaveRuleUsage::exceeds($rule, $leave, $all, $person, max(0, (int) $leave->days))) {
+            return null;
+        }
+
+        return sprintf(
+            '«%s %s» заалтын лимит (%s) хэтэрсэн тул сонгох боломжгүй.',
+            $rule['code'],
+            $rule['label'],
+            LeaveLimits::limitText($rule),
+        );
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Leave>|null  $all
+     */
+    private function serialize(Leave $leave, ?\Illuminate\Support\Collection $all = null): array
     {
         $start = $leave->start_date;
 
@@ -419,6 +480,9 @@ class LeaveController extends Controller
             'signer_title' => $leave->signerTitle(),
             'type' => $leave->type,
             'type_label' => $leave->typeLabel(),
+            'rule_code' => $leave->rule_code,
+            // Лимит хэтрэх заалтууд — сонголтод хаалттай гарна.
+            'blocked_rules' => $all === null ? [] : LeaveRuleUsage::blockedCodes($leave, $all),
             // Лимит хэтэрсэн мөрийн төрлийг солих боломжгүй.
             'limit_exceeded' => (bool) $leave->limit_exceeded,
             'start_date' => optional($start)?->format('Y-m-d'),
