@@ -14,10 +14,16 @@ class LeaveLimits
 {
     public const SETTING_KEY = 'leaves.limits';
 
-    /** Жилд олгох цалинтай чөлөөний дээд хоног (журмын 5.4.11). */
+    /**
+     * Жилд олгох цалинтай чөлөөний нийт дээд хоног.
+     *
+     * Хоног нь заалт тус бүрдээ бодогддог болсон тул энэ нийлбэр
+     * хязгаар анхдагчаар унтраалттай (0 = хязгаарлахгүй). Шаардлагатай
+     * бол тохиргооны утгыг нь гараар тавьж болно.
+     */
     public const PAID_DAYS_KEY = 'leaves.paid_days_per_year';
 
-    public const PAID_DAYS_DEFAULT = 5;
+    public const PAID_DAYS_DEFAULT = 0;
 
     /** Лимит тоолох давтамж. */
     public const PERIODS = [

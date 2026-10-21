@@ -121,7 +121,6 @@ class LeaveController extends Controller
             'limits.*.period' => ['nullable', Rule::in(array_keys(LeaveLimits::PERIODS))],
             'limits.*.days' => ['nullable', 'integer', 'min:0', 'max:365'],
             'limits.*.pay' => ['nullable', Rule::in(array_keys(LeaveLimits::PAY))],
-            'paid_days_per_year' => ['sometimes', 'integer', 'min:0', 'max:365'],
         ]);
 
         if ($request->boolean('reset')) {
@@ -132,10 +131,6 @@ class LeaveController extends Controller
         }
 
         LeaveLimits::save($data['limits'] ?? []);
-
-        if (array_key_exists('paid_days_per_year', $data)) {
-            LeaveLimits::savePaidDaysPerYear((int) $data['paid_days_per_year']);
-        }
 
         // Лимит өөрчлөгдвөл бүх бүртгэлийг дахин тооцно.
         LeaveBalance::reapplyAll();
