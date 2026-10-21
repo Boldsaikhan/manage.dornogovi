@@ -78,6 +78,27 @@ class LeaveRuleUsage
     }
 
     /**
+     * Энэ мөрийн үед тэр заалтаар нийт хэдэн хоног зарцуулсан бэ.
+     *
+     * Өмнөх мөрүүдийн хоног дээр, хэрэв энэ мөр өөрөө тэр заалтаар
+     * олгогдсон бол өөрийнх нь хоногийг нэмнэ. Ингэснээр мөр бүр дээр
+     * «хэдээс хэдийг авсан, хэд үлдсэн» нь дараалан буурч харагдана.
+     *
+     * @param  array{code: string, period: string, days: int}  $rule
+     * @param  Collection<int, Leave>  $all
+     */
+    public static function usedDays(array $rule, Leave $leave, Collection $all, string $person): int
+    {
+        $used = self::usedBefore($rule, $leave, $all, $person);
+
+        if (trim((string) $leave->rule_code) === $rule['code']) {
+            $used += max(0, (int) $leave->days);
+        }
+
+        return $used;
+    }
+
+    /**
      * Энэ мөрийг энэ заалтаар олговол лимит хэтрэх үү.
      *
      * @param  array{code: string, period: string, days: int}  $rule
@@ -101,18 +122,22 @@ class LeaveRuleUsage
             return $days > $limit;
         }
 
-        $used = self::usedDays($rule, $leave, $all, $person);
+        $used = self::usedBefore($rule, $leave, $all, $person);
 
         return $used + $days > $limit;
     }
 
     /**
-     * Тухайн хугацааны дотор энэ заалтаар авсан хоног (энэ мөрийг оруулахгүй).
+     * Энэ мөрөөс ӨМНӨ тэр заалтаар авсан хоног.
+     *
+     * Огноогоор нь эрэмбэлж, өмнөх мөрүүдийг л тооцно — ингэснээр
+     * «эхлээд 2 хоног авсан, үлдсэн 3-аас хасагдана» гэсэн дараалсан
+     * үлдэгдэл гарна.
      *
      * @param  array{code: string, period: string, days: int}  $rule
      * @param  Collection<int, Leave>  $all
      */
-    public static function usedDays(array $rule, Leave $leave, Collection $all, string $person): int
+    private static function usedBefore(array $rule, Leave $leave, Collection $all, string $person): int
     {
         $window = self::window($rule['period'], $leave->start_date);
 
@@ -142,7 +167,15 @@ class LeaveRuleUsage
 
                 $start = Carbon::parse($row->start_date);
 
-                return $start->betweenIncluded($from, $to);
+                if (! $start->betweenIncluded($from, $to)) {
+                    return false;
+                }
+
+                // Зөвхөн энэ мөрөөс өмнөх бүртгэл.
+                $mine = $leave->start_date ? Carbon::parse($leave->start_date) : Carbon::now();
+                $diff = $start->getTimestamp() <=> $mine->getTimestamp();
+
+                return $diff < 0 || ($diff === 0 && (int) $row->id < (int) $leave->id);
             })
             ->sum(fn (Leave $row) => max(0, (int) $row->days));
     }

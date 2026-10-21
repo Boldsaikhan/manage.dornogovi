@@ -262,6 +262,35 @@ class LeaveRuleLimitTest extends TestCase
             });
     }
 
+    public function test_the_balance_runs_down_row_by_row(): void
+    {
+        $admin = $this->admin();
+
+        // Жилийн заалт: 5 хоног. 2 → 1 → 2 гэж дараалан авна.
+        $first = $this->leave('2026-02-02', 2, 'Y');
+        $second = $this->leave('2026-03-02', 1, 'Y');
+        $third = $this->leave('2026-04-02', 2, 'Y');
+
+        $this->actingAs($admin)
+            ->get(route('leaves.index'))
+            ->assertOk()
+            ->assertInertia(function (AssertableInertia $page) use ($first, $second, $third): void {
+                $rows = collect($page->toArray()['props']['rows'])->keyBy('id');
+
+                // Мөр бүр дээр өмнөхүүд нь хуримтлагдана.
+                $this->assertSame(2, $rows[$first->id]['rule_usage']['Y']);
+                $this->assertSame(3, $rows[$second->id]['rule_usage']['Y']);
+                $this->assertSame(5, $rows[$third->id]['rule_usage']['Y']);
+            });
+
+        // Лимит дүүрсэн тул шинэ мөрөнд тэр заалт хаалттай.
+        $fresh = $this->leave('2026-05-02', 1);
+
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $fresh), ['rule_code' => 'Y'])
+            ->assertSessionHasErrors('rule_code');
+    }
+
     public function test_the_register_marks_the_blocked_rules(): void
     {
         $admin = $this->admin();
