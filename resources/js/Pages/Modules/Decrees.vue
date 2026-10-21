@@ -1135,9 +1135,6 @@ const docColumnCount = computed(() => {
                 @near-bottom="growRenderLimit"
             >
                 <div ref="sheetEl" class="ui-register">
-                <div class="ui-register__banner">
-                    Аймгийн Засаг даргын {{ docLabel }}ийн бүртгэл
-                </div>
                 <table class="ui-register__table min-w-[1400px]">
                     <colgroup>
                         <col style="width: 2.5rem" />

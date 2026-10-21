@@ -417,7 +417,6 @@ const visibleRows = computed(() => (
             <!-- Бүртгэлийн хүснэгт — .ui-register стандарт систем -->
             <TableScrollViewport v-else max-height="min(72vh, calc(100dvh - 11rem))">
                 <div ref="sheetEl" class="ui-register">
-                <div class="ui-register__banner">{{ registerTitle }}</div>
                 <table class="ui-register__table min-w-[113rem]">
                     <colgroup>
                         <col style="width: 2.5rem" />
