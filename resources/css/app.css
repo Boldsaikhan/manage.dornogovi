@@ -465,111 +465,33 @@
     }
 
     .ui-register thead th {
-        @apply bg-brand-navy-100 px-2 py-2 text-[11px] font-semibold uppercase tracking-wide text-brand-navy-800
+        @apply bg-brand-navy-50 px-2 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-brand-navy-700
             dark:bg-slate-800 dark:text-slate-300;
         vertical-align: middle;
     }
 
     /*
-     * Наалдсан (position: sticky) нүдний хүрээг хөтөч зурдаггүй —
-     * border-collapse: collapse үед хүрээг хүснэгт өөрөө зурдаг бөгөөд
-     * гүйлгэхэд алга болдог. Тиймээс толгойн нүднүүдийн хүрээг дотоод
-     * сүүдрээр (inset box-shadow) зурна.
+     * Толгой нь хүснэгтийн сүлжээг давтдаггүй — багана тус бүрийг
+     * хүрээгээр зурахын оронд зөвхөн доод ирмэгээр биеэс нь тусгаарлана.
+     * Наалдсан (sticky) нүдний хүрээг хөтөч зурдаггүй тул доод ирмэгийг
+     * дотоод сүүдрээр (inset box-shadow) өгнө.
      */
     .ui-register thead th {
-        border-right-color: transparent;
-        border-bottom-color: transparent;
-        box-shadow:
-            inset -1px 0 0 rgb(148 163 184),
-            inset 0 -1px 0 rgb(148 163 184);
+        border-color: transparent;
+        box-shadow: none;
     }
 
-    .ui-register thead th:last-child {
-        box-shadow: inset 0 -1px 0 rgb(148 163 184);
+    /* Хоёр мөрт гарчгийн дэд мөрийг маш нимгэн зураасаар ялгана. */
+    .ui-register thead tr:nth-child(2) th {
+        box-shadow: inset 0 1px 0 rgb(199 210 254 / 0.7);
     }
 
-    /*
-     * Толгойн хүрээг бүтэн зурна.
-     *
-     * Наалдсан нүд дээр хөтөч хүрээ зурдаггүй тул дээд, зүүн талыг нь
-     * дотоод сүүдрээр нэмж, толгой нь битүү хүрээтэй харагдана.
-     */
-    .ui-register thead tr:first-child th {
-        box-shadow:
-            inset -1px 0 0 rgb(148 163 184),
-            inset 0 1px 0 rgb(148 163 184),
-            inset 0 -1px 0 rgb(148 163 184);
-    }
-
-    .ui-register thead tr:first-child th:last-child {
-        box-shadow:
-            inset 0 1px 0 rgb(148 163 184),
-            inset 0 -1px 0 rgb(148 163 184);
-    }
-
-    /* Зүүн ирмэг — хөндлөн гүйлгэхэд ч хүрээ тасрахгүй. */
-    .ui-register th:first-child,
-    .ui-register td:first-child {
-        @apply border-l border-slate-200 dark:border-slate-700;
-    }
-
-    .ui-register thead tr:first-child th:first-child {
-        box-shadow:
-            inset 1px 0 0 rgb(226 232 240),
-            inset -1px 0 0 rgb(226 232 240),
-            inset 0 1px 0 rgb(203 213 225),
-            inset 0 -1px 0 rgb(226 232 240);
-    }
-
-    .ui-register thead tr.ui-filters th:first-child {
-        box-shadow:
-            inset 1px 0 0 rgb(148 163 184),
-            inset -1px 0 0 rgb(148 163 184),
-            inset 0 -2px 0 rgb(100 116 139),
-            0 3px 4px -2px rgb(15 23 42 / 0.25);
-    }
-
-    /*
-     * Бараан горимд дээрх inset box-shadow хүрээнүүдийг slate-200/300 бус
-     * бараан хувилбараар (slate-700/600) дахин зурна.
-     */
     .dark .ui-register thead th {
-        box-shadow:
-            inset -1px 0 0 rgb(51 65 85),
-            inset 0 -1px 0 rgb(51 65 85);
+        box-shadow: none;
     }
 
-    .dark .ui-register thead th:last-child {
-        box-shadow: inset 0 -1px 0 rgb(51 65 85);
-    }
-
-    .dark .ui-register thead tr:first-child th {
-        box-shadow:
-            inset -1px 0 0 rgb(51 65 85),
-            inset 0 1px 0 rgb(71 85 105),
-            inset 0 -1px 0 rgb(51 65 85);
-    }
-
-    .dark .ui-register thead tr:first-child th:last-child {
-        box-shadow:
-            inset 0 1px 0 rgb(71 85 105),
-            inset 0 -1px 0 rgb(51 65 85);
-    }
-
-    .dark .ui-register thead tr:first-child th:first-child {
-        box-shadow:
-            inset 1px 0 0 rgb(51 65 85),
-            inset -1px 0 0 rgb(51 65 85),
-            inset 0 1px 0 rgb(71 85 105),
-            inset 0 -1px 0 rgb(51 65 85);
-    }
-
-    .dark .ui-register thead tr.ui-filters th:first-child {
-        box-shadow:
-            inset 1px 0 0 rgb(51 65 85),
-            inset -1px 0 0 rgb(51 65 85),
-            inset 0 -1px 0 rgb(71 85 105),
-            0 2px 3px -2px rgb(0 0 0 / 0.4);
+    .dark .ui-register thead tr:nth-child(2) th {
+        box-shadow: inset 0 1px 0 rgb(71 85 105);
     }
 
     .ui-register thead tr:first-child th {
@@ -588,7 +510,7 @@
         position: sticky;
         top: 2.65rem;
         z-index: 13;
-        @apply bg-brand-navy-100 py-1.5 text-[10px] font-medium normal-case tracking-normal text-brand-navy-700
+        @apply bg-brand-navy-50 py-1.5 text-[10px] font-medium normal-case tracking-normal text-brand-navy-600
             dark:bg-slate-800 dark:text-slate-400;
     }
 
@@ -611,24 +533,19 @@
     thead tr.ui-filters th {
         position: sticky;
         z-index: 11;
-        @apply bg-brand-navy-50 px-1 py-1 align-middle dark:bg-slate-700;
+        @apply bg-white px-1 py-1.5 align-middle dark:bg-slate-800;
+        /* Толгойг биеэс нь тусгаарлах цорын ганц ирмэг. */
         box-shadow:
-            inset -1px 0 0 rgb(148 163 184),
-            inset 0 -2px 0 rgb(100 116 139),
-            0 3px 4px -2px rgb(15 23 42 / 0.25);
-    }
-
-    thead tr.ui-filters th:last-child {
-        box-shadow:
-            inset 0 -2px 0 rgb(100 116 139),
-            0 3px 4px -2px rgb(15 23 42 / 0.25);
+            inset 0 1px 0 rgb(199 210 254 / 0.7),
+            inset 0 -2px 0 theme('colors.brand-navy.200'),
+            0 4px 6px -4px rgb(15 23 42 / 0.12);
     }
 
     .dark thead tr.ui-filters th {
         box-shadow:
-            inset -1px 0 0 rgb(71 85 105),
-            inset 0 -1px 0 rgb(71 85 105),
-            0 2px 3px -2px rgb(0 0 0 / 0.4);
+            inset 0 1px 0 rgb(71 85 105),
+            inset 0 -2px 0 rgb(100 116 139),
+            0 4px 6px -4px rgb(0 0 0 / 0.4);
     }
 
     .dark thead tr.ui-filters th:last-child {
@@ -677,11 +594,11 @@
     }
 
     .ui-register--pin-actions thead .ui-sticky-actions {
-        @apply bg-brand-navy-100 dark:bg-slate-800;
+        @apply bg-brand-navy-50 dark:bg-slate-800;
     }
 
     .ui-register--pin-actions thead tr.ui-filters .ui-sticky-actions {
-        @apply bg-brand-navy-50 dark:bg-slate-700;
+        @apply bg-white dark:bg-slate-800;
     }
 
     /* Үйлдлийн багана — мөрийн өгөгдлөөс өнгөөрөө ялгарна. */
