@@ -664,6 +664,45 @@
         @apply bg-amber-50 text-amber-900 dark:bg-amber-950/60 dark:text-amber-200;
     }
 
+    /*
+     * Баруун талд наалдсан үйлдлийн багана (хэвлэх, устгах).
+     *
+     * Хэвтээ гүйлгэхэд ч харагдах ёстой тул дэвсгэр нь ил тод биш,
+     * бүрэн өнгөтэй байна — эс бөгөөс доогуур нь мөр харагдана.
+     */
+    .ui-register--pin-actions .ui-sticky-actions {
+        position: sticky;
+        right: 0;
+        background-clip: padding-box;
+        box-shadow: inset 1px 0 0 rgb(226 232 240);
+    }
+
+    .dark .ui-register--pin-actions .ui-sticky-actions {
+        box-shadow: inset 1px 0 0 rgb(51 65 85);
+    }
+
+    .ui-register--pin-actions thead .ui-sticky-actions {
+        @apply bg-brand-navy-50 dark:bg-slate-800;
+    }
+
+    .ui-register--pin-actions thead tr.ui-filters .ui-sticky-actions {
+        @apply bg-brand-navy-100 dark:bg-slate-700;
+    }
+
+    .ui-register--pin-actions tbody td.ui-sticky-actions {
+        @apply bg-white dark:bg-slate-900;
+        z-index: 5;
+    }
+
+    .ui-register--pin-actions tbody tr:nth-child(even) td.ui-sticky-actions {
+        @apply bg-slate-50 dark:bg-slate-800;
+    }
+
+    .ui-register--pin-actions tbody tr:hover td.ui-sticky-actions,
+    .ui-register--pin-actions tbody tr:focus-within td.ui-sticky-actions {
+        @apply bg-sky-50 dark:bg-sky-950;
+    }
+
     .ui-register tbody tr:nth-child(even) td:not(.ui-register__cell--muted) {
         @apply bg-slate-50/50 dark:bg-slate-800/40;
     }
