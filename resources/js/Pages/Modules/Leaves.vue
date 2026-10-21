@@ -716,7 +716,7 @@ const visibleRows = computed(() => {
                                 <select
                                     v-if="(row.paid_blocked || row.limit_exceeded) && rowEditable && drafts[row.id]"
                                     v-model="drafts[row.id].type"
-                                    class="w-full border-0 bg-transparent text-[11px] font-semibold text-rose-700 outline-none focus:bg-sky-50"
+                                    class="w-full border-0 bg-transparent text-[11px] outline-none focus:bg-sky-50"
                                     title="Сонгосон журмын заалтын хоног дууссан тул цалинтай байх боломжгүй."
                                     @change="saveField(row.id, 'type', drafts[row.id].type)"
                                 >
@@ -726,12 +726,12 @@ const visibleRows = computed(() => {
                                         :value="value"
                                         :disabled="value === 'tsalintai'"
                                     >
-                                        {{ label }}<template v-if="value === 'tsalintai'"> — хоног дууссан</template>
+                                        {{ label }}
                                     </option>
                                 </select>
                                 <span
                                     v-else-if="row.paid_blocked || row.limit_exceeded"
-                                    class="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700"
+                                    class="ui-clamp-2 text-[11px]"
                                     title="Сонгосон журмын заалтын хоног дууссан тул цалинтай байх боломжгүй."
                                 >
                                     {{ row.type_label }}
