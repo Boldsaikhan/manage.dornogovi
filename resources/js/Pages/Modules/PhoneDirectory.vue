@@ -542,23 +542,27 @@ const closeDirectoryForm = () => {
                 {{ flash }}
             </div>
 
-            <div class="flex flex-wrap items-center gap-3">
+            <!-- Хайлт, ангиллын товчнууд нэг мөрөнд — багтахгүй бол хэвтээ гүйнэ. -->
+            <div class="flex items-center gap-2">
                 <input
                     v-model="search"
                     type="search"
-                    class="ui-input md:max-w-sm"
+                    class="ui-input w-44 shrink-0 sm:w-56 lg:w-64"
                     :placeholder="isDirectory
                         ? 'Нэр, албан тушаал, утсаар хайх…'
                         : 'Нэгж, нэр, утас, и-мэйлээр хайх…'"
                 />
 
                 <!-- Ангиллаар шүүх (утасны жагсаалт) -->
-                <div v-if="isDirectory" class="flex flex-wrap gap-2">
+                <div
+                    v-if="isDirectory"
+                    class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto py-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
                     <button
                         v-for="tab in categoryTabs"
                         :key="tab.value"
                         type="button"
-                        class="rounded-full border px-3.5 py-1.5 text-sm font-medium transition"
+                        class="shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition"
                         :class="
                             tab.value === categoryFilter
                                 ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
@@ -569,10 +573,10 @@ const closeDirectoryForm = () => {
                     >
                         {{ tab.label }}
                         <span class="ml-1.5 text-xs opacity-80">{{ tab.orgCount }}</span>
-                        <span class="ml-0.5 text-[11px] opacity-60">нэгж</span>
-                        <span class="mx-1 text-xs opacity-40">·</span>
+                        <span class="ml-0.5 text-[10px] opacity-60">нэгж</span>
+                        <span class="mx-0.5 text-xs opacity-40">·</span>
                         <span class="text-xs opacity-80">{{ tab.peopleCount }}</span>
-                        <span class="ml-0.5 text-[11px] opacity-60">хүн</span>
+                        <span class="ml-0.5 text-[10px] opacity-60">хүн</span>
                     </button>
                 </div>
 
