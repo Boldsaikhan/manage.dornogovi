@@ -66,6 +66,65 @@ class LeaveRuleLimitTest extends TestCase
         $this->assertSame('Y', $leave->fresh()->rule_code);
     }
 
+    public function test_the_rule_sets_the_pay_type(): void
+    {
+        LeaveLimits::save([
+            ['code' => 'P', 'label' => 'Цалинтай заалт', 'period' => 'year', 'days' => 10, 'pay' => 'tsalintai'],
+            ['code' => 'U', 'label' => 'Цалингүй заалт', 'period' => 'year', 'days' => 10, 'pay' => 'tsalingui'],
+            ['code' => 'N', 'label' => 'Заагаагүй заалт', 'period' => 'year', 'days' => 10, 'pay' => 'none'],
+        ]);
+
+        $admin = $this->admin();
+        $leave = $this->leave('2026-02-02', 1);
+
+        // Тохиргоонд «Цалингүй» гэснийг сонгоход төрөл нь дагана.
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $leave), ['rule_code' => 'U'])
+            ->assertRedirect();
+
+        $this->assertSame('tsalingui', $leave->fresh()->type);
+
+        // «Цалинтай» заалт сонгоход буцаад цалинтай болно.
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $leave), ['rule_code' => 'P'])
+            ->assertRedirect();
+
+        $this->assertSame('tsalintai', $leave->fresh()->type);
+
+        // «—» заалт төрлийг хөндөхгүй.
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $leave), ['type' => 'eeljiin'])
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $leave), ['rule_code' => 'N'])
+            ->assertRedirect();
+
+        $this->assertSame('eeljiin', $leave->fresh()->type);
+    }
+
+    public function test_the_type_is_locked_when_the_rule_decides_it(): void
+    {
+        LeaveLimits::save([
+            ['code' => 'P', 'label' => 'Цалинтай заалт', 'period' => 'year', 'days' => 10, 'pay' => 'tsalintai'],
+            ['code' => 'N', 'label' => 'Заагаагүй заалт', 'period' => 'year', 'days' => 10, 'pay' => 'none'],
+        ]);
+
+        $admin = $this->admin();
+        $locked = $this->leave('2026-02-02', 1, 'P');
+        $open = $this->leave('2026-03-02', 1, 'N');
+
+        $this->actingAs($admin)
+            ->get(route('leaves.index'))
+            ->assertOk()
+            ->assertInertia(function (AssertableInertia $page) use ($locked, $open): void {
+                $rows = collect($page->toArray()['props']['rows'])->keyBy('id');
+
+                $this->assertTrue($rows[$locked->id]['type_locked']);
+                $this->assertFalse($rows[$open->id]['type_locked']);
+            });
+    }
+
     public function test_a_rule_over_its_yearly_limit_is_refused(): void
     {
         $admin = $this->admin();
