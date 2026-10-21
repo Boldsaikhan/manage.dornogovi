@@ -91,7 +91,6 @@ const resetLimits = () => {
     });
 };
 
-const view = ref('table'); // 'table' | 'sheet'
 const previewCopies = ref(6);
 const cellClass = 'ui-register__cell';
 
@@ -309,21 +308,6 @@ const slipPrintUrl = (row) => {
     return `${base}?${params.toString()}`;
 };
 
-/** Жагсаалтыг A4 хуудас бүрт 6 ширхэгээр хуваана. */
-const pages = computed(() => {
-    const size = 6;
-    const chunks = [];
-    for (let i = 0; i < props.rows.length; i += size) {
-        const slice = props.rows.slice(i, i + size);
-        while (slice.length < size && props.rows.length > 0) {
-            // Сүүлийн хуудсыг бүрэн дүүргэхгүй — зөвхөн бодит мөрүүд
-            break;
-        }
-        chunks.push(slice);
-    }
-    return chunks;
-});
-
 const kindLabel = (key) => ({
     tsalintai: 'цалинтай',
     tsalingui: 'цалингүй',
@@ -519,35 +503,12 @@ const visibleRows = computed(() => (
                 </button>
             </nav>
 
-            <div class="flex flex-wrap items-center gap-2">
-                <button
-                    type="button"
-                    class="rounded-full border px-3.5 py-1.5 text-sm font-medium transition"
-                    :class="view === 'table'
-                        ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-brand-navy-300'"
-                    @click="view = 'table'"
-                >
-                    Хүснэгт
-                </button>
-                <button
-                    type="button"
-                    class="rounded-full border px-3.5 py-1.5 text-sm font-medium transition"
-                    :class="view === 'sheet'
-                        ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-brand-navy-300'"
-                    @click="view = 'sheet'"
-                >
-                    Хуудасны харагдац
-                </button>
-            </div>
-
             <div v-if="!rows.length" class="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center text-slate-500">
                 {{ emptyMessage }}
             </div>
 
             <!-- Бүртгэлийн хүснэгт — .ui-register стандарт систем -->
-            <TableScrollViewport v-else-if="view === 'table'" max-height="min(72vh, calc(100dvh - 11rem))">
+            <TableScrollViewport v-else max-height="min(72vh, calc(100dvh - 11rem))">
                 <div class="ui-register">
                 <div class="ui-register__banner">{{ registerTitle }}</div>
                 <table class="ui-register__table min-w-[88rem]">
@@ -785,76 +746,6 @@ const visibleRows = computed(() => (
                 </div>
             </TableScrollViewport>
 
-            <div v-else class="space-y-8">
-                <section
-                    v-for="(pageRows, pageIndex) in pages"
-                    :key="pageIndex"
-                    class="leave-a4 mx-auto overflow-hidden bg-white shadow-soft"
-                >
-                    <div class="leave-a4-grid">
-                        <article
-                            v-for="row in pageRows"
-                            :key="row.id"
-                            class="leave-slip group relative"
-                        >
-                            <h3 class="leave-slip-title">ЧӨЛӨӨНИЙ ХУУДАС</h3>
-                            <p class="leave-slip-no">
-                                № <span class="leave-blank">{{ row.slip_number || row.id }}</span>
-                            </p>
-                            <p class="leave-slip-body">
-                                Аймгийн ЗДТГ-ын
-                                <span class="leave-blank">{{ row.unit || unitFromOrg(row.org_name) }}</span>
-                                хэлтсийн мэргэжилтэн
-                                <span class="leave-blank">{{ row.person_name }}</span>
-                                нь
-                                <span class="leave-blank">{{ row.reason || '………………' }}</span>
-                                үндэслэлээр
-                                {{ row.year || '____' }} оны
-                                <span class="leave-blank">{{ row.month || '…' }}</span>
-                                сарын
-                                <span class="leave-blank">{{ row.day || '…' }}</span>-ны өдрөөс
-                                ажлын
-                                <span class="leave-blank">{{ row.days || '…' }}</span>
-                                өдрийн чөлөө /
-                                <span :class="{ 'underline decoration-black': row.type === 'tsalintai' }">{{ kindLabel('tsalintai') }}</span>,
-                                <span :class="{ 'underline decoration-black': row.type === 'tsalingui' }">{{ kindLabel('tsalingui') }}</span>,
-                                <span :class="{ 'underline decoration-black': row.type === 'eeljiin' }">{{ kindLabel('eeljiin') }}</span>
-                                / олгов.
-                            </p>
-                            <div class="leave-slip-sign">
-                                <span class="leave-sign-title">
-                                    {{ row.signer_title || 'Гарын үсэг зурах албан тушаалтан' }}
-                                </span>
-                                <span class="leave-sign-name">
-                                    <template v-if="row.signer">{{ row.signer }}</template>
-                                    <template v-else>/ &nbsp;&nbsp;&nbsp;&nbsp; /</template>
-                                </span>
-                            </div>
-
-                            <div class="absolute right-1 top-1 flex gap-1 opacity-0 transition group-hover:opacity-100">
-                                <a
-                                    :href="slipPrintUrl(row)"
-                                    target="_blank"
-                                    class="rounded bg-brand-navy-600 px-2 py-0.5 text-[10px] font-semibold text-white"
-                                >
-                                    Хэвлэх
-                                </a>
-                                <button
-                                    v-if="canManage"
-                                    type="button"
-                                    class="rounded bg-rose-600 px-2 py-0.5 text-[10px] font-semibold text-white"
-                                    @click="destroyRow(row.id)"
-                                >
-                                    Устгах
-                                </button>
-                            </div>
-                        </article>
-                    </div>
-                    <p class="border-t border-slate-100 px-3 py-1.5 text-center text-[11px] text-slate-400">
-                        A4 · хуудас {{ pageIndex + 1 }} · {{ pageRows.length }}/6
-                    </p>
-                </section>
-            </div>
         </div>
 
         <!-- Өөрчлөлтийн түүх -->
