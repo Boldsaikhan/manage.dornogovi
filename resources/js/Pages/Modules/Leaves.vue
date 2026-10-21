@@ -553,7 +553,6 @@ const visibleRows = computed(() => {
             <!-- Бүртгэлийн хүснэгт — .ui-register стандарт систем -->
             <TableScrollViewport v-else max-height="min(72vh, calc(100dvh - 11rem))">
                 <div ref="registerEl" class="ui-register">
-                <div class="ui-register__banner">{{ registerTitle }}</div>
                 <table class="ui-register__table ui-register--pin-actions min-w-[88rem]">
                     <colgroup>
                         <col style="width: 2.5rem" />
