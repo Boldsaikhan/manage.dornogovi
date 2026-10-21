@@ -124,6 +124,24 @@ const switchScope = (value) => {
     router.get(route('leaves.index'), { scope: value }, { preserveState: false, preserveScroll: true });
 };
 
+/**
+ * Засварлах мөрүүд.
+ *
+ * Бүх хүснэгтийг нэг товчоор нээхийн оронд мөр бүрийг тусад нь
+ * засварлана — санамсаргүй өөрчлөх эрсдэл багасна.
+ */
+const editingRows = ref([]);
+
+const isEditing = (id) => props.canManage && editingRows.value.includes(id);
+
+const toggleRowEdit = (id) => {
+    if (! props.canManage) return;
+
+    editingRows.value = isEditing(id)
+        ? editingRows.value.filter((value) => value !== id)
+        : [...editingRows.value, id];
+};
+
 const addingRow = ref(false);
 
 const addRow = () => {
@@ -131,10 +149,20 @@ const addRow = () => {
 
     addingRow.value = true;
 
+    const before = props.rows.map((row) => row.id);
+
     router.post(route('leaves.store'), {
         scope: props.activeScope === 'all' ? 'baiguullaga' : props.activeScope,
     }, {
         preserveScroll: true,
+        // Зөвхөн шинээр нэмсэн мөр засварлах горимд нээгдэнэ.
+        onSuccess: () => {
+            const added = props.rows.find((row) => ! before.includes(row.id));
+
+            if (added) {
+                editingRows.value = [added.id];
+            }
+        },
         onFinish: () => { addingRow.value = false; },
     });
 };
@@ -142,45 +170,6 @@ const addRow = () => {
 const destroyRow = (id) => {
     if (!confirm('Устгах уу?')) return;
     router.delete(route('leaves.destroy', id), { preserveScroll: true });
-};
-
-/**
- * «Засах» горим — товчоор асаана.
- *
- * Унтраалттай үед хүснэгт зөвхөн харагдана: нүдэн дээр санамсаргүй дарж утга
- * өөрчлөгдөхгүй. Асаалттай үед бүх нүд идэвхжиж, мөр устгах товч гарна.
- */
-/*
- * Засах горим.
- *
- * Нүд хадгалах бүрд хуудас шинэчлэгддэг тул төлвийг нь санах ойд
- * хадгална — эс бөгөөс нэг нүд бөглөх бүрд горим унтарч, дахин дарах
- * шаардлагатай болдог.
- */
-const EDIT_MODE_KEY = 'leaves.edit-mode';
-
-const readEditMode = () => {
-    try {
-        return sessionStorage.getItem(EDIT_MODE_KEY) === '1';
-    } catch (e) {
-        return false;
-    }
-};
-
-const editMode = ref(readEditMode());
-
-const rowEditable = computed(() => props.canManage && editMode.value);
-
-watch(editMode, (value) => {
-    try {
-        sessionStorage.setItem(EDIT_MODE_KEY, value ? '1' : '0');
-    } catch (e) {
-        // Хувийн горимд хадгалах боломжгүй — горим нь энэ хуудсанд үлдэнэ.
-    }
-});
-
-const toggleEditMode = () => {
-    editMode.value = ! editMode.value;
 };
 
 /** Мөр сонгож, Excel/Word/PDF-ээр татах. */
@@ -205,7 +194,10 @@ const toggleAll = () => {
         : [...new Set([...selectedIds.value, ...ids])];
 };
 
-watch(() => props.activeScope, () => { selectedIds.value = []; });
+watch(() => props.activeScope, () => {
+    selectedIds.value = [];
+    editingRows.value = [];
+});
 
 const downloadOpen = ref(false);
 
@@ -488,15 +480,6 @@ const visibleRows = computed(() => {
                     >
                         Түүх
                     </button>
-                    <button
-                        v-if="canManage"
-                        type="button"
-                        class="ui-btn-ghost whitespace-nowrap"
-                        :class="editMode ? 'ring-2 ring-inset ring-brand-navy-500/40' : ''"
-                        @click="toggleEditMode"
-                    >
-                        {{ editMode ? 'Засварыг дуусгах' : 'Засах' }}
-                    </button>
                     <div class="relative">
                         <button
                             type="button"
@@ -681,7 +664,7 @@ const visibleRows = computed(() => {
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].org_name"
                                     :options="orgOptions"
-                                    :editable="rowEditable"
+                                    :editable="isEditing(row.id)"
                                     empty-label=""
                                     placeholder="Байгууллага…"
                                     @commit="(v) => saveField(row.id, 'org_name', v)"
@@ -691,7 +674,7 @@ const visibleRows = computed(() => {
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].unit_name"
-                                    :editable="rowEditable"
+                                    :editable="isEditing(row.id)"
                                     empty-label=""
                                     placeholder="Хэлтэс…"
                                     @commit="(v) => saveField(row.id, 'unit_name', v)"
@@ -702,7 +685,7 @@ const visibleRows = computed(() => {
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].person_name"
                                     :options="peopleOptions"
-                                    :editable="rowEditable"
+                                    :editable="isEditing(row.id)"
                                     empty-label=""
                                     placeholder="Овог нэр…"
                                     @commit="(v) => saveField(row.id, 'person_name', v)"
@@ -714,7 +697,7 @@ const visibleRows = computed(() => {
                                     идэвхгүй, «Цалингүй» эсвэл «Ээлжийн амралтаас»-аас сонгоно.
                                 -->
                                 <select
-                                    v-if="(row.paid_blocked || row.limit_exceeded) && rowEditable && drafts[row.id]"
+                                    v-if="(row.paid_blocked || row.limit_exceeded) && isEditing(row.id) && drafts[row.id]"
                                     v-model="drafts[row.id].type"
                                     class="w-full border-0 bg-transparent text-[11px] outline-none focus:bg-sky-50"
                                     title="Сонгосон журмын заалтын хоног дууссан тул цалинтай байх боломжгүй."
@@ -749,7 +732,7 @@ const visibleRows = computed(() => {
                                     </svg>
                                 </span>
                                 <select
-                                    v-else-if="rowEditable && drafts[row.id]"
+                                    v-else-if="isEditing(row.id) && drafts[row.id]"
                                     v-model="drafts[row.id].type"
                                     class="w-full border-0 bg-transparent text-[11px] outline-none focus:bg-sky-50"
                                     @change="saveField(row.id, 'type', drafts[row.id].type)"
@@ -767,7 +750,7 @@ const visibleRows = computed(() => {
                                     :usage="row.rule_usage || {}"
                                     :blocked="row.blocked_rules || []"
                                     :row-days="row.days || 0"
-                                    :editable="rowEditable"
+                                    :editable="isEditing(row.id)"
                                     @commit="(v) => saveField(row.id, 'rule_code', v)"
                                 />
                             </td>
@@ -777,7 +760,7 @@ const visibleRows = computed(() => {
                                     v-model="drafts[row.id].start_date"
                                     type="date"
                                     align="center"
-                                    :editable="rowEditable"
+                                    :editable="isEditing(row.id)"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'start_date', v)"
                                 />
@@ -788,7 +771,7 @@ const visibleRows = computed(() => {
                                     v-model="drafts[row.id].days"
                                     type="number"
                                     align="center"
-                                    :editable="rowEditable"
+                                    :editable="isEditing(row.id)"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'days', v)"
                                 />
@@ -799,7 +782,7 @@ const visibleRows = computed(() => {
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].reason"
                                     multiline
-                                    :editable="rowEditable"
+                                    :editable="isEditing(row.id)"
                                     empty-label=""
                                     placeholder="Үндэслэл…"
                                     @commit="(v) => saveField(row.id, 'reason', v)"
@@ -807,7 +790,7 @@ const visibleRows = computed(() => {
                             </td>
                             <td class="px-1.5 py-1.5">
                                 <select
-                                    v-if="rowEditable && drafts[row.id]"
+                                    v-if="isEditing(row.id) && drafts[row.id]"
                                     v-model="drafts[row.id].signer"
                                     class="w-full border-0 bg-transparent text-[11px] outline-none focus:bg-sky-50"
                                     @change="saveField(row.id, 'signer', drafts[row.id].signer)"
@@ -819,6 +802,23 @@ const visibleRows = computed(() => {
                             </td>
                             <td class="ui-sticky-actions text-center">
                                 <div class="flex items-center justify-center gap-1">
+                                    <!-- Мөрийг тусад нь засварлана. -->
+                                    <button
+                                        v-if="canManage"
+                                        type="button"
+                                        class="ui-icon-btn"
+                                        :class="isEditing(row.id) ? 'bg-brand-navy-600 text-white' : ''"
+                                        :title="isEditing(row.id) ? 'Засварыг дуусгах' : 'Энэ мөрийг засах'"
+                                        :aria-label="isEditing(row.id) ? 'Засварыг дуусгах' : 'Энэ мөрийг засах'"
+                                        @click="toggleRowEdit(row.id)"
+                                    >
+                                        <svg v-if="isEditing(row.id)" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                        <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 20h4l10-10a2.1 2.1 0 1 0-3-3L5 17v3z" />
+                                        </svg>
+                                    </button>
                                     <a
                                         :href="slipPrintUrl(row)"
                                         target="_blank"
@@ -831,7 +831,7 @@ const visibleRows = computed(() => {
                                         </svg>
                                     </a>
                                     <button
-                                        v-if="rowEditable"
+                                        v-if="isEditing(row.id)"
                                         type="button"
                                         class="ui-icon-btn ui-icon-btn--danger"
                                         title="Устгах"
