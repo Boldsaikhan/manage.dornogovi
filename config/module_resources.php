@@ -186,14 +186,16 @@ return [
         // Албан ёсны «гэрээний бүртгэл» маягтын багана, дараалал.
         'row_number' => '№',
         'columns' => [
-            ['key' => 'title', 'label' => 'Гэрээний нэр, утга агуулга', 'width' => '30%', 'align' => 'left', 'edit' => 'title'],
-            ['key' => 'issued_on', 'label' => 'Гэрээ байгуулсан он сар', 'width' => '13%', 'date' => true, 'edit' => 'issued_on', 'edit_type' => 'date'],
-            ['key' => 'number', 'label' => 'Гэрээний дугаар', 'width' => '11%', 'edit' => 'number'],
-            ['key' => 'copies', 'label' => 'Хувь', 'width' => '6%', 'edit' => 'copies', 'edit_type' => 'number'],
-            ['key' => 'prepared_by', 'label' => 'Боловсруулсан албан тушаалтан', 'width' => '17%', 'edit' => 'prepared_by', 'edit_people' => true],
-            ['key' => 'note', 'label' => 'Хянаж зөвлөгөө өгсөн тэмдэглэл', 'width' => '18%', 'align' => 'left', 'edit' => 'note'],
+            ['key' => 'title', 'label' => 'Гэрээний нэр, утга агуулга', 'width' => '22%', 'align' => 'left', 'edit' => 'title'],
+            ['key' => 'issued_on', 'label' => 'Гэрээ байгуулсан он сар', 'width' => '10%', 'date' => true, 'edit' => 'issued_on', 'edit_type' => 'date'],
+            ['key' => 'number', 'label' => 'Гэрээний дугаар', 'width' => '9%', 'edit' => 'number'],
+            ['key' => 'copies', 'label' => 'Хувь', 'width' => '5%', 'edit' => 'copies', 'edit_type' => 'number'],
+            ['key' => 'prepared_by', 'label' => 'Боловсруулсан албан тушаалтан', 'width' => '13%', 'edit' => 'prepared_by', 'edit_people' => true],
+            ['key' => 'approved_by_name', 'label' => 'Баталсан', 'width' => '12%', 'edit' => 'approved_by_name', 'edit_people' => true],
+            ['key' => 'signed_by', 'label' => 'Төлөөлж байгуулсан', 'width' => '12%', 'edit' => 'signed_by', 'edit_people' => true],
+            ['key' => 'note', 'label' => 'Хянаж зөвлөгөө өгсөн тэмдэглэл', 'width' => '12%', 'align' => 'left', 'edit' => 'note'],
             // Гэрээний эх хувь — мөр бүр дээрээ хавсаргана.
-            ['key' => 'file_label', 'label' => 'Гэрээ', 'width' => '11%', 'type' => 'file', 'upload' => 'file'],
+            ['key' => 'file_label', 'label' => 'Гэрээ', 'width' => '5%', 'type' => 'file', 'upload' => 'file'],
         ],
         'fields' => [
             ['name' => 'title', 'label' => 'Гэрээний нэр, утга агуулга', 'type' => 'text', 'required' => true],
@@ -201,6 +203,8 @@ return [
             ['name' => 'number', 'label' => 'Гэрээний дугаар', 'type' => 'text', 'required' => true],
             ['name' => 'copies', 'label' => 'Хувь', 'type' => 'number'],
             ['name' => 'prepared_by', 'label' => 'Боловсруулсан албан тушаалтан', 'type' => 'text'],
+            ['name' => 'approved_by_name', 'label' => 'Баталсан', 'type' => 'text'],
+            ['name' => 'signed_by', 'label' => 'Төлөөлж байгуулсан', 'type' => 'text'],
             ['name' => 'counterparty', 'label' => 'Харилцагч / тал', 'type' => 'text'],
             ['name' => 'note', 'label' => 'Хянаж зөвлөгөө өгсөн тэмдэглэл', 'type' => 'textarea'],
             ['name' => 'file', 'label' => 'Гэрээний файл (Word / PDF)', 'type' => 'file',
