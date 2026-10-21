@@ -65,6 +65,33 @@ class LeavePaidDayLimitTest extends TestCase
         $this->assertSame('2026-10-12', $leave->fresh()->start_date->format('Y-m-d'));
     }
 
+    public function test_a_unit_without_the_word_heltes_still_fills_the_parent(): void
+    {
+        $admin = $this->admin();
+
+        // Нэрэндээ «хэлтэс» гэсэн үггүй ч ангилал нь нэгж.
+        \App\Models\PhoneDirectoryEntry::create([
+            'org_name' => 'Цэргийн штаб',
+            'category' => 'heltes',
+            'person_name' => 'Х.Энхсайхан',
+            'position' => 'Ахлах мэргэжилтэн',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('leaves.store'), ['scope' => 'baiguullaga'])
+            ->assertRedirect();
+
+        $leave = Leave::query()->latest('id')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $leave), ['person_name' => 'Х.Энхсайхан'])
+            ->assertRedirect();
+
+        $fresh = $leave->fresh();
+        $this->assertSame(\App\Models\PhoneDirectoryEntry::PARENT_ORG, $fresh->org_name);
+        $this->assertSame('Цэргийн штаб', $fresh->unit_name);
+    }
+
     public function test_the_overall_cap_is_off_by_default(): void
     {
         LeaveLimits::reset();
