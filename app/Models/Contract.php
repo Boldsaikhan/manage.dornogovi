@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Contract extends Model
 {
     protected $fillable = [
-        'number', 'title', 'counterparty', 'issued_on', 'copies', 'prepared_by', 'issued_by', 'note',
+        'scope', 'number', 'title', 'counterparty', 'issued_on', 'copies', 'prepared_by', 'issued_by', 'note',
     ];
 
     protected function casts(): array

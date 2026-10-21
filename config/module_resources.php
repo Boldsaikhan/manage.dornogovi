@@ -174,6 +174,15 @@ return [
         'model' => App\Models\Contract::class,
         'title' => 'Гэрээний дугаар',
         'description' => 'Гэрээний дугаар авах, бүртгэх.',
+        // Баталсан албан тушаалтнаар нь ангилна.
+        'scope_column' => 'scope',
+        'scope_label' => 'Баталсан',
+        'default_scope' => 'zasag_darga',
+        'scopes' => [
+            'zasag_darga' => 'Засаг дарга',
+            'tamgyn_darga' => 'Тамгын дарга',
+            'busad' => 'Бусад',
+        ],
         // Албан ёсны «гэрээний бүртгэл» маягтын багана, дараалал.
         'row_number' => '№',
         'columns' => [
