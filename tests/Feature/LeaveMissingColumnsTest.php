@@ -51,7 +51,7 @@ class LeaveMissingColumnsTest extends TestCase
         $this->actingAs($admin)
             ->get(route('leaves.index'))
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->has('rules', 0));
+            ->assertInertia(fn ($page) => $page->has('rulesByScope', 0));
     }
 
     public function test_a_row_can_still_be_added_and_filled(): void

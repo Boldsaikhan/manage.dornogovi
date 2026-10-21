@@ -35,7 +35,8 @@ class LeaveLimitSettingsTest extends TestCase
                 ->where('limits.0.period', 'quarter')
                 ->where('limits.0.pay', 'none')
                 ->where('limitPeriodOptions.quarter', 'Улиралд')
-                ->has('rules', count(LeaveLimits::DEFAULTS))
+                ->where('limitScope', 'baiguullaga')
+                ->has('rulesByScope.baiguullaga', count(LeaveLimits::DEFAULTS))
                 ->where('limitPayOptions.tsalintai', 'Цалинтай'));
     }
 
@@ -45,6 +46,7 @@ class LeaveLimitSettingsTest extends TestCase
 
         $this->actingAs($admin)
             ->patch(route('leaves.limits.update'), [
+                'scope' => 'baiguullaga',
                 'limits' => [
                     ['code' => '5.4.3', 'label' => 'Нэгжийн даргын олгох чөлөө', 'period' => 'quarter', 'days' => 2, 'pay' => 'tsalingui'],
                     // Нэргүй мөр хадгалагдахгүй.
@@ -54,7 +56,7 @@ class LeaveLimitSettingsTest extends TestCase
             ->assertRedirect();
 
         LeaveLimits::forget();
-        $saved = LeaveLimits::all();
+        $saved = LeaveLimits::all('baiguullaga');
 
         $this->assertCount(1, $saved);
         $this->assertSame('quarter', $saved[0]['period']);
@@ -62,12 +64,15 @@ class LeaveLimitSettingsTest extends TestCase
         $this->assertSame('tsalingui', $saved[0]['pay']);
         $this->assertSame('Улиралд ажлын 2 хоног хүртэл', LeaveLimits::limitText($saved[0]));
 
+        // Өөр хүрээ хөндөгдөөгүй — анхны жагсаалт хэвээр.
+        $this->assertSame(LeaveLimits::DEFAULTS, LeaveLimits::all('agentlag'));
+
         $this->actingAs($admin)
-            ->patch(route('leaves.limits.update'), ['reset' => true])
+            ->patch(route('leaves.limits.update'), ['scope' => 'baiguullaga', 'reset' => true])
             ->assertRedirect();
 
         LeaveLimits::forget();
-        $this->assertSame(LeaveLimits::DEFAULTS, LeaveLimits::all());
+        $this->assertSame(LeaveLimits::DEFAULTS, LeaveLimits::all('baiguullaga'));
     }
 
     public function test_a_viewer_cannot_change_the_limits(): void
@@ -75,7 +80,7 @@ class LeaveLimitSettingsTest extends TestCase
         $user = User::factory()->create(['is_admin' => false]);
 
         $this->actingAs($user)
-            ->patch(route('leaves.limits.update'), ['limits' => []])
+            ->patch(route('leaves.limits.update'), ['scope' => 'baiguullaga', 'limits' => []])
             ->assertForbidden();
     }
 }

@@ -53,6 +53,43 @@ class LeaveRuleLimitTest extends TestCase
         ]);
     }
 
+    public function test_each_scope_keeps_its_own_limits(): void
+    {
+        $admin = $this->admin();
+
+        // АЗДТГ-д 3 хоног, агентлагт 10 хоног.
+        LeaveLimits::save([
+            ['code' => 'Y', 'label' => 'Жилийн заалт', 'period' => 'year', 'days' => 3, 'pay' => 'tsalintai'],
+        ], 'baiguullaga');
+
+        LeaveLimits::save([
+            ['code' => 'Y', 'label' => 'Жилийн заалт', 'period' => 'year', 'days' => 10, 'pay' => 'tsalintai'],
+        ], 'agentlag');
+
+        $this->assertSame(3, LeaveLimits::all('baiguullaga')[0]['days']);
+        $this->assertSame(10, LeaveLimits::all('agentlag')[0]['days']);
+
+        // АЗДТГ-ийн мөр 4 хоног авбал лимит хэтэрч цалингүй болно.
+        $office = $this->leave('2026-02-02', 4);
+        $office->update(['scope' => 'baiguullaga']);
+
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $office), ['rule_code' => 'Y'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('tsalingui', $office->fresh()->type);
+
+        // Агентлагийн мөрд 4 хоног лимитэд багтана.
+        $agency = $this->leave('2026-02-02', 4);
+        $agency->update(['scope' => 'agentlag']);
+
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $agency), ['rule_code' => 'Y'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('tsalintai', $agency->fresh()->type);
+    }
+
     public function test_a_rule_can_be_chosen_while_it_fits(): void
     {
         $admin = $this->admin();

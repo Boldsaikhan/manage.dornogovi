@@ -309,7 +309,7 @@ class LeavePaidDayLimitTest extends TestCase
         LeaveLimits::savePaidDaysPerYear(3);
 
         $this->actingAs($admin)
-            ->patch(route('leaves.limits.update'), ['limits' => LeaveLimits::DEFAULTS])
+            ->patch(route('leaves.limits.update'), ['scope' => 'baiguullaga', 'limits' => LeaveLimits::DEFAULTS])
             ->assertRedirect();
 
         $this->assertSame('tsalintai', $first->fresh()->type);

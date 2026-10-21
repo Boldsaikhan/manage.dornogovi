@@ -111,31 +111,57 @@ class LeaveLimits
         ],
     ];
 
-    /** @var list<array{code: string, label: string, period: string, days: int, pay: string}>|null */
-    private static ?array $cache = null;
+    /** @var array<string, list<array{code: string, label: string, period: string, days: int, pay: string}>> */
+    private static array $cache = [];
+
+    /** Хамрах хүрээ бүр өөрийн түлхүүртэй. */
+    public static function keyFor(?string $scope): string
+    {
+        $scope = trim((string) $scope);
+
+        return $scope === '' ? self::SETTING_KEY : self::SETTING_KEY.'.'.$scope;
+    }
 
     /**
-     * Хадгалсан лимитүүд, эс бөгөөс анхны жагсаалт.
+     * Тухайн хамрах хүрээний лимитүүд.
+     *
+     * Хүрээндээ тохируулаагүй бол нийтийн (хуучин) жагсаалт, эс бөгөөс
+     * журмын анхны жагсаалт.
      *
      * @return list<array{code: string, label: string, period: string, days: int, pay: string}>
      */
-    public static function all(): array
+    public static function all(?string $scope = null): array
     {
-        if (self::$cache !== null) {
-            return self::$cache;
+        $key = self::keyFor($scope);
+
+        if (array_key_exists($key, self::$cache)) {
+            return self::$cache[$key];
         }
 
+        $decoded = self::read($key);
+
+        // Хүрээндээ тохируулаагүй бол нийтийнхээр.
+        if (! is_array($decoded) && $key !== self::SETTING_KEY) {
+            $decoded = self::read(self::SETTING_KEY);
+        }
+
+        return self::$cache[$key] = is_array($decoded)
+            ? self::normalize($decoded)
+            : self::DEFAULTS;
+    }
+
+    /** @return array<int, mixed>|null */
+    private static function read(string $key): ?array
+    {
         try {
-            $raw = AppSetting::query()->where('key', self::SETTING_KEY)->value('value');
+            $raw = AppSetting::query()->where('key', $key)->value('value');
             $decoded = $raw ? json_decode((string) $raw, true) : null;
         } catch (\Throwable $e) {
-            // Хүснэгт бэлэн биш (migration-аас өмнө) — анхны утгаар.
+            // Хүснэгт бэлэн биш (migration-аас өмнө).
             $decoded = null;
         }
 
-        return self::$cache = is_array($decoded)
-            ? self::normalize($decoded)
-            : self::DEFAULTS;
+        return is_array($decoded) ? $decoded : null;
     }
 
     /**
@@ -173,12 +199,12 @@ class LeaveLimits
     /**
      * @param  array<int, mixed>  $rows
      */
-    public static function save(array $rows): void
+    public static function save(array $rows, ?string $scope = null): void
     {
         $clean = self::normalize($rows);
 
         AppSetting::query()->updateOrCreate(
-            ['key' => self::SETTING_KEY],
+            ['key' => self::keyFor($scope)],
             ['value' => json_encode($clean, JSON_UNESCAPED_UNICODE)],
         );
 
@@ -186,18 +212,23 @@ class LeaveLimits
     }
 
     /** Журмын анхны жагсаалт руу буцаана. */
-    public static function reset(): void
+    public static function reset(?string $scope = null): void
     {
-        AppSetting::query()
-            ->whereIn('key', [self::SETTING_KEY, self::PAID_DAYS_KEY])
-            ->delete();
+        $keys = [self::keyFor($scope), self::PAID_DAYS_KEY];
+
+        if ($scope !== null) {
+            // Хүрээнийхээ тохиргоог л хаяна.
+            $keys = [self::keyFor($scope)];
+        }
+
+        AppSetting::query()->whereIn('key', $keys)->delete();
 
         self::forget();
     }
 
     public static function forget(): void
     {
-        self::$cache = null;
+        self::$cache = [];
         self::$paidDays = null;
     }
 
@@ -208,7 +239,7 @@ class LeaveLimits
      *
      * @return array{code: string, label: string, period: string, days: int, pay: string}|null
      */
-    public static function find(?string $code): ?array
+    public static function find(?string $code, ?string $scope = null): ?array
     {
         $code = trim((string) $code);
 
@@ -216,7 +247,7 @@ class LeaveLimits
             return null;
         }
 
-        foreach (self::all() as $row) {
+        foreach (self::all($scope) as $row) {
             if ($row['code'] === $code) {
                 return $row;
             }

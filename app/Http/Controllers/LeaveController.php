@@ -42,6 +42,9 @@ class LeaveController extends Controller
             $scope = 'baiguullaga';
         }
 
+        // «Нийт» табд тохиргоог АЗДТГ-ынхаар нээнэ.
+        $defaultScope = 'baiguullaga';
+
         $query = Leave::query()->with(['user:id,name', 'department:id,name'])->latest('id');
         if ($scope !== 'all') {
             $query->where('scope', $scope);
@@ -85,24 +88,47 @@ class LeaveController extends Controller
             'types' => Leave::TYPES,
             'signers' => Leave::signerOptions(),
             // Журмын 5.4-р заалтын чөлөө олгох лимит — тохиргооноос засна.
-            'limits' => LeaveLimits::all(),
+            // Тохиргоо нь идэвхтэй табын (хамрах хүрээний) лимит.
+            'limitScope' => $scope === 'all' ? $defaultScope : $scope,
+            'limitScopeLabel' => self::SCOPES[$scope === 'all' ? $defaultScope : $scope] ?? '',
+            'limits' => LeaveLimits::all($scope === 'all' ? $defaultScope : $scope),
             'limitPayOptions' => LeaveLimits::PAY,
             'limitPeriodOptions' => LeaveLimits::PERIODS,
-            // «Журам» баганын сонголт (багана бэлэн үед).
-            'rules' => ! LeaveSchema::hasRules() ? [] : collect(LeaveLimits::all())
-                ->filter(fn (array $rule) => $rule['code'] !== '')
-                ->map(fn (array $rule) => [
-                    'code' => $rule['code'],
-                    'label' => $rule['code'].' '.$rule['label'],
-                    'limit_text' => LeaveLimits::limitText($rule),
-                    'period' => $rule['period'],
-                    'period_label' => LeaveLimits::PERIODS[$rule['period']] ?? '',
-                    'days' => (int) $rule['days'],
-                ])
-                ->values(),
+            /*
+             * «Журам» баганын сонголт — хамрах хүрээ тус бүрээр.
+             *
+             * «Нийт» табд өөр өөр хүрээний мөр холилдож байдаг тул мөр
+             * бүр өөрийн хүрээний заалтуудыг хэрэглэнэ.
+             */
+            'rulesByScope' => ! LeaveSchema::hasRules()
+                ? []
+                : collect(array_keys(self::SCOPES))
+                    ->mapWithKeys(fn (string $key) => [$key => $this->ruleOptions($key)])
+                    ->all(),
             'paidDaysPerYear' => LeaveLimits::paidDaysPerYear(),
             'hasAuditLog' => true,
         ]);
+    }
+
+    /**
+     * Нэг хамрах хүрээний журмын сонголтууд.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function ruleOptions(string $scope): array
+    {
+        return collect(LeaveLimits::all($scope))
+            ->filter(fn (array $rule) => $rule['code'] !== '')
+            ->map(fn (array $rule) => [
+                'code' => $rule['code'],
+                'label' => $rule['code'].' '.$rule['label'],
+                'limit_text' => LeaveLimits::limitText($rule),
+                'period' => $rule['period'],
+                'period_label' => LeaveLimits::PERIODS[$rule['period']] ?? '',
+                'days' => (int) $rule['days'],
+            ])
+            ->values()
+            ->all();
     }
 
     /**
@@ -115,6 +141,7 @@ class LeaveController extends Controller
 
         $data = $request->validate([
             'reset' => ['sometimes', 'boolean'],
+            'scope' => ['required', Rule::in(array_keys(self::SCOPES))],
             'limits' => ['array'],
             'limits.*.code' => ['nullable', 'string', 'max:20'],
             'limits.*.label' => ['nullable', 'string', 'max:1000'],
@@ -123,14 +150,16 @@ class LeaveController extends Controller
             'limits.*.pay' => ['nullable', Rule::in(array_keys(LeaveLimits::PAY))],
         ]);
 
+        $scope = (string) $data['scope'];
+
         if ($request->boolean('reset')) {
-            LeaveLimits::reset();
+            LeaveLimits::reset($scope);
             LeaveBalance::reapplyAll();
 
             return back()->with('success', 'Журмын анхны лимит сэргээгдлээ.');
         }
 
-        LeaveLimits::save($data['limits'] ?? []);
+        LeaveLimits::save($data['limits'] ?? [], $scope);
 
         // Лимит өөрчлөгдвөл бүх бүртгэлийг дахин тооцно.
         LeaveBalance::reapplyAll();
@@ -299,7 +328,7 @@ class LeaveController extends Controller
         $end = $start->copy()->addDays($days - 1);
 
         if (LeaveSchema::hasRules() && filled($data['rule_code'] ?? null)) {
-            $data = $this->applyRulePay($data);
+            $data = $this->applyRulePay($data, $scope);
         }
 
         // Нэрээ сонгосон бол байгууллага, хэлтсийг утасны жагсаалтаас нөхнө.
@@ -389,7 +418,7 @@ class LeaveController extends Controller
             unset($data['rule_code']);
         } elseif (array_key_exists('rule_code', $data)) {
             // Журмын заалт цалингийн төлвөө өөрөө заана.
-            $data = $this->applyRulePay($data);
+            $data = $this->applyRulePay($data, $leave->scope);
         }
 
         $changes = $this->changedFields($leave, $data);
@@ -466,9 +495,9 @@ class LeaveController extends Controller
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    private function applyRulePay(array $data): array
+    private function applyRulePay(array $data, ?string $scope = null): array
     {
-        $rule = LeaveLimits::find($data['rule_code'] ?? null);
+        $rule = LeaveLimits::find($data['rule_code'] ?? null, $scope);
         $pay = $rule['pay'] ?? null;
 
         if ($pay === 'tsalintai' || $pay === 'tsalingui') {
@@ -489,7 +518,7 @@ class LeaveController extends Controller
             return false;
         }
 
-        $rule = LeaveLimits::find($leave->rule_code);
+        $rule = LeaveLimits::find($leave->rule_code, $leave->scope);
 
         if ($rule === null || (int) $rule['days'] <= 0) {
             return false;
@@ -540,7 +569,7 @@ class LeaveController extends Controller
             'type_locked' => ! $leave->getAttribute('limit_exceeded')
                 && ! $this->ruleLimitExceeded($leave)
                 && in_array(
-                LeaveLimits::find($leave->getAttribute('rule_code'))['pay'] ?? 'none',
+                LeaveLimits::find($leave->getAttribute('rule_code'), $leave->scope)['pay'] ?? 'none',
                 ['tsalintai', 'tsalingui'],
                 true,
             ),

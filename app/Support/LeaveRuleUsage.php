@@ -32,7 +32,7 @@ class LeaveRuleUsage
         $days = max(0, (int) $leave->days);
         $blocked = [];
 
-        foreach (LeaveLimits::all() as $rule) {
+        foreach (LeaveLimits::all($leave->scope) as $rule) {
             if ($rule['code'] === '' || (int) $rule['days'] <= 0) {
                 // Хоног заагаагүй заалт — хязгаарлахгүй.
                 continue;
@@ -64,7 +64,7 @@ class LeaveRuleUsage
 
         $out = [];
 
-        foreach (LeaveLimits::all() as $rule) {
+        foreach (LeaveLimits::all($leave->scope) as $rule) {
             if ($rule['code'] === '') {
                 continue;
             }
