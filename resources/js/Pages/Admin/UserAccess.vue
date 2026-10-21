@@ -511,18 +511,23 @@ const mismatchedLogins = computed(
     () => props.users.filter((u) => u.directory_phone && ! u.login_matches_directory),
 );
 
+/** Зөрүүтэй бүртгэлүүдийн жагсаалтыг дэлгэх. */
+const showMismatches = ref(false);
+
 /** Нэвтрэх нэрийг утасны жагсаалтын дугаараар солино. */
 const syncingLogin = ref(false);
 
-const syncLogin = () => {
-    if (! selected.value || syncingLogin.value) return;
+const syncLoginFor = (id) => {
+    if (! id || syncingLogin.value) return;
 
     syncingLogin.value = true;
-    router.patch(route('admin.users.login', selected.value.id), {}, {
+    router.patch(route('admin.users.login', id), {}, {
         preserveScroll: true,
         onFinish: () => { syncingLogin.value = false; },
     });
 };
+
+const syncLogin = () => syncLoginFor(selected.value?.id);
 
 const syncAllLogins = () => {
     if (! confirm('Бүх бүртгэлийн нэвтрэх нэрийг утасны жагсаалтын дугаараар шинэчлэх үү?')) return;
@@ -585,7 +590,62 @@ const saveUser = () => {
                         v-if="mismatchedLogins.length"
                         class="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-[11px] leading-relaxed text-rose-700"
                     >
-                        {{ mismatchedLogins.length }} бүртгэлийн нэвтрэх нэр утасны жагсаалтын дугаартай зөрж байна.
+                        <button
+                            type="button"
+                            class="flex w-full items-start gap-1 text-left font-medium hover:text-rose-900"
+                            :title="showMismatches ? 'Жагсаалтыг хаах' : 'Зөрүүтэй бүртгэлүүдийг харах'"
+                            @click="showMismatches = ! showMismatches"
+                        >
+                            <span class="flex-1">
+                                {{ mismatchedLogins.length }} бүртгэлийн нэвтрэх нэр утасны жагсаалтын
+                                дугаартай зөрж байна.
+                            </span>
+                            <svg
+                                class="mt-0.5 h-3 w-3 shrink-0 transition"
+                                :class="showMismatches ? 'rotate-180' : ''"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2.5"
+                                viewBox="0 0 24 24"
+                            >
+                                <path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                        </button>
+
+                        <!-- Зөрүүг мөр мөрөөр нь харуулна — тулгахаасаа өмнө шалгана. -->
+                        <ul v-if="showMismatches" class="mt-1.5 max-h-52 space-y-1 overflow-y-auto">
+                            <li
+                                v-for="item in mismatchedLogins"
+                                :key="'mismatch-' + item.id"
+                                class="rounded-md border border-rose-200 bg-white px-2 py-1.5"
+                            >
+                                <button
+                                    type="button"
+                                    class="block w-full text-left font-semibold text-slate-800 hover:underline"
+                                    @click="selectUser(item.id)"
+                                >
+                                    {{ item.name }}
+                                </button>
+                                <p v-if="item.directory_org" class="text-[10px] text-slate-500">
+                                    {{ item.directory_org }}
+                                </p>
+                                <p class="mt-0.5 text-slate-600">
+                                    Одоо: <span class="font-mono font-semibold text-rose-700">{{ item.phone || '—' }}</span>
+                                </p>
+                                <p class="text-slate-600">
+                                    Жагсаалтад: <span class="font-mono font-semibold text-emerald-700">{{ item.directory_phone }}</span>
+                                </p>
+                                <button
+                                    type="button"
+                                    class="mt-1 font-semibold text-brand-navy-700 underline underline-offset-2 hover:text-brand-navy-900"
+                                    :disabled="syncingLogin"
+                                    @click="syncLoginFor(item.id)"
+                                >
+                                    Энэ бүртгэлийг тулгах
+                                </button>
+                            </li>
+                        </ul>
+
                         <button
                             type="button"
                             class="mt-1 block font-semibold underline underline-offset-2 hover:text-rose-900"
