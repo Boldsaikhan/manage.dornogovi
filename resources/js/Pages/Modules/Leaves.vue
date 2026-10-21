@@ -714,10 +714,10 @@ const visibleRows = computed(() => {
                                     идэвхгүй, «Цалингүй» эсвэл «Ээлжийн амралтаас»-аас сонгоно.
                                 -->
                                 <select
-                                    v-if="row.limit_exceeded && rowEditable && drafts[row.id]"
+                                    v-if="(row.paid_blocked || row.limit_exceeded) && rowEditable && drafts[row.id]"
                                     v-model="drafts[row.id].type"
                                     class="w-full border-0 bg-transparent text-[11px] font-semibold text-rose-700 outline-none focus:bg-sky-50"
-                                    :title="`Жилд олгох цалинтай чөлөөний хоног (${paidDaysPerYear}) дууссан.`"
+                                    title="Сонгосон журмын заалтын хоног дууссан тул цалинтай байх боломжгүй."
                                     @change="saveField(row.id, 'type', drafts[row.id].type)"
                                 >
                                     <option
@@ -730,9 +730,9 @@ const visibleRows = computed(() => {
                                     </option>
                                 </select>
                                 <span
-                                    v-else-if="row.limit_exceeded"
+                                    v-else-if="row.paid_blocked || row.limit_exceeded"
                                     class="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700"
-                                    :title="`Жилд олгох цалинтай чөлөөний хоног (${paidDaysPerYear}) дууссан.`"
+                                    title="Сонгосон журмын заалтын хоног дууссан тул цалинтай байх боломжгүй."
                                 >
                                     {{ row.type_label }}
                                 </span>
