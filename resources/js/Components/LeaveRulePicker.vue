@@ -22,7 +22,6 @@ const emit = defineEmits(['update:modelValue', 'commit']);
 const open = ref(false);
 const rootRef = ref(null);
 const menuRef = ref(null);
-const menuStyle = ref({});
 
 const selected = computed(() => props.rules.find((rule) => rule.code === props.modelValue) || null);
 
@@ -63,48 +62,6 @@ const summary = computed(() => {
     return `${rule.days} хоногоос ${usedDays(rule)} авсан, ${leftDays(rule)} үлдсэн`;
 });
 
-const place = () => {
-    const el = rootRef.value;
-    if (! el) {
-        return;
-    }
-
-    const rect = el.getBoundingClientRect();
-    const width = Math.min(960, window.innerWidth - 16);
-    let left = rect.left;
-
-    if (left + width > window.innerWidth - 8) {
-        left = Math.max(8, window.innerWidth - width - 8);
-    }
-
-    const below = window.innerHeight - rect.bottom - 16;
-    const upward = below < 260 && rect.top > below;
-
-    menuStyle.value = {
-        position: 'fixed',
-        left: `${left}px`,
-        ...(upward
-            ? { bottom: `${window.innerHeight - rect.top + 6}px` }
-            : { top: `${rect.bottom + 6}px` }),
-        width: `${width}px`,
-        zIndex: 200,
-    };
-};
-
-const onPointerDown = (event) => {
-    const target = event.target;
-
-    if (! (target instanceof Node)) {
-        return;
-    }
-
-    if (rootRef.value?.contains(target) || menuRef.value?.contains(target)) {
-        return;
-    }
-
-    close();
-};
-
 const onKeydown = (event) => {
     if (event.key === 'Escape') {
         close();
@@ -112,9 +69,6 @@ const onKeydown = (event) => {
 };
 
 const stop = () => {
-    window.removeEventListener('scroll', place, true);
-    window.removeEventListener('resize', place);
-    document.removeEventListener('pointerdown', onPointerDown, true);
     document.removeEventListener('keydown', onKeydown);
 };
 
@@ -136,10 +90,6 @@ const toggle = async () => {
 
     open.value = true;
     await nextTick();
-    place();
-    window.addEventListener('scroll', place, true);
-    window.addEventListener('resize', place);
-    document.addEventListener('pointerdown', onPointerDown, true);
     document.addEventListener('keydown', onKeydown);
 };
 
@@ -177,12 +127,16 @@ onBeforeUnmount(stop);
         </span>
 
         <Teleport to="body">
+            <!-- Дэлгэцийн голд — хүснэгтийн ирмэгээс хальж таслагдахгүй. -->
             <div
                 v-if="open"
-                ref="menuRef"
-                class="ui-card overflow-hidden shadow-2xl"
-                :style="menuStyle"
+                class="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/30 p-4"
+                @click.self="close"
             >
+                <div
+                    ref="menuRef"
+                    class="ui-card flex max-h-[85vh] w-full max-w-5xl flex-col overflow-hidden shadow-2xl"
+                >
                 <div class="flex items-center justify-between gap-2 border-b border-slate-200 px-3 py-2">
                     <p class="text-xs font-semibold text-slate-700">Хөдөлмөрийн дотоод журмын заалт</p>
                     <button type="button" class="text-xs text-slate-500 hover:text-slate-800" @click="pick('')">
@@ -190,7 +144,7 @@ onBeforeUnmount(stop);
                     </button>
                 </div>
 
-                <div class="ui-table-wrap max-h-[22rem] overflow-y-auto">
+                <div class="ui-table-wrap min-h-0 flex-1 overflow-y-auto">
                     <table class="ui-table">
                         <thead>
                             <tr>
@@ -237,6 +191,7 @@ onBeforeUnmount(stop);
                             </tr>
                         </tbody>
                     </table>
+                </div>
                 </div>
             </div>
         </Teleport>
