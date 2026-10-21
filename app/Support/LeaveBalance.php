@@ -75,6 +75,30 @@ class LeaveBalance
     }
 
     /**
+     * Энэ мөрийг цалинтай болговол жилийн лимит хэтрэх үү.
+     *
+     * Тухайн хүний тэр жилийн бусад цалинтай чөлөөний хоногийг тооцно.
+     */
+    public static function wouldExceedPaid(Leave $leave): bool
+    {
+        $limit = LeaveLimits::paidDaysPerYear();
+        $person = trim((string) $leave->person_name);
+
+        if ($limit <= 0 || $person === '' || ! $leave->start_date) {
+            return false;
+        }
+
+        $used = (int) Leave::query()
+            ->where('person_name', $person)
+            ->whereYear('start_date', Carbon::parse($leave->start_date)->year)
+            ->where('type', 'tsalintai')
+            ->when($leave->id, fn ($q) => $q->whereKeyNot($leave->id))
+            ->sum('days');
+
+        return $used + max(0, (int) $leave->days) > $limit;
+    }
+
+    /**
      * Лимит өөрчлөгдсөн үед бүх хүн, бүх жилийг дахин тооцно.
      */
     public static function reapplyAll(): void

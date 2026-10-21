@@ -412,6 +412,19 @@ class LeaveController extends Controller
             return back(303)->withErrors(['rule_code' => $error, 'days' => $error]);
         }
 
+        /*
+         * Жилийн цалинтай чөлөөний хоног дууссан бол «Цалинтай» болгохгүй —
+         * «Цалингүй» эсвэл «Ээлжийн амралтаас» сонгоно.
+         */
+        if ($leave->type === 'tsalintai' && LeaveBalance::wouldExceedPaid($leave)) {
+            $message = sprintf(
+                'Жилд олгох цалинтай чөлөөний хоног (%d) дууссан тул «Цалинтай» сонгох боломжгүй. «Цалингүй» эсвэл «Ээлжийн амралтаас» гэж сонгоно уу.',
+                LeaveLimits::paidDaysPerYear(),
+            );
+
+            return back(303)->withErrors(['type' => $message]);
+        }
+
         if (array_key_exists('start_date', $data) || array_key_exists('days', $data)) {
             $start = Carbon::parse($leave->start_date)->startOfDay();
             $days = (int) ($leave->days ?: 1);
@@ -549,7 +562,7 @@ class LeaveController extends Controller
             'type_label' => $leave->typeLabel(),
             'rule_code' => $leave->getAttribute('rule_code'),
             // Журам нь цалингийн төлвөө заасан бол гараар солихгүй.
-            'type_locked' => in_array(
+            'type_locked' => ! $leave->getAttribute('limit_exceeded') && in_array(
                 LeaveLimits::find($leave->getAttribute('rule_code'))['pay'] ?? 'none',
                 ['tsalintai', 'tsalingui'],
                 true,

@@ -637,17 +637,32 @@ const visibleRows = computed(() => (
                                 />
                             </td>
                             <td class="px-1.5 py-1.5">
-                                <!-- Лимит хэтэрсэн бол «Цалингүй» тогтсон — солихгүй. -->
+                                <!--
+                                    Жилийн цалинтай хоног дууссан: «Цалинтай» сонголт
+                                    идэвхгүй, «Цалингүй» эсвэл «Ээлжийн амралтаас»-аас сонгоно.
+                                -->
+                                <select
+                                    v-if="row.limit_exceeded && rowEditable && drafts[row.id]"
+                                    v-model="drafts[row.id].type"
+                                    class="w-full border-0 bg-transparent text-[11px] font-semibold text-rose-700 outline-none focus:bg-sky-50"
+                                    :title="`Жилд олгох цалинтай чөлөөний хоног (${paidDaysPerYear}) дууссан.`"
+                                    @change="saveField(row.id, 'type', drafts[row.id].type)"
+                                >
+                                    <option
+                                        v-for="[value, label] in typeEntries"
+                                        :key="value"
+                                        :value="value"
+                                        :disabled="value === 'tsalintai'"
+                                    >
+                                        {{ label }}<template v-if="value === 'tsalintai'"> — хоног дууссан</template>
+                                    </option>
+                                </select>
                                 <span
-                                    v-if="row.limit_exceeded"
+                                    v-else-if="row.limit_exceeded"
                                     class="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700"
-                                    :title="`Жилийн цалинтай чөлөөний лимит (${paidDaysPerYear} хоног) хэтэрсэн тул цалингүй болсон.`"
+                                    :title="`Жилд олгох цалинтай чөлөөний хоног (${paidDaysPerYear}) дууссан.`"
                                 >
                                     {{ row.type_label }}
-                                    <svg class="h-3 w-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path d="M7 11V8a5 5 0 0110 0v3" stroke-linecap="round" />
-                                        <rect x="5" y="11" width="14" height="9" rx="2" />
-                                    </svg>
                                 </span>
                                 <!-- Журам цалингийн төлвөө заасан бол гараар солихгүй. -->
                                 <span
