@@ -174,20 +174,32 @@ return [
         'model' => App\Models\Contract::class,
         'title' => 'Гэрээний дугаар',
         'description' => 'Гэрээний дугаар авах, бүртгэх.',
+        // Албан ёсны «гэрээний бүртгэл» маягтын багана, дараалал.
+        'row_number' => '№',
         'columns' => [
-            ['key' => 'number', 'label' => 'Дугаар'],
-            ['key' => 'title', 'label' => 'Гарчиг'],
-            ['key' => 'counterparty', 'label' => 'Талууд'],
-            ['key' => 'issued_on', 'label' => 'Олгосон'],
+            ['key' => 'title', 'label' => 'Гэрээний нэр, утга агуулга', 'width' => '30%', 'align' => 'left', 'edit' => 'title'],
+            ['key' => 'issued_on', 'label' => 'Гэрээ байгуулсан он сар', 'width' => '13%', 'date' => true, 'edit' => 'issued_on', 'edit_type' => 'date'],
+            ['key' => 'number', 'label' => 'Гэрээний дугаар', 'width' => '11%', 'edit' => 'number'],
+            ['key' => 'copies', 'label' => 'Хувь', 'width' => '6%', 'edit' => 'copies', 'edit_type' => 'number'],
+            ['key' => 'prepared_by', 'label' => 'Боловсруулсан албан тушаалтан', 'width' => '17%', 'edit' => 'prepared_by', 'edit_people' => true],
+            ['key' => 'note', 'label' => 'Хянаж зөвлөгөө өгсөн тэмдэглэл', 'width' => '23%', 'align' => 'left', 'edit' => 'note'],
         ],
         'fields' => [
-            ['name' => 'number', 'label' => 'Дугаар', 'type' => 'text', 'required' => true],
-            ['name' => 'title', 'label' => 'Гарчиг', 'type' => 'text', 'required' => true],
+            ['name' => 'title', 'label' => 'Гэрээний нэр, утга агуулга', 'type' => 'text', 'required' => true],
+            ['name' => 'issued_on', 'label' => 'Гэрээ байгуулсан он сар', 'type' => 'date', 'required' => true],
+            ['name' => 'number', 'label' => 'Гэрээний дугаар', 'type' => 'text', 'required' => true],
+            ['name' => 'copies', 'label' => 'Хувь', 'type' => 'number'],
+            ['name' => 'prepared_by', 'label' => 'Боловсруулсан албан тушаалтан', 'type' => 'text'],
             ['name' => 'counterparty', 'label' => 'Харилцагч / тал', 'type' => 'text'],
-            ['name' => 'issued_on', 'label' => 'Огноо', 'type' => 'date', 'required' => true],
-            ['name' => 'note', 'label' => 'Тэмдэглэл', 'type' => 'textarea'],
+            ['name' => 'note', 'label' => 'Хянаж зөвлөгөө өгсөн тэмдэглэл', 'type' => 'textarea'],
         ],
         'defaults' => [],
+        /*
+         * Хоосон мөр нэмэхгүй — «Гэрээний дугаар» нь давхардахгүй байх
+         * ёстой тул «Шинэ нэмэх» маягтаар дугаарыг нь зааж оруулна.
+         * Оруулсны дараа нүд бүрийг нь шууд засч болно.
+         */
+        'audit_log' => true,
         'on_create' => 'attach_issuer',
     ],
     'archives' => [
