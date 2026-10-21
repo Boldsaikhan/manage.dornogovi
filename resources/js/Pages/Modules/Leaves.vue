@@ -21,7 +21,7 @@ const props = defineProps({
     limitPayOptions: { type: Object, default: () => ({}) },
     limitPeriodOptions: { type: Object, default: () => ({}) },
     rules: { type: Array, default: () => [] },
-    paidDaysPerYear: { type: Number, default: 5 },
+    paidDaysPerYear: { type: Number, default: 0 },
     hasAuditLog: { type: Boolean, default: false },
 });
 
@@ -33,7 +33,6 @@ const props = defineProps({
  */
 const showLimits = ref(false);
 const limitRows = ref([]);
-const limitPaidDays = ref(0);
 const limitSaving = ref(false);
 
 const payEntries = computed(() => Object.entries(props.limitPayOptions));
@@ -44,7 +43,6 @@ const ruleLabel = (code) => props.rules.find((r) => r.code === code)?.label || '
 
 const openLimits = () => {
     limitRows.value = props.limits.map((row) => ({ ...row }));
-    limitPaidDays.value = props.paidDaysPerYear;
     showLimits.value = true;
 };
 
@@ -59,10 +57,7 @@ const removeLimitRow = (index) => {
 const saveLimits = () => {
     limitSaving.value = true;
 
-    router.patch(route('leaves.limits.update'), {
-        limits: limitRows.value,
-        paid_days_per_year: limitPaidDays.value,
-    }, {
+    router.patch(route('leaves.limits.update'), { limits: limitRows.value }, {
         preserveScroll: true,
         onSuccess: () => {
             showLimits.value = false;
@@ -84,7 +79,6 @@ const resetLimits = () => {
         preserveScroll: true,
         onSuccess: () => {
             limitRows.value = props.limits.map((row) => ({ ...row }));
-            limitPaidDays.value = props.paidDaysPerYear;
         },
         onFinish: () => {
             limitSaving.value = false;
@@ -799,22 +793,6 @@ const visibleRows = computed(() => (
                     </div>
                     <button type="button" class="ui-btn-ghost" @click="showLimits = false">Хаах</button>
                 </div>
-
-                <label class="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 p-3 text-sm">
-                    <span class="font-semibold text-slate-700">Жилд олгох цалинтай чөлөө:</span>
-                    <input
-                        v-model.number="limitPaidDays"
-                        type="number"
-                        min="0"
-                        max="365"
-                        class="ui-input w-24 !py-1 text-sm"
-                        :disabled="! canManage"
-                    />
-                    <span class="text-slate-600">хоног</span>
-                    <span class="text-xs text-slate-500">
-                        Хэтэрсэн чөлөө автоматаар «Цалингүй» болж, төрлийг нь солих боломжгүй. 0 = хязгаарлахгүй.
-                    </span>
-                </label>
 
                 <div class="ui-table-wrap max-h-[60vh] overflow-y-auto">
                     <table class="ui-table">

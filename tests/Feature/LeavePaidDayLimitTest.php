@@ -9,7 +9,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Жилийн цалинтай чөлөөний лимит — хэтэрсэн мөр «Цалингүй» болно.
+ * Жилийн нийлбэр цалинтай чөлөөний хязгаар.
+ *
+ * Хоног нь журмын заалт тус бүрдээ бодогддог болсон тул энэ нийлбэр
+ * хязгаар анхдагчаар унтраалттай. Тохируулбал ажилласан хэвээр байхыг
+ * энд шалгана.
  */
 class LeavePaidDayLimitTest extends TestCase
 {
@@ -20,6 +24,23 @@ class LeavePaidDayLimitTest extends TestCase
         parent::setUp();
 
         LeaveLimits::forget();
+
+        // Нийлбэр хязгаарыг зориуд асаана (анхдагчаар унтраалттай).
+        LeaveLimits::savePaidDaysPerYear(5);
+    }
+
+    public function test_the_overall_cap_is_off_by_default(): void
+    {
+        LeaveLimits::reset();
+
+        $this->assertSame(0, LeaveLimits::paidDaysPerYear());
+
+        $admin = $this->admin();
+        $leave = $this->addLeave($admin, '2026-02-02', 40);
+
+        // Заалт тус бүрийн лимит л үйлчилнэ — нийлбэр хязгаар байхгүй.
+        $this->assertSame('tsalintai', $leave->fresh()->type);
+        $this->assertFalse((bool) $leave->fresh()->limit_exceeded);
     }
 
     private function admin(): User
@@ -202,9 +223,9 @@ class LeavePaidDayLimitTest extends TestCase
 
     public function test_a_zero_cap_means_no_limit(): void
     {
-        $admin = $this->admin();
-
         LeaveLimits::savePaidDaysPerYear(0);
+
+        $admin = $this->admin();
 
         $leave = $this->addLeave($admin, '2026-02-02', 60);
 
@@ -221,11 +242,11 @@ class LeavePaidDayLimitTest extends TestCase
 
         $this->assertSame('tsalintai', $second->fresh()->type);
 
+        // Хязгаарыг багасгахад бүх бүртгэл дахин тооцогдоно.
+        LeaveLimits::savePaidDaysPerYear(3);
+
         $this->actingAs($admin)
-            ->patch(route('leaves.limits.update'), [
-                'limits' => LeaveLimits::DEFAULTS,
-                'paid_days_per_year' => 3,
-            ])
+            ->patch(route('leaves.limits.update'), ['limits' => LeaveLimits::DEFAULTS])
             ->assertRedirect();
 
         $this->assertSame('tsalintai', $first->fresh()->type);
