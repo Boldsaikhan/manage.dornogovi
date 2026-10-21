@@ -6,6 +6,7 @@ import Modal from '@/Components/Modal.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import SheetCell from '@/Components/SheetCell.vue';
 import LeaveRulePicker from '@/Components/LeaveRulePicker.vue';
+import { useStickyTableHead } from '@/composables/useStickyTableHead';
 
 const props = defineProps({
     activeScope: { type: String, default: 'baiguullaga' },
@@ -92,6 +93,13 @@ const resetLimits = () => {
 };
 
 const previewCopies = ref(6);
+
+/*
+ * Толгой гурван мөртэй (гарчиг, хугацааны дэд гарчиг, хайлт) тул
+ * наалдах байрлалыг бодит өндрөөр нь тооцно.
+ */
+const registerEl = ref(null);
+const { schedule: scheduleStickySync } = useStickyTableHead(() => registerEl.value);
 const cellClass = 'ui-register__cell';
 
 const typeEntries = computed(() => Object.entries(props.types));
@@ -350,6 +358,9 @@ const filters = reactive({
 
 const hasFilters = computed(() => Object.values(filters).some((v) => String(v).trim() !== ''));
 
+// Мөр нэмэгдэх, таб солигдох, шүүхэд толгойн өндөр өөрчлөгдөж болно.
+watch(() => [props.rows.length, props.activeScope, hasFilters.value], scheduleStickySync);
+
 const clearFilters = () => {
     Object.keys(filters).forEach((key) => (filters[key] = ''));
 };
@@ -509,7 +520,7 @@ const visibleRows = computed(() => (
 
             <!-- Бүртгэлийн хүснэгт — .ui-register стандарт систем -->
             <TableScrollViewport v-else max-height="min(72vh, calc(100dvh - 11rem))">
-                <div class="ui-register">
+                <div ref="registerEl" class="ui-register">
                 <div class="ui-register__banner">{{ registerTitle }}</div>
                 <table class="ui-register__table min-w-[88rem]">
                     <colgroup>
