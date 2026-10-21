@@ -10,7 +10,7 @@ import {
 const CATEGORY_FILTERS = [
     { key: 'udirdlaga', label: 'Аймгийн удирдлагууд', short: 'Удирдлага' },
     { key: 'sum', label: 'Сум', short: 'Сум' },
-    { key: 'heltes', label: 'Хэлтэс', short: 'Хэлтэс' },
+    { key: 'heltes', label: 'АЗДТГ', short: 'АЗДТГ' },
     { key: 'agentlag', label: 'Агентлаг', short: 'Агентлаг' },
     { key: 'baiguullaga', label: 'Байгууллага', short: 'Байгууллага' },
 ];
