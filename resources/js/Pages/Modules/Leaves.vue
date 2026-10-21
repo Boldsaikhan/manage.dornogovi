@@ -86,7 +86,8 @@ const resetLimits = () => {
     });
 };
 
-const previewCopies = ref(6);
+/** Чөлөөний хуудас нэг A4-д 6 ширхэгээр багтана. */
+const PRINT_COPIES = 6;
 
 /*
  * Толгой гурван мөртэй (гарчиг, хугацааны дэд гарчиг, хайлт) тул
@@ -319,7 +320,7 @@ const saveField = (id, field, value) => {
 
 const slipPrintUrl = (row) => {
     const base = row.slip_url || route('leaves.slip', row.id);
-    const params = new URLSearchParams({ copies: String(previewCopies.value) });
+    const params = new URLSearchParams({ copies: String(PRINT_COPIES) });
     return `${base}?${params.toString()}`;
 };
 
@@ -486,19 +487,6 @@ const visibleRows = computed(() => {
                 </nav>
 
                 <div class="flex shrink-0 items-center gap-1 border-l border-slate-200 pl-2">
-                    <!-- Хэвлэхэд нэг хуудсанд багтах тоо -->
-                    <label class="flex items-center gap-1 pr-1" title="Нэг A4 хуудсанд багтаах хуудасны тоо">
-                        <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 8V4h10v4M7 18H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 15h10v5H7z" />
-                        </svg>
-                        <select v-model.number="previewCopies" class="ui-input w-14 !py-1 !px-1 text-xs">
-                            <option :value="1">1</option>
-                            <option :value="2">2</option>
-                            <option :value="4">4</option>
-                            <option :value="6">6</option>
-                        </select>
-                    </label>
-
                     <button
                         type="button"
                         class="ui-icon-btn"
