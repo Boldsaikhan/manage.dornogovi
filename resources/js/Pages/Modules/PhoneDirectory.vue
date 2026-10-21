@@ -498,46 +498,6 @@ const closeDirectoryForm = () => {
 <template>
     <AuthenticatedLayout title="Утасны жагсаалт">
         <div class="ui-page">
-            <div class="flex flex-wrap items-end justify-end gap-3">
-                <div class="flex flex-wrap gap-2">
-                    <a
-                        v-if="isDirectory && total"
-                        :href="exportUrl"
-                        class="ui-btn-ghost"
-                        :title="selectedCount
-                            ? `Сонгосон ${selectedCount} бүртгэлийг Word-оор татна`
-                            : 'Бүх бүртгэлийг Word-оор татна'"
-                    >
-                        {{ selectedCount ? `Сонгосныг татах (${selectedCount})` : 'Word татах' }}
-                    </a>
-                    <button
-                        v-if="selectedCount"
-                        type="button"
-                        class="ui-btn-ghost"
-                        @click="clearSelection"
-                    >
-                        Сонголт цуцлах
-                    </button>
-                    <button
-                        v-if="canManage && isDirectory"
-                        type="button"
-                        class="ui-btn-ghost"
-                        :class="manageMode ? '!border-brand-navy-500 !bg-brand-navy-50 !text-brand-navy-800' : ''"
-                        @click="toggleManageMode"
-                    >
-                        {{ manageMode ? 'Засварыг дуусгах' : 'Засварлах' }}
-                    </button>
-                    <button
-                        v-if="editingActive"
-                        type="button"
-                        class="ui-btn-accent"
-                        @click="openAdd"
-                    >
-                        Шинэ нэмэх
-                    </button>
-                </div>
-            </div>
-
             <div v-if="flash" class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
                 {{ flash }}
             </div>
@@ -577,6 +537,69 @@ const closeDirectoryForm = () => {
                         <span class="mx-0.5 text-xs opacity-40">·</span>
                         <span class="text-xs opacity-80">{{ tab.peopleCount }}</span>
                         <span class="ml-0.5 text-[10px] opacity-60">хүн</span>
+                    </button>
+                </div>
+
+                <div class="flex shrink-0 items-center gap-1 border-l border-slate-200 pl-2">
+                    <a
+                        v-if="isDirectory && total"
+                        :href="exportUrl"
+                        class="ui-icon-btn relative"
+                        :title="selectedCount
+                            ? `Сонгосон ${selectedCount} бүртгэлийг Word-оор татна`
+                            : 'Бүх бүртгэлийг Word-оор татна'"
+                        aria-label="Word татах"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0-4-4m4 4 4-4M4 18v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1" />
+                        </svg>
+                        <span
+                            v-if="selectedCount"
+                            class="absolute -right-1 -top-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-brand-navy-600 px-1 text-[10px] font-bold text-white"
+                        >{{ selectedCount }}</span>
+                    </a>
+
+                    <button
+                        v-if="selectedCount"
+                        type="button"
+                        class="ui-icon-btn"
+                        title="Сонголт цуцлах"
+                        aria-label="Сонголт цуцлах"
+                        @click="clearSelection"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" d="M6 6l12 12M18 6 6 18" />
+                        </svg>
+                    </button>
+
+                    <button
+                        v-if="canManage && isDirectory"
+                        type="button"
+                        class="ui-icon-btn"
+                        :class="manageMode ? 'bg-brand-navy-600 text-white' : ''"
+                        :title="manageMode ? 'Засварыг дуусгах' : 'Засварлах'"
+                        :aria-label="manageMode ? 'Засварыг дуусгах' : 'Засварлах'"
+                        @click="toggleManageMode"
+                    >
+                        <svg v-if="manageMode" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 20h4l10-10a2.1 2.1 0 1 0-3-3L5 17v3z" />
+                        </svg>
+                    </button>
+
+                    <button
+                        v-if="editingActive"
+                        type="button"
+                        class="ui-icon-btn bg-brand-orange-500 text-white hover:bg-brand-orange-600"
+                        title="Шинэ бүртгэл нэмэх"
+                        aria-label="Нэмэх"
+                        @click="openAdd"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" d="M12 5v14M5 12h14" />
+                        </svg>
                     </button>
                 </div>
 
