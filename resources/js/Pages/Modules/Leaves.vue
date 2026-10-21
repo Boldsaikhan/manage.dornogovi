@@ -452,42 +452,92 @@ const visibleRows = computed(() => {
 <template>
     <AuthenticatedLayout title="Чөлөөний бүртгэл">
         <div class="ui-page">
-            <div class="flex flex-wrap items-end justify-end gap-3">
-                <div class="flex flex-wrap items-center gap-2">
-                    <label class="flex items-center gap-2 text-sm text-slate-600">
-                        <span>Хэвлэх:</span>
-                        <select v-model.number="previewCopies" class="ui-input w-20 py-1.5">
+            <!-- Лимит зөрчсөн үеийн сануулга -->
+            <div
+                v-if="saveError"
+                class="flex items-start justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-800"
+            >
+                <span>{{ saveError }}</span>
+                <button type="button" class="shrink-0 text-rose-500 hover:text-rose-700" @click="saveError = ''">✕</button>
+            </div>
+
+            <!-- Таб ба үйлдлүүд нэг мөрөнд -->
+            <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
+                <nav class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <button
+                    v-for="item in tabs"
+                    :key="item.value"
+                    type="button"
+                    class="shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-semibold transition"
+                    :class="activeScope === item.value
+                        ? 'bg-brand-navy-600 text-white shadow-md shadow-brand-navy-600/20'
+                        : 'text-slate-600 hover:bg-slate-50'"
+                    @click="switchScope(item.value)"
+                >
+                    {{ item.label }}
+                    <span class="ml-1 text-xs opacity-70">{{ item.count }}</span>
+                </button>
+                </nav>
+
+                <div class="flex shrink-0 items-center gap-1 border-l border-slate-200 pl-2">
+                    <!-- Хэвлэхэд нэг хуудсанд багтах тоо -->
+                    <label class="flex items-center gap-1 pr-1" title="Нэг A4 хуудсанд багтаах хуудасны тоо">
+                        <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 8V4h10v4M7 18H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 15h10v5H7z" />
+                        </svg>
+                        <select v-model.number="previewCopies" class="ui-input w-14 !py-1 !px-1 text-xs">
                             <option :value="1">1</option>
                             <option :value="2">2</option>
                             <option :value="4">4</option>
                             <option :value="6">6</option>
                         </select>
                     </label>
+
                     <button
                         type="button"
-                        class="ui-btn-ghost whitespace-nowrap"
-                        title="Журмын дагуу чөлөө олгох лимитийг харах, засах"
+                        class="ui-icon-btn"
+                        title="Чөлөөний тохиргоо — журмын дагуух лимит"
+                        aria-label="Чөлөөний тохиргоо"
                         @click="openLimits"
                     >
-                        Чөлөөний тохиргоо
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" />
+                            <circle cx="16" cy="6" r="2" />
+                            <circle cx="10" cy="12" r="2" />
+                            <circle cx="18" cy="18" r="2" />
+                        </svg>
                     </button>
+
                     <button
                         v-if="hasAuditLog"
                         type="button"
-                        class="ui-btn-ghost whitespace-nowrap"
-                        title="Хэн, хэзээ, юуг өөрчилснийг харах"
+                        class="ui-icon-btn"
+                        title="Түүх — хэн, хэзээ, юуг өөрчилсөн"
+                        aria-label="Түүх"
                         @click="openLogs"
                     >
-                        Түүх
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2M3.5 12a8.5 8.5 0 1 0 2.2-5.7M3 4v4h4" />
+                        </svg>
                     </button>
+
                     <div class="relative">
                         <button
                             type="button"
-                            class="ui-btn-ghost whitespace-nowrap"
+                            class="ui-icon-btn relative"
                             :title="selectedIds.length ? 'Сонгосон мөрийг татах' : 'Энэ табын бүх бүртгэлийг татах'"
+                            aria-label="Татах"
                             @click="downloadOpen = ! downloadOpen"
                         >
-                            {{ selectedIds.length ? `Татах (${selectedIds.length})` : 'Татах' }}
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0-4-4m4 4 4-4M4 18v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1" />
+                            </svg>
+                            <span
+                                v-if="selectedIds.length"
+                                class="absolute -right-1 -top-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-brand-navy-600 px-1 text-[10px] font-bold text-white"
+                            >
+                                {{ selectedIds.length }}
+                            </span>
                         </button>
                         <!-- Гадна дарахад цэс хаагдана. -->
                         <div v-if="downloadOpen" class="fixed inset-0 z-40" @click="downloadOpen = false" />
@@ -509,42 +559,22 @@ const visibleRows = computed(() => {
                             </button>
                         </div>
                     </div>
+
                     <button
                         v-if="canManage"
                         type="button"
-                        class="ui-btn-accent"
+                        class="ui-icon-btn bg-brand-orange-500 text-white hover:bg-brand-orange-600"
                         :disabled="addingRow"
+                        :title="addingRow ? 'Нэмж байна…' : 'Шинэ мөр нэмэх'"
+                        aria-label="Нэмэх"
                         @click="addRow"
                     >
-                        {{ addingRow ? 'Нэмж байна…' : 'Нэмэх' }}
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" d="M12 5v14M5 12h14" />
+                        </svg>
                     </button>
                 </div>
             </div>
-
-            <!-- Лимит зөрчсөн үеийн сануулга -->
-            <div
-                v-if="saveError"
-                class="flex items-start justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-800"
-            >
-                <span>{{ saveError }}</span>
-                <button type="button" class="shrink-0 text-rose-500 hover:text-rose-700" @click="saveError = ''">✕</button>
-            </div>
-
-            <nav class="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
-                <button
-                    v-for="item in tabs"
-                    :key="item.value"
-                    type="button"
-                    class="rounded-xl px-4 py-2.5 text-sm font-semibold transition"
-                    :class="activeScope === item.value
-                        ? 'bg-brand-navy-600 text-white shadow-md shadow-brand-navy-600/20'
-                        : 'text-slate-600 hover:bg-slate-50'"
-                    @click="switchScope(item.value)"
-                >
-                    {{ item.label }}
-                    <span class="ml-1 text-xs opacity-70">{{ item.count }}</span>
-                </button>
-            </nav>
 
             <div v-if="!rows.length" class="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center text-slate-500">
                 {{ emptyMessage }}

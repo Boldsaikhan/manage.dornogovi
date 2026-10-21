@@ -703,102 +703,14 @@ const destroyRow = (id) => {
 <template>
     <AuthenticatedLayout :title="title">
         <div class="ui-page">
-            <div class="flex flex-wrap items-end justify-end gap-3">
-                <!-- Товчнууд хоорондоо зууралдаж, баруун талд бөөгнөрнө. -->
-                <div class="flex flex-wrap items-center gap-1.5">
-                <button
-                    v-if="canImport"
-                    type="button"
-                    class="ui-btn-ghost"
-                    :disabled="importBusy"
-                    title="Excel эсвэл Word файлаас бүртгэл оруулах"
-                    @click="pickImportFile"
-                >
-                    {{ importBusy && ! importData ? 'Уншиж байна…' : 'Файлаас оруулах' }}
-                </button>
-                <button
-                    v-if="hasAuditLog"
-                    type="button"
-                    class="ui-btn-ghost whitespace-nowrap"
-                    title="Хэн, хэзээ, юуг өөрчилснийг харах"
-                    @click="openLogs"
-                >
-                    Түүх
-                </button>
-                <div v-if="canExportFile" class="relative">
-                    <button
-                        type="button"
-                        class="ui-btn-ghost whitespace-nowrap"
-                        :title="selectedIds.length ? 'Сонгосон мөрийг татах' : 'Энэ табын бүх бүртгэлийг татах'"
-                        @click="downloadOpen = ! downloadOpen"
-                    >
-                        {{ selectedIds.length ? `Татах (${selectedIds.length})` : 'Татах' }}
-                    </button>
-                    <!-- Гадна дарахад цэс хаагдана. -->
-                    <div v-if="downloadOpen" class="fixed inset-0 z-40" @click="downloadOpen = false" />
-                    <!--
-                        Хүснэгтийн наалдсан толгой z-30 хүртэл авдаг тул цэс
-                        түүнээс дээгүүр байх ёстой.
-                    -->
-                    <div
-                        v-if="downloadOpen"
-                        class="absolute right-0 z-50 mt-1 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
-                    >
-                        <p class="px-3 py-1.5 text-[11px] text-slate-400">
-                            {{ selectedIds.length ? `${selectedIds.length} сонгосон мөр` : 'Бүх бүртгэл' }}
-                        </p>
-                        <button
-                            v-for="option in downloadFormats"
-                            :key="option.format"
-                            type="button"
-                            class="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                            @click="download(option.format)"
-                        >
-                            {{ option.label }}
-                        </button>
-                    </div>
-                </div>
-                <button
-                    v-if="canManage"
-                    type="button"
-                    class="whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition"
-                    :class="
-                        editMode
-                            ? 'bg-brand-navy-600 text-white shadow-md shadow-brand-navy-600/20'
-                            : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                    "
-                    :title="editMode ? 'Засах горимыг хаах' : 'Засах, устгах товчийг идэвхжүүлэх'"
-                    @click="editMode = ! editMode"
-                >
-                    {{ editMode ? 'Засах горим асаалттай' : 'Засах' }}
-                </button>
-                <button
-                    v-if="canAddBlankRow"
-                    type="button"
-                    class="ui-btn-accent"
-                    :disabled="addingRow"
-                    title="Хүснэгтэд мөр нэмээд нүд бүр дээр нь бөглөнө"
-                    @click="addBlankRow"
-                >
-                    {{ addingRow ? 'Нэмж байна…' : 'Шинэ нэмэх' }}
-                </button>
-                <button
-                    v-else-if="canManage"
-                    type="button"
-                    class="ui-btn-accent"
-                    @click="openForm"
-                >
-                    Шинэ нэмэх
-                </button>
-                </div>
-            </div>
-
-            <nav v-if="scopeTabs.length" class="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
+            <!-- Таб ба үйлдлүүд нэг мөрөнд -->
+            <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
+                <nav v-if="scopeTabs.length" class="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <button
                     v-for="tab in scopeTabs"
                     :key="tab.value"
                     type="button"
-                    class="rounded-xl px-4 py-2.5 text-sm font-semibold transition"
+                    class="shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-semibold transition"
                     :class="
                         tab.value === activeScope
                             ? 'bg-brand-navy-600 text-white shadow-md shadow-brand-navy-600/20'
@@ -812,7 +724,7 @@ const destroyRow = (id) => {
                 <button
                     v-if="canManageScopes"
                     type="button"
-                    class="rounded-xl border border-dashed border-brand-navy-300 px-3.5 py-2.5 text-sm font-semibold text-brand-navy-600 transition hover:bg-brand-navy-50"
+                    class="shrink-0 whitespace-nowrap rounded-xl border border-dashed border-brand-navy-300 px-3 py-2 text-sm font-semibold text-brand-navy-600 transition hover:bg-brand-navy-50"
                     @click="showNewScope = !showNewScope"
                 >
                     + Таб нэмэх
@@ -820,12 +732,125 @@ const destroyRow = (id) => {
                 <button
                     v-if="canManageScopes"
                     type="button"
-                    class="rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50"
+                    class="shrink-0 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-semibold text-slate-500 transition hover:bg-slate-50"
                     @click="showScopePanel = !showScopePanel"
                 >
                     {{ showScopePanel ? 'Таб засах хаах' : 'Таб засах' }}
                 </button>
-            </nav>
+                </nav>
+                <span v-if="! scopeTabs.length" class="flex-1" />
+
+                <div class="flex shrink-0 items-center gap-1 border-l border-slate-200 pl-2">
+                    <button
+                        v-if="canImport"
+                        type="button"
+                        class="ui-icon-btn"
+                        :disabled="importBusy"
+                        :title="importBusy && ! importData ? 'Уншиж байна…' : 'Excel эсвэл Word файлаас бүртгэл оруулах'"
+                        aria-label="Файлаас оруулах"
+                        @click="pickImportFile"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L8 8m4-4 4 4M4 18v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1" />
+                        </svg>
+                    </button>
+
+                    <button
+                        v-if="hasAuditLog"
+                        type="button"
+                        class="ui-icon-btn"
+                        title="Түүх — хэн, хэзээ, юуг өөрчилсөн"
+                        aria-label="Түүх"
+                        @click="openLogs"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2M3.5 12a8.5 8.5 0 1 0 2.2-5.7M3 4v4h4" />
+                        </svg>
+                    </button>
+
+                    <div v-if="canExportFile" class="relative">
+                        <button
+                            type="button"
+                            class="ui-icon-btn relative"
+                            :title="selectedIds.length ? 'Сонгосон мөрийг татах' : 'Энэ табын бүх бүртгэлийг татах'"
+                            aria-label="Татах"
+                            @click="downloadOpen = ! downloadOpen"
+                        >
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0-4-4m4 4 4-4M4 18v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1" />
+                            </svg>
+                            <span
+                                v-if="selectedIds.length"
+                                class="absolute -right-1 -top-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-brand-navy-600 px-1 text-[10px] font-bold text-white"
+                            >
+                                {{ selectedIds.length }}
+                            </span>
+                        </button>
+                        <!-- Гадна дарахад цэс хаагдана. -->
+                        <div v-if="downloadOpen" class="fixed inset-0 z-40" @click="downloadOpen = false" />
+                        <div
+                            v-if="downloadOpen"
+                            class="absolute right-0 z-50 mt-1 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                        >
+                            <p class="px-3 py-1.5 text-[11px] text-slate-400">
+                                {{ selectedIds.length ? `${selectedIds.length} сонгосон мөр` : 'Бүх бүртгэл' }}
+                            </p>
+                            <button
+                                v-for="option in downloadFormats"
+                                :key="option.format"
+                                type="button"
+                                class="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                @click="download(option.format)"
+                            >
+                                {{ option.label }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <button
+                        v-if="canManage"
+                        type="button"
+                        class="ui-icon-btn"
+                        :class="editMode ? 'bg-brand-navy-600 text-white' : ''"
+                        :title="editMode ? 'Засах горимыг хаах' : 'Засах, устгах товчийг идэвхжүүлэх'"
+                        :aria-label="editMode ? 'Засах горимыг хаах' : 'Засах'"
+                        @click="editMode = ! editMode"
+                    >
+                        <svg v-if="editMode" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 20h4l10-10a2.1 2.1 0 1 0-3-3L5 17v3z" />
+                        </svg>
+                    </button>
+
+                    <button
+                        v-if="canAddBlankRow"
+                        type="button"
+                        class="ui-icon-btn bg-brand-orange-500 text-white hover:bg-brand-orange-600"
+                        :disabled="addingRow"
+                        :title="addingRow ? 'Нэмж байна…' : 'Хүснэгтэд мөр нэмээд нүд бүр дээр нь бөглөнө'"
+                        aria-label="Нэмэх"
+                        @click="addBlankRow"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" d="M12 5v14M5 12h14" />
+                        </svg>
+                    </button>
+                    <button
+                        v-else-if="canManage"
+                        type="button"
+                        class="ui-icon-btn bg-brand-orange-500 text-white hover:bg-brand-orange-600"
+                        title="Шинэ бүртгэл нэмэх"
+                        aria-label="Нэмэх"
+                        @click="openForm"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" d="M12 5v14M5 12h14" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
 
             <section
                 v-if="canManageScopes && showNewScope"

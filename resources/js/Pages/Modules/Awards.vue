@@ -190,31 +190,14 @@ const colAlign = (col) => {
 <template>
     <AuthenticatedLayout title="Шагнал">
         <div class="ui-page">
-            <div class="flex flex-wrap items-end justify-end gap-3">
-                <div class="flex flex-wrap items-center gap-2">
-                    <a :href="exportUrl" class="ui-btn-ghost">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                            <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                        Excel татах
-                    </a>
-                    <button
-                        v-if="canManage"
-                        type="button"
-                        class="ui-btn-accent"
-                        @click="addRow"
-                    >
-                        Шинэ нэмэх
-                    </button>
-                </div>
-            </div>
-
-            <nav class="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
+            <!-- Таб ба үйлдлүүд нэг мөрөнд -->
+            <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
+                <nav class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <button
                     v-for="item in tabs"
                     :key="item.value"
                     type="button"
-                    class="rounded-xl px-4 py-2.5 text-sm font-semibold transition"
+                    class="shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-semibold transition"
                     :class="tab === item.value
                         ? 'bg-brand-navy-600 text-white shadow-md shadow-brand-navy-600/20'
                         : 'text-slate-600 hover:bg-slate-50'"
@@ -223,7 +206,29 @@ const colAlign = (col) => {
                     {{ item.label }}
                     <span class="ml-1 text-xs opacity-70">{{ item.count }}</span>
                 </button>
-            </nav>
+                </nav>
+
+                <div class="flex shrink-0 items-center gap-1 border-l border-slate-200 pl-2">
+                    <a :href="exportUrl" class="ui-icon-btn" title="Excel татах" aria-label="Excel татах">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0-4-4m4 4 4-4M4 18v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1" />
+                        </svg>
+                    </a>
+
+                    <button
+                        v-if="canManage"
+                        type="button"
+                        class="ui-icon-btn bg-brand-orange-500 text-white hover:bg-brand-orange-600"
+                        title="Шинэ мөр нэмэх"
+                        aria-label="Нэмэх"
+                        @click="addRow"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" d="M12 5v14M5 12h14" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
 
             <div v-if="subtypes.length || years.length" class="flex flex-wrap items-center gap-2">
                 <template v-if="subtypes.length">
