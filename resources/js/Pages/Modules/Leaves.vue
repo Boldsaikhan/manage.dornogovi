@@ -397,9 +397,43 @@ const matchesFilters = (row) => Object.entries(filters).every(([field, needle]) 
     return searchKey(row[field]).includes(searchKey(text));
 });
 
-const visibleRows = computed(() => (
-    hasFilters.value ? rowsWithSignerLabel.value.filter(matchesFilters) : rowsWithSignerLabel.value
-));
+/**
+ * Эхлэх огноогоор эрэмбэлэх.
+ *
+ * Толгой дээр дарах бүрд: буурах → өсөх → эрэмбэлэхгүй (бүртгэсэн
+ * дарааллаар) гэж сэлгэнэ.
+ */
+const sortDir = ref(null); // null | 'desc' | 'asc'
+
+const toggleStartSort = () => {
+    sortDir.value = sortDir.value === null
+        ? 'desc'
+        : (sortDir.value === 'desc' ? 'asc' : null);
+};
+
+const visibleRows = computed(() => {
+    const list = hasFilters.value
+        ? rowsWithSignerLabel.value.filter(matchesFilters)
+        : rowsWithSignerLabel.value;
+
+    if (! sortDir.value) {
+        return list;
+    }
+
+    const factor = sortDir.value === 'asc' ? 1 : -1;
+
+    // Огноогүй мөрийг үргэлж төгсгөлд нь үлдээнэ.
+    return [...list].sort((a, b) => {
+        const left = a.start_date || '';
+        const right = b.start_date || '';
+
+        if (left === right) return 0;
+        if (! left) return 1;
+        if (! right) return -1;
+
+        return left < right ? -factor : factor;
+    });
+});
 </script>
 
 <template>
@@ -555,7 +589,30 @@ const visibleRows = computed(() => (
                             <th rowspan="2" />
                         </tr>
                         <tr>
-                            <th>Эхлэх</th>
+                            <th class="p-0">
+                                <button
+                                    type="button"
+                                    class="flex w-full items-center justify-center gap-1 px-2 py-1.5 transition hover:text-brand-navy-700"
+                                    :title="sortDir === 'desc'
+                                        ? 'Шинээс хуучин руу — дарж эргүүлнэ'
+                                        : (sortDir === 'asc' ? 'Хуучнаас шинэ рүү — дарж болино' : 'Эхлэх огноогоор эрэмбэлэх')"
+                                    @click="toggleStartSort"
+                                >
+                                    Эхлэх
+                                    <svg
+                                        class="h-3 w-3 shrink-0 transition"
+                                        :class="sortDir ? 'text-brand-navy-600' : 'text-slate-300'"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2.2"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path v-if="sortDir === 'asc'" d="m6 15 6-6 6 6" stroke-linecap="round" stroke-linejoin="round" />
+                                        <path v-else-if="sortDir === 'desc'" d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+                                        <path v-else d="M8 9l4-4 4 4M8 15l4 4 4-4" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                </button>
+                            </th>
                             <th>Хоног</th>
                             <th>Дуусах</th>
                         </tr>
