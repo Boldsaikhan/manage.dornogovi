@@ -12,6 +12,7 @@ use App\Models\Report;
 use App\Models\TravelAssignment;
 use App\Models\User;
 use App\Support\ModuleOwnScope;
+use App\Support\SearchTerms;
 use Carbon\Carbon;
 
 class DocumentTools
@@ -27,8 +28,7 @@ class DocumentTools
         $query = Decree::query()
             ->where('kind', '!=', 'blank')
             ->orderByDesc('issued_on')
-            ->orderByDesc('id')
-            ->limit(20);
+            ->orderByDesc('id');
         ModuleOwnScope::apply($query, $user, 'decrees');
 
         if ($category !== '' && $category !== 'blank') {
@@ -43,16 +43,23 @@ class DocumentTools
             }
         }
 
-        if ($q !== '') {
-            $query->where(function ($w) use ($q) {
-                $w->where('title', 'like', "%{$q}%")
-                    ->orWhere('number', 'like', "%{$q}%")
-                    ->orWhere('blank_number', 'like', "%{$q}%")
-                    ->orWhere('body', 'like', "%{$q}%")
-                    ->orWhere('person_name', 'like', "%{$q}%")
-                    ->orWhere('attachment_name', 'like', "%{$q}%")
-                    ->orWhere('num_zahiramj', 'like', "%{$q}%")
-                    ->orWhere('num_tushaal', 'like', "%{$q}%");
+        /*
+         * «Болдсайханы гаргасан» гэх мэт асуултад нэр нь нөхцөлтэй
+         * ордог тул үгийн үндсээр нь хайна. Үг бүр дор хаяж нэг
+         * баганад таарсан байх ёстой.
+         */
+        $terms = SearchTerms::tokens($q);
+
+        foreach ($terms as $term) {
+            $query->where(function ($w) use ($term) {
+                $w->where('title', 'like', "%{$term}%")
+                    ->orWhere('number', 'like', "%{$term}%")
+                    ->orWhere('blank_number', 'like', "%{$term}%")
+                    ->orWhere('body', 'like', "%{$term}%")
+                    ->orWhere('person_name', 'like', "%{$term}%")
+                    ->orWhere('attachment_name', 'like', "%{$term}%")
+                    ->orWhere('num_zahiramj', 'like', "%{$term}%")
+                    ->orWhere('num_tushaal', 'like', "%{$term}%");
             });
         }
 
@@ -76,8 +83,14 @@ class DocumentTools
             });
         }
 
+        // Нийт тоо — «хэдэн захирамж гарсан бэ» гэх асуултад хэрэгтэй.
+        $total = (clone $query)->count();
+
         return [
-            'items' => $query->get()->map(fn (Decree $d) => [
+            'query' => $q,
+            'terms' => $terms,
+            'total' => $total,
+            'items' => $query->limit(20)->get()->map(fn (Decree $d) => [
                 'id' => $d->id,
                 'kind' => $d->kindLabel(),
                 'kind_key' => $d->kind,

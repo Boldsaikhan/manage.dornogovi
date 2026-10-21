@@ -453,7 +453,46 @@ PROMPT;
                 : 'Утасны жагсаалтад таарсан бүртгэл олдсонгүй.';
         }
 
-        return 'Системийн мэдээллийн сангаас баталгаатай мэдээлэл олдсонгүй.';
+        /*
+         * Юуг нь хаанаас хайсныг нэрлэнэ — «олдсонгүй» гэдэг ганцаараа
+         * хэрэглэгчид юу ч хэлэхгүй.
+         */
+        $where = $this->moduleLabelForTool($tool);
+        $terms = array_filter((array) ($data['terms'] ?? []));
+
+        if ($terms !== []) {
+            return sprintf(
+                '%s «%s» гэсэн хайлтад таарсан бүртгэл алга.',
+                $where,
+                implode(', ', $terms),
+            );
+        }
+
+        if ($needle !== '') {
+            return sprintf('%s «%s»-д таарсан бүртгэл алга.', $where, $needle);
+        }
+
+        return $where.' таарах бүртгэл алга.';
+    }
+
+    /** Аль цэснээс хайснаа нэрлэнэ. */
+    private function moduleLabelForTool(string $tool): string
+    {
+        return match (true) {
+            str_contains($tool, 'order'), str_contains($tool, 'decree'), str_contains($tool, 'directive')
+                => 'Захирамж, тушаалын бүртгэлээс',
+            str_contains($tool, 'task') => 'Үүрэг даалгавраас',
+            str_contains($tool, 'leave') => 'Чөлөөний бүртгэлээс',
+            str_contains($tool, 'trip') => 'Томилолтын бүртгэлээс',
+            str_contains($tool, 'contract') => 'Гэрээний бүртгэлээс',
+            str_contains($tool, 'meeting') => 'Хурлын бүртгэлээс',
+            str_contains($tool, 'plan') => 'Төлөвлөгөөнөөс',
+            str_contains($tool, 'archive') => 'Архиваас',
+            str_contains($tool, 'report') => 'Тайлан мэдээллээс',
+            str_contains($tool, 'document') => 'Дотоод журмаас',
+            str_contains($tool, 'employee') => 'Албан хаагчдын бүртгэлээс',
+            default => 'Системээс',
+        };
     }
 
     /**
@@ -498,6 +537,21 @@ PROMPT;
      */
     private function itemsIntro(string $tool, int $count, array $data): string
     {
+        /*
+         * Нийт нь харуулснаас олон бол хэдийг нь харуулж байгааг хэлнэ —
+         * «бүгдийг гаргаж өг» гэсэн асуултад тоо нь тодорхой байх ёстой.
+         */
+        $total = (int) ($data['total'] ?? $count);
+
+        if ($total > $count) {
+            return sprintf(
+                '%s нийт %d бүртгэл байна. Эхний %d-г харуулав:',
+                $this->moduleLabelForTool($tool),
+                $total,
+                $count,
+            );
+        }
+
         return match (true) {
             str_contains($tool, 'order') || str_contains($tool, 'decree') || str_contains($tool, 'directive')
                 => "Системд {$count} захирамж/тушаал олдлоо:",
