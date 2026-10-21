@@ -469,7 +469,7 @@ const visibleRows = computed(() => {
                         title="Журмын дагуу чөлөө олгох лимитийг харах, засах"
                         @click="openLimits"
                     >
-                        Чөлөөний лимит
+                        Чөлөөний тохиргоо
                     </button>
                     <button
                         v-if="hasAuditLog"
@@ -516,7 +516,7 @@ const visibleRows = computed(() => {
                         :disabled="addingRow"
                         @click="addRow"
                     >
-                        {{ addingRow ? 'Нэмж байна…' : 'Шинэ нэмэх' }}
+                        {{ addingRow ? 'Нэмж байна…' : 'Нэмэх' }}
                     </button>
                 </div>
             </div>
