@@ -127,9 +127,14 @@ const syncStickyHead = () => {
 
     if (! head) return;
 
-    let top = 0;
+    /*
+     * Байрлалыг эхний мөрийн ирмэгээс хэмжинэ — өндрүүдийг нэмж бодвол
+     * rowspan-тай нүд завсар үүсгэж, доогуурх мөр нэвт харагддаг.
+     */
+    const base = head.rows[0].getBoundingClientRect().top;
 
     Array.from(head.rows).forEach((row, index) => {
+        const top = row.getBoundingClientRect().top - base;
         // 1 пикселээр давхарлана — хүрээ хуваалцсанаас үүсэх завсрыг арилгана.
         const offset = index === 0 ? 0 : Math.max(0, Math.round(top) - index);
 
@@ -143,8 +148,6 @@ const syncStickyHead = () => {
              */
             cell.style.zIndex = String(14 - index);
         });
-
-        top += row.getBoundingClientRect().height;
     });
 };
 

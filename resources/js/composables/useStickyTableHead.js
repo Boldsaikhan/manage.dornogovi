@@ -17,10 +17,18 @@ export function useStickyTableHead(getRoot) {
             return;
         }
 
-        let top = 0;
+        /*
+         * Мөр бүрийн байрлалыг эхний мөрийн дээд ирмэгээс хэмжинэ.
+         *
+         * Өндрүүдийг нэмж бодвол rowspan-тай нүд (жишээ нь «Албан хаагч»)
+         * мөрийн өндрийг гуйвуулж, толгойн мөрүүдийн хооронд завсар үүсч
+         * доогуурх мөр нэвт харагддаг.
+         */
+        const base = head.rows[0].getBoundingClientRect().top;
 
         Array.from(head.rows).forEach((row, index) => {
             // 1 пикселээр давхарлана — хүрээ хуваалцсанаас үүсэх завсрыг арилгана.
+            const top = row.getBoundingClientRect().top - base;
             const offset = index === 0 ? 0 : Math.max(0, Math.round(top) - index);
 
             Array.from(row.cells).forEach((cell) => {
@@ -33,8 +41,6 @@ export function useStickyTableHead(getRoot) {
                  */
                 cell.style.zIndex = String(14 - index);
             });
-
-            top += row.getBoundingClientRect().height;
         });
     };
 
