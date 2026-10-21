@@ -303,6 +303,10 @@ class LeaveController extends Controller
         $days = (int) ($data['days'] ?? 1);
         $end = $start->copy()->addDays($days - 1);
 
+        if (LeaveSchema::hasRules() && filled($data['rule_code'] ?? null)) {
+            $data = $this->applyRulePay($data);
+        }
+
         // Нэрээ сонгосон бол байгууллага, хэлтсийг утасны жагсаалтаас нөхнө.
         $place = PhoneDirectoryEntry::placeFor($data['person_name'] ?? null);
 
@@ -394,6 +398,9 @@ class LeaveController extends Controller
         // Багана бэлэн биш бол журмын кодыг хүлээж авахгүй.
         if (! LeaveSchema::hasRules()) {
             unset($data['rule_code']);
+        } elseif (array_key_exists('rule_code', $data)) {
+            // Журмын заалт цалингийн төлвөө өөрөө заана.
+            $data = $this->applyRulePay($data);
         }
 
         $changes = $this->changedFields($leave, $data);
@@ -446,6 +453,27 @@ class LeaveController extends Controller
     /**
      * @return array<string, mixed>
      */
+    /**
+     * Журмын заалтын цалингийн төлвийг мөрийн төрөлд тавина.
+     *
+     * Тохиргоонд «Цалинтай / Цалингүй» гэж заасан бол гараар солихгүй.
+     * «—» гэж заасан заалт төрлийг хөндөхгүй.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function applyRulePay(array $data): array
+    {
+        $rule = LeaveLimits::find($data['rule_code'] ?? null);
+        $pay = $rule['pay'] ?? null;
+
+        if ($pay === 'tsalintai' || $pay === 'tsalingui') {
+            $data['type'] = $pay;
+        }
+
+        return $data;
+    }
+
     /**
      * Сонгосон журмын лимит хэтэрсэн эсэх — хэтэрсэн бол алдааны бичвэр.
      */
@@ -520,6 +548,12 @@ class LeaveController extends Controller
             'type' => $leave->type,
             'type_label' => $leave->typeLabel(),
             'rule_code' => $leave->getAttribute('rule_code'),
+            // Журам нь цалингийн төлвөө заасан бол гараар солихгүй.
+            'type_locked' => in_array(
+                LeaveLimits::find($leave->getAttribute('rule_code'))['pay'] ?? 'none',
+                ['tsalintai', 'tsalingui'],
+                true,
+            ),
             // Лимит хэтрэх заалтууд — сонголтод хаалттай гарна.
             'blocked_rules' => $all === null || ! LeaveSchema::hasRules()
                 ? []
