@@ -20,7 +20,9 @@ const props = defineProps({
     limits: { type: Array, default: () => [] },
     limitPayOptions: { type: Object, default: () => ({}) },
     limitPeriodOptions: { type: Object, default: () => ({}) },
-    rules: { type: Array, default: () => [] },
+    rulesByScope: { type: Object, default: () => ({}) },
+    limitScope: { type: String, default: 'baiguullaga' },
+    limitScopeLabel: { type: String, default: '' },
     paidDaysPerYear: { type: Number, default: 0 },
     hasAuditLog: { type: Boolean, default: false },
 });
@@ -38,8 +40,11 @@ const limitSaving = ref(false);
 const payEntries = computed(() => Object.entries(props.limitPayOptions));
 const periodEntries = computed(() => Object.entries(props.limitPeriodOptions));
 
+/** Мөрийн хамрах хүрээний журмын заалтууд. */
+const rulesFor = (scope) => props.rulesByScope[scope] ?? [];
+
 /** Журмын нэрийг кодоор нь олох. */
-const ruleLabel = (code) => props.rules.find((r) => r.code === code)?.label || '';
+const ruleLabel = (scope, code) => rulesFor(scope).find((r) => r.code === code)?.label || '';
 
 const openLimits = () => {
     limitRows.value = props.limits.map((row) => ({ ...row }));
@@ -57,7 +62,10 @@ const removeLimitRow = (index) => {
 const saveLimits = () => {
     limitSaving.value = true;
 
-    router.patch(route('leaves.limits.update'), { limits: limitRows.value }, {
+    router.patch(route('leaves.limits.update'), {
+        scope: props.limitScope,
+        limits: limitRows.value,
+    }, {
         preserveScroll: true,
         onSuccess: () => {
             showLimits.value = false;
@@ -75,7 +83,7 @@ const resetLimits = () => {
 
     limitSaving.value = true;
 
-    router.patch(route('leaves.limits.update'), { reset: true }, {
+    router.patch(route('leaves.limits.update'), { scope: props.limitScope, reset: true }, {
         preserveScroll: true,
         onSuccess: () => {
             limitRows.value = props.limits.map((row) => ({ ...row }));
@@ -396,7 +404,7 @@ const rowsWithSignerLabel = computed(() => props.rows.map((row, index) => ({
     ...row,
     seq: props.rows.length - index,
     signer_label: props.signers[row.signer] || '',
-    rule_label: ruleLabel(row.rule_code),
+    rule_label: ruleLabel(row.scope, row.rule_code),
 })));
 
 const matchesFilters = (row) => Object.entries(filters).every(([field, needle]) => {
@@ -769,7 +777,7 @@ const visibleRows = computed(() => {
                                 <LeaveRulePicker
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].rule_code"
-                                    :rules="rules"
+                                    :rules="rulesFor(row.scope)"
                                     :usage="row.rule_usage || {}"
                                     :blocked="row.blocked_rules || []"
                                     :row-days="row.days || 0"
@@ -887,9 +895,13 @@ const visibleRows = computed(() => {
             <div class="ui-card-pad space-y-4">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                        <h3 class="ui-title text-base">Чөлөө олгох лимит</h3>
+                        <h3 class="ui-title text-base">
+                            Чөлөө олгох лимит
+                            <span v-if="limitScopeLabel" class="ml-1 text-brand-navy-600">— {{ limitScopeLabel }}</span>
+                        </h3>
                         <p class="ui-subtitle">
-                            Хөдөлмөрийн дотоод журмын 5.4-р заалт. Журам шинэчлэгдвэл энд засна.
+                            Хөдөлмөрийн дотоод журмын 5.4-р заалт. Энэ тохиргоо нь зөвхөн
+                            «{{ limitScopeLabel }}» хэсэгт үйлчилнэ.
                         </p>
                     </div>
                     <button type="button" class="ui-btn-ghost" @click="showLimits = false">Хаах</button>
