@@ -1,9 +1,7 @@
 <?php
 
-use App\Models\Leave;
-use App\Models\PhoneDirectoryEntry;
+use App\Support\OfficeUnits;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Тамгын газрын нэгжийг «байгууллага» биш «хэлтэс» болгож засна.
@@ -14,36 +12,9 @@ use Illuminate\Support\Facades\Schema;
  */
 return new class extends Migration
 {
-    /** Нэрэндээ «хэлтэс» гэсэн үггүй ч Тамгын газрын нэгж. */
-    private const UNITS = ['Цэргийн штаб'];
-
     public function up(): void
     {
-        foreach (self::UNITS as $name) {
-            PhoneDirectoryEntry::query()
-                ->whereRaw('LOWER(TRIM(org_name)) = ?', [mb_strtolower($name)])
-                ->update(['category' => 'heltes']);
-        }
-
-        if (! Schema::hasColumn('leaves', 'unit_name')) {
-            return;
-        }
-
-        // Нэгж гэж тэмдэглэгдсэн бүх байгууллагын мөрийг зөв байрлуулна.
-        $units = PhoneDirectoryEntry::query()
-            ->where('category', 'heltes')
-            ->whereNotNull('org_name')
-            ->distinct()
-            ->pluck('org_name');
-
-        foreach ($units as $unit) {
-            Leave::query()
-                ->where('org_name', $unit)
-                ->update([
-                    'org_name' => PhoneDirectoryEntry::PARENT_ORG,
-                    'unit_name' => $unit,
-                ]);
-        }
+        OfficeUnits::markAndRepair(['Цэргийн штаб']);
     }
 
     public function down(): void
