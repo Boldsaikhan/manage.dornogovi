@@ -424,6 +424,12 @@ const toggleStartSort = () => {
         : (sortDir.value === 'desc' ? 'asc' : null);
 };
 
+/*
+ * АЗДТГ табд бүх мөр нэг байгууллагынх тул тэр баганыг нуух нь
+ * хүснэгтэд зай чөлөөлнө.
+ */
+const showOrgColumn = computed(() => props.activeScope !== 'baiguullaga');
+
 const visibleRows = computed(() => {
     const list = hasFilters.value
         ? rowsWithSignerLabel.value.filter(matchesFilters)
@@ -587,7 +593,7 @@ const visibleRows = computed(() => {
                     <colgroup>
                         <col style="width: 2.5rem" />
                         <col style="width: 3rem" />
-                        <col style="width: 13rem" />
+                        <col v-if="showOrgColumn" style="width: 13rem" />
                         <col style="width: 12rem" />
                         <col style="width: 10rem" />
                         <col style="width: 8rem" />
@@ -611,7 +617,7 @@ const visibleRows = computed(() => {
                                 />
                             </th>
                             <th rowspan="2">Д/д</th>
-                            <th rowspan="2">Байгууллага</th>
+                            <th v-if="showOrgColumn" rowspan="2">Байгууллага</th>
                             <th rowspan="2">Хэлтэс</th>
                             <th rowspan="2">Албан хаагч</th>
                             <th rowspan="2">Төрөл</th>
@@ -663,7 +669,7 @@ const visibleRows = computed(() => {
                                 </button>
                                 <span v-else class="text-[10px] text-slate-300">Хайх</span>
                             </th>
-                            <th><input v-model="filters.org_name" type="search" placeholder="Хайх" /></th>
+                            <th v-if="showOrgColumn"><input v-model="filters.org_name" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.unit_name" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.person_name" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.type_label" type="search" placeholder="Хайх" /></th>
@@ -688,7 +694,7 @@ const visibleRows = computed(() => {
                             </td>
                             <td class="ui-register__cell--no">{{ row.seq }}</td>
                             <!-- Байгууллага, хэлтэс нь албан хаагчаас хамаарна. -->
-                            <td :class="cellClass">
+                            <td v-if="showOrgColumn" :class="cellClass">
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].org_name"
@@ -875,7 +881,7 @@ const visibleRows = computed(() => {
                             </td>
                         </tr>
                         <tr v-if="!visibleRows.length">
-                            <td colspan="11" class="ui-register__empty">
+                            <td :colspan="showOrgColumn ? 13 : 12" class="ui-register__empty">
                                 <template v-if="hasFilters">Хайлтад тохирох бүртгэл олдсонгүй.</template>
                                 <template v-else>{{ emptyMessage }}</template>
                             </td>
