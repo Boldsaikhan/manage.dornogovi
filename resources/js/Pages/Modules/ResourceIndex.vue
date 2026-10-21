@@ -486,6 +486,44 @@ const openForm = () => {
 const editMode = ref(false);
 
 /*
+ * Мөр дээрээ файл хавсаргах — хоосон мөр нэмдэг бүртгэлд «Шинэ нэмэх»
+ * маягт ашиглагддаггүй тул хүснэгтээс шууд оруулна.
+ */
+const rowFileInput = ref(null);
+const uploadingRow = ref(null);
+const uploadTargetId = ref(null);
+
+const pickRowFile = (id) => {
+    uploadTargetId.value = id;
+    rowFileInput.value?.click();
+};
+
+const onRowFileChange = (event) => {
+    const file = event.target.files?.[0];
+    const id = uploadTargetId.value;
+
+    event.target.value = '';
+
+    if (! file || ! id) return;
+
+    uploadingRow.value = id;
+
+    router.post(route('modules.file.upload', { module: props.module, id }), { file }, {
+        forceFormData: true,
+        preserveScroll: true,
+        onFinish: () => { uploadingRow.value = null; },
+    });
+};
+
+const removeRowFile = (id) => {
+    if (! confirm('Хавсаргасан файлыг устгах уу?')) return;
+
+    router.post(route('modules.file.upload', { module: props.module, id }), { remove: true }, {
+        preserveScroll: true,
+    });
+};
+
+/*
  * Хүснэгтийн нүдэн дээр шууд солих — засах горим асаалттай үед л.
  */
 const inlineFor = (key) => props.inlineFields[key] ?? null;
@@ -972,7 +1010,29 @@ const destroyRow = (id) => {
                                         </svg>
                                         <span class="ui-clamp-2">{{ row.file_name || row[col.key] }}</span>
                                     </a>
-                                    <span v-else class="text-slate-400">—</span>
+                                    <span v-else-if="! (col.upload && canEditInline)" class="text-slate-400">—</span>
+
+                                    <!-- Засах горимд мөр дээрээ файл хавсаргана. -->
+                                    <span v-if="col.upload && canEditInline" class="mt-1 block">
+                                        <button
+                                            type="button"
+                                            class="text-[11px] font-semibold text-brand-navy-700 hover:underline"
+                                            :disabled="uploadingRow === row.id"
+                                            @click.stop="pickRowFile(row.id)"
+                                        >
+                                            {{ uploadingRow === row.id
+                                                ? 'Оруулж байна…'
+                                                : (row.file_url ? 'Солих' : '+ Файл хавсаргах') }}
+                                        </button>
+                                        <button
+                                            v-if="row.file_url"
+                                            type="button"
+                                            class="ml-2 text-[11px] text-rose-600 hover:underline"
+                                            @click.stop="removeRowFile(row.id)"
+                                        >
+                                            Устгах
+                                        </button>
+                                    </span>
                                 </template>
                                 <template v-else-if="isInlineCell(col.key)">
                                     <select
@@ -1109,6 +1169,15 @@ const destroyRow = (id) => {
             accept=".xlsx,.xlsm,.docx,.docm,.pdf"
             class="hidden"
             @change="onImportFile"
+        />
+
+        <!-- Мөрд хавсаргах файл. -->
+        <input
+            ref="rowFileInput"
+            type="file"
+            accept=".pdf,.doc,.docx"
+            class="hidden"
+            @change="onRowFileChange"
         />
 
         <Modal :show="!! importData" max-width="7xl" @close="closeImport">

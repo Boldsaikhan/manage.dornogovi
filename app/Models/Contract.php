@@ -9,6 +9,7 @@ class Contract extends Model
 {
     protected $fillable = [
         'scope', 'number', 'title', 'counterparty', 'issued_on', 'copies', 'prepared_by', 'issued_by', 'note',
+        'file_path', 'file_name',
     ];
 
     protected function casts(): array

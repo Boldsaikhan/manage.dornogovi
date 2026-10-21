@@ -32,6 +32,7 @@ class ContractRegisterTest extends TestCase
                     'Хувь',
                     'Боловсруулсан албан тушаалтан',
                     'Хянаж зөвлөгөө өгсөн тэмдэглэл',
+                    'Гэрээ',
                 ], $labels);
 
                 $this->assertSame('№', $page->toArray()['props']['rowNumberLabel']);
@@ -125,6 +126,62 @@ class ContractRegisterTest extends TestCase
         $this->assertSame('Нүдэн дээр бөглөсөн гэрээ', $fresh->title);
         $this->assertSame('2026/77', $fresh->number);
         $this->assertSame(2, (int) $fresh->copies);
+    }
+
+    public function test_a_contract_file_can_be_attached_and_removed(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->post(route('modules.store', ['module' => 'contracts']), ['blank' => true])
+            ->assertRedirect();
+
+        $row = Contract::query()->sole();
+
+        $this->actingAs($admin)
+            ->post(route('modules.file.upload', ['module' => 'contracts', 'id' => $row->id]), [
+                'file' => \Illuminate\Http\UploadedFile::fake()->create('geree.pdf', 12, 'application/pdf'),
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $fresh = $row->fresh();
+        $this->assertSame('geree.pdf', $fresh->file_name);
+        $this->assertNotNull($fresh->file_path);
+        \Illuminate\Support\Facades\Storage::disk('local')->assertExists($fresh->file_path);
+
+        // Хүснэгтэд файлын нэр гарна.
+        $this->actingAs($admin)
+            ->get(route('contracts.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('rows.0.file_name', 'geree.pdf'));
+
+        $this->actingAs($admin)
+            ->post(route('modules.file.upload', ['module' => 'contracts', 'id' => $row->id]), ['remove' => true])
+            ->assertRedirect();
+
+        $this->assertNull($row->fresh()->file_path);
+    }
+
+    public function test_a_viewer_cannot_attach_a_file(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $viewer = User::factory()->create(['is_admin' => false]);
+
+        $this->actingAs($admin)
+            ->post(route('modules.store', ['module' => 'contracts']), ['blank' => true])
+            ->assertRedirect();
+
+        $row = Contract::query()->sole();
+
+        $this->actingAs($viewer)
+            ->post(route('modules.file.upload', ['module' => 'contracts', 'id' => $row->id]), [
+                'file' => \Illuminate\Http\UploadedFile::fake()->create('geree.pdf', 12, 'application/pdf'),
+            ])
+            ->assertForbidden();
     }
 
     public function test_the_new_columns_are_stored_and_editable(): void
