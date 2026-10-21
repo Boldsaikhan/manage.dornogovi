@@ -150,17 +150,38 @@ const destroyRow = (id) => {
  * Унтраалттай үед хүснэгт зөвхөн харагдана: нүдэн дээр санамсаргүй дарж утга
  * өөрчлөгдөхгүй. Асаалттай үед бүх нүд идэвхжиж, мөр устгах товч гарна.
  */
-const editMode = ref(false);
+/*
+ * Засах горим.
+ *
+ * Нүд хадгалах бүрд хуудас шинэчлэгддэг тул төлвийг нь санах ойд
+ * хадгална — эс бөгөөс нэг нүд бөглөх бүрд горим унтарч, дахин дарах
+ * шаардлагатай болдог.
+ */
+const EDIT_MODE_KEY = 'leaves.edit-mode';
+
+const readEditMode = () => {
+    try {
+        return sessionStorage.getItem(EDIT_MODE_KEY) === '1';
+    } catch (e) {
+        return false;
+    }
+};
+
+const editMode = ref(readEditMode());
 
 const rowEditable = computed(() => props.canManage && editMode.value);
+
+watch(editMode, (value) => {
+    try {
+        sessionStorage.setItem(EDIT_MODE_KEY, value ? '1' : '0');
+    } catch (e) {
+        // Хувийн горимд хадгалах боломжгүй — горим нь энэ хуудсанд үлдэнэ.
+    }
+});
 
 const toggleEditMode = () => {
     editMode.value = ! editMode.value;
 };
-
-watch(() => props.activeScope, () => {
-    editMode.value = false;
-});
 
 /** Мөр сонгож, Excel/Word/PDF-ээр татах. */
 const selectedIds = ref([]);
