@@ -92,6 +92,22 @@ class LeavePaidDayLimitTest extends TestCase
         $this->assertSame(\App\Models\PhoneDirectoryEntry::PARENT_ORG, $fresh->org_name);
         $this->assertSame('Төрийн захиргааны удирдлагын хэлтэс', $fresh->unit_name);
 
+        // «Хэлтэс» гэсэн үггүй ч ангилал нь нэгж бол толгой байгууллага нөхөгдөнө.
+        \App\Models\PhoneDirectoryEntry::create([
+            'org_name' => 'Хэвлэл мэдээллийн алба',
+            'category' => 'heltes',
+            'person_name' => 'Л.Хатанбаатар',
+            'position' => 'Дарга',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $leave), ['person_name' => 'Л.Хатанбаатар'])
+            ->assertRedirect();
+
+        $fresh = $leave->fresh();
+        $this->assertSame(\App\Models\PhoneDirectoryEntry::PARENT_ORG, $fresh->org_name);
+        $this->assertSame('Хэвлэл мэдээллийн алба', $fresh->unit_name);
+
         // Агентлагийн ажилтан — хэлтэс хоосон.
         $this->actingAs($admin)
             ->patch(route('leaves.update', $leave), ['person_name' => 'Б.Болд'])

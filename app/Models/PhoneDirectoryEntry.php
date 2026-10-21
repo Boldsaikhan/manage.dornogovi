@@ -221,15 +221,46 @@ class PhoneDirectoryEntry extends Model
      */
     public static function placeFor(?string $name): array
     {
-        $org = trim((string) (self::orgFor($name) ?? ''));
+        $entry = self::entryByName($name);
+        $org = trim((string) ($entry->org_name ?? ''));
 
         if ($org === '') {
             return ['org' => '', 'unit' => ''];
         }
 
-        return self::looksLikeDepartment($org)
+        /*
+         * Тамгын газрын нэгж мөн эсэхийг нэрээр нь таахгүй — «Цэргийн
+         * штаб», «Хэвлэл мэдээллийн алба» гэх мэт нэгжид «хэлтэс» гэсэн
+         * үг байдаггүй. Утасны жагсаалтад заасан ангилал нь эрх мэдэлтэй.
+         */
+        $isUnit = ($entry?->category ?? null) === 'heltes'
+            || self::looksLikeDepartment($org);
+
+        return $isUnit
             ? ['org' => self::PARENT_ORG, 'unit' => $org]
             : ['org' => $org, 'unit' => ''];
+    }
+
+    /** Нэрээр нь (бүтэн эсвэл товчилсон) бүртгэлийг олно. */
+    public static function entryByName(?string $name): ?self
+    {
+        $needle = trim((string) $name);
+
+        if ($needle === '') {
+            return null;
+        }
+
+        return static::query()
+            ->whereNotNull('person_name')
+            ->orderBy('org_order')
+            ->orderBy('sort_order')
+            ->get(['person_name', 'org_name', 'category'])
+            ->first(function (self $row) use ($needle) {
+                $full = trim((string) $row->person_name);
+                $short = \App\Support\PersonName::short($full);
+
+                return $full === $needle || ($short !== '' && $short === $needle);
+            });
     }
 
     public static function orgFor(?string $name): ?string
