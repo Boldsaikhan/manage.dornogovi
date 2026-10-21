@@ -191,7 +191,9 @@ return [
             ['key' => 'number', 'label' => 'Гэрээний дугаар', 'width' => '11%', 'edit' => 'number'],
             ['key' => 'copies', 'label' => 'Хувь', 'width' => '6%', 'edit' => 'copies', 'edit_type' => 'number'],
             ['key' => 'prepared_by', 'label' => 'Боловсруулсан албан тушаалтан', 'width' => '17%', 'edit' => 'prepared_by', 'edit_people' => true],
-            ['key' => 'note', 'label' => 'Хянаж зөвлөгөө өгсөн тэмдэглэл', 'width' => '23%', 'align' => 'left', 'edit' => 'note'],
+            ['key' => 'note', 'label' => 'Хянаж зөвлөгөө өгсөн тэмдэглэл', 'width' => '18%', 'align' => 'left', 'edit' => 'note'],
+            // Гэрээний эх хувь — мөр бүр дээрээ хавсаргана.
+            ['key' => 'file_label', 'label' => 'Гэрээ', 'width' => '11%', 'type' => 'file', 'upload' => 'file'],
         ],
         'fields' => [
             ['name' => 'title', 'label' => 'Гэрээний нэр, утга агуулга', 'type' => 'text', 'required' => true],
@@ -201,6 +203,10 @@ return [
             ['name' => 'prepared_by', 'label' => 'Боловсруулсан албан тушаалтан', 'type' => 'text'],
             ['name' => 'counterparty', 'label' => 'Харилцагч / тал', 'type' => 'text'],
             ['name' => 'note', 'label' => 'Хянаж зөвлөгөө өгсөн тэмдэглэл', 'type' => 'textarea'],
+            ['name' => 'file', 'label' => 'Гэрээний файл (Word / PDF)', 'type' => 'file',
+                'accept' => '.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'mimes' => 'pdf,doc,docx', 'max_kb' => 20480,
+                'folder' => 'contracts', 'store_as' => 'file_path', 'name_as' => 'file_name'],
         ],
         'defaults' => [],
         // Хоосон мөр нэмээд нүд бүр дээр нь дарж бөглөнө.

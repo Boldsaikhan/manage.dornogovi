@@ -177,6 +177,7 @@ Route::middleware('auth')->group(function () {
         ->name('modules.import.store');
     Route::post('/modules/{module}', [ModuleResourceController::class, 'store'])->name('modules.store');
     Route::get('/modules/{module}/{id}/file', [ModuleResourceController::class, 'download'])->name('modules.file');
+    Route::post('/modules/{module}/{id}/file', [ModuleResourceController::class, 'uploadFile'])->name('modules.file.upload');
     Route::get('/modules/{module}/{id}/edit', [ModuleResourceController::class, 'editValues'])->name('modules.edit');
     Route::post('/modules/{module}/{id}/field', [ModuleResourceController::class, 'updateField'])->name('modules.field');
     Route::post('/modules/{module}/{id}', [ModuleResourceController::class, 'update'])->name('modules.update');

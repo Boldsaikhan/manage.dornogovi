@@ -864,6 +864,61 @@ class ModuleResourceController extends Controller
     }
 
     /**
+     * Мөр дээр нь файл хавсаргах, солих, устгах.
+     *
+     * Хоосон мөр нэмээд нүдээр бөглөдөг бүртгэлд «Шинэ нэмэх» маягт
+     * ашиглагддаггүй тул файлыг хүснэгтээс шууд оруулна.
+     */
+    public function uploadFile(Request $request, string $module, int $id): RedirectResponse
+    {
+        $config = $this->configFor($module);
+        abort_unless(ModuleAccess::canEdit($request->user(), $module), 403);
+
+        $field = collect($config['fields'] ?? [])
+            ->first(fn (array $f) => ($f['type'] ?? '') === 'file');
+
+        abort_if($field === null, 404);
+
+        $row = $config['model']::query()->whereKey($id)->firstOrFail();
+        abort_unless(ModuleOwnScope::allows($request->user(), $module, $row), 403);
+
+        $pathKey = (string) ($field['store_as'] ?? 'file_path');
+        $nameKey = (string) ($field['name_as'] ?? 'file_name');
+
+        // Хавсралтыг хасах.
+        if ($request->boolean('remove')) {
+            $this->deleteStoredFile($row);
+            $row->update([$pathKey => null, $nameKey => null]);
+            $this->log($module, $row, 'updated', $config, summary: 'Хавсралт устгав.');
+
+            return back()->with('success', 'Хавсралт устлаа.');
+        }
+
+        $request->validate([
+            'file' => [
+                'required',
+                'file',
+                'mimes:'.($field['mimes'] ?? 'pdf,doc,docx'),
+                'max:'.(int) ($field['max_kb'] ?? 20480),
+            ],
+        ], [], ['file' => mb_strtolower((string) ($field['label'] ?? 'файл'))]);
+
+        // Хуучин хавсралт байвал орлуулахын өмнө устгана.
+        $this->deleteStoredFile($row);
+
+        $file = $request->file('file');
+
+        $row->update([
+            $pathKey => $file->store((string) ($field['folder'] ?? 'uploads'), 'local'),
+            $nameKey => $file->getClientOriginalName(),
+        ]);
+
+        $this->log($module, $row, 'updated', $config, summary: 'Хавсралт оруулав.');
+
+        return back()->with('success', 'Файл хавсаргалаа.');
+    }
+
+    /**
      * Оруулсан файлыг браузерт шууд харуулна (PDF) эсвэл татна.
      */
     public function download(Request $request, string $module, int $id): StreamedResponse
