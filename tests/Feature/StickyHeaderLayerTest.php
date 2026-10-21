@@ -57,11 +57,35 @@ class StickyHeaderLayerTest extends TestCase
             'js/Pages/Modules/Decrees.vue',
             'js/Pages/Modules/ResourceIndex.vue',
             'js/Pages/Modules/AnnualLeaves.vue',
+            'js/composables/useStickyTableHead.js',
         ] as $path) {
             $source = file_get_contents(resource_path($path));
 
             $this->assertStringContainsString('String(14 - index)', $source, $path);
             $this->assertStringNotContainsString('String(30 - index)', $source, $path);
+        }
+    }
+
+    /**
+     * Олон мөрт толгойтой бүртгэл наалдах байрлалаа JS-ээр тооцох ёстой.
+     *
+     * CSS дээрх тогтмол `top` нь зөвхөн эхний хоёр мөрд таарах тул
+     * хайлтын мөр гүйлгэхэд толгой эвдэрдэг.
+     */
+    public function test_registers_with_a_filter_row_sync_their_sticky_head(): void
+    {
+        foreach ([
+            'js/Pages/Modules/Leaves.vue',
+            'js/Pages/Modules/AnnualLeaves.vue',
+            'js/Pages/Modules/Decrees.vue',
+        ] as $path) {
+            $source = file_get_contents(resource_path($path));
+
+            $this->assertTrue(
+                str_contains($source, 'useStickyTableHead')
+                    || str_contains($source, 'syncStickyHead'),
+                $path.' — наалдсан толгойн тооцоо алга.'
+            );
         }
     }
 
