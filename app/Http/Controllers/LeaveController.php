@@ -132,6 +132,110 @@ class LeaveController extends Controller
     }
 
     /**
+     * Нэг албан хаагчийн нийт чөлөөний хураангуй.
+     *
+     * Нэр дээр дарахад гарах цонх — хэдэн удаа, хэдэн хоног авсан,
+     * журмын заалт тус бүрээр хэд үлдсэнийг харуулна.
+     */
+    public function person(Request $request): JsonResponse
+    {
+        abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
+
+        $name = trim((string) $request->query('name', ''));
+
+        if ($name === '') {
+            return response()->json(['name' => '', 'rows' => [], 'totals' => [], 'rules' => []]);
+        }
+
+        $query = Leave::query()->where('person_name', $name)->orderByDesc('start_date')->orderByDesc('id');
+        ModuleOwnScope::apply($query, $request->user(), self::MODULE);
+
+        $leaves = $query->limit(200)->get();
+
+        $rows = $leaves->map(fn (Leave $leave) => [
+            'id' => $leave->id,
+            'scope_label' => self::SCOPES[$leave->scope] ?? $leave->scope,
+            'unit' => $leave->getAttribute('unit_name') ?: $leave->org_name,
+            'type_label' => $leave->typeLabel(),
+            'rule_code' => $leave->getAttribute('rule_code'),
+            'start_date' => optional($leave->start_date)?->format('Y-m-d'),
+            'end_date' => optional($leave->end_date)?->format('Y-m-d'),
+            'days' => (int) $leave->days,
+            'reason' => $leave->reason,
+        ])->all();
+
+        $byType = [];
+
+        foreach (Leave::TYPES as $key => $label) {
+            $matching = $leaves->where('type', $key);
+
+            $byType[] = [
+                'key' => $key,
+                'label' => $label,
+                'count' => $matching->count(),
+                'days' => (int) $matching->sum('days'),
+            ];
+        }
+
+        return response()->json([
+            'name' => $name,
+            'rows' => $rows,
+            'totals' => [
+                'count' => $leaves->count(),
+                'days' => (int) $leaves->sum('days'),
+                'by_type' => $byType,
+            ],
+            'rules' => $this->personRuleUsage($leaves),
+        ]);
+    }
+
+    /**
+     * Журмын заалт тус бүрээр энэ оны зарцуулалт.
+     *
+     * @param  \Illuminate\Support\Collection<int, Leave>  $leaves
+     * @return list<array<string, mixed>>
+     */
+    private function personRuleUsage(\Illuminate\Support\Collection $leaves): array
+    {
+        if (! LeaveSchema::hasRules()) {
+            return [];
+        }
+
+        $year = (int) now()->format('Y');
+        $out = [];
+
+        foreach ($leaves->groupBy('scope') as $scope => $scopeLeaves) {
+            foreach (LeaveLimits::all((string) $scope) as $rule) {
+                if ($rule['code'] === '') {
+                    continue;
+                }
+
+                $used = (int) $scopeLeaves
+                    ->filter(fn (Leave $leave) => trim((string) $leave->getAttribute('rule_code')) === $rule['code']
+                        && $leave->start_date
+                        && (int) $leave->start_date->format('Y') === $year)
+                    ->sum('days');
+
+                if ($used === 0) {
+                    continue;
+                }
+
+                $out[] = [
+                    'scope_label' => self::SCOPES[$scope] ?? $scope,
+                    'code' => $rule['code'],
+                    'label' => $rule['label'],
+                    'limit_text' => LeaveLimits::limitText($rule),
+                    'days' => (int) $rule['days'],
+                    'used' => $used,
+                    'left' => (int) $rule['days'] > 0 ? max(0, (int) $rule['days'] - $used) : null,
+                ];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
      * Чөлөө олгох лимитийн тохиргоог хадгална.
      */
     public function updateLimits(Request $request): RedirectResponse

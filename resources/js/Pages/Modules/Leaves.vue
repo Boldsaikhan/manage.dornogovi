@@ -284,6 +284,36 @@ const syncDrafts = () => {
 
 watch(() => props.rows, syncDrafts, { immediate: true });
 
+/*
+ * Албан хаагчийн нийт чөлөөний хураангуй.
+ *
+ * Нэр дээр дарахад тухайн хүний бүх чөлөө, журмын заалт тус бүрийн
+ * зарцуулалтыг нэг дор харуулна.
+ */
+const personSummary = ref(null);
+const personLoading = ref(false);
+
+const openPerson = async (name) => {
+    const person = String(name ?? '').trim();
+
+    if (person === '') return;
+
+    personLoading.value = true;
+    personSummary.value = { name: person, rows: [], totals: null, rules: [] };
+
+    try {
+        const response = await fetch(`${route('leaves.person')}?name=${encodeURIComponent(person)}`, {
+            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        });
+
+        personSummary.value = await response.json();
+    } catch (e) {
+        personSummary.value = { name: person, rows: [], totals: null, rules: [], failed: true };
+    } finally {
+        personLoading.value = false;
+    }
+};
+
 /** Лимит зөрчсөн үед гарах сануулга. */
 const saveError = ref('');
 
@@ -713,14 +743,25 @@ const visibleRows = computed(() => {
                             </td>
                             <td :class="cellClass">
                                 <SheetCell
-                                    v-if="drafts[row.id]"
+                                    v-if="isEditing(row.id) && drafts[row.id]"
                                     v-model="drafts[row.id].person_name"
                                     :options="peopleOptions"
-                                    :editable="isEditing(row.id)"
+                                    editable
                                     empty-label=""
                                     placeholder="Овог нэр…"
                                     @commit="(v) => saveField(row.id, 'person_name', v)"
                                 />
+                                <!-- Нэр дээр дарахад нийт чөлөөний хураангуй. -->
+                                <button
+                                    v-else-if="row.person_name"
+                                    type="button"
+                                    class="ui-clamp-2 w-full px-1 py-0.5 text-center hover:underline"
+                                    title="Нийт авсан чөлөөг харах"
+                                    @click="openPerson(row.person_name)"
+                                >
+                                    {{ row.person_name }}
+                                </button>
+                                <span v-else class="text-slate-300">—</span>
                             </td>
                             <td class="px-1.5 py-1.5">
                                 <!--
@@ -890,6 +931,111 @@ const visibleRows = computed(() => {
         </div>
 
         <!-- Өөрчлөлтийн түүх -->
+        <!-- Албан хаагчийн нийт чөлөө -->
+        <Modal :show="!! personSummary" max-width="4xl" @close="personSummary = null">
+            <div v-if="personSummary" class="ui-card-pad space-y-4">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h3 class="ui-title text-base">{{ personSummary.name }}</h3>
+                        <p class="ui-subtitle">Авсан чөлөөний нэгдсэн мэдээлэл</p>
+                    </div>
+                    <button type="button" class="ui-btn-ghost" @click="personSummary = null">Хаах</button>
+                </div>
+
+                <p v-if="personLoading" class="py-8 text-center text-sm text-slate-500">Уншиж байна…</p>
+
+                <template v-else>
+                    <!-- Нийт дүн -->
+                    <div v-if="personSummary.totals" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                        <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
+                            <p class="text-xs text-slate-500">Нийт чөлөө</p>
+                            <p class="text-lg font-bold text-brand-navy-800">
+                                {{ personSummary.totals.count }}
+                                <span class="text-xs font-medium text-slate-500">удаа</span>
+                                · {{ personSummary.totals.days }}
+                                <span class="text-xs font-medium text-slate-500">хоног</span>
+                            </p>
+                        </div>
+                        <div
+                            v-for="item in personSummary.totals.by_type"
+                            :key="item.key"
+                            class="rounded-xl border border-slate-200 bg-white p-3"
+                        >
+                            <p class="text-xs text-slate-500">{{ item.label }}</p>
+                            <p class="text-lg font-bold text-slate-800">
+                                {{ item.count }}
+                                <span class="text-xs font-medium text-slate-500">удаа</span>
+                                · {{ item.days }}
+                                <span class="text-xs font-medium text-slate-500">хоног</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Журмын заалт тус бүрээр (энэ он) -->
+                    <div v-if="personSummary.rules && personSummary.rules.length" class="ui-table-wrap">
+                        <table class="ui-table">
+                            <thead>
+                                <tr>
+                                    <th class="w-16">№</th>
+                                    <th>Чөлөөний төрөл</th>
+                                    <th class="w-36 text-center">Лимит</th>
+                                    <th class="w-20 text-center">Авсан</th>
+                                    <th class="w-20 text-center">Үлдсэн</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="rule in personSummary.rules" :key="rule.scope_label + rule.code">
+                                    <td class="whitespace-nowrap font-semibold">{{ rule.code }}</td>
+                                    <td class="!text-left">{{ rule.label }}</td>
+                                    <td class="whitespace-nowrap text-center">{{ rule.limit_text }}</td>
+                                    <td class="text-center">{{ rule.used }}</td>
+                                    <td class="text-center">
+                                        <span v-if="rule.left === null" class="text-slate-400">хязгааргүй</span>
+                                        <span v-else :class="rule.left === 0 ? 'font-semibold text-rose-600' : ''">
+                                            {{ rule.left }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Бүртгэл бүрээр -->
+                    <div class="ui-table-wrap max-h-[40vh] overflow-y-auto">
+                        <table class="ui-table">
+                            <thead>
+                                <tr>
+                                    <th class="w-28">Эхлэх</th>
+                                    <th class="w-28">Дуусах</th>
+                                    <th class="w-16 text-center">Хоног</th>
+                                    <th class="w-28">Төрөл</th>
+                                    <th class="w-20">Журам</th>
+                                    <th>Хэлтэс</th>
+                                    <th>Үндэслэл</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="item in personSummary.rows" :key="item.id">
+                                    <td class="whitespace-nowrap">{{ item.start_date || '—' }}</td>
+                                    <td class="whitespace-nowrap">{{ item.end_date || '—' }}</td>
+                                    <td class="text-center">{{ item.days || '—' }}</td>
+                                    <td class="whitespace-nowrap">{{ item.type_label }}</td>
+                                    <td class="whitespace-nowrap">{{ item.rule_code || '—' }}</td>
+                                    <td class="!text-left">{{ item.unit || '—' }}</td>
+                                    <td class="!text-left">{{ item.reason || '—' }}</td>
+                                </tr>
+                                <tr v-if="! personSummary.rows.length">
+                                    <td colspan="7" class="!py-10 text-center text-slate-400">
+                                        Бүртгэл алга.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
+            </div>
+        </Modal>
+
         <!-- Чөлөө олгох лимитийн тохиргоо (журмын 5.4) -->
         <Modal :show="showLimits" max-width="5xl" @close="showLimits = false">
             <div class="ui-card-pad space-y-4">
