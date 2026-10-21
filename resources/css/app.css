@@ -465,7 +465,7 @@
     }
 
     .ui-register thead th {
-        @apply bg-brand-navy-50 px-2 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-600
+        @apply bg-brand-navy-100 px-2 py-2 text-[11px] font-semibold uppercase tracking-wide text-brand-navy-800
             dark:bg-slate-800 dark:text-slate-300;
         vertical-align: middle;
     }
@@ -588,14 +588,14 @@
         position: sticky;
         top: 2.65rem;
         z-index: 13;
-        @apply bg-brand-navy-50 py-1.5 text-[10px] font-medium normal-case tracking-normal text-slate-500
+        @apply bg-brand-navy-100 py-1.5 text-[10px] font-medium normal-case tracking-normal text-brand-navy-700
             dark:bg-slate-800 dark:text-slate-400;
     }
 
     .ui-register thead tr:nth-child(3) th {
         position: sticky;
         z-index: 12;
-        @apply bg-brand-navy-50 py-0.5 text-[10px] font-normal normal-case text-slate-400
+        @apply bg-brand-navy-50 py-0.5 text-[10px] font-normal normal-case text-slate-500
             dark:bg-slate-800 dark:text-slate-500;
     }
 
@@ -611,7 +611,7 @@
     thead tr.ui-filters th {
         position: sticky;
         z-index: 11;
-        @apply bg-brand-navy-100 px-1 py-1 align-middle dark:bg-slate-700;
+        @apply bg-brand-navy-50 px-1 py-1 align-middle dark:bg-slate-700;
         box-shadow:
             inset -1px 0 0 rgb(226 232 240),
             inset 0 -1px 0 rgb(203 213 225),
@@ -677,25 +677,26 @@
     }
 
     .ui-register--pin-actions thead .ui-sticky-actions {
-        @apply bg-brand-navy-50 dark:bg-slate-800;
+        @apply bg-brand-navy-100 dark:bg-slate-800;
     }
 
     .ui-register--pin-actions thead tr.ui-filters .ui-sticky-actions {
-        @apply bg-brand-navy-100 dark:bg-slate-700;
+        @apply bg-brand-navy-50 dark:bg-slate-700;
     }
 
+    /* Үйлдлийн багана — мөрийн өгөгдлөөс өнгөөрөө ялгарна. */
     .ui-register--pin-actions tbody td.ui-sticky-actions {
-        @apply bg-white dark:bg-slate-900;
+        @apply bg-brand-navy-50 dark:bg-slate-800;
         z-index: 5;
     }
 
     .ui-register--pin-actions tbody tr:nth-child(even) td.ui-sticky-actions {
-        @apply bg-slate-50 dark:bg-slate-800;
+        @apply bg-brand-navy-100/70 dark:bg-slate-800;
     }
 
     .ui-register--pin-actions tbody tr:hover td.ui-sticky-actions,
     .ui-register--pin-actions tbody tr:focus-within td.ui-sticky-actions {
-        @apply bg-sky-50 dark:bg-sky-950;
+        @apply bg-brand-navy-100 dark:bg-slate-700;
     }
 
     .ui-register tbody tr:nth-child(even) td:not(.ui-register__cell--muted) {
