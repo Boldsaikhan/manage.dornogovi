@@ -571,7 +571,7 @@ const visibleRows = computed(() => {
             <TableScrollViewport v-else max-height="min(72vh, calc(100dvh - 11rem))">
                 <div ref="registerEl" class="ui-register">
                 <div class="ui-register__banner">{{ registerTitle }}</div>
-                <table class="ui-register__table min-w-[88rem]">
+                <table class="ui-register__table ui-register--pin-actions min-w-[88rem]">
                     <colgroup>
                         <col style="width: 2.5rem" />
                         <col style="width: 3rem" />
@@ -607,7 +607,7 @@ const visibleRows = computed(() => {
                             <th colspan="3" class="ui-register__head-group--issued">Чөлөөний хугацаа</th>
                             <th rowspan="2">Үндэслэл</th>
                             <th rowspan="2">Орлон гарын<br>үсэг зурсан</th>
-                            <th rowspan="2" />
+                            <th rowspan="2" class="ui-sticky-actions" />
                         </tr>
                         <tr>
                             <th class="p-0">
@@ -661,7 +661,7 @@ const visibleRows = computed(() => {
                             <th><input v-model="filters.end_date" type="search" placeholder="2026.09" /></th>
                             <th><input v-model="filters.reason" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.signer_label" type="search" placeholder="Хайх" /></th>
-                            <th />
+                            <th class="ui-sticky-actions" />
                         </tr>
                     </thead>
                     <tbody>
@@ -817,7 +817,7 @@ const visibleRows = computed(() => {
                                 </select>
                                 <span v-else class="ui-clamp-2">{{ row.signer_label }}</span>
                             </td>
-                            <td class="text-center">
+                            <td class="ui-sticky-actions text-center">
                                 <div class="flex items-center justify-center gap-1">
                                     <a
                                         :href="slipPrintUrl(row)"
