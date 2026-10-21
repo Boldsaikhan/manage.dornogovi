@@ -31,6 +31,8 @@ class ContractRegisterTest extends TestCase
                     'Гэрээний дугаар',
                     'Хувь',
                     'Боловсруулсан албан тушаалтан',
+                    'Баталсан',
+                    'Төлөөлж байгуулсан',
                     'Хянаж зөвлөгөө өгсөн тэмдэглэл',
                     'Гэрээ',
                 ], $labels);
@@ -112,6 +114,8 @@ class ContractRegisterTest extends TestCase
             'title' => 'Нүдэн дээр бөглөсөн гэрээ',
             'number' => '2026/77',
             'copies' => '2',
+            'approved_by_name' => 'О.Батжаргал',
+            'signed_by' => 'Г.Март',
         ] as $field => $value) {
             $this->actingAs($admin)
                 ->post(route('modules.field', ['module' => 'contracts', 'id' => $row->id]), [
@@ -126,6 +130,8 @@ class ContractRegisterTest extends TestCase
         $this->assertSame('Нүдэн дээр бөглөсөн гэрээ', $fresh->title);
         $this->assertSame('2026/77', $fresh->number);
         $this->assertSame(2, (int) $fresh->copies);
+        $this->assertSame('О.Батжаргал', $fresh->approved_by_name);
+        $this->assertSame('Г.Март', $fresh->signed_by);
     }
 
     public function test_a_contract_file_can_be_attached_and_removed(): void
