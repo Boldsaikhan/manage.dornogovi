@@ -1013,24 +1013,45 @@ const destroyRow = (id) => {
                                     <span v-else-if="! (col.upload && canEditInline)" class="text-slate-400">—</span>
 
                                     <!-- Засах горимд мөр дээрээ файл хавсаргана. -->
-                                    <span v-if="col.upload && canEditInline" class="mt-1 block">
+                                    <span v-if="col.upload && canEditInline" class="mt-1 flex items-center gap-1">
                                         <button
                                             type="button"
-                                            class="text-[11px] font-semibold text-brand-navy-700 hover:underline"
+                                            class="ui-icon-btn"
                                             :disabled="uploadingRow === row.id"
+                                            :title="row.file_url ? 'Файлыг солих' : 'Файл хавсаргах'"
+                                            :aria-label="row.file_url ? 'Файлыг солих' : 'Файл хавсаргах'"
                                             @click.stop="pickRowFile(row.id)"
                                         >
-                                            {{ uploadingRow === row.id
-                                                ? 'Оруулж байна…'
-                                                : (row.file_url ? 'Солих' : '+ Файл хавсаргах') }}
+                                            <svg
+                                                v-if="uploadingRow === row.id"
+                                                class="h-4 w-4 animate-spin"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path d="M12 3a9 9 0 1 0 9 9" stroke-linecap="round" />
+                                            </svg>
+                                            <!-- Цаасны хавчаар — файл хавсаргах. -->
+                                            <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M21 12.5 12.5 21a5 5 0 0 1-7-7l8-8a3.5 3.5 0 1 1 5 5l-8 8a2 2 0 0 1-3-3l7.5-7.5"
+                                                />
+                                            </svg>
                                         </button>
                                         <button
                                             v-if="row.file_url"
                                             type="button"
-                                            class="ml-2 text-[11px] text-rose-600 hover:underline"
+                                            class="ui-icon-btn ui-icon-btn--danger"
+                                            title="Хавсралтыг устгах"
+                                            aria-label="Хавсралтыг устгах"
                                             @click.stop="removeRowFile(row.id)"
                                         >
-                                            Устгах
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                <path d="M6 7h12M9 7V5h6v2m-7 0 1 12h6l1-12" stroke-linecap="round" stroke-linejoin="round" />
+                                            </svg>
                                         </button>
                                     </span>
                                 </template>
