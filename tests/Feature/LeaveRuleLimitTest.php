@@ -321,6 +321,31 @@ class LeaveRuleLimitTest extends TestCase
         return $value;
     }
 
+    public function test_a_later_leave_counts_even_for_an_earlier_row(): void
+    {
+        $admin = $this->admin();
+
+        // Улирлын заалт: 3 хоног. Сүүлд бүртгэсэн ч огноо нь хожуу.
+        $this->leave('2026-02-20', 3, 'Q');
+
+        // Шинэ мөр нь огноогоор өмнө — гэхдээ улирлын лимит дүүрсэн.
+        $earlier = $this->leave('2026-02-10', 1);
+
+        $this->assertSame(3, $this->ruleUsage($admin, $earlier->id, 'Q'));
+
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $earlier), ['rule_code' => 'Q'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('tsalingui', $earlier->fresh()->type);
+    }
+
+    /** Мөрөнд харагдах заалтын зарцуулалт. */
+    private function ruleUsage(User $admin, int $id, string $code): int
+    {
+        return (int) ($this->rowProp($admin, $id, 'rule_usage')[$code] ?? 0);
+    }
+
     public function test_the_register_marks_the_blocked_rules(): void
     {
         $admin = $this->admin();
