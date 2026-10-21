@@ -29,6 +29,42 @@ class LeavePaidDayLimitTest extends TestCase
         LeaveLimits::savePaidDaysPerYear(5);
     }
 
+    public function test_the_end_date_follows_the_start_date_and_days(): void
+    {
+        $admin = $this->admin();
+        $leave = $this->addLeave($admin, '2026-10-12', 5);
+
+        // Эхлэх өдрөө оролцуулж тоолно: 12, 13, 14, 15, 16.
+        $this->assertSame('2026-10-16', $leave->fresh()->end_date->format('Y-m-d'));
+
+        // Хоногийг солиход дуусах огноо дагана.
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $leave), ['days' => 2])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('2026-10-13', $leave->fresh()->end_date->format('Y-m-d'));
+
+        // Эхлэх огноог солиход ч дагана.
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $leave), ['start_date' => '2026-11-30'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('2026-12-01', $leave->fresh()->end_date->format('Y-m-d'));
+    }
+
+    public function test_a_mistyped_year_is_refused(): void
+    {
+        $admin = $this->admin();
+        $leave = $this->addLeave($admin, '2026-10-12', 1);
+
+        // «0008-09-09» гэх мэт буруу он хадгалагдахгүй.
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $leave), ['start_date' => '0008-09-09'])
+            ->assertSessionHasErrors('start_date');
+
+        $this->assertSame('2026-10-12', $leave->fresh()->start_date->format('Y-m-d'));
+    }
+
     public function test_the_overall_cap_is_off_by_default(): void
     {
         LeaveLimits::reset();

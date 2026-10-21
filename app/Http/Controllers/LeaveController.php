@@ -285,7 +285,7 @@ class LeaveController extends Controller
             'signer' => ['nullable', Rule::in(array_keys(Leave::signerOptions()))],
             'type' => ['nullable', Rule::in(array_keys(Leave::TYPES))],
             'rule_code' => ['nullable', 'string', 'max:20'],
-            'start_date' => ['nullable', 'date'],
+            'start_date' => ['nullable', 'date', 'after_or_equal:2000-01-01', 'before_or_equal:2100-12-31'],
             'days' => ['nullable', 'integer', 'min:1', 'max:365'],
             'reason' => ['nullable', 'string', 'max:2000'],
             'status' => ['nullable', Rule::in(['pending', 'approved', 'rejected'])],
@@ -365,7 +365,7 @@ class LeaveController extends Controller
             'signer' => ['sometimes', 'nullable', Rule::in(array_keys(Leave::signerOptions()))],
             'type' => ['sometimes', Rule::in(array_keys(Leave::TYPES))],
             'rule_code' => ['sometimes', 'nullable', 'string', 'max:20'],
-            'start_date' => ['sometimes', 'date'],
+            'start_date' => ['sometimes', 'date', 'after_or_equal:2000-01-01', 'before_or_equal:2100-12-31'],
             'days' => ['sometimes', 'integer', 'min:1', 'max:365'],
             'reason' => ['sometimes', 'nullable', 'string', 'max:2000'],
         ]);
@@ -411,11 +411,16 @@ class LeaveController extends Controller
             $leave->type = 'tsalingui';
         }
 
-        if (array_key_exists('start_date', $data) || array_key_exists('days', $data)) {
-            $start = Carbon::parse($leave->start_date)->startOfDay();
-            $days = (int) ($leave->days ?: 1);
-            $leave->end_date = $start->copy()->addDays($days - 1)->toDateString();
-        }
+        /*
+         * Дуусах огноо нь эхлэх огноо + хоногоос бодогдоно. Эхлэх өдрөө
+         * оролцуулж тоолно: 1 хоног = эхлэх өдөр өөрөө.
+         */
+        $leave->end_date = $leave->start_date
+            ? Carbon::parse($leave->start_date)
+                ->startOfDay()
+                ->addDays(max(1, (int) $leave->days) - 1)
+                ->toDateString()
+            : null;
 
         $leave->save();
 
