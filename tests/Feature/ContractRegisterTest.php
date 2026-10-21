@@ -89,6 +89,44 @@ class ContractRegisterTest extends TestCase
         $this->assertSame('busad', Contract::query()->sole()->scope);
     }
 
+    public function test_a_blank_row_can_be_added_and_filled_cell_by_cell(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        // Хоосон мөр хоёр удаа нэмэхэд дугаар нь хоосон хэвээр — давхардахгүй.
+        foreach (range(1, 2) as $ignored) {
+            $this->actingAs($admin)
+                ->post(route('modules.store', ['module' => 'contracts', 'scope' => 'tamgyn_darga']), ['blank' => true])
+                ->assertRedirect()
+                ->assertSessionHasNoErrors();
+        }
+
+        $this->assertSame(2, Contract::query()->count());
+
+        $row = Contract::query()->latest('id')->firstOrFail();
+        $this->assertSame('tamgyn_darga', $row->scope);
+        $this->assertNull($row->number);
+
+        foreach ([
+            'title' => 'Нүдэн дээр бөглөсөн гэрээ',
+            'number' => '2026/77',
+            'copies' => '2',
+        ] as $field => $value) {
+            $this->actingAs($admin)
+                ->post(route('modules.field', ['module' => 'contracts', 'id' => $row->id]), [
+                    'field' => $field,
+                    'value' => $value,
+                ])
+                ->assertRedirect()
+                ->assertSessionHasNoErrors();
+        }
+
+        $fresh = $row->fresh();
+        $this->assertSame('Нүдэн дээр бөглөсөн гэрээ', $fresh->title);
+        $this->assertSame('2026/77', $fresh->number);
+        $this->assertSame(2, (int) $fresh->copies);
+    }
+
     public function test_the_new_columns_are_stored_and_editable(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
