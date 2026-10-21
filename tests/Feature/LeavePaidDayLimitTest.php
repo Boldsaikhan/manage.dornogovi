@@ -196,10 +196,10 @@ class LeavePaidDayLimitTest extends TestCase
 
         $this->assertTrue($over->fresh()->limit_exceeded);
 
-        // Сервер «Цалинтай» болгохыг татгалзаж, шалтгааныг нь хэлнэ.
+        // Сервер «Цалинтай» болгохыг хүлээж авалгүй цалингүй хэвээр үлдээнэ.
         $this->actingAs($admin)
             ->patch(route('leaves.update', $over), ['type' => 'tsalintai'])
-            ->assertSessionHasErrors('type');
+            ->assertRedirect();
 
         $this->assertSame('tsalingui', $over->fresh()->type);
     }

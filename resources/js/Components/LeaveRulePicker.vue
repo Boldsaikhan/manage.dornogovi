@@ -94,10 +94,7 @@ const toggle = async () => {
 };
 
 const pick = (code) => {
-    if (code && isBlocked(code)) {
-        return;
-    }
-
+    // Лимит дүүрсэн заалтыг ч сонгоно — тэр чөлөө цалингүй болно.
     close();
     emit('update:modelValue', code);
     emit('commit', code);
@@ -161,9 +158,8 @@ onBeforeUnmount(stop);
                                 :key="rule.code"
                                 class="transition"
                                 :class="[
-                                    isBlocked(rule.code)
-                                        ? 'cursor-not-allowed text-slate-400'
-                                        : 'cursor-pointer hover:bg-brand-navy-50',
+                                    'cursor-pointer hover:bg-brand-navy-50',
+                                    isBlocked(rule.code) ? 'text-slate-500' : '',
                                     rule.code === modelValue ? 'bg-brand-navy-50 font-semibold' : '',
                                 ]"
                                 @click="pick(rule.code)"
@@ -172,7 +168,7 @@ onBeforeUnmount(stop);
                                 <td class="!text-left">
                                     {{ rule.label.replace(rule.code + ' ', '') }}
                                     <span v-if="isBlocked(rule.code)" class="ml-1 whitespace-nowrap text-[10px] font-semibold text-rose-600">
-                                        лимит дүүрсэн
+                                        лимит дүүрсэн — цалингүй болно
                                     </span>
                                 </td>
                                 <td class="whitespace-nowrap text-center">{{ limitText(rule) }}</td>

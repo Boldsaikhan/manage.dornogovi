@@ -324,12 +324,6 @@ class LeaveController extends Controller
             'department_id' => $request->user()->department_id,
         ]);
 
-        if ($error = $this->ruleLimitError($leave)) {
-            $leave->delete();
-
-            return back()->withErrors(['rule_code' => $error]);
-        }
-
         // Жилийн цалинтай чөлөөний лимит хэтэрвэл «Цалингүй» болно.
         LeaveBalance::reapplyFor($leave);
         $leave->refresh();
@@ -402,22 +396,19 @@ class LeaveController extends Controller
 
         $leave->fill($data);
 
-        // Лимитээс хэтэрсэн заалтыг сонгох боломжгүй.
-        if ($error = $this->ruleLimitError($leave)) {
-            return back(303)->withErrors(['rule_code' => $error, 'days' => $error]);
+        /*
+         * Заалтын лимит дүүрсэн бол сонгоход саад болохгүй — зөвхөн
+         * цалинтай байх боломжгүй болж, цалингүй болж бүртгэгдэнэ.
+         */
+        if ($this->ruleLimitExceeded($leave) && $leave->type === 'tsalintai') {
+            $leave->type = 'tsalingui';
         }
 
         /*
-         * Жилийн цалинтай чөлөөний хоног дууссан бол «Цалинтай» болгохгүй —
-         * «Цалингүй» эсвэл «Ээлжийн амралтаас» сонгоно.
+         * Нийлбэр хязгаар асаалттай бөгөөд дүүрсэн бол ч цалинтай болгохгүй.
          */
         if ($leave->type === 'tsalintai' && LeaveBalance::wouldExceedPaid($leave)) {
-            $message = sprintf(
-                'Жилд олгох цалинтай чөлөөний хоног (%d) дууссан тул «Цалинтай» сонгох боломжгүй. «Цалингүй» эсвэл «Ээлжийн амралтаас» гэж сонгоно уу.',
-                LeaveLimits::paidDaysPerYear(),
-            );
-
-            return back(303)->withErrors(['type' => $message]);
+            $leave->type = 'tsalingui';
         }
 
         if (array_key_exists('start_date', $data) || array_key_exists('days', $data)) {
@@ -483,51 +474,33 @@ class LeaveController extends Controller
     }
 
     /**
-     * Сонгосон журмын лимит хэтэрсэн эсэх — хэтэрсэн бол алдааны бичвэр.
+     * Сонгосон журмын заалтын лимит хэтэрсэн эсэх.
+     *
+     * Хэтэрсэн ч бүртгэхийг хориглохгүй — тэр чөлөө цалингүй болно.
      */
-    private function ruleLimitError(Leave $leave): ?string
+    private function ruleLimitExceeded(Leave $leave): bool
     {
         if (! LeaveSchema::hasRules()) {
-            return null;
+            return false;
         }
 
         $rule = LeaveLimits::find($leave->rule_code);
 
         if ($rule === null || (int) $rule['days'] <= 0) {
-            return null;
+            return false;
         }
 
         $person = trim((string) $leave->person_name);
 
         if ($person === '') {
-            return null;
+            return false;
         }
 
         $all = Leave::query()->get(
             LeaveSchema::only(['id', 'person_name', 'rule_code', 'start_date', 'days']),
         );
 
-        if (! LeaveRuleUsage::exceeds($rule, $leave, $all, $person, max(0, (int) $leave->days))) {
-            return null;
-        }
-
-        $all = Leave::query()->get(
-            LeaveSchema::only(['id', 'person_name', 'rule_code', 'start_date', 'days']),
-        );
-
-        $used = $rule['period'] === 'once'
-            ? 0
-            : LeaveRuleUsage::usedDays($rule, $leave, $all, $person);
-
-        $left = max(0, (int) $rule['days'] - $used);
-
-        return sprintf(
-            '«%s» заалтаар %s. Боломжит үлдэгдэл %d хоног — %d хоног олгох боломжгүй.',
-            $rule['code'],
-            mb_strtolower(LeaveLimits::limitText($rule)),
-            $left,
-            max(0, (int) $leave->days),
-        );
+        return LeaveRuleUsage::exceeds($rule, $leave, $all, $person, max(0, (int) $leave->days));
     }
 
     /**
@@ -556,8 +529,12 @@ class LeaveController extends Controller
             'type' => $leave->type,
             'type_label' => $leave->typeLabel(),
             'rule_code' => $leave->getAttribute('rule_code'),
+            // Заалтын лимит дүүрсэн — «Цалинтай» сонгох боломжгүй.
+            'paid_blocked' => $this->ruleLimitExceeded($leave),
             // Журам нь цалингийн төлвөө заасан бол гараар солихгүй.
-            'type_locked' => ! $leave->getAttribute('limit_exceeded') && in_array(
+            'type_locked' => ! $leave->getAttribute('limit_exceeded')
+                && ! $this->ruleLimitExceeded($leave)
+                && in_array(
                 LeaveLimits::find($leave->getAttribute('rule_code'))['pay'] ?? 'none',
                 ['tsalintai', 'tsalingui'],
                 true,

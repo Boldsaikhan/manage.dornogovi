@@ -125,19 +125,21 @@ class LeaveRuleLimitTest extends TestCase
             });
     }
 
-    public function test_a_rule_over_its_yearly_limit_is_refused(): void
+    public function test_a_rule_over_its_yearly_limit_becomes_unpaid(): void
     {
         $admin = $this->admin();
 
         $this->leave('2026-02-02', 4, 'Y');
         $second = $this->leave('2026-06-02', 3);
 
-        // 4 + 3 = 7 > 5
+        // 4 + 3 = 7 > 5 — сонгоход саад болохгүй, гэхдээ цалингүй болно.
         $this->actingAs($admin)
             ->patch(route('leaves.update', $second), ['rule_code' => 'Y'])
-            ->assertSessionHasErrors('rule_code');
+            ->assertSessionHasNoErrors();
 
-        $this->assertNull($second->fresh()->rule_code);
+        $fresh = $second->fresh();
+        $this->assertSame('Y', $fresh->rule_code);
+        $this->assertSame('tsalingui', $fresh->type);
     }
 
     public function test_the_quarterly_limit_resets_next_quarter(): void
@@ -146,21 +148,23 @@ class LeaveRuleLimitTest extends TestCase
 
         $this->leave('2026-01-10', 3, 'Q');
 
-        // Хоёрдугаар улирал — лимит дахин шинэ.
+        // Хоёрдугаар улирал — лимит дахин шинэ тул цалинтай хэвээр.
         $next = $this->leave('2026-04-10', 3);
 
         $this->actingAs($admin)
             ->patch(route('leaves.update', $next), ['rule_code' => 'Q'])
             ->assertSessionHasNoErrors();
 
-        $this->assertSame('Q', $next->fresh()->rule_code);
+        $this->assertSame('tsalintai', $next->fresh()->type);
 
-        // Мөн улиралд дахин авбал хаагдана.
+        // Мөн улиралд дахин авбал лимит дүүрсэн тул цалингүй.
         $same = $this->leave('2026-02-10', 1);
 
         $this->actingAs($admin)
             ->patch(route('leaves.update', $same), ['rule_code' => 'Q'])
-            ->assertSessionHasErrors('rule_code');
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('tsalingui', $same->fresh()->type);
     }
 
     public function test_a_per_occasion_rule_only_caps_this_leave(): void
@@ -171,39 +175,45 @@ class LeaveRuleLimitTest extends TestCase
         $short = $this->leave('2026-03-02', 2);
         $long = $this->leave('2026-04-02', 3);
 
-        // Өмнөх тохиолдол саад болохгүй.
+        // Өмнөх тохиолдол саад болохгүй — цалинтай хэвээр.
         $this->actingAs($admin)
             ->patch(route('leaves.update', $short), ['rule_code' => 'O'])
             ->assertSessionHasNoErrors();
 
-        // Гэхдээ нэг удаад 2 хоногоос хэтэрч болохгүй.
+        $this->assertSame('tsalintai', $short->fresh()->type);
+
+        // Нэг удаад 2 хоногоос хэтэрвэл цалингүй.
         $this->actingAs($admin)
             ->patch(route('leaves.update', $long), ['rule_code' => 'O'])
-            ->assertSessionHasErrors('rule_code');
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('tsalingui', $long->fresh()->type);
     }
 
-    public function test_days_cannot_be_raised_past_the_rule_limit(): void
+    public function test_raising_the_days_past_the_limit_turns_it_unpaid(): void
     {
         $admin = $this->admin();
 
         $leave = $this->leave('2026-02-02', 2, 'Y');
 
-        // 5 хоногийн лимит — 5 хүртэл боломжтой.
+        // 5 хоногийн лимит — 5 хүртэл цалинтай хэвээр.
         $this->actingAs($admin)
             ->patch(route('leaves.update', $leave), ['days' => 5])
             ->assertSessionHasNoErrors();
 
         $this->assertSame(5, $leave->fresh()->days);
+        $this->assertSame('tsalintai', $leave->fresh()->type);
 
-        // 6 бол хэтэрнэ — хадгалагдахгүй.
+        // 6 бол хэтэрнэ — хадгалагдана, гэхдээ цалингүй болно.
         $this->actingAs($admin)
             ->patch(route('leaves.update', $leave), ['days' => 6])
-            ->assertSessionHasErrors(['rule_code', 'days']);
+            ->assertSessionHasNoErrors();
 
-        $this->assertSame(5, $leave->fresh()->days);
+        $this->assertSame(6, $leave->fresh()->days);
+        $this->assertSame('tsalingui', $leave->fresh()->type);
     }
 
-    public function test_days_are_capped_against_what_others_already_used(): void
+    public function test_the_days_of_other_rows_count_toward_the_limit(): void
     {
         $admin = $this->admin();
 
@@ -215,12 +225,14 @@ class LeaveRuleLimitTest extends TestCase
             ->patch(route('leaves.update', $second), ['days' => 2])
             ->assertSessionHasNoErrors();
 
+        $this->assertSame('tsalintai', $second->fresh()->type);
+
         // 3 + 3 = 6 — хэтэрнэ.
         $this->actingAs($admin)
             ->patch(route('leaves.update', $second), ['days' => 3])
-            ->assertSessionHasErrors('days');
+            ->assertSessionHasNoErrors();
 
-        $this->assertSame(2, $second->fresh()->days);
+        $this->assertSame('tsalingui', $second->fresh()->type);
     }
 
     public function test_a_per_occasion_rule_caps_the_days_too(): void
@@ -231,9 +243,10 @@ class LeaveRuleLimitTest extends TestCase
 
         $this->actingAs($admin)
             ->patch(route('leaves.update', $leave), ['days' => 3])
-            ->assertSessionHasErrors('days');
+            ->assertSessionHasNoErrors();
 
-        $this->assertSame(1, $leave->fresh()->days);
+        $this->assertSame(3, $leave->fresh()->days);
+        $this->assertSame('tsalingui', $leave->fresh()->type);
     }
 
     public function test_the_register_reports_how_many_days_are_used(): void
@@ -283,12 +296,29 @@ class LeaveRuleLimitTest extends TestCase
                 $this->assertSame(5, $rows[$third->id]['rule_usage']['Y']);
             });
 
-        // Лимит дүүрсэн тул шинэ мөрөнд тэр заалт хаалттай.
+        // Лимит дүүрсэн тул шинэ мөр цалингүй болно.
         $fresh = $this->leave('2026-05-02', 1);
 
         $this->actingAs($admin)
             ->patch(route('leaves.update', $fresh), ['rule_code' => 'Y'])
-            ->assertSessionHasErrors('rule_code');
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('tsalingui', $fresh->fresh()->type);
+        $this->assertTrue((bool) $this->rowProp($admin, $fresh->id, 'paid_blocked'));
+    }
+
+    /** Хүснэгтийн мөрний нэг талбарыг уншина. */
+    private function rowProp(User $admin, int $id, string $key): mixed
+    {
+        $value = null;
+
+        $this->actingAs($admin)
+            ->get(route('leaves.index'))
+            ->assertInertia(function (AssertableInertia $page) use ($id, $key, &$value): void {
+                $value = collect($page->toArray()['props']['rows'])->firstWhere('id', $id)[$key] ?? null;
+            });
+
+        return $value;
     }
 
     public function test_the_register_marks_the_blocked_rules(): void
