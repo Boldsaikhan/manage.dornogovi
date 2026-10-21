@@ -11,6 +11,7 @@ import QrScanButton from '@/Components/QrScanButton.vue';
 import AiPanel from '@/Components/AiPanel.vue';
 import AppLockGate from '@/Components/AppLockGate.vue';
 import Modal from '@/Components/Modal.vue';
+import HoverTip from '@/Components/HoverTip.vue';
 import { useTheme } from '@/utils/theme';
 
 defineProps({
@@ -580,5 +581,8 @@ const onLinkedSystemClick = (sys, event) => {
                 <VaultUnlockForm @unlocked="vaultModal = false" />
             </div>
         </Modal>
+
+        <!-- Тайлбарыг хулганы дээд талд гаргана. -->
+        <HoverTip />
     </div>
 </template>
