@@ -25,17 +25,17 @@ class PhoneDirectoryCategoryTabsTest extends TestCase
             'sort_order' => 1,
         ]);
 
-        // Хуудсанд «Хэлтэс» ангилал сонголт болон бүлгийн төлөв хэвээр ирнэ
+        // Тамгын газрын нэгжийн ангилал «АЗДТГ» нэрээр ирнэ.
         $this->actingAs($admin)
             ->get(route('phone-directory.index'))
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Modules/PhoneDirectory')
-                ->where('categories.heltes', 'Хэлтэс')
+                ->where('categories.heltes', 'АЗДТГ')
                 ->where('groups.0.category', 'heltes')
                 ->where('total', 1)
                 ->has('groups', 1));
 
-        // Хэлтэс болгож сонгоход хадгалагдана
+        // Ангилал нь өөрчлөгдөөгүй — зөвхөн харагдах нэр солигдсон.
         $this->actingAs($admin)
             ->patch(route('phone-directory.category'), [
                 'org_name' => 'Төрийн захиргааны удирдлагын хэлтэс',

@@ -475,7 +475,7 @@ const filter = ref(null); // { type: 'category' | 'org' | 'person', value, label
 
 const CATEGORY_LABELS = {
     udirdlaga: 'Аймгийн удирдлагууд',
-    heltes: 'Хэлтэс',
+    heltes: 'АЗДТГ',
     agentlag: 'Агентлаг',
     sum: 'Сумд',
     baiguullaga: 'Байгууллага',
