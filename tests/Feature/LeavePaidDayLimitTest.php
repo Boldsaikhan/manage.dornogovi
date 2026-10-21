@@ -149,6 +149,23 @@ class LeavePaidDayLimitTest extends TestCase
         $this->assertSame('tsalintai', $next->fresh()->type);
     }
 
+    public function test_annual_leave_stays_available_when_the_cap_is_used_up(): void
+    {
+        $admin = $this->admin();
+
+        $this->addLeave($admin, '2026-02-02', 5);
+        $over = $this->addLeave($admin, '2026-03-02', 2);
+
+        $this->assertTrue($over->fresh()->limit_exceeded);
+
+        // «Ээлжийн амралтаас» сонгоход саадгүй.
+        $this->actingAs($admin)
+            ->patch(route('leaves.update', $over), ['type' => 'eeljiin'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('eeljiin', $over->fresh()->type);
+    }
+
     public function test_the_type_cannot_be_changed_back_to_paid(): void
     {
         $admin = $this->admin();
@@ -158,11 +175,11 @@ class LeavePaidDayLimitTest extends TestCase
 
         $this->assertTrue($over->fresh()->limit_exceeded);
 
+        // Сервер «Цалинтай» болгохыг татгалзаж, шалтгааныг нь хэлнэ.
         $this->actingAs($admin)
             ->patch(route('leaves.update', $over), ['type' => 'tsalintai'])
-            ->assertRedirect();
+            ->assertSessionHasErrors('type');
 
-        // Сервер лимитээ дахин тооцож, цалингүй болгож буцаана.
         $this->assertSame('tsalingui', $over->fresh()->type);
     }
 
