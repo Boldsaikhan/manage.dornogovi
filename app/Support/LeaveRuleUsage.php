@@ -89,13 +89,29 @@ class LeaveRuleUsage
      */
     public static function usedDays(array $rule, Leave $leave, Collection $all, string $person): int
     {
-        $used = self::usedBefore($rule, $leave, $all, $person);
-
+        /*
+         * Энэ мөр тэр заалтаар олгогдсон бол түүхэн дараалал харуулна:
+         * өмнөх мөрүүд дээр өөрийнх нь хоногийг нэмнэ.
+         *
+         * Заалтаа сонгоогүй мөрөнд бол аль хэдийн зарцуулсан БҮХ хоногийг
+         * харуулна — тэгж байж «хэд үлдсэн»-ийг зөв хардаг.
+         */
         if (trim((string) $leave->rule_code) === $rule['code']) {
-            $used += max(0, (int) $leave->days);
+            return self::usedBefore($rule, $leave, $all, $person) + max(0, (int) $leave->days);
         }
 
-        return $used;
+        return self::usedOthers($rule, $leave, $all, $person);
+    }
+
+    /**
+     * Тухайн хугацааны дотор энэ заалтаар бусад мөрүүдийн авсан хоног.
+     *
+     * @param  array{code: string, period: string, days: int}  $rule
+     * @param  Collection<int, Leave>  $all
+     */
+    private static function usedOthers(array $rule, Leave $leave, Collection $all, string $person): int
+    {
+        return self::sumInWindow($rule, $leave, $all, $person, false);
     }
 
     /**
@@ -122,9 +138,12 @@ class LeaveRuleUsage
             return $days > $limit;
         }
 
-        $used = self::usedBefore($rule, $leave, $all, $person);
-
-        return $used + $days > $limit;
+        /*
+         * Хязгаар шалгахад тухайн хугацааны БҮХ бүртгэлийг тооцно —
+         * сүүлд бүртгэсэн ч, өмнөх огноотой ч ялгаагүй нэг саванд
+         * хуримтлагдана.
+         */
+        return self::usedOthers($rule, $leave, $all, $person) + $days > $limit;
     }
 
     /**
@@ -139,6 +158,23 @@ class LeaveRuleUsage
      */
     private static function usedBefore(array $rule, Leave $leave, Collection $all, string $person): int
     {
+        return self::sumInWindow($rule, $leave, $all, $person, true);
+    }
+
+    /**
+     * Хугацааны хүрээн дэх нийлбэр.
+     *
+     * @param  array{code: string, period: string, days: int}  $rule
+     * @param  Collection<int, Leave>  $all
+     * @param  bool  $onlyEarlier Зөвхөн энэ мөрөөс өмнөх бүртгэл
+     */
+    private static function sumInWindow(
+        array $rule,
+        Leave $leave,
+        Collection $all,
+        string $person,
+        bool $onlyEarlier,
+    ): int {
         $window = self::window($rule['period'], $leave->start_date);
 
         if ($window === null) {
@@ -148,7 +184,7 @@ class LeaveRuleUsage
         [$from, $to] = $window;
 
         return (int) $all
-            ->filter(function (Leave $row) use ($leave, $person, $rule, $from, $to) {
+            ->filter(function (Leave $row) use ($leave, $person, $rule, $from, $to, $onlyEarlier) {
                 if ($row->id === $leave->id) {
                     return false;
                 }
@@ -169,6 +205,10 @@ class LeaveRuleUsage
 
                 if (! $start->betweenIncluded($from, $to)) {
                     return false;
+                }
+
+                if (! $onlyEarlier) {
+                    return true;
                 }
 
                 // Зөвхөн энэ мөрөөс өмнөх бүртгэл.
