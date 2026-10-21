@@ -478,20 +478,37 @@
      */
     .ui-register thead th {
         border-color: transparent;
+        /* Багана хооронд цайвар зураас — хар хүрээгүй ч ялгарна. */
+        box-shadow: inset -1px 0 0 theme('colors.brand-navy.200');
+    }
+
+    .ui-register thead th:last-child {
         box-shadow: none;
     }
 
     /* Хоёр мөрт гарчгийн дэд мөрийг маш нимгэн зураасаар ялгана. */
     .ui-register thead tr:nth-child(2) th {
-        box-shadow: inset 0 1px 0 rgb(199 210 254 / 0.7);
+        box-shadow:
+            inset -1px 0 0 theme('colors.brand-navy.200'),
+            inset 0 1px 0 theme('colors.brand-navy.200');
+    }
+
+    .ui-register thead tr:nth-child(2) th:last-child {
+        box-shadow: inset 0 1px 0 theme('colors.brand-navy.200');
     }
 
     .dark .ui-register thead th {
+        box-shadow: inset -1px 0 0 rgb(71 85 105);
+    }
+
+    .dark .ui-register thead th:last-child {
         box-shadow: none;
     }
 
     .dark .ui-register thead tr:nth-child(2) th {
-        box-shadow: inset 0 1px 0 rgb(71 85 105);
+        box-shadow:
+            inset -1px 0 0 rgb(71 85 105),
+            inset 0 1px 0 rgb(71 85 105);
     }
 
     .ui-register thead tr:first-child th {
@@ -534,10 +551,18 @@
         position: sticky;
         z-index: 11;
         @apply bg-white px-1 py-1.5 align-middle dark:bg-slate-800;
-        /* Толгойг биеэс нь тусгаарлах цорын ганц ирмэг. */
+        /* Багана хоорондын зураас + толгойг биеэс тусгаарлах ирмэг. */
         box-shadow:
-            inset 0 1px 0 rgb(199 210 254 / 0.7),
-            inset 0 -2px 0 theme('colors.brand-navy.200'),
+            inset -1px 0 0 theme('colors.brand-navy.200'),
+            inset 0 1px 0 theme('colors.brand-navy.200'),
+            inset 0 -2px 0 theme('colors.brand-navy.300'),
+            0 4px 6px -4px rgb(15 23 42 / 0.12);
+    }
+
+    thead tr.ui-filters th:last-child {
+        box-shadow:
+            inset 0 1px 0 theme('colors.brand-navy.200'),
+            inset 0 -2px 0 theme('colors.brand-navy.300'),
             0 4px 6px -4px rgb(15 23 42 / 0.12);
     }
 
