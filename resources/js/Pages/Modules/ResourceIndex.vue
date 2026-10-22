@@ -1174,12 +1174,15 @@ const destroyRow = (id) => {
             </p>
 
             <Teleport to="body">
+                <!-- PDF нь дэлгэцийн голд, жижиг цонхоор нээгдэнэ. -->
                 <div
                     v-if="previewRow?.file_is_pdf && previewRow.file_url"
-                    class="fixed inset-0 z-[80] flex flex-col bg-slate-900"
+                    class="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/50 p-4"
                     role="dialog"
                     aria-modal="true"
+                    @click.self="closePreview"
                 >
+                    <div class="flex h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
                     <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-slate-200 bg-white px-3 py-2.5 sm:px-4">
                         <div class="min-w-0 flex-1">
                             <h3 class="truncate text-sm font-semibold text-brand-navy-900">
@@ -1208,6 +1211,7 @@ const destroyRow = (id) => {
                         class="min-h-0 w-full flex-1 bg-slate-200"
                         :title="previewRow.file_name || 'PDF'"
                     />
+                    </div>
                 </div>
             </Teleport>
         </div>
