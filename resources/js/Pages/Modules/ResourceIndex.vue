@@ -1016,27 +1016,33 @@ const destroyRow = (id) => {
                                     <button
                                         v-if="row.file_url && row.file_is_pdf"
                                         type="button"
-                                        class="inline-flex max-w-xs items-center gap-1.5 text-left text-sm font-medium text-brand-navy-700 hover:underline"
+                                        :class="col.icon_only
+                                            ? 'ui-icon-btn mx-auto text-brand-navy-700'
+                                            : 'inline-flex max-w-xs items-center gap-1.5 text-left text-sm font-medium text-brand-navy-700 hover:underline'"
+                                        :title="row.file_name || 'Файлыг харах'"
                                         @click.stop="openPreview(row)"
                                     >
                                         <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M7 3h6l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
                                             <path stroke-linecap="round" d="M13 3v5h5" />
                                         </svg>
-                                        <span class="ui-clamp-2">{{ row.file_name || row[col.key] }}</span>
+                                        <span v-if="! col.icon_only" class="ui-clamp-2">{{ row.file_name || row[col.key] }}</span>
                                     </button>
                                     <a
                                         v-else-if="row.file_url"
                                         :href="row.file_url"
                                         target="_blank"
                                         rel="noopener"
-                                        class="inline-flex max-w-xs items-center gap-1.5 text-sm font-medium text-brand-navy-700 hover:underline"
+                                        :class="col.icon_only
+                                            ? 'ui-icon-btn mx-auto text-brand-navy-700'
+                                            : 'inline-flex max-w-xs items-center gap-1.5 text-sm font-medium text-brand-navy-700 hover:underline'"
+                                        :title="row.file_name || 'Файлыг татах'"
                                         @click.stop
                                     >
                                         <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2M8 12l4 4 4-4M12 4v12" />
                                         </svg>
-                                        <span class="ui-clamp-2">{{ row.file_name || row[col.key] }}</span>
+                                        <span v-if="! col.icon_only" class="ui-clamp-2">{{ row.file_name || row[col.key] }}</span>
                                     </a>
                                     <span v-else-if="! (col.upload && canEditInline)" class="text-slate-400">—</span>
 

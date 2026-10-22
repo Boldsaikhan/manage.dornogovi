@@ -146,9 +146,10 @@ return [
         'default_scope' => 'internal',
         'dynamic_scopes' => true,
         'columns' => [
-            ['key' => 'title', 'label' => 'Гарчиг'],
-            ['key' => 'file_label', 'label' => 'Файл', 'type' => 'file'],
-            ['key' => 'published_at', 'label' => 'Нийтэлсэн'],
+            ['key' => 'title', 'label' => 'Гарчиг', 'align' => 'left'],
+            ['key' => 'published_at', 'label' => 'Нийтэлсэн', 'width' => '12%'],
+            // Файл нь зөвхөн icon — нэр нь тайлбарт гарна.
+            ['key' => 'file_label', 'label' => 'Файл', 'type' => 'file', 'icon_only' => true, 'width' => '6%'],
         ],
         'fields' => [
             ['name' => 'title', 'label' => 'Гарчиг', 'type' => 'text', 'required' => true],
