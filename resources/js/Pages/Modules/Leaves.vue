@@ -629,7 +629,8 @@ const visibleRows = computed(() => {
                         <col style="width: 6rem" />
                         <col style="width: 14rem" />
                         <col style="width: 10rem" />
-                        <col style="width: 4rem" />
+                        <!-- Гурван icon (засах, хэвлэх, устгах) багтах өргөн. -->
+                        <col style="width: 7rem" />
                     </colgroup>
                     <thead>
                         <tr>
