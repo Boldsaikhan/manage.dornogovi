@@ -2,7 +2,6 @@
 import { computed, ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import AppExtensionManager from '@/Components/AppExtensionManager.vue';
 
 const props = defineProps({
     department: Object,
@@ -114,8 +113,6 @@ function selectCard(card) {
 <template>
     <AuthenticatedLayout title="Албан хаагчийн самбар">
         <div class="ui-page">
-
-            <AppExtensionManager notify-only />
 
             <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
                 <button

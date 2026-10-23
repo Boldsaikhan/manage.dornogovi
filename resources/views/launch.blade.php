@@ -112,9 +112,10 @@
         const target = document.getElementById('go').href;
         const status = document.getElementById('status');
         const stay = document.getElementById('stay');
-        const hasExtension = document.documentElement.dataset.mdExtension === '1';
+        // Ширээний програм дотор ажиллаж байгаа эсэх — тэр нь маягтыг бөглөнө.
+        const inDesktopApp = typeof window.manageDesktop?.autoLogin === 'function';
 
-        // Гар утас — өргөтгөл суудаггүй тул автоматаар бөглөх боломжгүй.
+        // Гар утас — автомат бөглөлт байхгүй.
         // Автоматаар үсрэхийн оронд мэдээллийг тод харуулж, хуулах товч өгнө.
         const onPhone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
             || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform));
@@ -123,7 +124,7 @@
 
         const go = () => location.replace(target);
 
-        // Нөөц зам (хуучин өргөтгөлтэй нийцүүлэх): хуудсаар дамжуулна.
+        // Нөөц зам: хуудсаар дамжуулна (програмын preload сонсоно).
         const postMessageFallback = (payload) => {
             window.addEventListener('message', (event) => {
                 if (event.origin === window.location.origin && event.data?.type === 'md-autologin-ready') {
@@ -150,8 +151,8 @@
             stay.disabled = true;
         });
 
-        if (hasExtension) {
-            // Өргөтгөл суусан: мэдээллийг түүнд шилжүүлээд, тэр нь маягтыг өөрөө бөглөнө.
+        if (inDesktopApp) {
+            // Ширээний програм: мэдээллийг түүнд шилжүүлээд, маягтыг өөрөө бөглөнө.
             status.textContent = 'Нэвтэрч байна…';
             document.getElementById('hint').style.display = 'none';
 
@@ -164,21 +165,17 @@
                 password: document.getElementById('p').value,
             };
 
-            const extensionId = document.documentElement.dataset.mdExtensionId;
-
-            // 1) Аюулгүй зам: мэдээллийг шууд өргөтгөл рүү илгээнэ.
-            //    Хуудсан дээрх бусад скрипт, өргөтгөл харах боломжгүй.
-            if (extensionId && window.chrome?.runtime?.sendMessage) {
-                try {
-                    chrome.runtime.sendMessage(extensionId, payload, () => go());
-                } catch (e) {
-                    postMessageFallback(payload);
-                }
-            } else {
+            /*
+             * Мэдээллийг програмын preload руу шууд өгнө — хуудсан дээрх
+             * бусад скрипт харах боломжгүй.
+             */
+            try {
+                Promise.resolve(window.manageDesktop.autoLogin(payload)).then(go, () => go());
+            } catch (e) {
                 postMessageFallback(payload);
             }
 
-            // Өргөтгөл хариу өгөхгүй бол ч гацахгүй.
+            // Програм хариу өгөхгүй бол ч гацахгүй.
             timer = setTimeout(go, 2000);
         } else if (onPhone) {
             // Утсан дээр өөрөө үсрэхгүй — хэрэглэгч нэр, нууц үгээ хуулж аваад орно.

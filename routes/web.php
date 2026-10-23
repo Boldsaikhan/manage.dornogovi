@@ -12,8 +12,8 @@ use App\Http\Controllers\CredentialController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DecreeController;
 use App\Http\Controllers\DepartmentDashboardController;
+use App\Http\Controllers\DesktopAppController;
 use App\Http\Controllers\DocumentStandardController;
-use App\Http\Controllers\ExtensionController;
 use App\Http\Controllers\LaunchController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\LeaveSlipController;
@@ -197,13 +197,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/ai/confirm', [AiAssistantController::class, 'confirm'])->name('ai.confirm');
     Route::post('/ai/conversations', [AiAssistantController::class, 'newConversation'])->name('ai.conversations.store');
 
-    Route::get('/extension/download', [ExtensionController::class, 'download'])->name('extension.download');
-    // ⚠️ Зам нь «.zip»-ээр төгсдөггүй — nginx-ийн статик файлын дүрэм
-    // (css|js|...|zip|...) ийм URL-ийг Laravel руу дамжуулахгүй шууд
-    // 404 буцаадаг тул «-zip» гэж бичсэн (цэггүй).
-    Route::get('/extension/download-zip', [ExtensionController::class, 'downloadZip'])->name('extension.download.zip');
-    // Windows суулгац — өргөтгөл + суулгах скрипт.
-    Route::get('/extension/setup', [ExtensionController::class, 'downloadSetup'])->name('extension.setup');
+    // Windows ширээний програмын суулгац.
+    Route::get('/desktop/download', [DesktopAppController::class, 'download'])->name('desktop.download');
     Route::get('/systems/{system}/launch', LaunchController::class)->name('systems.launch');
     Route::get('/systems/{system}', [SystemViewController::class, 'show'])->name('systems.show');
 
