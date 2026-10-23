@@ -321,7 +321,8 @@
     /* Урт бичвэрийг 2 мөрөнд багтаана — бүтэн утга title-аар */
     /* Хүснэгтийн мөрийн үйлдэл — зөвхөн icon. */
     .ui-icon-btn {
-        @apply inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200
+        /* shrink-0 — нэг мөрөнд хэд ч байсан хэмжээ нь жижгэрэхгүй. */
+        @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200
             bg-white text-slate-500 transition hover:bg-slate-50 hover:text-brand-navy-700
             disabled:cursor-not-allowed disabled:opacity-50
             dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400
