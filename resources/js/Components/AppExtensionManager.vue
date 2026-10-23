@@ -240,6 +240,13 @@ const downloadExtension = async () => {
             >
                 Шалгах
             </button>
+            <a
+                :href="route('extension.setup')"
+                class="ui-btn-ghost !py-1.5 text-xs"
+                title="Windows суулгац — задалж СУУЛГАХ.bat ажиллуулна"
+            >
+                Windows суулгац
+            </a>
             <button
                 type="button"
                 class="ui-btn-ghost !py-1.5 text-xs"
@@ -250,7 +257,11 @@ const downloadExtension = async () => {
         </div>
 
         <ol v-if="showHelp" class="list-decimal space-y-1 rounded-lg bg-slate-50 px-3 py-2 pl-5 text-xs leading-relaxed text-slate-600">
-            <li>«Өргөтгөл татах» дарахад <b>manage-dornogovi-extension.zip</b> шууд татагдана.</li>
+            <li>
+                <b>Windows суулгац</b> — задалж <b>СУУЛГАХ.bat</b> ажиллуулахад өргөтгөл
+                хуулагдаж, ширээн дээр товчлол үүснэ (хамгийн хялбар арга).
+            </li>
+            <li>Эсвэл «Өргөтгөл татах» дарахад <b>manage-dornogovi-extension.zip</b> шууд татагдана.</li>
             <li>ZIP файлыг задлана (Задлах / Extract All).</li>
             <li>Задарсан хавтас доторх <b>install.bat</b> ажиллуулна (эсвэл chrome://extensions нээнэ).</li>
             <li><b>Developer mode</b> асаагаад <b>Load unpacked</b> → задарсан хавтсыг сонгоно.</li>

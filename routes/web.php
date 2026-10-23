@@ -202,6 +202,8 @@ Route::middleware('auth')->group(function () {
     // (css|js|...|zip|...) ийм URL-ийг Laravel руу дамжуулахгүй шууд
     // 404 буцаадаг тул «-zip» гэж бичсэн (цэггүй).
     Route::get('/extension/download-zip', [ExtensionController::class, 'downloadZip'])->name('extension.download.zip');
+    // Windows суулгац — өргөтгөл + суулгах скрипт.
+    Route::get('/extension/setup', [ExtensionController::class, 'downloadSetup'])->name('extension.setup');
     Route::get('/systems/{system}/launch', LaunchController::class)->name('systems.launch');
     Route::get('/systems/{system}', [SystemViewController::class, 'show'])->name('systems.show');
 

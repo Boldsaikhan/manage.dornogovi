@@ -95,6 +95,60 @@ class ExtensionController extends Controller
     }
 
     /**
+     * Windows суулгац — өргөтгөл + суулгах скриптүүд нэг ZIP-д.
+     *
+     * Задалж «СУУЛГАХ.bat» ажиллуулахад өргөтгөл байнгын хавтсанд
+     * хуулагдаж, ширээн дээр товчлол үүснэ.
+     */
+    public function downloadSetup(): StreamedResponse
+    {
+        $extDir = base_path('browser-extension');
+        $setupDir = base_path('desktop-setup');
+
+        abort_unless(is_dir($extDir) && is_dir($setupDir), 404);
+
+        $tmp = tempnam(sys_get_temp_dir(), 'setupzip');
+        $zipPath = $tmp.'.zip';
+        @unlink($tmp);
+
+        $zip = new ZipArchive;
+        abort_unless($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true, 500);
+
+        $folder = 'Manage-Dornogovi-Setup';
+
+        // Суулгах скриптүүд үндсэн хавтаст.
+        foreach (scandir($setupDir) ?: [] as $name) {
+            $path = $setupDir.DIRECTORY_SEPARATOR.$name;
+
+            if (! is_file($path)) {
+                continue;
+            }
+
+            $zip->addFile($path, $folder.'/'.$name);
+        }
+
+        // Өргөтгөл нь «extension» дэд хавтаст — install.ps1 түүнийг хайна.
+        foreach ($this->relativeFiles() as $relative) {
+            $path = $extDir.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $relative);
+
+            if (! is_file($path)) {
+                continue;
+            }
+
+            $zip->addFile($path, $folder.'/extension/'.$relative);
+        }
+
+        $zip->close();
+
+        return response()->streamDownload(function () use ($zipPath) {
+            readfile($zipPath);
+            @unlink($zipPath);
+        }, $folder.'.zip', [
+            'Content-Type' => 'application/zip',
+        ]);
+    }
+
+    /**
      * Нэг ZIP — дотор нь manage-dornogovi-extension/ хавтас (бүх файл).
      * Задаад Load unpacked хийнэ.
      */
