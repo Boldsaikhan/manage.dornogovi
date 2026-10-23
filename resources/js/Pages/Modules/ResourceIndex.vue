@@ -31,6 +31,7 @@ const props = defineProps({
     scopeCategories: { type: Array, default: () => [] },
     storeUrl: String,
     scopeTabs: { type: Array, default: () => [] },
+    externalLink: { type: Object, default: null },
     activeScope: { type: String, default: 'all' },
     scopeField: { type: String, default: null },
     directory: { type: Array, default: () => [] },
@@ -744,6 +745,19 @@ const destroyRow = (id) => {
                 <span v-if="! scopeTabs.length" class="flex-1" />
 
                 <div class="flex shrink-0 items-center gap-1 border-l border-slate-200 pl-2">
+                    <a
+                        v-if="externalLink"
+                        :href="externalLink.url"
+                        target="_blank"
+                        rel="noopener"
+                        class="ui-icon-btn"
+                        :title="externalLink.title || externalLink.label"
+                        :aria-label="externalLink.label"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14 4h6v6M20 4l-8 8M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4" />
+                        </svg>
+                    </a>
                     <button
                         v-if="canImport"
                         type="button"
@@ -1012,7 +1026,24 @@ const destroyRow = (id) => {
                                     col.align === 'left' ? 'text-left' : '',
                                 ]"
                             >
-                                <template v-if="isFileColumn(col)">
+                                <!-- Эх сурвалжийн холбоос — зөвхөн icon. -->
+                                <template v-if="col.type === 'link' && ! (canEditInline && col.edit)">
+                                    <a
+                                        v-if="row[col.key]"
+                                        :href="row[col.key]"
+                                        target="_blank"
+                                        rel="noopener"
+                                        class="ui-icon-btn mx-auto text-brand-navy-700"
+                                        :title="row[col.key]"
+                                        @click.stop
+                                    >
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14 4h6v6M20 4l-8 8M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4" />
+                                        </svg>
+                                    </a>
+                                    <span v-else class="text-slate-300">—</span>
+                                </template>
+                                <template v-else-if="isFileColumn(col)">
                                     <button
                                         v-if="row.file_url && row.file_is_pdf"
                                         type="button"

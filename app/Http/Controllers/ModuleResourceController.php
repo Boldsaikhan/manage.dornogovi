@@ -132,6 +132,8 @@ class ModuleResourceController extends Controller
             // Тусгай маягттай модуль (жишээ нь томилолтын удирдамж) — A4 хэлбэрээр бөглөнө.
             'formLayout' => $config['form_layout'] ?? null,
             'formMeta' => $this->formMeta($config, $activeScope),
+            // Гадаад эх сурвалж руу шууд очих холбоос (жишээ нь legalinfo.mn).
+            'externalLink' => $config['external_link'] ?? null,
             'canManage' => ModuleAccess::canEdit($request->user(), $module),
             'storeUrl' => route('modules.store', $module),
             'destroyUrlTemplate' => url('/modules/'.$module).'/{id}',

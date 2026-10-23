@@ -90,6 +90,15 @@ return [
             'icon' => 'hash',
         ],
         [
+            'key' => 'legal_acts',
+            'label' => 'Эрх зүйн акт, тогтоол',
+            'route' => 'legal-acts.index',
+            'group' => 'documents',
+            'icon' => 'book',
+            // Бүгд хардаг, өөрийн оруулсныг нь л засдаг.
+            'own_scope' => 'public_read_own_write',
+        ],
+        [
             'key' => 'archives',
             'label' => 'Архив',
             'route' => 'archives.index',
