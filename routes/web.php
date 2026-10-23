@@ -152,6 +152,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/modules/decrees/{decree}/image', [DecreeController::class, 'destroyImage'])->name('decrees.image.destroy');
     Route::delete('/modules/decrees/{decree}', [DecreeController::class, 'destroy'])->name('decrees.destroy');
     Route::get('/modules/contracts', [ModuleResourceController::class, 'index'])->name('contracts.index');
+    Route::get('/modules/legal_acts', [ModuleResourceController::class, 'index'])->name('legal-acts.index');
     Route::get('/modules/archives', [ModuleResourceController::class, 'index'])->name('archives.index');
     Route::get('/modules/doc_standards', [DocumentStandardController::class, 'index'])->name('doc-standards.index');
     Route::patch('/document-formats/{format}', [DocumentStandardController::class, 'updateFormat'])->name('document-formats.update');
