@@ -37,3 +37,16 @@ npm run dist
 npm start                      # production сервер рүү холбогдоно
 MD_SITE_URL=http://localhost npm start
 ```
+
+## Windows дээр бүтээхэд гарч болох алдаа
+
+electron-builder нь кодын гэрийн баталгааны хэрэгслээ 7z-ээс задлахдаа
+macOS-ийн symlink үүсгэж чаддаггүй (`A required privilege is not held`).
+Шийдэл — тэр хавтсыг `darwin`-гүйгээр гараар задлах:
+
+```bash
+C="$LOCALAPPDATA/electron-builder/Cache/winCodeSign"
+./node_modules/7zip-bin/win/x64/7za.exe x -snld -y '-xr!darwin' \
+    "$C/<татсан>.7z" "-o$C/winCodeSign-2.6.0"
+npm run dist
+```
