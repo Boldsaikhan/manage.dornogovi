@@ -30,7 +30,13 @@
             font: 13px/1.2 "Segoe UI", system-ui, sans-serif;
             color: #fff;
             user-select: none;
+            /* Цонхны толгой нь энэ мөр — эндээс чирнэ. */
+            -webkit-app-region: drag;
+            /* Баруун талд Windows-ийн багасгах/хаах товчнууд. */
+            padding-right: 146px;
         }
+
+        button, .tab { -webkit-app-region: no-drag; }
 
         .nav {
             display: flex;
@@ -121,10 +127,19 @@
 
         .tab.active .close:hover { background: var(--navy-100); }
 
+        .icon {
+            flex: none;
+            width: 16px;
+            height: 16px;
+            object-fit: contain;
+            border-radius: 3px;
+        }
+
         .dot {
             flex: none;
             width: 7px;
             height: 7px;
+            margin: 0 4px;
             border-radius: 50%;
             background: currentColor;
             opacity: .45;
@@ -191,14 +206,25 @@
             node.title = tab.title;
             node.addEventListener('click', () => window.mdTabs.activate(tab.id));
 
-            const dot = document.createElement('span');
-            dot.className = 'dot';
+            const mark = tab.icon ? document.createElement('img') : document.createElement('span');
+
+            if (tab.icon) {
+                mark.className = 'icon';
+                mark.src = tab.icon;
+                mark.alt = '';
+                // Татагдаагүй бол цэг болгоно.
+                mark.addEventListener('error', () => {
+                    mark.replaceWith(Object.assign(document.createElement('span'), { className: 'dot' }));
+                });
+            } else {
+                mark.className = 'dot';
+            }
 
             const label = document.createElement('span');
             label.className = 'label';
             label.textContent = tab.title;
 
-            node.append(dot, label);
+            node.append(mark, label);
 
             if (tab.closable) {
                 const close = document.createElement('button');
