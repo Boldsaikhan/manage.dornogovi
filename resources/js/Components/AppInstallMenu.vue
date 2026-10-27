@@ -262,9 +262,20 @@ const toggle = () => {
 
                     <ol class="list-decimal space-y-1 rounded-lg bg-slate-50 px-3 py-2 pl-5 text-xs leading-relaxed text-slate-600">
                         <li>Татсан <b>Manage-Dornogovi-Setup.exe</b> файлыг ажиллуулна.</li>
+                        <li>
+                            Windows «<b>Windows protected your PC</b>» гэж сануулбал
+                            <b>More info</b> → <b>Run anyway</b> дарна.
+                        </li>
+                        <li>Суулгацын тайлбарыг уншаад <b>Install</b> дарж дуустал хүлээнэ.</li>
                         <li>Ширээн дээр үүссэн <b>Manage Dornogovi</b> товчлолоор орно.</li>
                         <li>«Холбосон системүүд» цэсэнд нэвтрэх мэдээллээ нэг удаа хадгална.</li>
                     </ol>
+
+                    <p class="rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-800">
+                        Програм нь гарын үсэг (code signing) гэрчилгээгүй тул Windows
+                        анх удаа сануулга өгдөг. Энэ нь вирус гэсэн үг биш — суулгац
+                        манай системээс татагдаж байна.
+                    </p>
                 </div>
             </div>
         </Transition>
