@@ -9,7 +9,7 @@
  * Админ «хүчээр» гэж тохируулсан бол «Дараа» сонголт гарахгүй.
  */
 
-const { app, BrowserWindow, dialog, ipcMain, net } = require('electron');
+const { app, BrowserWindow, ipcMain, net } = require('electron');
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -244,21 +244,19 @@ const openWindow = (parent) => {
  * @param {string} siteUrl
  * @param {{silent?: boolean, parent?: import('electron').BaseWindow|null}} options
  */
-async function checkForUpdates(siteUrl, { silent = true, parent = null } = {}) {
+async function checkForUpdates(siteUrl, { silent = true, parent = null, notify = null } = {}) {
+    // Тусдаа цонх биш, програмын дотор богино мэдэгдэл харуулна.
+    const say = (text) => {
+        if (! silent && typeof notify === 'function') {
+            notify(text);
+        }
+    };
     let manifest;
 
     try {
         manifest = await fetchJson(new URL('/desktop/version', siteUrl).toString());
     } catch (error) {
-        if (! silent) {
-            dialog.showMessageBox({
-                type: 'warning',
-                title: 'Шинэчлэлт',
-                message: 'Шинэчлэлтийг шалгаж чадсангүй.',
-                detail: error.message,
-                buttons: ['Хаах'],
-            });
-        }
+        say('Шинэчлэлтийг шалгаж чадсангүй.');
 
         return false;
     }
@@ -267,15 +265,7 @@ async function checkForUpdates(siteUrl, { silent = true, parent = null } = {}) {
     const current = app.getVersion();
 
     if (! manifest?.available || latest === '' || compareVersions(latest, current) <= 0) {
-        if (! silent) {
-            dialog.showMessageBox({
-                type: 'info',
-                title: 'Шинэчлэлт',
-                message: 'Та хамгийн сүүлийн хувилбарыг ашиглаж байна.',
-                detail: `Хувилбар ${current}`,
-                buttons: ['Хаах'],
-            });
-        }
+        say(`Хамгийн сүүлийн хувилбар (v${current}) ажиллаж байна.`);
 
         return false;
     }
