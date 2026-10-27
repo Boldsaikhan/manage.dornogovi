@@ -196,6 +196,7 @@ const sendState = () => {
             title: tab.title,
             active: tab.id === activeId,
             closable: ! tab.home,
+            icon: tab.icon,
         })),
         canGoBack: current ? canGoBack(current.view.webContents) : false,
     });
@@ -253,6 +254,18 @@ const wire = (tab) => {
         }
 
         sendState();
+    });
+
+    webContents.on('page-favicon-updated', (event, icons) => {
+        tab.icon = Array.isArray(icons) && icons.length > 0 ? icons[0] : null;
+        sendState();
+    });
+
+    // Шинэ хаяг руу шилжихэд хуучин icon үлдэхгүй.
+    webContents.on('did-start-navigation', (event, url, isInPlace, isMainFrame) => {
+        if (isMainFrame && ! isInPlace) {
+            tab.icon = null;
+        }
     });
 
     webContents.on('did-navigate', sendState);
@@ -319,6 +332,7 @@ const createTab = (url, { home = false } = {}) => {
         view,
         title: home ? 'Самбар' : 'Ачаалж байна…',
         home,
+        icon: null,
         // Аль холбоосоор нээгдсэн — дахин дарвал ижил таб руугаа шилжинэ.
         openedWith: url,
     };
@@ -382,8 +396,18 @@ const createMainWindow = () => {
         height: 900,
         minWidth: 1024,
         minHeight: 640,
-        backgroundColor: '#ffffff',
+        backgroundColor: '#164789',
         title: 'Manage Dornogovi',
+        /*
+         * Цагаан хүрээ биш — табын мөр нь цонхны толгой болно.
+         * Windows-ийн багасгах/хаах товчнуудыг цэнхэр дэвсгэр дээр зурна.
+         */
+        titleBarStyle: 'hidden',
+        titleBarOverlay: {
+            color: '#164789',
+            symbolColor: '#e4eef8',
+            height: TAB_BAR_HEIGHT,
+        },
     });
 
     tabBar = new WebContentsView({
