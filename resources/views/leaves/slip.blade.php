@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Чөлөөний хуудас №{{ $slipNumber ?: $leave->id }}</title>
     @php
-        $pageWidth = 210;
-        $pageHeight = 297;
+        // Хэмжээ нь контроллероос ирнэ (A4/A5, босоо/хэвтээ).
+        $pageWidth = $pageWidth ?? 210;
+        $pageHeight = $pageHeight ?? 297;
         // Албан бичгийн захын зай — агуулгын өндөр / 3 ≈ нэг хуудасны өндөр
         $marginTop = 12;
         $marginRight = 12;
