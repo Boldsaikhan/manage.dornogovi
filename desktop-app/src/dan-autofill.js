@@ -106,8 +106,37 @@ function runDanAutofill(entry, { onFilled = () => {} } = {}) {
             .slice(0, index)
             .filter((el) => el.tagName === 'SELECT'
                 || el.maxLength === 1
-                || (el.placeholder ?? '').trim().length === 1)
+                || (el.placeholder ?? '').trim().length === 1
+                // Нэг үсгийн нүд нь нарийхан байдаг.
+                || el.getBoundingClientRect().width < 64)
             .slice(-2);
+    };
+
+    /**
+     * Хүний бичилт шиг оруулна.
+     *
+     * Нэг тэмдэгтийн нүднүүд нь товчлуурын үйлдлээр л утгаа хүлээн
+     * авдаг байж болох тул эхлээд execCommand('insertText')-ээр
+     * оролдоод, бүтэхгүй бол шууд утга онооно.
+     */
+    const typeInto = (el, value) => {
+        try {
+            el.focus();
+            el.select?.();
+
+            if (document.execCommand('insertText', false, value) && el.value === value) {
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+                el.dispatchEvent(new KeyboardEvent('keyup', { key: value, bubbles: true }));
+
+                return true;
+            }
+        } catch {
+            // execCommand дэмжигдээгүй — доорх аргаар оролдоно.
+        }
+
+        setValue(el, value);
+
+        return el.value === value;
     };
 
     const setLetter = (el, letter) => {
@@ -122,7 +151,7 @@ function runDanAutofill(entry, { onFilled = () => {} } = {}) {
             return;
         }
 
-        setValue(el, letter);
+        typeInto(el, letter);
     };
 
     const submit = () => {
@@ -267,6 +296,11 @@ function runDanAutofill(entry, { onFilled = () => {} } = {}) {
                 clearInterval(guard);
 
                 return;
+            }
+
+            if (boxes.length === 2) {
+                if ((boxes[0].value ?? '').toUpperCase() !== letters[0]) setLetter(boxes[0], letters[0]);
+                if ((boxes[1].value ?? '').toUpperCase() !== letters[1]) setLetter(boxes[1], letters[1]);
             }
 
             if (numberField.value !== wanted) setValue(numberField, wanted);
