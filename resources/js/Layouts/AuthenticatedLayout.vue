@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import { Link, router, usePage, Head } from '@inertiajs/vue3';
+import { Link, usePage, Head } from '@inertiajs/vue3';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import StateEmblem from '@/Components/StateEmblem.vue';
@@ -208,7 +208,7 @@ const onLinkedSystemClick = (sys, event) => {
     // зогссон хоосон шинэ таб дараалан нээгдэж, "үсэрдэггүй" мэт санагддаг.
     if (sys.requires_login && (! sys.has_credential || ! vaultUnlocked.value)) {
         event.preventDefault();
-        router.visit(route('systems.show', sys.id));
+        openSystemSettings(sys);
     }
 };
 </script>

@@ -37,6 +37,59 @@ const form = useForm({
 const isDan = computed(() => form.auth_type === 'dan');
 const saved = computed(() => Boolean(detail.value?.has_credential));
 
+/* ── Хадгалсан нууц үгийг харах ──────────────────────────────────────
+ *
+ * Өөр хүн харахаас сэргийлж, эзнийхээ Manage нууц үгээр баталгаажуулна.
+ */
+const revealOpen = ref(false);
+const revealPassword = ref('');
+const revealError = ref('');
+const revealBusy = ref(false);
+
+const closeReveal = () => {
+    revealOpen.value = false;
+    revealPassword.value = '';
+    revealError.value = '';
+};
+
+const toggleReveal = () => {
+    // Шинээр бичиж байгаа бол зүгээр л харуулна.
+    if (! saved.value || form.password) {
+        showPassword.value = ! showPassword.value;
+
+        return;
+    }
+
+    revealOpen.value = true;
+    revealPassword.value = '';
+    revealError.value = '';
+};
+
+const submitReveal = async () => {
+    if (revealBusy.value || ! revealPassword.value) {
+        return;
+    }
+
+    revealBusy.value = true;
+    revealError.value = '';
+
+    try {
+        const { data } = await window.axios.post(route('credentials.reveal', props.system.id), {
+            account_password: revealPassword.value,
+        });
+
+        form.username = data.username ?? form.username;
+        form.password = data.password ?? '';
+        showPassword.value = true;
+        closeReveal();
+    } catch (e) {
+        revealError.value = e?.response?.data?.errors?.account_password?.[0]
+            || 'Харуулж чадсангүй.';
+    } finally {
+        revealBusy.value = false;
+    }
+};
+
 const load = async () => {
     if (! props.system) {
         return;
@@ -46,6 +99,9 @@ const load = async () => {
     loadError.value = '';
     detail.value = null;
     showPassword.value = false;
+    revealOpen.value = false;
+    revealPassword.value = '';
+    revealError.value = '';
     form.clearErrors();
 
     try {
@@ -152,11 +208,45 @@ const remove = () => {
                         <button
                             type="button"
                             class="ui-btn-ghost shrink-0 !px-3"
-                            :title="showPassword ? 'Нуух' : 'Харах'"
-                            @click="showPassword = ! showPassword"
+                            :title="saved && ! form.password
+                                ? 'Хадгалсан нууц үгийг харах'
+                                : (showPassword ? 'Нуух' : 'Харах')"
+                            @click="toggleReveal"
                         >
-                            {{ showPassword ? 'Нуух' : 'Харах' }}
+                            {{ showPassword && form.password ? 'Нуух' : 'Харах' }}
                         </button>
+                    </div>
+
+                    <div
+                        v-if="revealOpen"
+                        class="mt-2 rounded-xl border border-brand-navy-100 bg-brand-navy-50/60 p-3"
+                    >
+                        <p class="text-xs leading-relaxed text-brand-navy-700">
+                            Хадгалсан нууц үгийг харахын тулд өөрийн
+                            <b>Manage-ийн нууц үг</b>-ээ оруулна.
+                        </p>
+                        <input
+                            v-model="revealPassword"
+                            type="password"
+                            autocomplete="current-password"
+                            class="ui-input mt-2"
+                            placeholder="Таны Manage-ийн нууц үг"
+                            @keyup.enter.prevent="submitReveal"
+                        >
+                        <p v-if="revealError" class="mt-1 text-xs text-rose-600">{{ revealError }}</p>
+                        <div class="mt-2 flex justify-end gap-2">
+                            <button type="button" class="ui-btn-ghost !px-3 !py-1.5 text-xs" @click="closeReveal">
+                                Болих
+                            </button>
+                            <button
+                                type="button"
+                                class="ui-btn-primary !px-3 !py-1.5 text-xs"
+                                :disabled="revealBusy || ! revealPassword"
+                                @click="submitReveal"
+                            >
+                                {{ revealBusy ? 'Шалгаж байна…' : 'Харуулах' }}
+                            </button>
+                        </div>
                     </div>
                     <p v-if="saved && ! form.password" class="mt-1 text-xs text-slate-500">
                         Хоосон орхивол хуучин нууц үг хэвээр үлдэнэ.
@@ -197,17 +287,10 @@ const remove = () => {
                     <div class="flex gap-2">
                         <button type="button" class="ui-btn-ghost" @click="emit('close')">Болих</button>
                         <button type="submit" class="ui-btn-primary" :disabled="form.processing">
-                            {{ form.processing ? 'Хадгалж байна…' : (saved ? 'Шинэчлэх' : 'Хадгалах') }}
+                            {{ form.processing ? 'Хадгалж байна…' : 'Хадгалах' }}
                         </button>
                     </div>
                 </div>
-
-                <a
-                    :href="route('systems.show', system.id)"
-                    class="block pt-1 text-center text-xs text-brand-navy-600 hover:underline"
-                >
-                    Дэлгэрэнгүй тохиргоо
-                </a>
             </form>
         </div>
     </Modal>
