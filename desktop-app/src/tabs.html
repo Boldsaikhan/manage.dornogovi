@@ -5,10 +5,12 @@
     <title>Табууд</title>
     <style>
         :root {
-            --navy: #1c55a5;
-            --navy-dark: #143f7c;
-            --line: #e2e8f0;
-            --muted: #64748b;
+            --navy-600: #1c55a5;
+            --navy-700: #164789;
+            --navy-800: #153b70;
+            --navy-900: #15335d;
+            --navy-300: #93b9e0;
+            --navy-100: #e4eef8;
         }
 
         * { box-sizing: border-box; }
@@ -21,13 +23,12 @@
 
         body {
             display: flex;
-            align-items: flex-end;
-            gap: 6px;
-            padding: 0 8px;
-            background: #f1f5f9;
-            border-bottom: 1px solid var(--line);
+            align-items: center;
+            gap: 8px;
+            padding: 0 10px;
+            background: linear-gradient(180deg, var(--navy-700) 0%, var(--navy-800) 100%);
             font: 13px/1.2 "Segoe UI", system-ui, sans-serif;
-            color: #0f172a;
+            color: #fff;
             user-select: none;
         }
 
@@ -35,7 +36,6 @@
             display: flex;
             align-items: center;
             gap: 2px;
-            padding-bottom: 6px;
         }
 
         .nav button {
@@ -46,16 +46,22 @@
             border: 0;
             border-radius: 8px;
             background: transparent;
-            color: var(--muted);
+            color: var(--navy-300);
+            font-size: 15px;
             cursor: pointer;
+            transition: background .15s, color .15s;
         }
 
-        .nav button:hover:not(:disabled) { background: #e2e8f0; color: #0f172a; }
-        .nav button:disabled { opacity: .35; cursor: default; }
+        .nav button:hover:not(:disabled) {
+            background: rgba(255, 255, 255, .14);
+            color: #fff;
+        }
+
+        .nav button:disabled { opacity: .3; cursor: default; }
 
         #tabs {
             display: flex;
-            align-items: flex-end;
+            align-items: center;
             gap: 4px;
             overflow: hidden;
             flex: 1;
@@ -66,25 +72,24 @@
             align-items: center;
             gap: 8px;
             min-width: 0;
-            max-width: 240px;
+            max-width: 230px;
             flex: 0 1 auto;
-            height: 34px;
+            height: 30px;
             padding: 0 6px 0 12px;
-            border: 1px solid transparent;
-            border-bottom: 0;
-            border-radius: 10px 10px 0 0;
-            background: transparent;
-            color: var(--muted);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .08);
+            color: var(--navy-100);
             cursor: pointer;
+            transition: background .15s, color .15s;
         }
 
-        .tab:hover { background: #e2e8f0; }
+        .tab:hover { background: rgba(255, 255, 255, .18); }
 
         .tab.active {
             background: #fff;
-            border-color: var(--line);
-            color: #0f172a;
+            color: var(--navy-800);
             font-weight: 600;
+            box-shadow: 0 1px 6px rgba(0, 0, 0, .18);
         }
 
         .tab .label {
@@ -95,45 +100,59 @@
 
         .tab .close {
             flex: none;
-            width: 20px;
-            height: 20px;
+            width: 19px;
+            height: 19px;
             display: grid;
             place-items: center;
             border: 0;
-            border-radius: 6px;
+            border-radius: 50%;
             background: transparent;
             color: inherit;
             font-size: 14px;
             line-height: 1;
+            opacity: .65;
             cursor: pointer;
         }
 
-        .tab .close:hover { background: #cbd5e1; }
+        .tab .close:hover {
+            background: rgba(0, 0, 0, .12);
+            opacity: 1;
+        }
+
+        .tab.active .close:hover { background: var(--navy-100); }
 
         .dot {
             flex: none;
-            width: 8px;
-            height: 8px;
+            width: 7px;
+            height: 7px;
             border-radius: 50%;
-            background: var(--navy);
-            opacity: .35;
+            background: currentColor;
+            opacity: .45;
         }
 
-        .tab.active .dot { opacity: 1; }
+        .tab.active .dot {
+            background: var(--navy-600);
+            opacity: 1;
+        }
 
         .version {
             flex: none;
-            margin-bottom: 7px;
-            padding: 4px 10px;
-            border: 1px solid var(--line);
+            padding: 4px 11px;
+            border: 1px solid rgba(255, 255, 255, .25);
             border-radius: 999px;
-            background: #fff;
-            color: var(--muted);
+            background: transparent;
+            color: var(--navy-300);
             font-size: 11px;
+            letter-spacing: .02em;
             cursor: pointer;
+            transition: background .15s, color .15s, border-color .15s;
         }
 
-        .version:hover { color: var(--navy); border-color: var(--navy); }
+        .version:hover {
+            background: rgba(255, 255, 255, .14);
+            border-color: transparent;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -149,7 +168,6 @@
     <script>
         const list = document.getElementById('tabs');
         const back = document.getElementById('back');
-
         const update = document.getElementById('update');
 
         window.mdTabs.version().then((version) => {
