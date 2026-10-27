@@ -15,8 +15,30 @@ const props = defineProps({
     menuGroups: { type: Array, default: () => [] },
     aiModules: { type: Array, default: () => [] },
     verify: { type: Object, default: () => ({}) },
+    desktop: { type: Object, default: () => ({}) },
     genitiveWords: { type: Array, default: () => [] },
 });
+
+/* ── Ширээний програм ───────────────────────────────────────────────
+ *
+ * Байршуулсан суулгацын хувилбарыг бичихэд суусан програм шинэчлэлтээ
+ * олж, хэрэглэгчээс зөвшөөрөл асууна.
+ */
+const desktopForm = useForm({
+    version: props.desktop.version ?? '',
+    force: Boolean(props.desktop.force),
+    notes: props.desktop.notes ?? '',
+});
+
+const desktopSize = computed(() => {
+    const bytes = props.desktop.size;
+
+    return bytes ? `${(bytes / 1024 / 1024).toFixed(1)} МБ` : '';
+});
+
+const saveDesktop = () => {
+    desktopForm.patch(route('admin.desktop-settings.update'), { preserveScroll: true });
+};
 
 const page = usePage();
 
@@ -89,6 +111,7 @@ const SETTINGS_TABS = [
     { id: 'ai', label: 'Manage AI' },
     { id: 'verify', label: 'Утсаар сэргээх' },
     { id: 'push', label: 'Push мэдэгдэл' },
+    { id: 'desktop', label: 'Ширээний програм' },
     { id: 'genitive', label: 'Тийн ялгал' },
     { id: 'systems', label: 'Гадны системүүд' },
 ];
@@ -1104,6 +1127,79 @@ const saveAi = () => {
                 </p>
             </div>
             <PushSubscribe class="max-w-xl" />
+        </section>
+
+        <section
+            v-show="activeTab === 'desktop'"
+            class="rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm"
+            role="tabpanel"
+        >
+            <div class="mb-4">
+                <h2 class="text-base font-semibold text-brand-navy-900">Ширээний програм</h2>
+                <p class="mt-1 max-w-2xl text-sm text-brand-navy-400">
+                    Шинэ суулгацыг толгойн <b>дэлгэцний icon</b> дээрээс байршуулаад,
+                    хувилбарынх нь дугаарыг энд бичнэ. Суусан програм 6 цаг тутамд
+                    шалгаж, шинэ хувилбар гарсан бол «Одоо шинэчлэх / Дараа» гэж асууна.
+                </p>
+            </div>
+
+            <form class="max-w-xl space-y-4" @submit.prevent="saveDesktop">
+                <div
+                    class="rounded-xl border px-4 py-3 text-sm"
+                    :class="desktop.available
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                        : 'border-amber-200 bg-amber-50 text-amber-800'"
+                >
+                    <template v-if="desktop.available">
+                        Суулгац байршуулсан — {{ desktopSize }}.
+                    </template>
+                    <template v-else>
+                        Суулгац байршуулаагүй байна.
+                    </template>
+                </div>
+
+                <div>
+                    <label class="ui-label" for="desktop-version">Хувилбар</label>
+                    <input
+                        id="desktop-version"
+                        v-model="desktopForm.version"
+                        class="ui-input"
+                        placeholder="1.1.0"
+                        inputmode="decimal"
+                    >
+                    <p class="mt-1 text-xs text-slate-500">
+                        Байршуулсан суулгацын хувилбар. Хоосон бол шинэчлэлт шалгахгүй.
+                    </p>
+                    <InputError :message="desktopForm.errors.version" class="mt-1" />
+                </div>
+
+                <label class="flex items-start gap-2 text-sm text-slate-700">
+                    <input v-model="desktopForm.force" type="checkbox" class="mt-0.5 rounded border-slate-300">
+                    <span>
+                        <b>Шинэчлэлтийг хүчээр хийлгэх</b>
+                        <span class="block text-xs text-slate-500">
+                            Асаавал «Дараа» сонголт гарахгүй — хэрэглэгч шинэчлэхээс нааш
+                            програмаар ажиллах боломжгүй.
+                        </span>
+                    </span>
+                </label>
+
+                <div>
+                    <label class="ui-label" for="desktop-notes">Шинэчлэлтийн тайлбар</label>
+                    <textarea
+                        id="desktop-notes"
+                        v-model="desktopForm.notes"
+                        rows="3"
+                        class="ui-input"
+                        placeholder="Юу өөрчлөгдсөнийг товч бичнэ — цонхонд харагдана."
+                    ></textarea>
+                    <InputError :message="desktopForm.errors.notes" class="mt-1" />
+                </div>
+
+                <button type="submit" class="ui-btn-primary" :disabled="desktopForm.processing">
+                    Тохиргоо хадгалах
+                </button>
+            </form>
         </section>
 
         <section

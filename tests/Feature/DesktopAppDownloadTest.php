@@ -97,6 +97,33 @@ class DesktopAppDownloadTest extends TestCase
         }
     }
 
+    public function test_the_version_endpoint_is_public(): void
+    {
+        \App\Support\DesktopRelease::save(['version' => '1.2.0', 'force' => true, 'notes' => 'Таб нэмэв']);
+
+        $this->getJson('/desktop/version')
+            ->assertOk()
+            ->assertJsonPath('version', '1.2.0')
+            ->assertJsonPath('force', true)
+            ->assertJsonPath('available', false);
+    }
+
+    public function test_an_admin_sets_the_released_version(): void
+    {
+        $this->actingAs(User::factory()->create(['is_admin' => true]))
+            ->patch('/admin/desktop-settings', ['version' => '1.3.0', 'force' => true, 'notes' => ''])
+            ->assertRedirect();
+
+        $this->assertSame('1.3.0', \App\Support\DesktopRelease::all()['version']);
+    }
+
+    public function test_a_bad_version_is_rejected(): void
+    {
+        $this->actingAs(User::factory()->create(['is_admin' => true]))
+            ->patch('/admin/desktop-settings', ['version' => 'v1.2-beta', 'force' => false])
+            ->assertSessionHasErrors('version');
+    }
+
     public function test_only_an_admin_may_upload(): void
     {
         $this->actingAs(User::factory()->create(['is_admin' => false]))

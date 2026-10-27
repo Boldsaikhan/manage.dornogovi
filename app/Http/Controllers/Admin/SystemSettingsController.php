@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\DesktopAppController;
 use App\Models\AppSetting;
 use App\Models\System;
 use App\Models\User;
@@ -11,6 +12,7 @@ use App\Services\Verify\VerifyMnClient;
 use App\Services\Verify\VerifySettings;
 use App\Services\EmbedChecker;
 use App\Support\LoginFormDetector;
+use App\Support\DesktopRelease;
 use App\Support\ModuleAccess;
 use App\Support\ModuleOrder;
 use App\Support\ModuleVisibility;
@@ -61,6 +63,10 @@ class SystemSettingsController extends Controller
                 ]),
             'ai' => $aiSettings->forAdmin(),
             'verify' => $verify->forAdmin(),
+            'desktop' => [
+                ...DesktopRelease::all(),
+                ...DesktopAppController::status(),
+            ],
             'menus' => ModuleVisibility::forAdmin(),
             'menuGroups' => ModuleVisibility::groupsForAdmin(),
             // AI аль цэсэд ямар эрхтэйг тохируулах жагсаалт.
@@ -152,6 +158,22 @@ class SystemSettingsController extends Controller
         }
 
         return $rows;
+    }
+
+    /** Ширээний програмын хувилбар, хүчээр шинэчлэх тохиргоо. */
+    public function updateDesktop(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'version' => ['nullable', 'string', 'max:20', 'regex:/^\d+(\.\d+){0,3}$/'],
+            'force' => ['boolean'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ], [
+            'version.regex' => 'Хувилбарыг 1.2.3 хэлбэрээр бичнэ.',
+        ]);
+
+        DesktopRelease::save($data);
+
+        return back()->with('success', 'Ширээний програмын тохиргоог хадгаллаа.');
     }
 
     public function updateMenus(Request $request): RedirectResponse
