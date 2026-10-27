@@ -65,6 +65,16 @@
 
         .nav button:disabled { opacity: .3; cursor: default; }
 
+        .nav svg {
+            width: 17px;
+            height: 17px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
         #tabs {
             display: flex;
             align-items: center;
@@ -172,8 +182,15 @@
 </head>
 <body>
     <div class="nav">
-        <button id="back" title="Буцах" disabled>&#8592;</button>
-        <button id="reload" title="Дахин ачаалах">&#10227;</button>
+        <button id="back" title="Буцах" aria-label="Буцах" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <button id="forward" title="Урагшлах" aria-label="Урагшлах" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+        <button id="reload" title="Дахин ачаалах" aria-label="Дахин ачаалах">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 10-2.3 6.3"/><path d="M20 5v6h-6"/></svg>
+        </button>
     </div>
 
     <div id="tabs"></div>
@@ -191,11 +208,15 @@
 
         update.addEventListener('click', () => window.mdTabs.checkUpdates());
 
+        const forward = document.getElementById('forward');
+
         back.addEventListener('click', () => window.mdTabs.back());
+        forward.addEventListener('click', () => window.mdTabs.forward());
         document.getElementById('reload').addEventListener('click', () => window.mdTabs.reload());
 
         window.mdTabs.onState((state) => {
             back.disabled = ! state.canGoBack;
+            forward.disabled = ! state.canGoForward;
             list.replaceChildren(...state.tabs.map(build));
         });
 
