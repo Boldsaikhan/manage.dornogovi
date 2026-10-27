@@ -91,24 +91,27 @@ function runDanAutofill(entry, { onFilled = () => {}, typeKeys = null, log = () 
      * Регистрийн 2 үсгийн талбарууд — дугаарын талбарын өмнөх богино input/select.
      */
     const letterFields = (numberField) => {
-        const all = [...document.querySelectorAll('input, select')].filter(visible);
-        const index = all.indexOf(numberField);
-
-        if (index < 1) return [];
-
         /*
-         * Үсгийн нүд нь нэг тэмдэгт хүлээж авдаг — maxlength=1 эсвэл
-         * placeholder нь нэг үсэг («Р», «Д») байдгаараа танигдана.
-         * Өмнө нь maxlength-гүй бүх талбарыг оруулдаг тул санамсаргүй
-         * талбар сонгогдож, регистр буруу бичигддэг байв.
+         * Байрлалаар нь олно — DOM-ийн дараалалд найдахгүй.
+         *
+         * Энэ маягтад үсгийн нүднүүд нь дугаарын талбарын ДАРАА бичигдсэн
+         * байж, зүүн талд нь харагддаг (flex дараалал). Өмнө нь зөвхөн
+         * өмнөх элементүүдээс хайдаг тул огт олддоггүй байв.
          */
-        return all
-            .slice(0, index)
-            .filter((el) => el.tagName === 'SELECT'
-                || el.maxLength === 1
-                || (el.placeholder ?? '').trim().length === 1
-                // Нэг үсгийн нүд нь нарийхан байдаг.
-                || el.getBoundingClientRect().width < 64)
+        const box = numberField.getBoundingClientRect();
+
+        return [...document.querySelectorAll('input, select')]
+            .filter(visible)
+            .filter((el) => el !== numberField && el.type !== 'password')
+            .filter((el) => {
+                const rect = el.getBoundingClientRect();
+
+                // Нэг мөрөнд, дугаарын талбарын зүүн талд, нарийхан нүд.
+                return Math.abs(rect.top - box.top) < 24
+                    && rect.right <= box.left + 6
+                    && rect.width < 90;
+            })
+            .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left)
             .slice(-2);
     };
 
@@ -139,7 +142,38 @@ function runDanAutofill(entry, { onFilled = () => {}, typeKeys = null, log = () 
         return el.value === value;
     };
 
-    const setLetter = (el, letter) => {
+    /**
+     * Зөвхөн монгол (кирилл) үсэг бичнэ.
+     *
+     * Хадгалсан регистр нь латин харагдацтай үсэгтэй байж болох тул
+     * (жишээ нь Y, X) кирилл дүйцлээр нь солино — эс бөгөөс маягт
+     * хүлээж авахгүй, нүд хоосон үлддэг.
+     */
+    const LATIN_TO_CYRILLIC = {
+        A: 'А', B: 'В', C: 'С', E: 'Е', H: 'Н', I: 'И', J: 'Ж',
+        K: 'К', M: 'М', N: 'Н', O: 'О', P: 'Р', S: 'С', T: 'Т',
+        U: 'У', X: 'Х', Y: 'Ү', Z: 'З', D: 'Д', G: 'Г', L: 'Л',
+        R: 'Р', F: 'Ф', V: 'В', W: 'В', Q: 'Х',
+    };
+
+    const toCyrillic = (letter) => {
+        const upper = String(letter ?? '').toUpperCase();
+
+        if (/^[А-ЯЁӨҮ]$/.test(upper)) {
+            return upper;
+        }
+
+        return LATIN_TO_CYRILLIC[upper] ?? null;
+    };
+
+    const setLetter = (el, rawLetter) => {
+        const letter = toCyrillic(rawLetter);
+
+        // Кирилл биш бол огт бичихгүй.
+        if (! letter) {
+            return;
+        }
+
         if (el.tagName === 'SELECT') {
             const option = [...el.options].find((o) => (o.value || o.textContent).trim().toUpperCase() === letter);
 
@@ -271,7 +305,8 @@ function runDanAutofill(entry, { onFilled = () => {}, typeKeys = null, log = () 
         if (! numberField || ! pwField) return false;
 
         const register = (credential.username ?? '').trim().toUpperCase();
-        const letters = register.slice(0, 2);
+        // Үсгүүдийг кирилл болгож жигдрүүлнэ.
+        const letters = [...register.slice(0, 2)].map((ch) => toCyrillic(ch) ?? ch);
         const digits = register.slice(2);
 
         // 3. Үсэг + дугаар.
