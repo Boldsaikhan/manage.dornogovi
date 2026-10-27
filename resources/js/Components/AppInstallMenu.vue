@@ -215,7 +215,7 @@ const toggle = () => {
                     </p>
 
                     <a
-                        v-if="! inDesktopApp && installer.available"
+                        v-if="installer.available"
                         :href="route('desktop.download')"
                         class="ui-btn-primary w-full justify-center !py-2 text-xs"
                         download
@@ -224,15 +224,24 @@ const toggle = () => {
                         <span v-if="installerSize" class="ml-1 opacity-70">· {{ installerSize }}</span>
                     </a>
 
+                    <button
+                        v-else
+                        type="button"
+                        class="ui-btn-primary w-full cursor-not-allowed justify-center !py-2 text-xs opacity-50"
+                        disabled
+                    >
+                        Програм татах (Windows)
+                    </button>
+
                     <p
-                        v-else-if="! inDesktopApp"
+                        v-if="! installer.available"
                         class="rounded-lg bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800"
                     >
                         Суулгацыг сервер дээр хараахан байршуулаагүй байна.
                         <template v-if="! installer.canUpload">Системийн админд хандана уу.</template>
                     </p>
 
-                    <div v-if="! inDesktopApp && installer.canUpload" class="space-y-1">
+                    <div v-if="installer.canUpload" class="space-y-1">
                         <input
                             ref="fileInput"
                             type="file"
