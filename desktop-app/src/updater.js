@@ -6,9 +6,27 @@
  * «хүчээр» гэж тохируулсан бол «Дараа» гэж сонгох боломжгүй.
  */
 
-const { app, dialog, net, shell } = require('electron');
+const { app, dialog, net } = require('electron');
+const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+
+/**
+ * Суулгацыг програмаа хаасны ДАРАА ажиллуулна.
+ *
+ * Шууд ажиллуулбал хуучин програм ажилласан хэвээр байх тул суулгагч
+ * «Another program is currently using this file» гэж зогсдог. Иймд
+ * тусдаа процесс хэдэн секунд хүлээгээд эхлүүлнэ.
+ */
+const launchInstallerAfterExit = (installer) => {
+    const shellExe = process.env.COMSPEC || 'cmd.exe';
+
+    spawn(
+        shellExe,
+        ['/c', `timeout /t 4 /nobreak >nul & start "" "${installer}"`],
+        { detached: true, stdio: 'ignore', windowsHide: true },
+    ).unref();
+};
 
 /** Хувилбарыг тоогоор нь харьцуулна: 1.10.0 > 1.9.3. */
 const compareVersions = (left, right) => {
@@ -160,10 +178,9 @@ async function checkForUpdates(siteUrl, { silent = true } = {}) {
         noLink: true,
     });
 
-    shell.openPath(target);
-
-    // Суулгагч файлыг солих боломжтой байхын тулд програмаа хаана.
-    setTimeout(() => app.quit(), 500);
+    // Эхлээд суулгагчийг хүлээлгэнд тавиад, дараа нь програмаа бүрэн хаана.
+    launchInstallerAfterExit(target);
+    app.quit();
 
     return true;
 }
