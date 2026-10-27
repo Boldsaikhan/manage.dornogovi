@@ -356,10 +356,46 @@ const saveField = (id, field, value) => {
     );
 };
 
+/* ── Хэвлэх тохиргоо ─────────────────────────────────────────────────
+ *
+ * Цаасны хэмжээ, чиглэл, нэг хуудсанд багтаах ширхгийг сонгоод
+ * хэвлэнэ. Сонголт хөтөчид хадгалагдана.
+ */
+const PRINT_KEY = 'leaves-print-options';
+
+const printRow = ref(null);
+const printOptions = reactive({ paper: 'a4', orient: 'portrait', copies: PRINT_COPIES });
+
+try {
+    Object.assign(printOptions, JSON.parse(localStorage.getItem(PRINT_KEY) || '{}'));
+} catch {
+    // Хадгалсан сонголт алга.
+}
+
 const slipPrintUrl = (row) => {
     const base = row.slip_url || route('leaves.slip', row.id);
-    const params = new URLSearchParams({ copies: String(PRINT_COPIES) });
+    const params = new URLSearchParams({
+        copies: String(printOptions.copies),
+        paper: printOptions.paper,
+        orient: printOptions.orient,
+    });
+
     return `${base}?${params.toString()}`;
+};
+
+const startPrint = (row) => {
+    printRow.value = row;
+};
+
+const confirmPrint = () => {
+    try {
+        localStorage.setItem(PRINT_KEY, JSON.stringify({ ...printOptions }));
+    } catch {
+        // Хадгалж чадсангүй.
+    }
+
+    window.open(slipPrintUrl(printRow.value), '_blank', 'noopener');
+    printRow.value = null;
 };
 
 const kindLabel = (key) => ({
@@ -892,17 +928,17 @@ const visibleRows = computed(() => {
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 20h4l10-10a2.1 2.1 0 1 0-3-3L5 17v3z" />
                                         </svg>
                                     </button>
-                                    <a
-                                        :href="slipPrintUrl(row)"
-                                        target="_blank"
+                                    <button
+                                        type="button"
                                         class="ui-icon-btn"
                                         title="Хэвлэх"
                                         aria-label="Хэвлэх"
+                                        @click="startPrint(row)"
                                     >
                                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M7 8V4h10v4M7 18H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 15h10v5H7z" />
                                         </svg>
-                                    </a>
+                                    </button>
                                     <button
                                         v-if="isEditing(row.id)"
                                         type="button"
@@ -933,6 +969,83 @@ const visibleRows = computed(() => {
 
         <!-- Өөрчлөлтийн түүх -->
         <!-- Албан хаагчийн нийт чөлөө -->
+        <!-- Хэвлэхийн өмнөх сонголт -->
+        <Modal :show="!! printRow" max-width="sm" @close="printRow = null">
+            <div class="p-5">
+                <h2 class="text-base font-semibold text-brand-navy-900">Чөлөөний хуудас хэвлэх</h2>
+                <p class="mt-0.5 text-xs text-slate-500">{{ printRow?.person_name }}</p>
+
+                <div class="mt-4 space-y-4">
+                    <div>
+                        <label class="ui-label">Цаас</label>
+                        <div class="flex gap-2">
+                            <button
+                                v-for="size in ['a4', 'a5']"
+                                :key="size"
+                                type="button"
+                                class="flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition"
+                                :class="printOptions.paper === size
+                                    ? 'border-brand-navy-600 bg-brand-navy-50 text-brand-navy-800'
+                                    : 'border-slate-200 text-slate-600 hover:border-brand-navy-200'"
+                                @click="printOptions.paper = size"
+                            >
+                                {{ size.toUpperCase() }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="ui-label">Чиглэл</label>
+                        <div class="flex gap-2">
+                            <button
+                                type="button"
+                                class="flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition"
+                                :class="printOptions.orient === 'portrait'
+                                    ? 'border-brand-navy-600 bg-brand-navy-50 text-brand-navy-800'
+                                    : 'border-slate-200 text-slate-600 hover:border-brand-navy-200'"
+                                @click="printOptions.orient = 'portrait'"
+                            >
+                                Босоо
+                            </button>
+                            <button
+                                type="button"
+                                class="flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition"
+                                :class="printOptions.orient === 'landscape'
+                                    ? 'border-brand-navy-600 bg-brand-navy-50 text-brand-navy-800'
+                                    : 'border-slate-200 text-slate-600 hover:border-brand-navy-200'"
+                                @click="printOptions.orient = 'landscape'"
+                            >
+                                Хэвтээ
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="ui-label">Нэг хуудсанд</label>
+                        <div class="flex gap-2">
+                            <button
+                                v-for="n in [1, 2, 4, 6]"
+                                :key="n"
+                                type="button"
+                                class="flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition"
+                                :class="printOptions.copies === n
+                                    ? 'border-brand-navy-600 bg-brand-navy-50 text-brand-navy-800'
+                                    : 'border-slate-200 text-slate-600 hover:border-brand-navy-200'"
+                                @click="printOptions.copies = n"
+                            >
+                                {{ n }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-5 flex justify-end gap-2">
+                    <button type="button" class="ui-btn-ghost" @click="printRow = null">Болих</button>
+                    <button type="button" class="ui-btn-primary" @click="confirmPrint">Хэвлэх</button>
+                </div>
+            </div>
+        </Modal>
+
         <Modal :show="!! personSummary" max-width="4xl" @close="personSummary = null">
             <div v-if="personSummary" class="ui-card-pad space-y-4">
                 <div class="flex flex-wrap items-start justify-between gap-3">

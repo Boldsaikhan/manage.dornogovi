@@ -9,7 +9,10 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
 /**
- * Чөлөөний хуудас — албан хэрэг хөтлөлтийн загвараар хэвлэх (A4-д 6 ширхэг).
+ * Чөлөөний хуудас — албан хэрэг хөтлөлтийн загвараар хэвлэнэ.
+ *
+ * Цаасны хэмжээ (A4/A5), чиглэл (босоо/хэвтээ), нэг хуудсанд багтаах
+ * ширхгийг хэвлэхийн өмнө сонгоно.
  */
 class LeaveSlipController extends Controller
 {
@@ -22,11 +25,23 @@ class LeaveSlipController extends Controller
         $copies = (int) $request->query('copies', 6);
         $copies = in_array($copies, [1, 2, 4, 6], true) ? $copies : 6;
 
+        // Цаасны хэмжээ, чиглэл — хэвлэхийн өмнө сонгоно.
+        $paper = $request->query('paper') === 'a5' ? 'a5' : 'a4';
+        $landscape = $request->query('orient') === 'landscape';
+
+        [$width, $height] = $paper === 'a5' ? [148, 210] : [210, 297];
+
+        if ($landscape) {
+            [$width, $height] = [$height, $width];
+        }
+
         $start = $leave->start_date;
 
         return view('leaves.slip', [
             'leave' => $leave,
             'copies' => $copies,
+            'pageWidth' => $width,
+            'pageHeight' => $height,
             'signerTitle' => $leave->signerTitle(),
             'signerName' => (string) $leave->signer,
             'format' => DocumentFormat::defaultFormat(),
