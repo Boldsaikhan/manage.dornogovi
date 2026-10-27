@@ -11,6 +11,7 @@ import QrScanButton from '@/Components/QrScanButton.vue';
 import AiPanel from '@/Components/AiPanel.vue';
 import AppLockGate from '@/Components/AppLockGate.vue';
 import HoverTip from '@/Components/HoverTip.vue';
+import SystemCredentialModal from '@/Components/SystemCredentialModal.vue';
 import { useTheme } from '@/utils/theme';
 
 defineProps({
@@ -188,10 +189,15 @@ const linkedSystemOpenUrl = (sys) => {
     return sys.entry_url;
 };
 
+/* Хажуугийн цэсний харандаа — жижиг цонхоор нэвтрэх тохиргоо. */
+const credentialSystem = ref(null);
+const credentialOpen = ref(false);
+
 const openSystemSettings = (sys) => {
     sidebarOpen.value = false;
     hideNavTip();
-    router.visit(route('systems.show', sys.id));
+    credentialSystem.value = sys;
+    credentialOpen.value = true;
 };
 
 const onLinkedSystemClick = (sys, event) => {
@@ -522,6 +528,12 @@ const onLinkedSystemClick = (sys, event) => {
         />
 
         <AppLockGate />
+
+        <SystemCredentialModal
+            :show="credentialOpen"
+            :system="credentialSystem"
+            @close="credentialOpen = false"
+        />
 
         <!-- Тайлбарыг хулганы дээд талд гаргана. -->
         <HoverTip />
