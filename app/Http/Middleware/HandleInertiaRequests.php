@@ -80,6 +80,8 @@ class HandleInertiaRequests extends Middleware
 
                 return [
                     ...DesktopAppController::status(),
+                    // Байршуулсан суулгацын хувилбар — цэсэнд харуулна.
+                    'version' => \App\Support\DesktopRelease::all()['version'],
                     'canUpload' => (bool) $request->user()->is_admin,
                 ];
             },

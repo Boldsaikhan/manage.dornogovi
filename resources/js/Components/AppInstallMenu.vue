@@ -16,15 +16,42 @@ const onPhone = ref(false);
 
 /** Ширээний програм дотор ажиллаж байгаа эсэх. */
 const inDesktopApp = ref(false);
+
+/** Ажиллаж байгаа ширээний програмын хувилбар. */
+const runningVersion = ref('');
 const checked = ref(false);
 
 const verify = () => {
+    runningVersion.value = window.manageDesktop?.version ?? '';
     inDesktopApp.value = window.manageDesktop?.version !== undefined
         || document.documentElement.dataset.mdDesktop === '1';
     checked.value = true;
 };
 
 const appMissing = computed(() => checked.value && ! inDesktopApp.value);
+
+/** Серверт илүү шинэ хувилбар байгаа эсэх. */
+const newerAvailable = computed(() => {
+    const latest = String(installer.value.version ?? '').trim();
+
+    if (! latest || ! runningVersion.value) {
+        return false;
+    }
+
+    const part = (value) => String(value).split('.').map((n) => parseInt(n, 10) || 0);
+    const a = part(latest);
+    const b = part(runningVersion.value);
+
+    for (let i = 0; i < Math.max(a.length, b.length); i += 1) {
+        const diff = (a[i] ?? 0) - (b[i] ?? 0);
+
+        if (diff !== 0) {
+            return diff > 0;
+        }
+    }
+
+    return false;
+});
 
 /** Серверт суулгац байршсан эсэх. */
 const page = usePage();
@@ -206,9 +233,19 @@ const toggle = () => {
                 </div>
 
                 <div class="space-y-3 p-3">
-                    <p v-if="inDesktopApp" class="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-                        Ширээний програмаар орсон байна. Холбосон системүүд рүү автоматаар нэвтэрнэ.
-                    </p>
+                    <div v-if="inDesktopApp" class="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="font-semibold">Ширээний програмаар орсон байна</span>
+                            <span
+                                v-if="runningVersion"
+                                class="shrink-0 rounded-full bg-white/70 px-2 py-0.5 font-mono text-[10px] font-semibold"
+                            >v{{ runningVersion }}</span>
+                        </div>
+                        <p class="mt-0.5 leading-relaxed">Холбосон системүүд рүү автоматаар нэвтэрнэ.</p>
+                        <p v-if="newerAvailable" class="mt-1 font-semibold text-amber-700">
+                            Шинэ хувилбар гарсан: v{{ installer.version }}
+                        </p>
+                    </div>
                     <p v-else class="text-xs leading-relaxed text-slate-600">
                         Windows програмыг суулгавал холбосон системүүд рүү
                         нэр, нууц үгээ бичихгүйгээр шууд нэвтэрнэ.
@@ -221,7 +258,10 @@ const toggle = () => {
                         download
                     >
                         Програм татах (Windows)
-                        <span v-if="installerSize" class="ml-1 opacity-70">· {{ installerSize }}</span>
+                        <span class="ml-1 opacity-70">
+                            <template v-if="installer.version">· v{{ installer.version }}</template>
+                            <template v-if="installerSize"> · {{ installerSize }}</template>
+                        </span>
                     </a>
 
                     <button
