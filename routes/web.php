@@ -40,6 +40,14 @@ Route::get('/manifest.webmanifest', PwaManifestController::class);
 // Ширээний програмын хувилбар — суулгац шинэчлэлтээ шалгана.
 Route::get('/desktop/version', [DesktopAppController::class, 'version'])->name('desktop.version');
 
+/*
+ * Нэвтрэх хуудас удаан нээлттэй байхад сешн дуусаж, CSRF токен хүчингүй
+ * болдог. Хуудас нь үүнийг тогтмол дуудаж сешнээ сэргээнэ.
+ */
+Route::get('/session/keep-alive', fn () => response()->json(['ok' => true]))
+    ->middleware('throttle:30,1')
+    ->name('session.keep-alive');
+
 Route::get('/', function () {
     if (auth()->check()) {
         return redirect()->route(HomeRedirect::routeName());
