@@ -212,6 +212,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/desktop/download', [DesktopAppController::class, 'download'])->name('desktop.download');
     Route::post('/desktop/upload', [DesktopAppController::class, 'upload'])->name('desktop.upload');
     Route::get('/systems/{system}/launch', LaunchController::class)->name('systems.launch');
+    Route::get('/systems/{system}/credential', [SystemViewController::class, 'credential'])->name('systems.credential');
     Route::get('/systems/{system}', [SystemViewController::class, 'show'])->name('systems.show');
 
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
