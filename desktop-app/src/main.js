@@ -249,11 +249,14 @@ const wire = (tab) => {
 };
 
 const createTab = (url, { home = false } = {}) => {
-    const useAppPreload = home || isSiteUrl(url);
-
+    /*
+     * Таб нь системээс эхлээд холбосон систем рүү шилжиж болох тул preload
+     * нь нэг л файл — хуудас бүр дээр хостоосоо хамаарч ажиллана.
+     */
     const view = new WebContentsView({
         webPreferences: {
-            preload: path.join(__dirname, useAppPreload ? 'preload-app.js' : 'preload-target.js'),
+            preload: path.join(__dirname, 'preload.js'),
+            additionalArguments: [`--md-site-host=${SITE_HOST}`, `--md-version=${app.getVersion()}`],
             contextIsolation: true,
             nodeIntegration: false,
             sandbox: false,
@@ -265,6 +268,8 @@ const createTab = (url, { home = false } = {}) => {
         view,
         title: home ? 'Самбар' : 'Ачаалж байна…',
         home,
+        // Аль холбоосоор нээгдсэн — дахин дарвал ижил таб руугаа шилжинэ.
+        openedWith: url,
     };
 
     tabs.push(tab);
@@ -297,6 +302,10 @@ const openInTab = (url) => {
     const existing = tabs.find((tab) => {
         if (tab.home) {
             return false;
+        }
+
+        if (tab.openedWith === url) {
+            return true;
         }
 
         try {
