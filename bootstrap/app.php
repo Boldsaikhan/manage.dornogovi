@@ -65,17 +65,20 @@ return Application::configure(basePath: dirname(__DIR__))
                 return $response;
             }
 
-            $message = 'Холболтын хугацаа дууссан тул дахин оролдоно уу.';
-
             if ($request->expectsJson() && ! $request->header('X-Inertia')) {
-                return response()->json(['message' => $message], 419);
+                return response()->json(['message' => 'Дахин оролдоно уу.'], 419);
             }
 
+            /*
+             * Хэрэглэгчид сануулга харуулахгүй — шинэ токентой хуудсыг нь
+             * чимээгүй нээж өгнө. Нэвтрэх хуудас токеноо тогтмол шинэчилдэг
+             * тул энэ нь ховор тохиолдоно.
+             */
             if (! $request->user()) {
-                return redirect()->route('login', [], 303)->with('status', $message);
+                return redirect()->route('login', [], 303);
             }
 
-            return back(303)->with('status', $message);
+            return back(303);
         });
 
         // Устгагдсан мөр дээр засвар/устгал илгээхэд 404 биш, эелдэг мэдэгдэл.

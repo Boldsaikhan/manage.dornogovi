@@ -392,7 +392,7 @@ const finishUnlock = async () => {
 /** Алдааг хүнд ойлгомжтой бичвэр болгоно. */
 const unlockErrorMessage = (e, fallback = 'Түгжээ тайлагдахгүй байна.') => {
     if (e?.response?.status === 419) {
-        return 'Холболтын хугацаа дууссан. Хуудас шинэчлэгдэж байна…';
+        return 'Хуудсыг шинэчилж байна…';
     }
 
     if (! navigator.onLine) {

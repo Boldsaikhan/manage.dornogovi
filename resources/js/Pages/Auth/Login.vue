@@ -141,11 +141,28 @@ const qrCountdown = computed(() => {
     return `${m}:${String(sec).padStart(2, '0')}`;
 });
 
+/*
+ * Нэвтрэх хуудсыг удаан нээлттэй орхиход сешн дуусаж, нэвтрэхэд алдаа
+ * гардаг байв. 10 минут тутамд сервер рүү хандаж сешнээ сэргээнэ.
+ */
+let keepAlive = null;
+
 onMounted(() => {
     onPhone.value = isMobileDevice();
+
+    keepAlive = setInterval(() => {
+        window.axios.get(route('session.keep-alive')).catch(() => {});
+    }, 10 * 60 * 1000);
 });
 
-onBeforeUnmount(stopQrTimers);
+onBeforeUnmount(() => {
+    stopQrTimers();
+
+    if (keepAlive) {
+        clearInterval(keepAlive);
+        keepAlive = null;
+    }
+});
 
 const submit = () => {
     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
