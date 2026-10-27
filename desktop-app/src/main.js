@@ -17,8 +17,26 @@ const {
     shell,
     session,
 } = require('electron');
+const fs = require('node:fs');
 const path = require('node:path');
 const { checkForUpdates } = require('./updater');
+
+/**
+ * Богино бүртгэл — нэвтрэлт болоогүй үед шалтгааныг олоход хэрэгтэй.
+ *
+ * Зөвхөн хост, үйлдлийн нэрийг бичнэ — нэр, нууц үг хэзээ ч бичигдэхгүй.
+ * Байршил: %APPDATA%\Manage Dornogovi\manage-desktop.log
+ */
+const logLine = (message) => {
+    try {
+        fs.appendFileSync(
+            path.join(app.getPath('userData'), 'manage-desktop.log'),
+            `${new Date().toISOString()} ${message}\n`,
+        );
+    } catch {
+        // Бичиж чадсангүй — ажиллагаанд нөлөөлөхгүй.
+    }
+};
 
 const SITE_URL = process.env.MD_SITE_URL || 'https://manage.dornogovi.gov.mn';
 const SITE_HOST = new URL(SITE_URL).host;
@@ -55,22 +73,55 @@ const rememberCredential = (payload) => {
     return true;
 };
 
-const takeCredential = (host) => {
-    const entry = credentials.get(host);
+/**
+ * Хостод тохирох түлхүүрийг олно.
+ *
+ * Зарим систем нэвтрэх хуудас руугаа өөр дэд домэйнээр шилждэг тул
+ * яг таарахгүй бол «www.»-г хасаад, эцэст нь үндсэн домэйнээр нь тааруулна.
+ */
+const matchHost = (host) => {
+    const clean = String(host || '').toLowerCase();
 
-    if (! entry) {
+    if (clean === '') {
         return null;
     }
+
+    if (credentials.has(clean)) {
+        return clean;
+    }
+
+    const base = (value) => value.replace(/^www\./, '').split('.').slice(-2).join('.');
+    const wanted = base(clean);
+
+    for (const key of credentials.keys()) {
+        if (base(key) === wanted) {
+            return key;
+        }
+    }
+
+    return null;
+};
+
+const takeCredential = (host) => {
+    const key = matchHost(host);
+
+    if (key === null) {
+        return null;
+    }
+
+    const entry = credentials.get(key);
 
     if (Date.now() - entry.at > CREDENTIAL_TTL_MS) {
-        credentials.delete(host);
+        credentials.delete(key);
 
         return null;
     }
 
-    // Нэг удаа л өгнө — хуудас дахин ачаалагдвал давтан илгээхгүй.
-    credentials.delete(host);
-
+    /*
+     * Устгахгүй — нэвтрэх хуудас руу дахин шилжих, SPA дахин ачаалах
+     * тохиолдолд мэдээлэл алга болчихдог байв. Маягт амжилттай
+     * бөглөгдмөгц `md:used`-ээр, эс бөгөөс хугацаа дуусахад устана.
+     */
     return { username: entry.username, password: entry.password, source: entry.source };
 };
 
@@ -409,14 +460,39 @@ if (! app.requestSingleInstanceLock()) {
 ipcMain.handle('md:store', (event, payload) => {
     // Зөвхөн системийн хуудас мэдээлэл өгч чадна.
     if (! isSiteUrl(event.sender.getURL())) {
+        logLine('store: татгалзав (системийн хуудас биш)');
+
         return false;
     }
 
-    return rememberCredential(payload);
+    const stored = rememberCredential(payload);
+
+    logLine(`store: ${payload?.host || '?'} → ${stored ? 'хадгаллаа' : 'дутуу мэдээлэл'}`);
+
+    return stored;
 });
 
 // Зорилтот сайтын preload мэдээллээ авна.
-ipcMain.handle('md:take', (event, host) => takeCredential(String(host || '')));
+ipcMain.handle('md:take', (event, host) => {
+    const credential = takeCredential(String(host || ''));
+
+    logLine(`take: ${host} → ${credential ? 'өглөө' : 'мэдээлэл алга'}`);
+
+    return credential;
+});
+
+// Маягт бөглөгдлөө — мэдээллийг санах ойгоос устгана.
+ipcMain.handle('md:used', (event, host) => {
+    const key = matchHost(String(host || ''));
+
+    if (key !== null) {
+        credentials.delete(key);
+    }
+
+    logLine(`used: ${host}`);
+
+    return true;
+});
 
 // Гадаад холбоосыг системийн хөтчөөр нээнэ.
 ipcMain.handle('md:external', (event, url) => shell.openExternal(String(url || '')));

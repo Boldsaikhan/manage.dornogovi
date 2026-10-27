@@ -120,7 +120,7 @@ const markSubmitted = () => {
  *
  * @param {{username: string, password: string, source?: string}} credential
  */
-function runAutofill(credential) {
+function runAutofill(credential, { onFilled = () => {} } = {}) {
     if (! credential?.username) {
         return;
     }
@@ -148,6 +148,12 @@ function runAutofill(credential) {
 
         setValue(usernameField, credential.username);
         setValue(passwordField, credential.password);
+
+        try {
+            onFilled();
+        } catch {
+            // Мэдэгдэж чадсангүй — бөглөлт нь хэвийн үргэлжилнэ.
+        }
 
         /*
          * Платформоос шинээр дарсан бол заавал илгээнэ; санасан мэдээллээр
