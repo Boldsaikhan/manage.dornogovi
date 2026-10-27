@@ -95,12 +95,13 @@ const launchInstallerAfterExit = (installer) => {
     const shellExe = process.env.COMSPEC || 'cmd.exe';
 
     /*
-     * /S — чимээгүй суулгалт (хэрэглэгч дарж суухгүй),
-     * --force-run — суусны дараа програмыг шууд нээнэ.
+     * /S-гүйгээр ажиллуулна — нэг даралтын суулгац өөрийн явцын цонхоо
+     * харуулж, дарж суулгах шаардлагагүй, дуусмагц програмыг нээдэг.
+     * (/S үед юу ч харагдахгүй тул хэрэглэгч гацсан мэт боддог.)
      */
     spawn(
         shellExe,
-        ['/c', `timeout /t 3 /nobreak >nul & start "" "${installer}" /S --force-run`],
+        ['/c', `timeout /t 3 /nobreak >nul & start "" "${installer}" --force-run`],
         { detached: true, stdio: 'ignore', windowsHide: true },
     ).unref();
 };
