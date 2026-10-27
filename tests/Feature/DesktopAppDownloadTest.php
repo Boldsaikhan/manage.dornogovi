@@ -12,28 +12,30 @@ class DesktopAppDownloadTest extends TestCase
 {
     use RefreshDatabase;
 
-    private ?string $backup = null;
+    /** @var array<string, string> Тестийн турш хойш тавьсан файлууд. */
+    private array $backups = [];
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $path = DesktopAppController::path();
-
-        // Жинхэнэ суулгац байвал тестийн турш хойш нь тавина.
-        if (is_file($path)) {
-            $this->backup = $path.'.test-backup';
-            rename($path, $this->backup);
+        // Жинхэнэ суулгацуудыг тестийн турш хойш нь тавина.
+        foreach ([DesktopAppController::path(), DesktopAppController::bundledPath()] as $path) {
+            if (is_file($path)) {
+                $this->backups[$path] = $path.'.test-backup';
+                rename($path, $this->backups[$path]);
+            }
         }
     }
 
     protected function tearDown(): void
     {
-        $path = DesktopAppController::path();
-        @unlink($path);
+        @unlink(DesktopAppController::path());
 
-        if ($this->backup !== null && is_file($this->backup)) {
-            rename($this->backup, $path);
+        foreach ($this->backups as $path => $backup) {
+            if (is_file($backup)) {
+                rename($backup, $path);
+            }
         }
 
         parent::tearDown();
@@ -72,6 +74,27 @@ class DesktopAppDownloadTest extends TestCase
             ->get('/desktop/download')
             ->assertOk()
             ->assertDownload('Manage-Dornogovi-Setup.exe');
+    }
+
+    public function test_the_copy_shipped_with_the_code_is_served(): void
+    {
+        $bundled = DesktopAppController::bundledPath();
+        $dir = dirname($bundled);
+
+        if (! is_dir($dir)) {
+            mkdir($dir, 0775, true);
+        }
+
+        file_put_contents($bundled, 'MZ-bundled');
+
+        try {
+            $this->actingAs(User::factory()->create())
+                ->get('/desktop/download')
+                ->assertOk()
+                ->assertDownload('Manage-Dornogovi-Setup.exe');
+        } finally {
+            @unlink($bundled);
+        }
     }
 
     public function test_only_an_admin_may_upload(): void

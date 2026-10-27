@@ -32,10 +32,34 @@ class DesktopAppController extends Controller
     /** Дуусгаагүй хэсгүүдийг ийм хугацааны дараа хаяна. */
     private const STALE_SECONDS = 3600;
 
-    /** Суулгацын файлын зам. */
+    /** Админы байршуулсан суулгац (байвал түүнийг түгээнэ). */
     public static function path(): string
     {
         return storage_path('app/desktop/'.self::FILE);
+    }
+
+    /**
+     * Кодтой хамт тараагддаг суулгац.
+     *
+     * Сервер рүү гараар файл хуулах шаардлагагүй байхын тулд суулгацыг
+     * агуулахад хамт хадгална. Админ шинээр байршуулбал түүнийг дээр нь
+     * тавина.
+     */
+    public static function bundledPath(): string
+    {
+        return base_path('resources/desktop/'.self::FILE);
+    }
+
+    /** Түгээх суулгацын зам — байхгүй бол null. */
+    public static function servedPath(): ?string
+    {
+        foreach ([self::path(), self::bundledPath()] as $candidate) {
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -45,9 +69,9 @@ class DesktopAppController extends Controller
      */
     public static function status(): array
     {
-        $path = self::path();
+        $path = self::servedPath();
 
-        if (! is_file($path)) {
+        if ($path === null) {
             return ['available' => false, 'size' => null, 'updated_at' => null];
         }
 
@@ -62,9 +86,9 @@ class DesktopAppController extends Controller
 
     public function download(): BinaryFileResponse|RedirectResponse
     {
-        $path = self::path();
+        $path = self::servedPath();
 
-        if (! is_file($path)) {
+        if ($path === null) {
             return back()->with('warning', 'Суулгац хараахан байршуулаагүй байна. Системийн админд хандана уу.');
         }
 

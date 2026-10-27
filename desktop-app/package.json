@@ -43,7 +43,9 @@
             "createDesktopShortcut": true,
             "createStartMenuShortcut": true,
             "shortcutName": "Manage Dornogovi",
-            "allowToChangeInstallationDirectory": false
-        }
+            "allowToChangeInstallationDirectory": false,
+            "differentialPackage": false
+        },
+        "compression": "maximum"
     }
 }
