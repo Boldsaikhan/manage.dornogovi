@@ -548,7 +548,7 @@ ipcMain.handle('md:type', (event, text) => {
 
 // Оношлох бүртгэл — зөвхөн маягтын бүтэц, нууц мэдээлэл бичигдэхгүй.
 ipcMain.handle('md:log', (event, message) => {
-    logLine('dan: ' + String(message ?? '').slice(0, 600));
+    logLine('dan: ' + String(message ?? '').slice(0, 2000));
 
     return true;
 });
