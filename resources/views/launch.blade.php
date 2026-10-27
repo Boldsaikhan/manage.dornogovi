@@ -87,8 +87,9 @@
         <p class="hint" id="hint">
             Нэвтрэх хуудсанд нууц үгийн талбар дээр Ctrl+V дарна.
             <br>
-            <a href="{{ url('/dept-dashboard') }}">Автомат нэвтрэлтийн өргөтгөл татах</a> —
-            нүүр дээрх «Өргөтгөл татах»-аар задгай файлаар суулгана.
+            Маягтыг бүрэн автоматаар бөглүүлэхийг хүсвэл
+            <a href="{{ url('/dept-dashboard') }}">Manage Dornogovi ширээний програм</a>-ыг
+            суулгана уу.
         </p>
     </div>
 
@@ -121,6 +122,7 @@
             || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform));
 
         let timer = null;
+        let moved = false;
 
         const go = () => location.replace(target);
 
@@ -147,6 +149,7 @@
 
         stay.addEventListener('click', () => {
             clearTimeout(timer);
+            moved = true;
             status.textContent = 'Шилжихийг зогсоолоо. Нэр, нууц үгээ хуулж аваад "Одоо шилжих" дарна уу.';
             stay.disabled = true;
         });
@@ -187,13 +190,28 @@
 
             stay.style.display = 'none';
         } else {
-            // Өргөтгөлгүй компьютер: нууц үгийг хуулаад нэвтрэх хуудас руу шилжинэ.
-            timer = setTimeout(go, 1200);
+            /*
+             * Энгийн хөтөч: энэ хуудсан дээр саатуулахгүй — нууц үгийг хуулах
+             * оролдлогыг хийгээд (амжилттай эсэхээс үл хамааран) системийн
+             * нэвтрэх хуудас руу шууд шилжинэ.
+             */
+            status.textContent = 'Нэвтрэх хуудас руу шилжиж байна…';
 
-            navigator.clipboard.writeText(document.getElementById('p').value).catch(() => {
-                clearTimeout(timer);
-                status.textContent = 'Нууц үгийг автоматаар хуулж чадсангүй. "Хуулах" товчийг дарна уу.';
-            });
+            const once = () => {
+                if (! moved) {
+                    moved = true;
+                    go();
+                }
+            };
+
+            // Хуулалт удвал ч хүлээлгэхгүй.
+            timer = setTimeout(once, 400);
+
+            try {
+                navigator.clipboard.writeText(document.getElementById('p').value).then(once, once);
+            } catch (e) {
+                once();
+            }
         }
     </script>
 @endif
