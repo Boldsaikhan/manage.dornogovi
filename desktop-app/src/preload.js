@@ -10,6 +10,7 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 const { runAutofill } = require('./autofill.js');
+const { runDanAutofill } = require('./dan-autofill.js');
 
 /** Үндсэн процессоос дамжуулсан системийн хост. */
 const siteHost = (process.argv.find((arg) => arg.startsWith('--md-site-host=')) || '')
@@ -38,10 +39,14 @@ window.addEventListener('DOMContentLoaded', async () => {
         const credential = await ipcRenderer.invoke('md:take', location.host);
 
         if (credential) {
-            runAutofill(credential, {
-                // Бөглөгдсөн хойно нь санах ойгоос устгана.
-                onFilled: () => ipcRenderer.invoke('md:used', location.host),
-            });
+            // Бөглөгдсөн хойно нь санах ойгоос устгана.
+            const options = { onFilled: () => ipcRenderer.invoke('md:used', location.host) };
+
+            if (credential.mode === 'dan') {
+                runDanAutofill(credential, options);
+            } else {
+                runAutofill(credential, options);
+            }
         }
     } catch {
         // Мэдээлэл алга — хэрэглэгч гараар нэвтэрнэ.

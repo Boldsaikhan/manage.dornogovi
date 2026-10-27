@@ -66,6 +66,8 @@ const rememberCredential = (payload) => {
     credentials.set(host, {
         username: String(payload.username),
         password: String(payload.password ?? ''),
+        // 'dan' бол ДАН-ы маягтыг өөр дараалалаар бөглөнө.
+        mode: String(payload.mode ?? 'password'),
         source: payload.remember ? 'remembered' : 'pending',
         at: Date.now(),
     });
@@ -122,7 +124,12 @@ const takeCredential = (host) => {
      * тохиолдолд мэдээлэл алга болчихдог байв. Маягт амжилттай
      * бөглөгдмөгц `md:used`-ээр, эс бөгөөс хугацаа дуусахад устана.
      */
-    return { username: entry.username, password: entry.password, source: entry.source };
+    return {
+        username: entry.username,
+        password: entry.password,
+        mode: entry.mode,
+        source: entry.source,
+    };
 };
 
 const isSiteUrl = (url) => {
