@@ -31,10 +31,17 @@ const setValue = (el, value) => {
         ? HTMLTextAreaElement.prototype
         : HTMLInputElement.prototype;
 
+    try {
+        el.focus();
+    } catch {
+        // Фокус авахгүй байж болно — утгаа бичсээр л байна.
+    }
+
     Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, value);
 
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
+    el.dispatchEvent(new Event('blur', { bubbles: true }));
 };
 
 const findPasswordField = () =>
@@ -50,12 +57,24 @@ const findUsernameField = (passwordField) => {
         return null;
     }
 
-    // Нууц үгийн талбарын өмнөх сүүлчийн талбарыг сонгоно.
+    // Нууц үгийн талбарын өмнөх талбарууд.
     const before = candidates.filter(
         (el) => el.compareDocumentPosition(passwordField) & Node.DOCUMENT_POSITION_FOLLOWING,
     );
 
-    return before.at(-1) ?? candidates[0];
+    const pool = before.length > 0 ? before : candidates;
+
+    // Нэр нь илт хэлж байвал түүнийг нь эхэлж сонгоно.
+    const named = pool.find((el) => {
+        const hay = [el.name, el.id, el.placeholder, el.autocomplete, el.getAttribute('aria-label')]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+
+        return /user|login|email|нэвтрэх|нэр|и-мэйл|мэйл|утас|phone/.test(hay);
+    });
+
+    return named ?? pool.at(-1);
 };
 
 const submit = (passwordField) => {
@@ -149,6 +168,28 @@ function runAutofill(credential, { onFilled = () => {} } = {}) {
         setValue(usernameField, credential.username);
         setValue(passwordField, credential.password);
 
+        /*
+         * Зарим SPA маягтаа дахин зурахдаа бөглөсөн утгыг арчдаг (нэвтрэх
+         * нэр хоосон үлддэг байв). Хоёр секундын турш хянаж, арилсан бол
+         * дахин бичнэ.
+         */
+        let guards = 0;
+        const guard = setInterval(() => {
+            if (++guards > 10 || ! usernameField.isConnected) {
+                clearInterval(guard);
+
+                return;
+            }
+
+            if (usernameField.value !== credential.username) {
+                setValue(usernameField, credential.username);
+            }
+
+            if (passwordField.value !== credential.password) {
+                setValue(passwordField, credential.password);
+            }
+        }, 200);
+
         try {
             onFilled();
         } catch {
@@ -165,7 +206,7 @@ function runAutofill(credential, { onFilled = () => {} } = {}) {
             markSubmitted();
 
             // Framework-т төлвөө шинэчлэх зав өгнө.
-            setTimeout(() => submit(passwordField), 250);
+            setTimeout(() => submit(passwordField), 600);
         }
 
         return true;
