@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { router, usePage } from '@inertiajs/vue3';
 import { isMobileDevice } from '@/utils/mobileClient';
 
 /**
@@ -24,6 +25,97 @@ const verify = () => {
 };
 
 const appMissing = computed(() => checked.value && ! inDesktopApp.value);
+
+/** Серверт суулгац байршсан эсэх. */
+const page = usePage();
+const installer = computed(() => page.props.desktopApp ?? { available: false, canUpload: false });
+const installerSize = computed(() => {
+    const bytes = installer.value.size;
+
+    return bytes ? `${(bytes / 1024 / 1024).toFixed(1)} МБ` : '';
+});
+
+const uploading = ref(false);
+const uploadError = ref('');
+const progress = ref(0);
+const fileInput = ref(null);
+
+const pickInstaller = () => fileInput.value?.click();
+
+/** Суулгац ~80 МБ тул nginx/PHP-ийн хязгаарт багтаан хэсэгчлэн илгээнэ. */
+const CHUNK_BYTES = 4 * 1024 * 1024;
+
+const randomId = () => Array.from(
+    crypto.getRandomValues(new Uint8Array(12)),
+    (b) => b.toString(16).padStart(2, '0'),
+).join('');
+
+const sendChunk = async (file, uploadId, index, total) => {
+    const body = new FormData();
+
+    body.append('chunk', file.slice(index * CHUNK_BYTES, (index + 1) * CHUNK_BYTES), 'part');
+    body.append('upload_id', uploadId);
+    body.append('index', String(index));
+    body.append('total', String(total));
+
+    const response = await fetch(route('desktop.upload'), {
+        method: 'POST',
+        body,
+        credentials: 'same-origin',
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+        },
+    });
+
+    if (! response.ok) {
+        const payload = await response.json().catch(() => ({}));
+
+        throw new Error(payload.message || `Сервер ${response.status} гэж хариулав.`);
+    }
+
+    return response.json();
+};
+
+const onInstallerPicked = async (event) => {
+    const file = event.target.files?.[0];
+
+    event.target.value = '';
+
+    if (! file) {
+        return;
+    }
+
+    if (! /\.exe$/i.test(file.name)) {
+        uploadError.value = 'Зөвхөн .exe файл байршуулна.';
+
+        return;
+    }
+
+    uploadError.value = '';
+    progress.value = 0;
+    uploading.value = true;
+
+    const uploadId = randomId();
+    const total = Math.max(1, Math.ceil(file.size / CHUNK_BYTES));
+
+    try {
+        for (let index = 0; index < total; index += 1) {
+            // Сервер хэсгүүдийг дараалан залгадаг тул зэрэг илгээхгүй.
+            // eslint-disable-next-line no-await-in-loop
+            await sendChunk(file, uploadId, index, total);
+
+            progress.value = Math.round(((index + 1) / total) * 100);
+        }
+
+        router.reload({ only: ['desktopApp'] });
+    } catch (error) {
+        uploadError.value = error.message || 'Байршуулахад алдаа гарлаа.';
+    } finally {
+        uploading.value = false;
+    }
+};
 
 const onOutside = (event) => {
     if (open.value && root.value && ! root.value.contains(event.target)) {
@@ -123,12 +215,41 @@ const toggle = () => {
                     </p>
 
                     <a
-                        v-if="! inDesktopApp"
+                        v-if="! inDesktopApp && installer.available"
                         :href="route('desktop.download')"
                         class="ui-btn-primary w-full justify-center !py-2 text-xs"
+                        download
                     >
                         Програм татах (Windows)
+                        <span v-if="installerSize" class="ml-1 opacity-70">· {{ installerSize }}</span>
                     </a>
+
+                    <p
+                        v-else-if="! inDesktopApp"
+                        class="rounded-lg bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800"
+                    >
+                        Суулгацыг сервер дээр хараахан байршуулаагүй байна.
+                        <template v-if="! installer.canUpload">Системийн админд хандана уу.</template>
+                    </p>
+
+                    <div v-if="! inDesktopApp && installer.canUpload" class="space-y-1">
+                        <input
+                            ref="fileInput"
+                            type="file"
+                            accept=".exe,application/octet-stream"
+                            class="hidden"
+                            @change="onInstallerPicked"
+                        >
+                        <button
+                            type="button"
+                            class="ui-btn-ghost w-full justify-center !py-2 text-xs"
+                            :disabled="uploading"
+                            @click="pickInstaller"
+                        >
+                            {{ uploading ? `Байршуулж байна… ${progress}%` : (installer.available ? 'Суулгацыг шинэчлэх' : 'Суулгац байршуулах') }}
+                        </button>
+                        <p v-if="uploadError" class="text-xs text-rose-600">{{ uploadError }}</p>
+                    </div>
 
                     <ol class="list-decimal space-y-1 rounded-lg bg-slate-50 px-3 py-2 pl-5 text-xs leading-relaxed text-slate-600">
                         <li>Татсан <b>Manage-Dornogovi-Setup.exe</b> файлыг ажиллуулна.</li>

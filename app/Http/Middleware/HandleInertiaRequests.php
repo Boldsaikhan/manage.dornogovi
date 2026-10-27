@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Controllers\DesktopAppController;
 use App\Models\System;
 use App\Models\UserCredential;
 use App\Services\Ai\AiSettings;
@@ -70,6 +71,16 @@ class HandleInertiaRequests extends Middleware
                     'hasWebAuthn' => $user->webauthnCredentials()->exists(),
                     'idleMinutes' => (int) config('session.idle_lock_minutes', 30),
                     'reason' => AppLock::lockReason($request),
+                ];
+            },
+            'desktopApp' => function () use ($request) {
+                if (! $request->user()) {
+                    return null;
+                }
+
+                return [
+                    ...DesktopAppController::status(),
+                    'canUpload' => (bool) $request->user()->is_admin,
                 ];
             },
             'nav' => fn () => $this->navigation($request),
