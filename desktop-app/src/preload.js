@@ -38,7 +38,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         const credential = await ipcRenderer.invoke('md:take', location.host);
 
         if (credential) {
-            runAutofill(credential);
+            runAutofill(credential, {
+                // Бөглөгдсөн хойно нь санах ойгоос устгана.
+                onFilled: () => ipcRenderer.invoke('md:used', location.host),
+            });
         }
     } catch {
         // Мэдээлэл алга — хэрэглэгч гараар нэвтэрнэ.
