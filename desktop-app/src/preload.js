@@ -18,6 +18,22 @@ const siteHost = (process.argv.find((arg) => arg.startsWith('--md-site-host=')) 
 
 const onSite = () => siteHost !== '' && location.host === siteHost;
 
+/**
+ * «Нэвтэрсэн байна» гэсэн мэдэгдэл гарсан эсэх.
+ *
+ * Нэг нэвтрэлтийн системээр хэд хэдэн систем рүү ордог тул хоёр дахь
+ * удаагаа нэвтрэх хуудас руу орвол маягтын оронд ийм мэдэгдэл гардаг.
+ */
+const alreadySignedIn = () => {
+    if (document.querySelector('input[type="password"]')) {
+        return false;
+    }
+
+    const body = (document.body?.innerText ?? '').replace(/\s+/g, ' ');
+
+    return /нэвтэрсэн байна|already (logged|signed) in/i.test(body);
+};
+
 contextBridge.exposeInMainWorld('manageDesktop', {
     version: process.argv.find((arg) => arg.startsWith('--md-version='))?.replace('--md-version=', '') || '1.0.0',
 
@@ -39,6 +55,29 @@ window.addEventListener('DOMContentLoaded', async () => {
         const credential = await ipcRenderer.invoke('md:take', location.host);
 
         if (credential) {
+            /*
+             * Нэвтрэлтийн систем «Нэвтэрсэн байна» гэж зогсоовол маягт
+             * байхгүй — энэ үед тухайн системийнхээ хуудас руу үргэлжилнэ.
+             */
+            const goHome = () => {
+                if (! alreadySignedIn() || ! credential.home) {
+                    return false;
+                }
+
+                ipcRenderer.invoke('md:used', location.host);
+                location.replace(credential.home);
+
+                return true;
+            };
+
+            if (goHome()) {
+                return;
+            }
+
+            // Мэдэгдэл нь хожуу зурагдаж магадгүй.
+            setTimeout(goHome, 1500);
+            setTimeout(goHome, 3500);
+
             // Бөглөгдсөн хойно нь санах ойгоос устгана.
             const options = { onFilled: () => ipcRenderer.invoke('md:used', location.host) };
 

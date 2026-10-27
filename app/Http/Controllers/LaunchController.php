@@ -51,6 +51,8 @@ class LaunchController extends Controller
                 'entryUrl' => $credential->auth_type === System::AUTH_DAN
                     ? $system->danEntryUrl()
                     : $system->entryUrl(),
+                // Нэвтэрсэн байхад буцаж очих хаяг (ДАН «Нэвтэрсэн байна» гэх үед).
+                'homeUrl' => $system->entryUrl(),
             ])
             // Нэвтрэх мэдээлэл агуулсан хуудсыг хаана ч бүү хадгал.
             ->withHeaders([

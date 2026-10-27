@@ -68,6 +68,8 @@ const rememberCredential = (payload) => {
         password: String(payload.password ?? ''),
         // 'dan' бол ДАН-ы маягтыг өөр дараалалаар бөглөнө.
         mode: String(payload.mode ?? 'password'),
+        // Аль хэдийн нэвтэрсэн бол энэ хаяг руу үргэлжилнэ.
+        home: String(payload.home ?? ''),
         source: payload.remember ? 'remembered' : 'pending',
         at: Date.now(),
     });
@@ -128,6 +130,7 @@ const takeCredential = (host) => {
         username: entry.username,
         password: entry.password,
         mode: entry.mode,
+        home: entry.home,
         source: entry.source,
     };
 };
