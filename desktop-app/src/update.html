@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="mn">
+<head>
+    <meta charset="utf-8">
+    <title>Шинэчлэлт</title>
+    <style>
+        :root {
+            --navy-600: #1c55a5;
+            --navy-700: #164789;
+            --navy-800: #153b70;
+            --slate-500: #64748b;
+            --slate-200: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body { height: 100%; margin: 0; }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            padding: 22px 24px 20px;
+            background: #fff;
+            font: 14px/1.5 "Segoe UI", system-ui, sans-serif;
+            color: #0f172a;
+            user-select: none;
+        }
+
+        .head {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .badge {
+            flex: none;
+            width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            border-radius: 12px;
+            background: linear-gradient(180deg, var(--navy-600), var(--navy-800));
+            color: #fff;
+            font-size: 19px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .version {
+            margin-top: 2px;
+            color: var(--slate-500);
+            font-size: 12px;
+        }
+
+        .notes {
+            margin: 14px 0 0;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: #f8fafc;
+            color: #334155;
+            font-size: 13px;
+            max-height: 86px;
+            overflow: auto;
+            white-space: pre-wrap;
+            user-select: text;
+        }
+
+        .bar {
+            margin-top: 16px;
+            height: 8px;
+            border-radius: 999px;
+            background: var(--slate-200);
+            overflow: hidden;
+        }
+
+        .bar > span {
+            display: block;
+            height: 100%;
+            width: 0;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--navy-600), #3771b8);
+            transition: width .2s ease;
+        }
+
+        .state {
+            margin-top: 8px;
+            color: var(--slate-500);
+            font-size: 12px;
+        }
+
+        .actions {
+            margin-top: auto;
+            padding-top: 18px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        button {
+            height: 36px;
+            padding: 0 18px;
+            border: 0;
+            border-radius: 10px;
+            font: inherit;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .primary { background: var(--navy-600); color: #fff; }
+        .primary:hover { background: var(--navy-700); }
+        .primary:disabled { opacity: .55; cursor: default; }
+
+        .ghost { background: #f1f5f9; color: #475569; }
+        .ghost:hover { background: var(--slate-200); }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="head">
+        <span class="badge">&#8681;</span>
+        <div>
+            <h1 id="title">Шинэчлэлт гарлаа</h1>
+            <div class="version" id="version"></div>
+        </div>
+    </div>
+
+    <p class="notes hidden" id="notes"></p>
+
+    <div class="bar hidden" id="bar"><span id="fill"></span></div>
+    <div class="state hidden" id="state"></div>
+
+    <div class="actions">
+        <button type="button" class="ghost hidden" id="later">Дараа</button>
+        <button type="button" class="primary" id="start">Одоо шинэчлэх</button>
+        <button type="button" class="primary hidden" id="finish">Дууссан</button>
+    </div>
+
+    <script>
+        const el = (id) => document.getElementById(id);
+
+        window.mdUpdate.onState((state) => {
+            if (state.kind === 'offer') {
+                el('version').textContent = `Хувилбар ${state.current} → ${state.latest}`;
+
+                if (state.notes) {
+                    el('notes').textContent = state.notes;
+                    el('notes').classList.remove('hidden');
+                }
+
+                el('later').classList.toggle('hidden', Boolean(state.force));
+
+                return;
+            }
+
+            if (state.kind === 'progress') {
+                el('fill').style.width = `${state.percent}%`;
+                el('state').textContent = state.total
+                    ? `Татаж байна… ${state.percent}% (${state.doneMb} / ${state.totalMb} МБ)`
+                    : `Татаж байна… ${state.doneMb} МБ`;
+
+                return;
+            }
+
+            if (state.kind === 'ready') {
+                el('title').textContent = 'Шинэчлэлт татагдлаа';
+                el('state').textContent = 'Дууссан дарахад програм хаагдаж, шинэ хувилбар суугаад дахин нээгдэнэ.';
+                el('fill').style.width = '100%';
+                el('start').classList.add('hidden');
+                el('later').classList.add('hidden');
+                el('finish').classList.remove('hidden');
+
+                return;
+            }
+
+            if (state.kind === 'error') {
+                el('title').textContent = 'Шинэчлэлт амжилтгүй';
+                el('state').textContent = state.message;
+                el('bar').classList.add('hidden');
+                el('start').disabled = false;
+                el('start').textContent = 'Дахин оролдох';
+                el('start').classList.remove('hidden');
+                el('later').classList.remove('hidden');
+            }
+        });
+
+        el('start').addEventListener('click', () => {
+            el('start').disabled = true;
+            el('start').textContent = 'Татаж байна…';
+            el('later').classList.add('hidden');
+            el('bar').classList.remove('hidden');
+            el('state').classList.remove('hidden');
+            window.mdUpdate.start();
+        });
+
+        el('later').addEventListener('click', () => window.mdUpdate.later());
+        el('finish').addEventListener('click', () => window.mdUpdate.install());
+    </script>
+</body>
+</html>

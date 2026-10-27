@@ -2,31 +2,17 @@
  * Шинэчлэлт шалгах, татах, суулгах.
  *
  * Сервер дээрх /desktop/version нь байршуулсан суулгацын хувилбарыг
- * хэлнэ. Суусан хувилбараас шинэ бол хэрэглэгчээс асууна — админ
- * «хүчээр» гэж тохируулсан бол «Дараа» гэж сонгох боломжгүй.
+ * хэлнэ. Суусан хувилбараас шинэ бол програмын голд цонх гарч ирнэ:
+ * татах явц нь мөрөөр харагдаж, «Дууссан» дарахад програм хаагдан
+ * шинэ хувилбар суугаад дахин нээгдэнэ.
+ *
+ * Админ «хүчээр» гэж тохируулсан бол «Дараа» сонголт гарахгүй.
  */
 
-const { app, dialog, net } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, net } = require('electron');
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
-
-/**
- * Суулгацыг програмаа хаасны ДАРАА ажиллуулна.
- *
- * Шууд ажиллуулбал хуучин програм ажилласан хэвээр байх тул суулгагч
- * «Another program is currently using this file» гэж зогсдог. Иймд
- * тусдаа процесс хэдэн секунд хүлээгээд эхлүүлнэ.
- */
-const launchInstallerAfterExit = (installer) => {
-    const shellExe = process.env.COMSPEC || 'cmd.exe';
-
-    spawn(
-        shellExe,
-        ['/c', `timeout /t 4 /nobreak >nul & start "" "${installer}"`],
-        { detached: true, stdio: 'ignore', windowsHide: true },
-    ).unref();
-};
 
 /** Хувилбарыг тоогоор нь харьцуулна: 1.10.0 > 1.9.3. */
 const compareVersions = (left, right) => {
@@ -69,7 +55,8 @@ const fetchJson = (url) => new Promise((resolve, reject) => {
     request.end();
 });
 
-const downloadTo = (url, target) => new Promise((resolve, reject) => {
+/** Татах явцыг мэдэгдэж байж суулгацыг хадгална. */
+const downloadTo = (url, target, onProgress) => new Promise((resolve, reject) => {
     // Сешний cookie-г хамт илгээнэ — татах хаяг нэвтэрсэн хэрэглэгчид зориулагдсан.
     const request = net.request({ url, method: 'GET', useSessionCookies: true });
 
@@ -80,9 +67,16 @@ const downloadTo = (url, target) => new Promise((resolve, reject) => {
             return;
         }
 
+        const total = Number(response.headers['content-length'] ?? 0) || 0;
         const file = fs.createWriteStream(target);
+        let done = 0;
 
-        response.on('data', (chunk) => file.write(chunk));
+        response.on('data', (chunk) => {
+            done += chunk.length;
+            file.write(chunk);
+            onProgress(done, total);
+        });
+
         response.on('end', () => file.end(() => resolve(target)));
         response.on('error', reject);
     });
@@ -92,12 +86,136 @@ const downloadTo = (url, target) => new Promise((resolve, reject) => {
 });
 
 /**
- * Шинэчлэлт байгаа эсэхийг шалгаж, зөвшөөрвөл суулгана.
+ * Суулгацыг програмаа хаасны ДАРАА ажиллуулна.
+ *
+ * Шууд ажиллуулбал хуучин програм ажилласан хэвээр байх тул суулгагч
+ * «Another program is currently using this file» гэж зогсдог.
+ */
+const launchInstallerAfterExit = (installer) => {
+    const shellExe = process.env.COMSPEC || 'cmd.exe';
+
+    spawn(
+        shellExe,
+        ['/c', `timeout /t 4 /nobreak >nul & start "" "${installer}"`],
+        { detached: true, stdio: 'ignore', windowsHide: true },
+    ).unref();
+};
+
+/** @type {import('electron').BrowserWindow|null} */
+let updateWin = null;
+
+/** Одоо санал болгож буй шинэчлэлт. */
+let pending = null;
+
+let wired = false;
+
+const send = (state) => {
+    if (updateWin && ! updateWin.isDestroyed()) {
+        updateWin.webContents.send('update:state', state);
+    }
+};
+
+const mb = (bytes) => (bytes / 1024 / 1024).toFixed(1);
+
+const closeWindow = () => {
+    if (updateWin && ! updateWin.isDestroyed()) {
+        updateWin.destroy();
+    }
+
+    updateWin = null;
+};
+
+const startDownload = async () => {
+    if (! pending) {
+        return;
+    }
+
+    const target = path.join(app.getPath('temp'), `Manage-Dornogovi-Setup-${pending.latest}.exe`);
+
+    try {
+        await downloadTo(pending.url, target, (done, total) => {
+            send({
+                kind: 'progress',
+                percent: total ? Math.min(100, Math.round((done / total) * 100)) : 0,
+                doneMb: mb(done),
+                totalMb: total ? mb(total) : null,
+                total,
+            });
+        });
+    } catch (error) {
+        send({ kind: 'error', message: error.message });
+
+        return;
+    }
+
+    pending.file = target;
+    send({ kind: 'ready' });
+};
+
+const wire = () => {
+    if (wired) {
+        return;
+    }
+
+    wired = true;
+
+    ipcMain.on('update:ready', () => {
+        if (pending) {
+            send({ kind: 'offer', ...pending });
+        }
+    });
+
+    ipcMain.on('update:start', startDownload);
+    ipcMain.on('update:later', closeWindow);
+
+    ipcMain.on('update:install', () => {
+        if (! pending?.file) {
+            return;
+        }
+
+        launchInstallerAfterExit(pending.file);
+        app.quit();
+    });
+};
+
+const openWindow = (parent) => {
+    wire();
+    closeWindow();
+
+    updateWin = new BrowserWindow({
+        width: 460,
+        height: 300,
+        parent: parent ?? undefined,
+        modal: Boolean(parent),
+        resizable: false,
+        // Хүчээр шинэчлэх үед цонхыг хааж болохгүй.
+        closable: ! pending?.force,
+        minimizable: false,
+        maximizable: false,
+        fullscreenable: false,
+        backgroundColor: '#ffffff',
+        title: 'Шинэчлэлт',
+        webPreferences: {
+            preload: path.join(__dirname, 'preload-update.js'),
+            contextIsolation: true,
+            nodeIntegration: false,
+        },
+    });
+
+    updateWin.setMenuBarVisibility(false);
+    updateWin.loadFile(path.join(__dirname, 'update.html'));
+    updateWin.on('closed', () => {
+        updateWin = null;
+    });
+};
+
+/**
+ * Шинэчлэлт байгаа эсэхийг шалгаж, байвал цонхыг нээнэ.
  *
  * @param {string} siteUrl
- * @param {{silent?: boolean}} options  silent — шинэчлэлт байхгүй бол дуугарахгүй
+ * @param {{silent?: boolean, parent?: import('electron').BaseWindow|null}} options
  */
-async function checkForUpdates(siteUrl, { silent = true } = {}) {
+async function checkForUpdates(siteUrl, { silent = true, parent = null } = {}) {
     let manifest;
 
     try {
@@ -133,54 +251,23 @@ async function checkForUpdates(siteUrl, { silent = true } = {}) {
         return false;
     }
 
-    const force = Boolean(manifest.force);
-    const buttons = force ? ['Одоо шинэчлэх'] : ['Одоо шинэчлэх', 'Дараа'];
+    // Нээлттэй цонх байвал дахин нээхгүй.
+    if (updateWin && ! updateWin.isDestroyed()) {
+        updateWin.focus();
 
-    const { response } = await dialog.showMessageBox({
-        type: 'info',
-        title: 'Шинэчлэлт гарлаа',
-        message: `Шинэ хувилбар бэлэн боллоо (${current} → ${latest}).`,
-        detail: force
-            ? `${manifest.notes || ''}\n\nЭнэ шинэчлэлтийг заавал хийнэ.`.trim()
-            : (manifest.notes || 'Одоо шинэчлэх үү, эсвэл дараа хийх үү?'),
-        buttons,
-        defaultId: 0,
-        cancelId: force ? -1 : 1,
-        noLink: true,
-    });
-
-    if (! force && response !== 0) {
-        return false;
+        return true;
     }
 
-    const target = path.join(app.getPath('temp'), `Manage-Dornogovi-Setup-${latest}.exe`);
+    pending = {
+        latest,
+        current,
+        notes: String(manifest.notes || ''),
+        force: Boolean(manifest.force),
+        url: new URL(manifest.url, siteUrl).toString(),
+        file: null,
+    };
 
-    try {
-        await downloadTo(new URL(manifest.url, siteUrl).toString(), target);
-    } catch (error) {
-        await dialog.showMessageBox({
-            type: 'error',
-            title: 'Шинэчлэлт',
-            message: 'Суулгацыг татаж чадсангүй.',
-            detail: error.message,
-            buttons: ['Хаах'],
-        });
-
-        return false;
-    }
-
-    await dialog.showMessageBox({
-        type: 'info',
-        title: 'Шинэчлэлт',
-        message: 'Суулгац бэлэн боллоо.',
-        detail: 'Програм хаагдаж, шинэ хувилбар суусны дараа дахин нээгдэнэ.',
-        buttons: ['Үргэлжлүүлэх'],
-        noLink: true,
-    });
-
-    // Эхлээд суулгагчийг хүлээлгэнд тавиад, дараа нь програмаа бүрэн хаана.
-    launchInstallerAfterExit(target);
-    app.quit();
+    openWindow(parent);
 
     return true;
 }
