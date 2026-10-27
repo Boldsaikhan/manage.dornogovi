@@ -10,7 +10,6 @@ import NotificationBell from '@/Components/NotificationBell.vue';
 import QrScanButton from '@/Components/QrScanButton.vue';
 import AiPanel from '@/Components/AiPanel.vue';
 import AppLockGate from '@/Components/AppLockGate.vue';
-import Modal from '@/Components/Modal.vue';
 import HoverTip from '@/Components/HoverTip.vue';
 import { useTheme } from '@/utils/theme';
 
@@ -129,8 +128,6 @@ const sidebarBlocks = computed(() => {
 });
 
 const vaultUnlocked = computed(() => page.props.vault?.unlocked ?? false);
-const vaultModal = ref(false);
-const vaultBusy = ref(false);
 const navBadges = computed(() => page.props.navBadges ?? {});
 const linkedSystems = computed(() => (page.props.nav ?? []).filter((s) => ! s.is_internal));
 
@@ -159,26 +156,6 @@ const publishSystemHosts = () => {
 };
 
 watch(systemHosts, publishSystemHosts);
-
-const onVaultClick = async () => {
-    if (! vaultUnlocked.value) {
-        vaultModal.value = true;
-
-        return;
-    }
-
-    if (vaultBusy.value) {
-        return;
-    }
-
-    vaultBusy.value = true;
-    try {
-        await window.axios.post(route('vault.lock'));
-        router.reload({ only: ['vault'] });
-    } finally {
-        vaultBusy.value = false;
-    }
-};
 
 const badgeFor = (key) => {
     const n = Number(navBadges.value?.[key] ?? 0);
@@ -373,32 +350,6 @@ const onLinkedSystemClick = (sys, event) => {
                 class="space-y-1 border-t border-slate-100 p-3 dark:border-slate-800"
                 :class="sidebarCollapsed ? 'lg:px-2' : ''"
             >
-                <button
-                    type="button"
-                    class="flex w-full items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-left text-sm text-slate-600 transition hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-                    :class="sidebarCollapsed ? 'lg:relative lg:justify-center lg:px-0' : ''"
-                    :title="vaultUnlocked ? 'Сан хаах' : 'Сан нээх'"
-                    @mouseenter="showNavTip($event, vaultUnlocked ? 'Сан — нээлттэй (хаах)' : 'Сан — түгжээтэй (нээх)')"
-                    @mouseleave="hideNavTip"
-                    @click="onVaultClick"
-                >
-                    <svg class="h-5 w-5 shrink-0 text-brand-navy-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                        <path :d="iconPaths.lock" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                    <span class="flex-1 font-medium" :class="sidebarCollapsed ? 'lg:hidden' : ''">Сан</span>
-                    <span
-                        class="rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                        :class="[
-                            vaultUnlocked
-                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300'
-                                : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
-                            sidebarCollapsed ? 'lg:hidden' : '',
-                        ]"
-                    >
-                        {{ vaultUnlocked ? 'нээлттэй' : 'түгжээтэй' }}
-                    </span>
-                </button>
-
                 <Link
                     v-if="user.is_admin"
                     :href="route('admin.users.index')"
@@ -571,16 +522,6 @@ const onLinkedSystemClick = (sys, event) => {
         />
 
         <AppLockGate />
-
-        <Modal :show="vaultModal" max-width="sm" @close="vaultModal = false">
-            <div class="p-6">
-                <h2 class="text-base font-semibold text-brand-navy-900">Нэвтрэх мэдээллийн сан</h2>
-                <p class="mt-1 mb-4 text-sm text-slate-500">
-                    Сан нээгдсэний дараа холбосон систем рүү хадгалсан нэр, нууц үгээр шууд нэвтэрнэ.
-                </p>
-                <VaultUnlockForm @unlocked="vaultModal = false" />
-            </div>
-        </Modal>
 
         <!-- Тайлбарыг хулганы дээд талд гаргана. -->
         <HoverTip />
