@@ -528,6 +528,31 @@ ipcMain.handle('md:used', (event, host) => {
 // Гадаад холбоосыг системийн хөтчөөр нээнэ.
 ipcMain.handle('md:external', (event, url) => shell.openExternal(String(url || '')));
 
+/*
+ * Жинхэнэ товчлуурын үйлдэл илгээнэ.
+ *
+ * Зарим маягтын нэг тэмдэгтийн нүд (регистрийн үсэг) нь зөвхөн бодит
+ * гарын оролтыг хүлээн авдаг тул DOM-оор утга оноох нь ажиллахгүй.
+ */
+ipcMain.handle('md:type', (event, text) => {
+    const chars = [...String(text ?? '')].slice(0, 32);
+
+    for (const ch of chars) {
+        event.sender.sendInputEvent({ type: 'keyDown', keyCode: ch });
+        event.sender.sendInputEvent({ type: 'char', keyCode: ch });
+        event.sender.sendInputEvent({ type: 'keyUp', keyCode: ch });
+    }
+
+    return true;
+});
+
+// Оношлох бүртгэл — зөвхөн маягтын бүтэц, нууц мэдээлэл бичигдэхгүй.
+ipcMain.handle('md:log', (event, message) => {
+    logLine('dan: ' + String(message ?? '').slice(0, 600));
+
+    return true;
+});
+
 // Табын мөрийн үйлдлүүд.
 ipcMain.on('tabs:activate', (event, id) => activate(Number(id)));
 ipcMain.on('tabs:close', (event, id) => closeTab(Number(id)));

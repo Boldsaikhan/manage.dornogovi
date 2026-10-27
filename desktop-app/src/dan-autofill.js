@@ -15,7 +15,7 @@
  * гүйцэтгээд, кодын талбарт фокус тавьж өгнө.
  */
 
-function runDanAutofill(entry, { onFilled = () => {} } = {}) {
+function runDanAutofill(entry, { onFilled = () => {}, typeKeys = null, log = () => {} } = {}) {
     const MAX_WAIT_MS = 25_000;
     const POLL_MS = 400;
 
@@ -151,6 +151,22 @@ function runDanAutofill(entry, { onFilled = () => {} } = {}) {
             return;
         }
 
+        /*
+         * Эхлээд бодит товчлуураар — нэг тэмдэгтийн нүд зөвхөн түүнийг
+         * хүлээн авдаг. Боломжгүй бол DOM-оор бичнэ.
+         */
+        if (typeKeys) {
+            try {
+                el.focus();
+                el.select?.();
+                typeKeys(letter);
+
+                return;
+            } catch {
+                // Доорх аргаар үргэлжилнэ.
+            }
+        }
+
         typeInto(el, letter);
     };
 
@@ -260,6 +276,22 @@ function runDanAutofill(entry, { onFilled = () => {} } = {}) {
 
         // 3. Үсэг + дугаар.
         const boxes = letterFields(numberField);
+
+        // Оношлоход: аль талбарууд олдсоныг тэмдэглэнэ.
+        try {
+            const describe = (el) => [
+                el.tagName.toLowerCase(),
+                el.type,
+                'max=' + el.maxLength,
+                'ph=' + (el.placeholder || '-'),
+                'w=' + Math.round(el.getBoundingClientRect().width),
+            ].join('/');
+
+            log('нүднүүд: ' + boxes.map(describe).join(' | ')
+                + ' || дугаар: ' + describe(numberField));
+        } catch {
+            // Бүртгэж чадсангүй.
+        }
         let split = false;
 
         if (boxes.length === 2) {
@@ -291,6 +323,7 @@ function runDanAutofill(entry, { onFilled = () => {} } = {}) {
          */
         const wanted = digitsOnly ? digits : register;
         let guards = 0;
+        let letterTries = 0;
         const guard = setInterval(() => {
             if (++guards > 10 || ! numberField.isConnected) {
                 clearInterval(guard);
@@ -298,9 +331,14 @@ function runDanAutofill(entry, { onFilled = () => {} } = {}) {
                 return;
             }
 
-            if (boxes.length === 2) {
-                if ((boxes[0].value ?? '').toUpperCase() !== letters[0]) setLetter(boxes[0], letters[0]);
-                if ((boxes[1].value ?? '').toUpperCase() !== letters[1]) setLetter(boxes[1], letters[1]);
+            // Үсгийг цөөхөн удаа л дахин оролдоно — гар оролт давхарлахгүй.
+            if (boxes.length === 2 && letterTries < 3) {
+                if ((boxes[0].value ?? '').toUpperCase() !== letters[0]
+                    || (boxes[1].value ?? '').toUpperCase() !== letters[1]) {
+                    letterTries++;
+                    setLetter(boxes[0], letters[0]);
+                    setLetter(boxes[1], letters[1]);
+                }
             }
 
             if (numberField.value !== wanted) setValue(numberField, wanted);
