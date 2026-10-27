@@ -43,7 +43,12 @@ window.addEventListener('DOMContentLoaded', async () => {
             const options = { onFilled: () => ipcRenderer.invoke('md:used', location.host) };
 
             if (credential.mode === 'dan') {
-                runDanAutofill(credential, options);
+                runDanAutofill(credential, {
+                    ...options,
+                    // Бодит товчлуурын үйлдэл — нэг тэмдэгтийн нүдэнд хэрэгтэй.
+                    typeKeys: (text) => ipcRenderer.invoke('md:type', text),
+                    log: (message) => ipcRenderer.invoke('md:log', message),
+                });
             } else {
                 runAutofill(credential, options);
             }
