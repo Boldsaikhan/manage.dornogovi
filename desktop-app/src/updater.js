@@ -94,9 +94,13 @@ const downloadTo = (url, target, onProgress) => new Promise((resolve, reject) =>
 const launchInstallerAfterExit = (installer) => {
     const shellExe = process.env.COMSPEC || 'cmd.exe';
 
+    /*
+     * /S — чимээгүй суулгалт (хэрэглэгч дарж суухгүй),
+     * --force-run — суусны дараа програмыг шууд нээнэ.
+     */
     spawn(
         shellExe,
-        ['/c', `timeout /t 4 /nobreak >nul & start "" "${installer}"`],
+        ['/c', `timeout /t 3 /nobreak >nul & start "" "${installer}" /S --force-run`],
         { detached: true, stdio: 'ignore', windowsHide: true },
     ).unref();
 };
@@ -178,11 +182,17 @@ const wire = () => {
 
         installing = true;
         launchInstallerAfterExit(pending.file);
-        closeWindow();
-        app.quit();
 
-        // Ямар нэг цонх хаагдахгүй бол хүчээр гарна — суулгац түгжигдэхгүй.
-        setTimeout(() => app.exit(0), 1500);
+        // Хаагдахаас өмнө «суулгаж байна» төлвийг харуулна.
+        send({ kind: 'installing' });
+
+        setTimeout(() => {
+            closeWindow();
+            app.quit();
+
+            // Ямар нэг цонх хаагдахгүй бол хүчээр гарна.
+            setTimeout(() => app.exit(0), 1200);
+        }, 1200);
     });
 };
 
