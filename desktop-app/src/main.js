@@ -6,7 +6,7 @@
  * Мэдээлэл нь зөвхөн програмын санах ойд байх бөгөөд дискэнд бичигдэхгүй.
  */
 
-const { app, BrowserWindow, ipcMain, shell, session } = require('electron');
+const { app, BrowserWindow, ipcMain, nativeTheme, shell, session } = require('electron');
 const path = require('node:path');
 
 const SITE_URL = process.env.MD_SITE_URL || 'https://manage.dornogovi.gov.mn';
@@ -74,6 +74,7 @@ const openTarget = (url) => {
         width: 1280,
         height: 860,
         autoHideMenuBar: true,
+        backgroundColor: '#ffffff',
         webPreferences: {
             preload: path.join(__dirname, 'preload-target.js'),
             contextIsolation: true,
@@ -94,6 +95,7 @@ const createMainWindow = () => {
         minWidth: 1024,
         minHeight: 640,
         autoHideMenuBar: true,
+        backgroundColor: '#ffffff',
         title: 'Manage Dornogovi',
         webPreferences: {
             preload: path.join(__dirname, 'preload-app.js'),
@@ -149,6 +151,9 @@ if (! app.requestSingleInstanceLock()) {
     });
 
     app.whenReady().then(() => {
+        // Цонхны хүрээ цайвар — систем нь бараан байсан ч.
+        nativeTheme.themeSource = 'light';
+
         // Сайтын өөрийн preload-оос бусдад хандах эрх өгөхгүй.
         session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
             callback(['clipboard-read', 'clipboard-sanitized-write'].includes(permission));

@@ -5,7 +5,7 @@ const STORAGE_KEY = 'manage-theme';
 const systemPrefersDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
 
 /** 'light' | 'dark' | 'system' — app.blade.php-ийн inline script-тэй ижил логик. */
-const mode = ref(localStorage.getItem(STORAGE_KEY) || 'system');
+const mode = ref(localStorage.getItem(STORAGE_KEY) || 'light');
 
 const applyMode = (value) => {
     const dark = value === 'dark' || (value === 'system' && systemPrefersDark());
