@@ -23,18 +23,74 @@
 
         body {
             display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 0 10px;
+            flex-direction: column;
+            gap: 0;
+            padding: 0;
             background: linear-gradient(180deg, var(--navy-700) 0%, var(--navy-800) 100%);
             font: 13px/1.2 "Segoe UI", system-ui, sans-serif;
             color: #fff;
             user-select: none;
             /* Цонхны толгой нь энэ мөр — эндээс чирнэ. */
             -webkit-app-region: drag;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .row--tabs {
+            height: 44px;
+            padding: 0 10px;
             /* Баруун талд Windows-ийн багасгах/хаах товчнууд. */
             padding-right: 146px;
         }
+
+        .row--address {
+            height: 30px;
+            padding: 0 10px 5px;
+            -webkit-app-region: no-drag;
+        }
+
+        .address {
+            flex: 1;
+            min-width: 0;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 0 10px;
+            border-radius: 7px;
+            background: rgba(255, 255, 255, .12);
+            color: var(--navy-100);
+            font-size: 11.5px;
+            cursor: default;
+        }
+
+        .address .scheme { opacity: .6; }
+
+        .address .path {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            user-select: text;
+        }
+
+        .address .copy {
+            flex: none;
+            margin-left: auto;
+            padding: 2px 8px;
+            border: 0;
+            border-radius: 5px;
+            background: transparent;
+            color: var(--navy-300);
+            font-size: 10.5px;
+            cursor: pointer;
+        }
+
+        .address .copy:hover { background: rgba(255, 255, 255, .18); color: #fff; }
 
         button, .tab { -webkit-app-region: no-drag; }
 
@@ -181,7 +237,8 @@
     </style>
 </head>
 <body>
-    <div class="nav">
+    <div class="row row--tabs">
+        <div class="nav">
         <button id="back" title="Буцах" aria-label="Буцах" disabled>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
         </button>
@@ -195,7 +252,16 @@
 
     <div id="tabs"></div>
 
-    <button id="update" class="version" title="Шинэчлэлт шалгах"></button>
+        <button id="update" class="version" title="Шинэчлэлт шалгах"></button>
+    </div>
+
+    <div class="row row--address">
+        <div class="address" title="Одоогийн хаяг">
+            <span class="scheme" id="lock">&#128274;</span>
+            <span class="path" id="url">—</span>
+            <button type="button" class="copy" id="copy">Хуулах</button>
+        </div>
+    </div>
 
     <script>
         const list = document.getElementById('tabs');
@@ -217,7 +283,35 @@
         window.mdTabs.onState((state) => {
             back.disabled = ! state.canGoBack;
             forward.disabled = ! state.canGoForward;
+            showUrl(state.url);
             list.replaceChildren(...state.tabs.map(build));
+        });
+
+        let currentUrl = '';
+
+        function showUrl(url) {
+            currentUrl = url || '';
+
+            const field = document.getElementById('url');
+            const lock = document.getElementById('lock');
+
+            if (! currentUrl) {
+                field.textContent = '—';
+                lock.textContent = '';
+
+                return;
+            }
+
+            field.textContent = currentUrl;
+            field.title = currentUrl;
+            // Нууцлалтай холболт эсэхийг түгжээгээр харуулна.
+            lock.textContent = currentUrl.startsWith('https:') ? '🔒' : '\u26A0';
+        }
+
+        document.getElementById('copy').addEventListener('click', () => {
+            if (currentUrl) {
+                navigator.clipboard.writeText(currentUrl).catch(() => {});
+            }
         });
 
         function build(tab) {

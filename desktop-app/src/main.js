@@ -12,6 +12,7 @@ const {
     BaseWindow,
     WebContentsView,
     Menu,
+    clipboard,
     ipcMain,
     nativeTheme,
     shell,
@@ -41,8 +42,8 @@ const logLine = (message) => {
 const SITE_URL = process.env.MD_SITE_URL || 'https://manage.dornogovi.gov.mn';
 const SITE_HOST = new URL(SITE_URL).host;
 
-/** Табын мөрийн өндөр (px). */
-const TAB_BAR_HEIGHT = 44;
+/** Табын мөр + хаягийн мөрийн нийт өндөр (px). */
+const TAB_BAR_HEIGHT = 74;
 
 /**
  * Хост → нэвтрэх мэдээлэл.
@@ -234,6 +235,7 @@ const sendState = () => {
         })),
         canGoBack: current ? canGoBack(current.view.webContents) : false,
         canGoForward: current ? canGoForward(current.view.webContents) : false,
+        url: current ? current.view.webContents.getURL() : '',
     });
 };
 
@@ -276,9 +278,51 @@ const closeTab = (id) => {
     }
 };
 
+/**
+ * Хулганы баруун товчны цэс.
+ *
+ * Хөтчийн цэсийг хассан тул хуулах, буулгах, буцах зэрэг энгийн үйлдлүүд
+ * алга болсон байв.
+ */
+const openContextMenu = (webContents, params) => {
+    const { editFlags } = params;
+    const items = [];
+
+    if (params.linkURL) {
+        items.push(
+            { label: 'Холбоосыг шинэ табд нээх', click: () => openInTab(params.linkURL) },
+            { label: 'Холбоосыг хуулах', click: () => clipboard.writeText(params.linkURL) },
+            { type: 'separator' },
+        );
+    }
+
+    if (params.isEditable || params.selectionText) {
+        items.push(
+            { label: 'Таслах', role: 'cut', enabled: editFlags.canCut },
+            { label: 'Хуулах', role: 'copy', enabled: editFlags.canCopy },
+            { label: 'Буулгах', role: 'paste', enabled: editFlags.canPaste },
+            { label: 'Бүгдийг сонгох', role: 'selectAll' },
+            { type: 'separator' },
+        );
+    }
+
+    items.push(
+        { label: 'Буцах', enabled: canGoBack(webContents), click: () => webContents.navigationHistory.goBack() },
+        { label: 'Урагшлах', enabled: canGoForward(webContents), click: () => webContents.navigationHistory.goForward() },
+        { label: 'Дахин ачаалах', click: () => webContents.reload() },
+        { type: 'separator' },
+        { label: 'Хаягийг хуулах', click: () => clipboard.writeText(webContents.getURL()) },
+        { label: 'Шалгах (DevTools)', click: () => webContents.openDevTools({ mode: 'detach' }) },
+    );
+
+    Menu.buildFromTemplate(items).popup({ window: win });
+};
+
 /** Табын доторх хуудсыг програмын дүрмээр хянана. */
 const wire = (tab) => {
     const { webContents } = tab.view;
+
+    webContents.on('context-menu', (event, params) => openContextMenu(webContents, params));
 
     webContents.on('page-title-updated', (event, title) => {
         event.preventDefault();
@@ -440,7 +484,8 @@ const createMainWindow = () => {
         titleBarOverlay: {
             color: '#164789',
             symbolColor: '#e4eef8',
-            height: TAB_BAR_HEIGHT,
+            // Цонхны товчнууд зөвхөн дээд мөрөнд — хаягийн мөр доор нь.
+            height: 44,
         },
     });
 
