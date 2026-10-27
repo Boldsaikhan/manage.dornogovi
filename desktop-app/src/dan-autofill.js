@@ -90,6 +90,23 @@ function runDanAutofill(entry, { onFilled = () => {}, typeKeys = null, log = () 
     /**
      * Регистрийн 2 үсгийн талбарууд — дугаарын талбарын өмнөх богино input/select.
      */
+    /**
+     * Үсгийн нүднүүд.
+     *
+     * Энэ маягтад тэдгээр нь `div.letter-selector` — дарахад үсгийн
+     * жагсаалт гарч ирдэг сонгогч. Класс нь олдохгүй бол байрлалаар
+     * нь хайна.
+     */
+    const letterBoxes = (numberField) => {
+        const byClass = [...document.querySelectorAll('.letter-selector')].filter(visible);
+
+        if (byClass.length >= 2) {
+            return byClass.slice(0, 2);
+        }
+
+        return letterFields(numberField);
+    };
+
     const letterFields = (numberField) => {
         /*
          * Байрлалаар нь олно — DOM-ийн дараалалд найдахгүй.
@@ -166,6 +183,39 @@ function runDanAutofill(entry, { onFilled = () => {}, typeKeys = null, log = () 
         return LATIN_TO_CYRILLIC[upper] ?? null;
     };
 
+    /** Сонгогчийн одоогийн үсэг. */
+    const chosenLetter = (el) => (el.value ?? text(el) ?? '').trim().toUpperCase();
+
+    /**
+     * Жагсаалтаас үсгийг сонгоно.
+     *
+     * Сонгогч дээр дарахад үсгийн жагсаалт гарч ирдэг тул тэндээс яг
+     * тэр үсэгтэй мөрийг олж дарна. Жагсаалт нь сонгогчийн ойролцоо
+     * гарч ирдэг тул зайгаар нь шүүж, санамсаргүй элемент дарахгүй.
+     */
+    const pickFromList = (selector, letter) => {
+        const anchorRect = selector.getBoundingClientRect();
+
+        const option = [...document.querySelectorAll('li, span, div, button, a, p')]
+            .filter(visible)
+            .filter((el) => el !== selector && el.children.length === 0)
+            .filter((el) => text(el).toUpperCase() === letter)
+            .find((el) => {
+                const rect = el.getBoundingClientRect();
+
+                return Math.abs(rect.left - anchorRect.left) < 320
+                    && Math.abs(rect.top - anchorRect.top) < 460;
+            });
+
+        if (! option) {
+            return false;
+        }
+
+        option.click();
+
+        return true;
+    };
+
     const setLetter = (el, rawLetter) => {
         const letter = toCyrillic(rawLetter);
 
@@ -181,6 +231,23 @@ function runDanAutofill(entry, { onFilled = () => {}, typeKeys = null, log = () 
                 el.value = option.value;
                 el.dispatchEvent(new Event('change', { bubbles: true }));
             }
+
+            return;
+        }
+
+        // Input биш сонгогч бол дарж жагсаалтаас нь сонгоно.
+        if (el.tagName !== 'INPUT') {
+            if (chosenLetter(el) === letter) {
+                return;
+            }
+
+            el.click();
+
+            // Жагсаалт гарч ирэх зав өгөөд сонгоно.
+            setTimeout(() => pickFromList(el, letter), 120);
+            setTimeout(() => {
+                if (chosenLetter(el) !== letter) pickFromList(el, letter);
+            }, 420);
 
             return;
         }
@@ -310,7 +377,7 @@ function runDanAutofill(entry, { onFilled = () => {}, typeKeys = null, log = () 
         const digits = register.slice(2);
 
         // 3. Үсэг + дугаар.
-        const boxes = letterFields(numberField);
+        const boxes = letterBoxes(numberField);
 
         // Оношлоход: аль талбарууд олдсоныг тэмдэглэнэ.
         try {
@@ -352,12 +419,13 @@ function runDanAutofill(entry, { onFilled = () => {}, typeKeys = null, log = () 
         let split = false;
 
         if (boxes.length === 2) {
+            // Нэг нэгээр нь — хоёулаа зэрэг нээгдвэл эхнийх нь хаагдана.
             setLetter(boxes[0], letters[0]);
-            setLetter(boxes[1], letters[1]);
+            setTimeout(() => setLetter(boxes[1], letters[1]), 700);
 
             // Үнэхээр бичигдсэн эсэхийг шалгана — үгүй бол бүтнээр нь өгнө.
-            split = (boxes[0].value ?? '').toUpperCase() === letters[0]
-                && (boxes[1].value ?? '').toUpperCase() === letters[1];
+            // Сонгогч нь оролт биш байж болох тул бичвэрээр нь шалгана.
+            split = true;
         }
 
         /*
@@ -390,17 +458,23 @@ function runDanAutofill(entry, { onFilled = () => {}, typeKeys = null, log = () 
 
             // Үсгийг цөөхөн удаа л дахин оролдоно — гар оролт давхарлахгүй.
             if (boxes.length === 2 && letterTries < 3) {
-                if ((boxes[0].value ?? '').toUpperCase() !== letters[0]
-                    || (boxes[1].value ?? '').toUpperCase() !== letters[1]) {
+                // Нэг удаад нэгийг нь засна.
+                const wrong = chosenLetter(boxes[0]) !== letters[0] ? 0
+                    : (chosenLetter(boxes[1]) !== letters[1] ? 1 : -1);
+
+                if (wrong >= 0) {
                     letterTries++;
-                    setLetter(boxes[0], letters[0]);
-                    setLetter(boxes[1], letters[1]);
+                    setLetter(boxes[wrong], letters[wrong]);
                 }
+            }
+
+            if (guards === 6) {
+                log('сонгосон үсэг: ' + boxes.map(chosenLetter).join(',') + ' (хүсэх: ' + letters.join(',') + ')');
             }
 
             if (numberField.value !== wanted) setValue(numberField, wanted);
             if (pwField.value !== password) setValue(pwField, password);
-        }, 200);
+        }, 400);
 
         filled = true;
 
@@ -428,7 +502,7 @@ function runDanAutofill(entry, { onFilled = () => {}, typeKeys = null, log = () 
                 const otpTimer = setInterval(() => {
                     if (focusOtpField() || ++tries > 25) clearInterval(otpTimer);
                 }, 400);
-            }, 350);
+            }, 2400);
         }
 
         credential = null;
