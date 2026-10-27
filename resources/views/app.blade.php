@@ -13,7 +13,7 @@
         <script>
             (function () {
                 try {
-                    var saved = localStorage.getItem('manage-theme') || 'system';
+                    var saved = localStorage.getItem('manage-theme') || 'light';
                     var dark = saved === 'dark'
                         || (saved === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
                     document.documentElement.classList.toggle('dark', dark);
