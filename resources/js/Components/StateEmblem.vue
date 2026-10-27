@@ -5,13 +5,18 @@ import SoyomboMark from '@/Components/SoyomboMark.vue';
 /**
  * Системийн лого.
  *
- * `public/images/emblem.png` файл байвал түүнийг харуулна. Байхгүй бол
- * доорх энгийн хувилбарт автоматаар шилжинэ — ингэснээр зураг байршуулаагүй
- * ч хуудас гуйвахгүй.
+ * `full` үед бичигтэй бүтэн лого, эс бөгөөс зөвхөн тэмдэг нь харагдана.
+ * Зураг нь олдохгүй бол энгийн хувилбарт автоматаар шилжинэ — ингэснээр
+ * файл байршуулаагүй ч хуудас гуйвахгүй.
  *
- * Логоо солихдоо зөвхөн тэр файлыг солиход хангалттай:
- *   public/images/emblem.png   (тунгалаг дэвсгэртэй, 512×512 орчим)
+ * Логоо солихдоо эдгээр файлыг л солино:
+ *   public/images/logo-manage.png   (бичигтэй бүтэн лого)
+ *   public/images/logo-mark.png     (зөвхөн тэмдэг, дөрвөлжин)
  */
+defineProps({
+    full: { type: Boolean, default: false },
+});
+
 const useFallback = ref(false);
 </script>
 
@@ -19,7 +24,7 @@ const useFallback = ref(false);
     <span class="relative inline-flex items-center justify-center">
         <img
             v-if="!useFallback"
-            src="/images/emblem.png"
+            :src="full ? '/images/logo-manage.png' : '/images/logo-mark.png'"
             alt="Manage дотоод системийн лого"
             class="h-full w-full object-contain"
             @error="useFallback = true"

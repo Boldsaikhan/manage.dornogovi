@@ -205,7 +205,7 @@ onBeforeUnmount(() => clearInterval(ticker));
         <div class="mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-md items-center justify-center">
             <div class="w-full rounded-3xl bg-white px-6 py-10 shadow-xl shadow-slate-300/40 sm:px-10">
                 <div class="text-center">
-                    <StateEmblem class="mx-auto h-16 w-16" />
+                    <StateEmblem full class="mx-auto h-20 w-40" />
 
                     <h1 class="mt-4 text-base font-bold leading-snug tracking-tight text-brand-navy-700">
                         НЭВТРЭХ МЭДЭЭЛЭЛ СЭРГЭЭХ
