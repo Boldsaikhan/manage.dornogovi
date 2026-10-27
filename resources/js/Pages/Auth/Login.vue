@@ -170,7 +170,7 @@ const submit = () => {
                 <div class="w-full max-w-sm">
                     <!-- Толгой -->
                     <div class="text-center">
-                        <StateEmblem class="mx-auto h-20 w-20" />
+                        <StateEmblem full class="mx-auto h-24 w-48" />
 
                         <h1
                             class="mt-5 text-lg font-bold leading-snug tracking-tight text-brand-navy-700"
