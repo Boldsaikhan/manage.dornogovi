@@ -1,7 +1,7 @@
 {
     "name": "manage-dornogovi-desktop",
     "productName": "Manage Dornogovi",
-    "version": "1.4.0",
+    "version": "1.4.1",
     "description": "Дорноговь аймгийн дотоод систем — Windows ширээний програм. Холбосон системүүд рүү автоматаар нэвтэрнэ.",
     "author": "Дорноговь аймгийн ЗДТГ",
     "main": "src/main.js",
@@ -38,17 +38,15 @@
             "artifactName": "Manage-Dornogovi-Setup.${ext}"
         },
         "nsis": {
-            "oneClick": false,
+            "oneClick": true,
             "perMachine": false,
-            "allowElevation": true,
             "allowToChangeInstallationDirectory": false,
             "createDesktopShortcut": true,
             "createStartMenuShortcut": true,
             "shortcutName": "Manage Dornogovi",
             "runAfterFinish": true,
             "deleteAppDataOnUninstall": false,
-            "differentialPackage": false,
-            "license": "build/license.txt"
+            "differentialPackage": false
         },
         "compression": "maximum"
     }
