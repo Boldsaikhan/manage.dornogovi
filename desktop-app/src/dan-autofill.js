@@ -39,10 +39,17 @@ function runDanAutofill(entry, { onFilled = () => {} } = {}) {
             ? HTMLTextAreaElement.prototype
             : HTMLInputElement.prototype;
 
+        try {
+            el.focus();
+        } catch {
+            // Фокус авахгүй байж болно.
+        }
+
         Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, value);
 
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
+        el.dispatchEvent(new Event('blur', { bubbles: true }));
     };
 
     /** Текстээр нь товч/таб олж дарна. Аль хэдийн идэвхтэй бол дарахгүй. */
@@ -89,9 +96,17 @@ function runDanAutofill(entry, { onFilled = () => {} } = {}) {
 
         if (index < 1) return [];
 
+        /*
+         * Үсгийн нүд нь нэг тэмдэгт хүлээж авдаг — maxlength=1 эсвэл
+         * placeholder нь нэг үсэг («Р», «Д») байдгаараа танигдана.
+         * Өмнө нь maxlength-гүй бүх талбарыг оруулдаг тул санамсаргүй
+         * талбар сонгогдож, регистр буруу бичигддэг байв.
+         */
         return all
             .slice(0, index)
-            .filter((el) => el.tagName === 'SELECT' || (el.maxLength === 1 || el.maxLength === -1))
+            .filter((el) => el.tagName === 'SELECT'
+                || el.maxLength === 1
+                || (el.placeholder ?? '').trim().length === 1)
             .slice(-2);
     };
 
@@ -216,18 +231,47 @@ function runDanAutofill(entry, { onFilled = () => {} } = {}) {
 
         // 3. Үсэг + дугаар.
         const boxes = letterFields(numberField);
+        let split = false;
 
         if (boxes.length === 2) {
             setLetter(boxes[0], letters[0]);
             setLetter(boxes[1], letters[1]);
-            setValue(numberField, digits);
-        } else {
-            // Нэг талбарт бүтнээр нь хүлээж авдаг хувилбар.
-            setValue(numberField, register);
+
+            // Үнэхээр бичигдсэн эсэхийг шалгана — үгүй бол бүтнээр нь өгнө.
+            split = (boxes[0].value ?? '').toUpperCase() === letters[0]
+                && (boxes[1].value ?? '').toUpperCase() === letters[1];
         }
 
-        // 4. Нууц үг.
-        setValue(pwField, credential.password);
+        /*
+         * Үсгийн нүд ажиллаагүй бол дугаарын талбарын урт нь аль
+         * хэлбэрийг хүлээж авахыг хэлнэ: 8 бол зөвхөн орон, эс бөгөөс
+         * регистрийг бүтнээр нь.
+         */
+        const digitsOnly = split || numberField.maxLength === digits.length;
+
+        setValue(numberField, digitsOnly ? digits : register);
+
+        // 4. Нууц үг. (credential нь доор цэвэрлэгддэг тул хуулж авна.)
+        const password = credential.password;
+
+        setValue(pwField, password);
+
+        /*
+         * Маягт дахин зурагдахад бөглөсөн утга арилдаг тул хэсэг
+         * хугацаанд хянаж, арилсныг нь дахин бичнэ.
+         */
+        const wanted = digitsOnly ? digits : register;
+        let guards = 0;
+        const guard = setInterval(() => {
+            if (++guards > 10 || ! numberField.isConnected) {
+                clearInterval(guard);
+
+                return;
+            }
+
+            if (numberField.value !== wanted) setValue(numberField, wanted);
+            if (pwField.value !== password) setValue(pwField, password);
+        }, 200);
 
         filled = true;
 
