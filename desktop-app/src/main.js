@@ -463,8 +463,8 @@ if (! app.requestSingleInstanceLock()) {
         createMainWindow();
 
         // Эхлэхэд нэг удаа, дараа нь 6 цаг тутамд шинэчлэлтээ шалгана.
-        setTimeout(() => checkForUpdates(SITE_URL), 8000);
-        setInterval(() => checkForUpdates(SITE_URL), 6 * 60 * 60 * 1000);
+        setTimeout(() => checkForUpdates(SITE_URL, { parent: win }), 8000);
+        setInterval(() => checkForUpdates(SITE_URL, { parent: win }), 6 * 60 * 60 * 1000);
 
         app.on('activate', () => {
             if (! win || win.isDestroyed()) {
@@ -532,5 +532,5 @@ ipcMain.on('tabs:back', () => {
     }
 });
 ipcMain.on('tabs:reload', () => activeTab()?.view.webContents.reload());
-ipcMain.on('tabs:update', () => checkForUpdates(SITE_URL, { silent: false }));
+ipcMain.on('tabs:update', () => checkForUpdates(SITE_URL, { silent: false, parent: win }));
 ipcMain.handle('tabs:version', () => app.getVersion());
