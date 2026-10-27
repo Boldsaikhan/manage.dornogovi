@@ -682,5 +682,10 @@ ipcMain.on('tabs:forward', () => {
     }
 });
 ipcMain.on('tabs:reload', () => activeTab()?.view.webContents.reload());
-ipcMain.on('tabs:update', () => checkForUpdates(SITE_URL, { silent: false, parent: win }));
+ipcMain.on('tabs:update', () => checkForUpdates(SITE_URL, {
+    silent: false,
+    parent: win,
+    // Тусдаа цонх нээхгүй — табын мөрөнд богино мэдэгдэл.
+    notify: (text) => tabBar?.webContents.send('tabs:notice', text),
+}));
 ipcMain.handle('tabs:version', () => app.getVersion());

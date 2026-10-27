@@ -16,5 +16,8 @@ contextBridge.exposeInMainWorld('mdTabs', {
     forward: () => ipcRenderer.send('tabs:forward'),
     reload: () => ipcRenderer.send('tabs:reload'),
     checkUpdates: () => ipcRenderer.send('tabs:update'),
+    onNotice: (callback) => {
+        ipcRenderer.on('tabs:notice', (event, text) => callback(text));
+    },
     version: () => ipcRenderer.invoke('tabs:version'),
 });
