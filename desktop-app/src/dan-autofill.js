@@ -289,6 +289,28 @@ function runDanAutofill(entry, { onFilled = () => {}, typeKeys = null, log = () 
 
             log('нүднүүд: ' + boxes.map(describe).join(' | ')
                 + ' || дугаар: ' + describe(numberField));
+
+            // Үсгийн нүд олдоогүй бол эргэн тойрны бүтцийг бүртгэнэ.
+            if (boxes.length !== 2) {
+                const row = numberField.parentElement?.parentElement
+                    ?? numberField.parentElement
+                    ?? document.body;
+
+                const near = [...row.querySelectorAll('*')]
+                    .filter((el) => el.getBoundingClientRect().width > 0)
+                    .slice(0, 22)
+                    .map((el) => [
+                        el.tagName.toLowerCase(),
+                        (String(el.className || '').split(' ')[0] || '-'),
+                        'r=' + (el.getAttribute('role') || '-'),
+                        'ce=' + (el.isContentEditable ? 1 : 0),
+                        'w=' + Math.round(el.getBoundingClientRect().width),
+                        't=' + (el.textContent || '').trim().slice(0, 6),
+                    ].join('/'))
+                    .join(' | ');
+
+                log('бүтэц: ' + near);
+            }
         } catch {
             // Бүртгэж чадсангүй.
         }
