@@ -109,6 +109,9 @@ let pending = null;
 
 let wired = false;
 
+/** Суулгац ажиллуулах гэж байгаа — цонх хаагдахыг зөвшөөрнө. */
+let installing = false;
+
 const send = (state) => {
     if (updateWin && ! updateWin.isDestroyed()) {
         updateWin.webContents.send('update:state', state);
@@ -173,8 +176,13 @@ const wire = () => {
             return;
         }
 
+        installing = true;
         launchInstallerAfterExit(pending.file);
+        closeWindow();
         app.quit();
+
+        // Ямар нэг цонх хаагдахгүй бол хүчээр гарна — суулгац түгжигдэхгүй.
+        setTimeout(() => app.exit(0), 1500);
     });
 };
 
@@ -188,8 +196,6 @@ const openWindow = (parent) => {
         parent: parent ?? undefined,
         modal: Boolean(parent),
         resizable: false,
-        // Хүчээр шинэчлэх үед цонхыг хааж болохгүй.
-        closable: ! pending?.force,
         minimizable: false,
         maximizable: false,
         fullscreenable: false,
@@ -204,6 +210,18 @@ const openWindow = (parent) => {
 
     updateWin.setMenuBarVisibility(false);
     updateWin.loadFile(path.join(__dirname, 'update.html'));
+
+    /*
+     * Хүчээр шинэчлэх үед цонхыг хаалгахгүй. Гэхдээ closable: false нь
+     * app.quit()-ийг бас зогсоодог тул суулгах үед зөвшөөрнө — эс бөгөөс
+     * програм хаагдахгүй, суулгац хуучин файлуудыг солиж чадахгүй байв.
+     */
+    updateWin.on('close', (event) => {
+        if (pending?.force && ! installing) {
+            event.preventDefault();
+        }
+    });
+
     updateWin.on('closed', () => {
         updateWin = null;
     });
