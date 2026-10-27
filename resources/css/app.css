@@ -767,8 +767,19 @@
         @apply text-white;
     }
 
+    /* Бүлгийн гарчиг — дарахад хураагддаг тул товч шиг аашилна. */
     .ui-section-label {
-        @apply !mt-4 px-3 pb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500;
+        @apply !mt-4 flex w-full items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-bold
+            uppercase tracking-[0.14em] text-brand-navy-700 transition
+            dark:text-brand-navy-300;
+    }
+
+    button.ui-section-label {
+        @apply hover:bg-brand-navy-50 dark:hover:bg-slate-800;
+    }
+
+    .ui-section-label__chevron {
+        @apply ml-auto h-3 w-3 shrink-0 text-slate-400 transition-transform dark:text-slate-500;
     }
 
     nav > .ui-section-label:first-child {
