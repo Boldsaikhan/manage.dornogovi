@@ -135,6 +135,21 @@ const takeCredential = (host) => {
     };
 };
 
+/**
+ * Зөвхөн веб хаяг зөвшөөрнө.
+ *
+ * file:, javascript: зэрэг схемээр дамжсан халдлагаас хамгаална.
+ */
+const isWebUrl = (url) => {
+    try {
+        const { protocol } = new URL(url);
+
+        return protocol === 'https:' || protocol === 'http:';
+    } catch {
+        return false;
+    }
+};
+
 const isSiteUrl = (url) => {
     try {
         return new URL(url).host === SITE_HOST;
@@ -193,6 +208,15 @@ const canGoBack = (webContents) => {
     }
 };
 
+/** Таб нь урагшилж чадах эсэх. */
+const canGoForward = (webContents) => {
+    try {
+        return webContents.navigationHistory.canGoForward();
+    } catch {
+        return false;
+    }
+};
+
 const sendState = () => {
     if (! tabBar || tabBar.webContents.isDestroyed()) {
         return;
@@ -209,6 +233,7 @@ const sendState = () => {
             icon: tab.icon,
         })),
         canGoBack: current ? canGoBack(current.view.webContents) : false,
+        canGoForward: current ? canGoForward(current.view.webContents) : false,
     });
 };
 
@@ -364,15 +389,14 @@ const openInTab = (url) => {
         return;
     }
 
-    let host = '';
-
-    try {
-        host = new URL(url).host;
-    } catch {
-        shell.openExternal(url);
+    // Веб биш хаягийг огт нээхгүй.
+    if (! isWebUrl(url)) {
+        logLine('нээхээс татгалзав: ' + String(url).slice(0, 80));
 
         return;
     }
+
+    const host = new URL(url).host;
 
     const existing = tabs.find((tab) => {
         if (tab.home) {
@@ -466,8 +490,34 @@ if (! app.requestSingleInstanceLock()) {
         Menu.setApplicationMenu(null);
 
         // Сайтын өөрийн preload-оос бусдад хандах эрх өгөхгүй.
+        /*
+         * Камер, микрофон, байршил, мэдэгдэл зэргийг хаана. Зөвхөн
+         * системийн өөрийн хуудсанд clipboard-ыг зөвшөөрнө.
+         */
         session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
-            callback(['clipboard-read', 'clipboard-sanitized-write'].includes(permission));
+            const fromSite = isSiteUrl(webContents.getURL());
+
+            callback(fromSite && ['clipboard-read', 'clipboard-sanitized-write'].includes(permission));
+        });
+
+        session.defaultSession.setPermissionCheckHandler((webContents, permission) => (
+            isSiteUrl(webContents?.getURL() ?? '')
+            && ['clipboard-read', 'clipboard-sanitized-write'].includes(permission)
+        ));
+
+        /*
+         * Бүх хуудсанд нэг мөр хамгаалалт: webview хавсаргахыг хаана,
+         * веб биш хаяг руу шилжихийг зогсооно.
+         */
+        app.on('web-contents-created', (event, contents) => {
+            contents.on('will-attach-webview', (attachEvent) => attachEvent.preventDefault());
+
+            contents.on('will-navigate', (navEvent, url) => {
+                if (! isWebUrl(url) && ! url.startsWith('file:')) {
+                    navEvent.preventDefault();
+                    logLine('шилжихээс татгалзав: ' + String(url).slice(0, 80));
+                }
+            });
         });
 
         createMainWindow();
@@ -529,7 +579,20 @@ ipcMain.handle('md:used', (event, host) => {
 });
 
 // Гадаад холбоосыг системийн хөтчөөр нээнэ.
-ipcMain.handle('md:external', (event, url) => shell.openExternal(String(url || '')));
+ipcMain.handle('md:external', (event, url) => {
+    const target = String(url || '');
+
+    // Зөвхөн системийн хуудас, зөвхөн веб хаяг.
+    if (! isSiteUrl(event.sender.getURL()) || ! isWebUrl(target)) {
+        logLine('гадаад холбоосыг татгалзав');
+
+        return false;
+    }
+
+    shell.openExternal(target);
+
+    return true;
+});
 
 /*
  * Жинхэнэ товчлуурын үйлдэл илгээнэ.
@@ -564,6 +627,13 @@ ipcMain.on('tabs:back', () => {
 
     if (tab && canGoBack(tab.view.webContents)) {
         tab.view.webContents.navigationHistory.goBack();
+    }
+});
+ipcMain.on('tabs:forward', () => {
+    const tab = activeTab();
+
+    if (tab && canGoForward(tab.view.webContents)) {
+        tab.view.webContents.navigationHistory.goForward();
     }
 });
 ipcMain.on('tabs:reload', () => activeTab()?.view.webContents.reload());

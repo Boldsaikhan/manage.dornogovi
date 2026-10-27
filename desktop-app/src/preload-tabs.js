@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('mdTabs', {
     activate: (id) => ipcRenderer.send('tabs:activate', id),
     close: (id) => ipcRenderer.send('tabs:close', id),
     back: () => ipcRenderer.send('tabs:back'),
+    forward: () => ipcRenderer.send('tabs:forward'),
     reload: () => ipcRenderer.send('tabs:reload'),
     checkUpdates: () => ipcRenderer.send('tabs:update'),
     version: () => ipcRenderer.invoke('tabs:version'),

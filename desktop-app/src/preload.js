@@ -34,14 +34,22 @@ const alreadySignedIn = () => {
     return /нэвтэрсэн байна|already (logged|signed) in/i.test(body);
 };
 
-contextBridge.exposeInMainWorld('manageDesktop', {
-    version: process.argv.find((arg) => arg.startsWith('--md-version='))?.replace('--md-version=', '') || '1.0.0',
+/*
+ * Гүүрийг ЗӨВХӨН системийн хуудсанд нээнэ.
+ *
+ * Гадны сайт энэ API-г огт харахгүй — тэгж байж гуравдагч хуудас
+ * програмын үйлдлийг дуудах боломжгүй болно.
+ */
+if (onSite()) {
+    contextBridge.exposeInMainWorld('manageDesktop', {
+        version: process.argv.find((arg) => arg.startsWith('--md-version='))?.replace('--md-version=', '') || '1.0.0',
 
-    /** @param {{host: string, username: string, password: string, remember?: boolean}} payload */
-    autoLogin: (payload) => ipcRenderer.invoke('md:store', payload),
+        /** @param {{host: string, username: string, password: string, remember?: boolean}} payload */
+        autoLogin: (payload) => ipcRenderer.invoke('md:store', payload),
 
-    openExternal: (url) => ipcRenderer.invoke('md:external', url),
-});
+        openExternal: (url) => ipcRenderer.invoke('md:external', url),
+    });
+}
 
 window.addEventListener('DOMContentLoaded', async () => {
     if (onSite()) {
@@ -102,7 +110,7 @@ window.addEventListener('DOMContentLoaded', async () => {
  * илгээвэл мөн хүлээж авна.
  */
 window.addEventListener('message', (event) => {
-    if (event.source !== window || event.data?.type !== 'md-autologin') {
+    if (! onSite() || event.source !== window || event.data?.type !== 'md-autologin') {
         return;
     }
 
