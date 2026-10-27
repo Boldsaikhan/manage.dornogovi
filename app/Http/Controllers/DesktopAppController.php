@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\DesktopRelease;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -82,6 +83,12 @@ class DesktopAppController extends Controller
             'size' => (int) filesize($path),
             'updated_at' => date('c', (int) filemtime($path)),
         ];
+    }
+
+    /** Суусан програм шинэчлэлт шалгах — нэвтрэхгүйгээр уншина. */
+    public function version(): JsonResponse
+    {
+        return response()->json(DesktopRelease::manifest());
     }
 
     public function download(): BinaryFileResponse|RedirectResponse

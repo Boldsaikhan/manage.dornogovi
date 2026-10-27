@@ -37,6 +37,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/manifest.webmanifest', PwaManifestController::class);
 
+// Ширээний програмын хувилбар — суулгац шинэчлэлтээ шалгана.
+Route::get('/desktop/version', [DesktopAppController::class, 'version'])->name('desktop.version');
+
 Route::get('/', function () {
     if (auth()->check()) {
         return redirect()->route(HomeRedirect::routeName());
@@ -219,6 +222,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/genitive', [SystemSettingsController::class, 'updateGenitive'])->name('genitive.update');
         Route::post('/genitive/test', [SystemSettingsController::class, 'testGenitive'])->name('genitive.test');
         Route::patch('/menu-settings', [SystemSettingsController::class, 'updateMenus'])->name('menu-settings.update');
+        Route::patch('/desktop-settings', [SystemSettingsController::class, 'updateDesktop'])->name('desktop-settings.update');
 
         Route::get('/users', [UserAccessController::class, 'index'])->name('users.index');
         Route::post('/users/provision-heltes', [UserAccessController::class, 'provisionHeltes'])->name('users.provision-heltes');

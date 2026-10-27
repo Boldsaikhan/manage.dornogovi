@@ -18,6 +18,7 @@ const {
     session,
 } = require('electron');
 const path = require('node:path');
+const { checkForUpdates } = require('./updater');
 
 const SITE_URL = process.env.MD_SITE_URL || 'https://manage.dornogovi.gov.mn';
 const SITE_HOST = new URL(SITE_URL).host;
@@ -377,6 +378,10 @@ if (! app.requestSingleInstanceLock()) {
 
         createMainWindow();
 
+        // Эхлэхэд нэг удаа, дараа нь 6 цаг тутамд шинэчлэлтээ шалгана.
+        setTimeout(() => checkForUpdates(SITE_URL), 8000);
+        setInterval(() => checkForUpdates(SITE_URL), 6 * 60 * 60 * 1000);
+
         app.on('activate', () => {
             if (! win || win.isDestroyed()) {
                 createMainWindow();
@@ -418,3 +423,5 @@ ipcMain.on('tabs:back', () => {
     }
 });
 ipcMain.on('tabs:reload', () => activeTab()?.view.webContents.reload());
+ipcMain.on('tabs:update', () => checkForUpdates(SITE_URL, { silent: false }));
+ipcMain.handle('tabs:version', () => app.getVersion());
