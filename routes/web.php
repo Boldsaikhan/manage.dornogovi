@@ -199,6 +199,7 @@ Route::middleware('auth')->group(function () {
 
     // Windows ширээний програмын суулгац.
     Route::get('/desktop/download', [DesktopAppController::class, 'download'])->name('desktop.download');
+    Route::post('/desktop/upload', [DesktopAppController::class, 'upload'])->name('desktop.upload');
     Route::get('/systems/{system}/launch', LaunchController::class)->name('systems.launch');
     Route::get('/systems/{system}', [SystemViewController::class, 'show'])->name('systems.show');
 
