@@ -1,7 +1,7 @@
 {
     "name": "manage-dornogovi-desktop",
     "productName": "Manage Dornogovi",
-    "version": "1.1.3",
+    "version": "1.1.4",
     "description": "Дорноговь аймгийн дотоод систем — Windows ширээний програм. Холбосон системүүд рүү автоматаар нэвтэрнэ.",
     "author": "Дорноговь аймгийн ЗДТГ",
     "main": "src/main.js",
