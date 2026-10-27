@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="mn">
+<head>
+    <meta charset="utf-8">
+    <title>Табууд</title>
+    <style>
+        :root {
+            --navy: #1c55a5;
+            --navy-dark: #143f7c;
+            --line: #e2e8f0;
+            --muted: #64748b;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        body {
+            display: flex;
+            align-items: flex-end;
+            gap: 6px;
+            padding: 0 8px;
+            background: #f1f5f9;
+            border-bottom: 1px solid var(--line);
+            font: 13px/1.2 "Segoe UI", system-ui, sans-serif;
+            color: #0f172a;
+            user-select: none;
+        }
+
+        .nav {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            padding-bottom: 6px;
+        }
+
+        .nav button {
+            width: 28px;
+            height: 28px;
+            display: grid;
+            place-items: center;
+            border: 0;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+        }
+
+        .nav button:hover:not(:disabled) { background: #e2e8f0; color: #0f172a; }
+        .nav button:disabled { opacity: .35; cursor: default; }
+
+        #tabs {
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            overflow: hidden;
+            flex: 1;
+        }
+
+        .tab {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            max-width: 240px;
+            flex: 0 1 auto;
+            height: 34px;
+            padding: 0 6px 0 12px;
+            border: 1px solid transparent;
+            border-bottom: 0;
+            border-radius: 10px 10px 0 0;
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+        }
+
+        .tab:hover { background: #e2e8f0; }
+
+        .tab.active {
+            background: #fff;
+            border-color: var(--line);
+            color: #0f172a;
+            font-weight: 600;
+        }
+
+        .tab .label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .tab .close {
+            flex: none;
+            width: 20px;
+            height: 20px;
+            display: grid;
+            place-items: center;
+            border: 0;
+            border-radius: 6px;
+            background: transparent;
+            color: inherit;
+            font-size: 14px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .tab .close:hover { background: #cbd5e1; }
+
+        .dot {
+            flex: none;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--navy);
+            opacity: .35;
+        }
+
+        .tab.active .dot { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <button id="back" title="Буцах" disabled>&#8592;</button>
+        <button id="reload" title="Дахин ачаалах">&#10227;</button>
+    </div>
+
+    <div id="tabs"></div>
+
+    <script>
+        const list = document.getElementById('tabs');
+        const back = document.getElementById('back');
+
+        back.addEventListener('click', () => window.mdTabs.back());
+        document.getElementById('reload').addEventListener('click', () => window.mdTabs.reload());
+
+        window.mdTabs.onState((state) => {
+            back.disabled = ! state.canGoBack;
+            list.replaceChildren(...state.tabs.map(build));
+        });
+
+        function build(tab) {
+            const node = document.createElement('div');
+
+            node.className = tab.active ? 'tab active' : 'tab';
+            node.title = tab.title;
+            node.addEventListener('click', () => window.mdTabs.activate(tab.id));
+
+            const dot = document.createElement('span');
+            dot.className = 'dot';
+
+            const label = document.createElement('span');
+            label.className = 'label';
+            label.textContent = tab.title;
+
+            node.append(dot, label);
+
+            if (tab.closable) {
+                const close = document.createElement('button');
+
+                close.className = 'close';
+                close.textContent = '×';
+                close.title = 'Таб хаах';
+                close.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    window.mdTabs.close(tab.id);
+                });
+
+                node.append(close);
+            }
+
+            return node;
+        }
+    </script>
+</body>
+</html>
