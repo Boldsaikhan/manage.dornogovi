@@ -10,6 +10,41 @@
     body {
         @apply bg-slate-100 font-sans text-slate-800 dark:bg-slate-950 dark:text-slate-200;
     }
+
+    /* ── Гүйлгэх зурвас ──────────────────────────────────────────────
+     *
+     * Windows-ийн бүдүүн саарал зурвасыг нарийн, дугуйруулсан болгож,
+     * хажуугийн цэс, хүснэгтэд эвгүй харагдахгүй болгоно. Хүснэгтийн
+     * хэвтээ зурвасыг тусад нь (доор) тодруулсан хэвээр үлдэнэ.
+     */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: theme('colors.slate.300') transparent;
+    }
+
+    .dark * {
+        scrollbar-color: theme('colors.slate.700') transparent;
+    }
+
+    ::-webkit-scrollbar {
+        @apply h-2.5 w-2.5;
+    }
+
+    ::-webkit-scrollbar-track {
+        @apply bg-transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        @apply rounded-full border-[3px] border-solid border-transparent bg-slate-300 bg-clip-padding dark:bg-slate-700;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        @apply bg-slate-400 dark:bg-slate-600;
+    }
+
+    ::-webkit-scrollbar-corner {
+        @apply bg-transparent;
+    }
 }
 
 @layer components {
