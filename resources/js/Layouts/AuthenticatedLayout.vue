@@ -158,6 +158,41 @@ const publishSystemHosts = () => {
 
 watch(systemHosts, publishSystemHosts);
 
+/* ── Цэсний бүлгийг хураах ───────────────────────────────────────────
+ *
+ * Гарчиг дээр дарахад тухайн бүлэг хураагдаж, сонголт нь хөтөчид
+ * хадгалагдана.
+ */
+const COLLAPSED_KEY = 'manage-nav-collapsed';
+
+const collapsedGroups = ref([]);
+
+try {
+    const saved = JSON.parse(localStorage.getItem(COLLAPSED_KEY) || '[]');
+
+    if (Array.isArray(saved)) {
+        collapsedGroups.value = saved.map(String);
+    }
+} catch {
+    // Хадгалсан сонголт алга — бүгд нээлттэй.
+}
+
+const isGroupOpen = (key) => ! collapsedGroups.value.includes(String(key));
+
+const toggleGroup = (key) => {
+    const id = String(key);
+
+    collapsedGroups.value = collapsedGroups.value.includes(id)
+        ? collapsedGroups.value.filter((item) => item !== id)
+        : [...collapsedGroups.value, id];
+
+    try {
+        localStorage.setItem(COLLAPSED_KEY, JSON.stringify(collapsedGroups.value));
+    } catch {
+        // Хадгалж чадсангүй — зөвхөн энэ сешнд хэрэгжинэ.
+    }
+};
+
 const badgeFor = (key) => {
     const n = Number(navBadges.value?.[key] ?? 0);
 
@@ -263,14 +298,29 @@ const onLinkedSystemClick = (sys, event) => {
             >
                 <template v-for="block in sidebarBlocks" :key="block.type === 'linked-systems' ? 'linked-systems' : block.group.key">
                     <template v-if="block.type === 'linked-systems'">
-                        <div
+                        <button
+                            type="button"
                             class="ui-section-label"
                             :class="sidebarCollapsed ? 'lg:mx-auto lg:!mt-3 lg:h-px lg:w-6 lg:overflow-hidden lg:bg-slate-200 lg:p-0 lg:text-[0px]' : ''"
+                            :aria-expanded="isGroupOpen('linked-systems')"
+                            @click="toggleGroup('linked-systems')"
                         >
                             Холбосон системүүд
-                        </div>
+                            <svg
+                                class="ui-section-label__chevron"
+                                :class="[isGroupOpen('linked-systems') ? '' : '-rotate-90', sidebarCollapsed ? 'lg:hidden' : '']"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2.5"
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                            >
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" />
+                            </svg>
+                        </button>
                         <div
                             v-for="sys in linkedSystems"
+                            v-show="isGroupOpen('linked-systems')"
                             :key="'sys-'+sys.id"
                             class="group/sys relative flex items-center"
                         >
@@ -310,14 +360,29 @@ const onLinkedSystemClick = (sys, event) => {
                         </div>
                     </template>
                     <template v-else>
-                        <div
+                        <button
+                            type="button"
                             class="ui-section-label"
                             :class="sidebarCollapsed ? 'lg:mx-auto lg:!mt-3 lg:h-px lg:w-6 lg:overflow-hidden lg:bg-slate-200 lg:p-0 lg:text-[0px]' : ''"
+                            :aria-expanded="isGroupOpen(block.group.key)"
+                            @click="toggleGroup(block.group.key)"
                         >
                             {{ block.group.label }}
-                        </div>
+                            <svg
+                                class="ui-section-label__chevron"
+                                :class="[isGroupOpen(block.group.key) ? '' : '-rotate-90', sidebarCollapsed ? 'lg:hidden' : '']"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2.5"
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                            >
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6" />
+                            </svg>
+                        </button>
                         <Link
                             v-for="item in block.group.items"
+                            v-show="isGroupOpen(block.group.key)"
                             :key="item.key"
                             :href="route(item.route)"
                             class="ui-nav-link relative"
