@@ -718,6 +718,20 @@
             dark:bg-brand-navy-600 dark:text-white dark:hover:bg-brand-navy-600;
     }
 
+    /* Цэсний icon-ууд үндсэн цэнхэр — идэвхтэй мөрөнд цагаан. */
+    .ui-nav-link svg {
+        @apply text-brand-navy-600 dark:text-brand-navy-300;
+    }
+
+    .ui-nav-link:hover svg {
+        @apply text-brand-navy-700 dark:text-brand-navy-200;
+    }
+
+    .ui-nav-link-active svg,
+    .ui-nav-link-active:hover svg {
+        @apply text-white;
+    }
+
     .ui-section-label {
         @apply !mt-4 px-3 pb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500;
     }

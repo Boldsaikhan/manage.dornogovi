@@ -281,7 +281,7 @@ const onLinkedSystemClick = (sys, event) => {
                                 @focus="showNavTip($event, sys.name)"
                                 @blur="hideNavTip"
                             >
-                                <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                                     <path :d="iconPaths.globe" />
                                 </svg>
                                 <span class="min-w-0 flex-1 truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ sys.name }}</span>
@@ -324,7 +324,7 @@ const onLinkedSystemClick = (sys, event) => {
                             @focus="showNavTip($event, item.label + (badgeFor(item.key) ? ` (${badgeFor(item.key)})` : ''))"
                             @blur="hideNavTip"
                         >
-                            <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                            <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                                 <path :d="iconPaths[item.icon] || iconPaths.clipboard" />
                             </svg>
                             <span class="min-w-0 flex-1 truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ item.label }}</span>
@@ -363,7 +363,7 @@ const onLinkedSystemClick = (sys, event) => {
                     @focus="showNavTip($event, 'Хандах эрх')"
                     @blur="hideNavTip"
                 >
-                    <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path :d="iconPaths.users" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                     <span :class="sidebarCollapsed ? 'lg:hidden' : ''">Хандах эрх</span>
@@ -382,7 +382,7 @@ const onLinkedSystemClick = (sys, event) => {
                     @focus="showNavTip($event, 'Системийн тохиргоо')"
                     @blur="hideNavTip"
                 >
-                    <svg class="h-5 w-5 shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path :d="iconPaths.settings" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                     <span :class="sidebarCollapsed ? 'lg:hidden' : ''">Системийн тохиргоо</span>
