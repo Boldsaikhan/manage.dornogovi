@@ -5,6 +5,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
 import PushSubscribe from '@/Components/PushSubscribe.vue';
+import VaultPanel from '@/Components/VaultPanel.vue';
 import EmployeePicker from '@/Components/EmployeePicker.vue';
 
 const props = defineProps({
@@ -112,6 +113,7 @@ const SETTINGS_TABS = [
     { id: 'verify', label: 'Утсаар сэргээх' },
     { id: 'push', label: 'Push мэдэгдэл' },
     { id: 'desktop', label: 'Ширээний програм' },
+    { id: 'vault', label: 'Нэвтрэх мэдээллийн сан' },
     { id: 'genitive', label: 'Тийн ялгал' },
     { id: 'systems', label: 'Гадны системүүд' },
 ];
@@ -1127,6 +1129,23 @@ const saveAi = () => {
                 </p>
             </div>
             <PushSubscribe class="max-w-xl" />
+        </section>
+
+        <section
+            v-show="activeTab === 'vault'"
+            class="rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm"
+            role="tabpanel"
+        >
+            <div class="mb-4">
+                <h2 class="text-base font-semibold text-brand-navy-900">Нэвтрэх мэдээллийн сан</h2>
+                <p class="mt-1 max-w-2xl text-sm text-brand-navy-400">
+                    Холбосон системүүдийн нэр, нууц үг шифрлэгдэж хадгалагдана.
+                    Ашиглахын тулд санг нээх шаардлагатай. Сан нь албан хаагч
+                    бүрт тусдаа — өөрийн нууц үгээрээ нээнэ.
+                </p>
+            </div>
+
+            <VaultPanel />
         </section>
 
         <section
