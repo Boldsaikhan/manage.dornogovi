@@ -3,13 +3,13 @@ import { ref } from 'vue';
 import SoyomboMark from '@/Components/SoyomboMark.vue';
 
 /**
- * Аймгийн албан ёсны сүлд.
+ * Системийн лого.
  *
  * `public/images/emblem.png` файл байвал түүнийг харуулна. Байхгүй бол
  * доорх энгийн хувилбарт автоматаар шилжинэ — ингэснээр зураг байршуулаагүй
  * ч хуудас гуйвахгүй.
  *
- * Албан ёсны сүлдээ тавихдаа зөвхөн тэр файлыг нэмэхэд хангалттай:
+ * Логоо солихдоо зөвхөн тэр файлыг солиход хангалттай:
  *   public/images/emblem.png   (тунгалаг дэвсгэртэй, 512×512 орчим)
  */
 const useFallback = ref(false);
@@ -20,7 +20,7 @@ const useFallback = ref(false);
         <img
             v-if="!useFallback"
             src="/images/emblem.png"
-            alt="Дорноговь аймгийн Засаг даргын Тамгын газрын сүлд"
+            alt="Manage дотоод системийн лого"
             class="h-full w-full object-contain"
             @error="useFallback = true"
         />
@@ -29,7 +29,7 @@ const useFallback = ref(false);
             v-else
             class="flex h-full w-full items-center justify-center rounded-full bg-brand-navy-600 ring-2 ring-inset ring-brand-orange-300/60"
             role="img"
-            aria-label="Дорноговь аймгийн Засаг даргын Тамгын газрын сүлд"
+            aria-label="Manage дотоод системийн лого"
         >
             <span
                 class="flex h-[82%] w-[82%] items-center justify-center rounded-full bg-brand-navy-700"
