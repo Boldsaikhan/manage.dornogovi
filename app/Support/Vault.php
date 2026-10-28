@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 
 /**
@@ -48,6 +49,48 @@ class Vault
     public static function lock(Request $request): void
     {
         $request->session()->forget(self::SESSION_KEY);
+
+        // Админаас нээсэн байсан бол түүнийг нь ч хаана — эс бөгөөс
+        // «Сан хаах» дараад хаагдахгүй байх болно.
+        self::revoke($request->user());
+    }
+
+    /**
+     * Админаас тухайн албан хаагчийн санг нээх (өөрийнх нь session биш тул
+     * хугацаагаар бүртгэнэ).
+     */
+    public static function grant(User $user, int $minutes, ?User $by = null): void
+    {
+        $user->forceFill([
+            'vault_open_until' => now()->addMinutes($minutes),
+            'vault_opened_by' => $by?->id,
+        ])->save();
+    }
+
+    public static function revoke(?object $user): void
+    {
+        if (! $user instanceof User || ! $user->vault_open_until) {
+            return;
+        }
+
+        $user->forceFill([
+            'vault_open_until' => null,
+            'vault_opened_by' => null,
+        ])->save();
+    }
+
+    /**
+     * Админаас нээсэн хугацаа (хүчинтэй бол), эсвэл null.
+     */
+    public static function grantedUntil(?object $user): ?int
+    {
+        if (! $user instanceof User || ! $user->vault_open_until) {
+            return null;
+        }
+
+        $until = $user->vault_open_until->timestamp;
+
+        return $until > now()->timestamp ? $until : null;
     }
 
     public static function isUnlocked(Request $request): bool
@@ -60,16 +103,22 @@ class Vault
      */
     public static function unlockedUntil(Request $request): ?int
     {
-        if (! $request->hasSession()) {
-            return null;
+        $best = null;
+
+        if ($request->hasSession()) {
+            $until = $request->session()->get(self::SESSION_KEY);
+
+            if (is_int($until) && $until > now()->timestamp) {
+                $best = $until;
+            }
         }
 
-        $until = $request->session()->get(self::SESSION_KEY);
+        $granted = self::grantedUntil($request->user());
 
-        if (! is_int($until) || $until <= now()->timestamp) {
-            return null;
+        if ($granted !== null && ($best === null || $granted > $best)) {
+            $best = $granted;
         }
 
-        return $until;
+        return $best;
     }
 }

@@ -14,6 +14,7 @@ use App\Services\EmbedChecker;
 use App\Support\LoginFormDetector;
 use App\Support\DesktopRelease;
 use App\Support\ModuleAccess;
+use App\Support\Vault;
 use App\Support\ModuleOrder;
 use App\Support\ModuleVisibility;
 use App\Support\MongolianCase;
@@ -61,6 +62,8 @@ class SystemSettingsController extends Controller
                     'phone' => $u->phone,
                     'department' => $u->department?->name,
                 ]),
+            // Албан хаагч бүрийн нэвтрэх мэдээллийн сангийн төлөв.
+            'vaultUsers' => $this->vaultUsers(),
             'ai' => $aiSettings->forAdmin(),
             'verify' => $verify->forAdmin(),
             'desktop' => [
@@ -83,6 +86,54 @@ class SystemSettingsController extends Controller
                 ->values()
                 ->all(),
         ]);
+    }
+
+    /**
+     * Албан хаагч бүрийн сангийн төлөв — админ тус тусад нь нээж, хааж болно.
+     */
+    private function vaultUsers(): array
+    {
+        return User::query()
+            ->with('department:id,name')
+            ->withCount('systemCredentials')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (User $u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'position' => $u->position,
+                'department' => $u->department?->name,
+                'credentials' => (int) $u->system_credentials_count,
+                'open_until' => Vault::grantedUntil($u),
+            ])
+            ->all();
+    }
+
+    /**
+     * Нэг албан хаагчийн санг тодорхой хугацаагаар нээнэ.
+     *
+     * Админ нууц үгийг нь харахгүй — зөвхөн тухайн хүн холбосон систем дээр
+     * дарахад дахин нууц үг асуухгүй болно.
+     */
+    public function openUserVault(Request $request, User $user): RedirectResponse
+    {
+        $validated = $request->validate([
+            'hours' => ['required', 'integer', 'min:1', 'max:720'],
+        ]);
+
+        Vault::grant($user, $validated['hours'] * 60, $request->user());
+
+        return back()->with('success', $user->name . ' — сан нээгдлээ.');
+    }
+
+    /**
+     * Нэг албан хаагчийн санг хаана.
+     */
+    public function closeUserVault(Request $request, User $user): RedirectResponse
+    {
+        Vault::revoke($user);
+
+        return back()->with('success', $user->name . ' — сан хаагдлаа.');
     }
 
     /**

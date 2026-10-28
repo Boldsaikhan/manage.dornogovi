@@ -6,6 +6,7 @@ import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
 import PushSubscribe from '@/Components/PushSubscribe.vue';
 import VaultPanel from '@/Components/VaultPanel.vue';
+import VaultUsersPanel from '@/Components/VaultUsersPanel.vue';
 import EmployeePicker from '@/Components/EmployeePicker.vue';
 
 const props = defineProps({
@@ -18,6 +19,7 @@ const props = defineProps({
     verify: { type: Object, default: () => ({}) },
     desktop: { type: Object, default: () => ({}) },
     genitiveWords: { type: Array, default: () => [] },
+    vaultUsers: { type: Array, default: () => [] },
 });
 
 /* ── Ширээний програм ───────────────────────────────────────────────
@@ -1146,6 +1148,20 @@ const saveAi = () => {
             </div>
 
             <VaultPanel />
+
+            <div class="mt-8 border-t border-brand-navy-100 pt-6">
+                <h3 class="text-base font-semibold text-brand-navy-900">
+                    Албан хаагчдын сан
+                </h3>
+                <p class="mt-1 max-w-2xl text-sm text-brand-navy-400">
+                    Албан хаагч бүрийн санг тусад нь нээж өгч болно. Нээлттэй
+                    байх хугацаанд тэр хүн холбосон систем дээр дарахад нууц
+                    үгээ дахин бичихгүй шууд нэвтэрнэ. <b>Нууц үг нь админд
+                    харагдахгүй</b> — зөвхөн нээх, хаах эрх.
+                </p>
+
+                <VaultUsersPanel :users="vaultUsers" class="mt-4" />
+            </div>
         </section>
 
         <section
