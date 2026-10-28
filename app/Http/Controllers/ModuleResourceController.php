@@ -80,11 +80,34 @@ class ModuleResourceController extends Controller
                 ->groupBy($scopeColumn)
                 ->pluck('aggregate', 'scope_key');
 
+            $groups = $config['scope_groups'] ?? [];
+            $groupOf = [];
+            foreach ($groups as $groupKey => $group) {
+                foreach ($group['scopes'] ?? [] as $value) {
+                    $groupOf[$value] = ['key' => $groupKey, 'label' => $group['label'] ?? ''];
+                }
+            }
+
+            // «Нийт» нь эхний бүлэгт хамаарна.
+            $firstGroup = $groups ? array_key_first($groups) : null;
+
             if (! $hideAll) {
-                $scopeTabs[] = ['value' => 'all', 'label' => 'Нийт', 'count' => (int) $counts->sum()];
+                $scopeTabs[] = [
+                    'value' => 'all',
+                    'label' => 'Нийт',
+                    'count' => (int) $counts->sum(),
+                    'group' => $firstGroup,
+                    'group_label' => $firstGroup ? ($groups[$firstGroup]['label'] ?? '') : null,
+                ];
             }
             foreach ($scopes as $value => $label) {
-                $scopeTabs[] = ['value' => $value, 'label' => $label, 'count' => (int) ($counts[$value] ?? 0)];
+                $scopeTabs[] = [
+                    'value' => $value,
+                    'label' => $label,
+                    'count' => (int) ($counts[$value] ?? 0),
+                    'group' => $groupOf[$value]['key'] ?? null,
+                    'group_label' => $groupOf[$value]['label'] ?? null,
+                ];
             }
         }
 

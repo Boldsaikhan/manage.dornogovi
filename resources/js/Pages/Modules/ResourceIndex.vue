@@ -710,21 +710,30 @@ const destroyRow = (id) => {
             <!-- Таб ба үйлдлүүд нэг мөрөнд -->
             <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
                 <nav v-if="scopeTabs.length" class="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <button
-                    v-for="tab in scopeTabs"
-                    :key="tab.value"
-                    type="button"
-                    class="shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-semibold transition"
-                    :class="
-                        tab.value === activeScope
-                            ? 'bg-brand-navy-600 text-white shadow-md shadow-brand-navy-600/20'
-                            : 'text-slate-600 hover:bg-slate-50'
-                    "
-                    @click="switchScope(tab.value)"
-                >
-                    {{ tab.label }}
-                    <span class="ml-1 text-xs opacity-70">{{ tab.count }}</span>
-                </button>
+                <template v-for="(tab, index) in scopeTabs" :key="tab.value">
+                    <!-- Бүлгийн нэр — шинэ бүлэг эхлэх бүрд -->
+                    <span
+                        v-if="tab.group_label && tab.group !== scopeTabs[index - 1]?.group"
+                        class="flex shrink-0 items-center gap-1.5 pl-1 text-[11px] font-bold uppercase tracking-wide text-slate-400"
+                    >
+                        <span v-if="index > 0" class="mr-1 h-5 w-px bg-slate-200" />
+                        {{ tab.group_label }}
+                    </span>
+
+                    <button
+                        type="button"
+                        class="shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-semibold transition"
+                        :class="
+                            tab.value === activeScope
+                                ? 'bg-brand-navy-600 text-white shadow-md shadow-brand-navy-600/20'
+                                : 'text-slate-600 hover:bg-slate-50'
+                        "
+                        @click="switchScope(tab.value)"
+                    >
+                        {{ tab.label }}
+                        <span class="ml-1 text-xs opacity-70">{{ tab.count }}</span>
+                    </button>
+                </template>
                 <button
                     v-if="canManageScopes"
                     type="button"

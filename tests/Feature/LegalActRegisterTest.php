@@ -28,8 +28,17 @@ class LegalActRegisterTest extends TestCase
                 $this->assertSame('legal_acts', $props['module']);
 
                 $this->assertSame(
-                    ['Нийт', 'Хууль', 'УИХ-ын тогтоол', 'Засгийн газрын тогтоол', 'Сайдын тушаал', 'Орон нутгийн', 'Бусад'],
+                    [
+                        'Нийт', 'Хууль', 'УИХ-ын тогтоол', 'Засгийн газрын тогтоол',
+                        'Сайдын тушаал', 'Орон нутгийн', 'Бусад', 'Салбарын үзүүлэлт',
+                    ],
                     collect($props['scopeTabs'])->pluck('label')->all(),
+                );
+
+                // Табууд хоёр бүлэгт хуваагдана.
+                $this->assertSame(
+                    ['Хууль тогтоомж', 'Салбарын үзүүлэлт'],
+                    collect($props['scopeTabs'])->pluck('group_label')->unique()->values()->all(),
                 );
 
                 // legalinfo.mn руу шууд очих холбоос.
