@@ -24,7 +24,7 @@ class PhoneDirectoryActionsTest extends TestCase
             'sort_order' => 1,
         ]);
 
-        // Ангилал солих — «Аймгийн удирдлагууд»
+        // Ангилал солих — «Удирдлагууд»
         $this->actingAs($admin)
             ->patch(route('phone-directory.category'), [
                 'org_name' => 'Удирдлагууд',

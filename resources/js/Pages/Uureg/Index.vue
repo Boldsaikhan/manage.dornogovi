@@ -485,7 +485,7 @@ const CATEGORY_ORDER = ['udirdlaga', 'heltes', 'agentlag', 'sum', 'baiguullaga',
 const filter = ref(null); // { type: 'category' | 'org' | 'person', value, label }
 
 const CATEGORY_LABELS = {
-    udirdlaga: 'Аймгийн удирдлагууд',
+    udirdlaga: 'Удирдлагууд',
     heltes: 'АЗДТГ',
     agentlag: 'Агентлаг',
     sum: 'Сумд',

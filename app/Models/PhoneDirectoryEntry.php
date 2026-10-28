@@ -8,7 +8,7 @@ class PhoneDirectoryEntry extends Model
 {
     /** Чөлөөний бүртгэлийн хамрах хүрээтэй нийцсэн ангилал. */
     public const CATEGORIES = [
-        'udirdlaga' => 'Аймгийн удирдлагууд',
+        'udirdlaga' => 'Удирдлагууд',
         'heltes' => 'АЗДТГ',
         'agentlag' => 'Агентлаг',
         'sum' => 'Сумд',
