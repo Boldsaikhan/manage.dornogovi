@@ -1456,147 +1456,6 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
 
     <AuthenticatedLayout :title="source.name">
         <div class="ui-page ui-page--tight" :class="viewMode === 'table' ? 'ui-page--tasks-table' : ''">
-            <!-- Үйлдлийн товчнууд зөвхөн хүснэгтэд, өөрчлөлт оруулах үед хэрэгтэй. -->
-            <div
-                v-if="hasKinds && viewMode === 'table'"
-                class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-end"
-            >
-                <div class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
-                    <input
-                        ref="fileInput"
-                        type="file"
-                        accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        class="hidden"
-                        @change="onFileChange"
-                    />
-                    <button
-                        v-if="canEdit || canEditProgress"
-                        type="button"
-                        class="ui-btn-ghost w-full sm:w-auto"
-                        :disabled="undoCount < 1 || undoing"
-                        :title="undoCount ? 'Сүүлийн үйлдлийг буцаах' : 'Буцаах үйлдэл алга'"
-                        @click="undo"
-                    >
-                        <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                            <path d="M9 14L4 9l5-5" stroke-linecap="round" stroke-linejoin="round" />
-                            <path d="M4 9h10a6 6 0 010 12h-3" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                        Буцаах<span v-if="undoCount"> ({{ undoCount }})</span>
-                    </button>
-                    <button
-                        v-if="canEdit || canEditProgress"
-                        type="button"
-                        class="ui-btn-ghost w-full sm:w-auto"
-                        :disabled="redoCount < 1 || redoing"
-                        :title="redoCount ? 'Буцаасан үйлдлийг дахин хийх' : 'Дахин хийх үйлдэл алга'"
-                        @click="redo"
-                    >
-                        <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                            <path d="M15 14l5-5-5-5" stroke-linecap="round" stroke-linejoin="round" />
-                            <path d="M20 9H10a6 6 0 000 12h3" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                        Дахин<span v-if="redoCount"> ({{ redoCount }})</span>
-                    </button>
-                    <button
-                        v-if="hasKinds"
-                        type="button"
-                        class="ui-btn-ghost w-full sm:w-auto"
-                        :title="tableExpanded ? 'Хэвийн хэмжээнд буцах (Esc)' : 'Хүснэгтийг дэлгэц дүүрэн харах'"
-                        @click="tableExpanded = ! tableExpanded"
-                    >
-                        <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                            <path
-                                v-if="tableExpanded"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M9 9L5 5m0 0h4M5 5v4m10 0l4-4m0 0h-4m4 0v4M9 15l-4 4m0 0h4m-4 0v-4m10 0l4 4m0 0h-4m4 0v-4"
-                            />
-                            <path
-                                v-else
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M4 9V5a1 1 0 011-1h4M20 9V5a1 1 0 00-1-1h-4M4 15v4a1 1 0 001 1h4M20 15v4a1 1 0 01-1 1h-4"
-                            />
-                        </svg>
-                        {{ tableExpanded ? 'Хаах' : 'Дэлгэц дүүрэн' }}
-                    </button>
-                    <button
-                        v-if="hasKinds"
-                        type="button"
-                        class="ui-btn-ghost w-full sm:w-auto"
-                        title="Хэн, хэзээ, юуг өөрчилснийг харах"
-                        @click="openLogs"
-                    >
-                        Түүх
-                    </button>
-                    <button
-                        v-if="canImport"
-                        type="button"
-                        class="ui-btn-primary w-full sm:w-auto"
-                        :disabled="wordPreviewing"
-                        @click="pickWordFile"
-                    >
-                        {{ wordPreviewing ? 'Уншиж байна…' : 'Word оруулах' }}
-                    </button>
-                    <div v-if="canExport && hasKinds" ref="downloadRoot" class="relative w-full sm:w-auto">
-                        <button
-                            type="button"
-                            class="ui-btn-ghost w-full sm:w-auto"
-                            :aria-expanded="downloadOpen"
-                            title="Хүснэгтийг Word, Excel, PDF-ээр татах"
-                            @click.stop="toggleDownload"
-                        >
-                            Татах
-                            <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                <path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-                        </button>
-                        <div
-                            v-if="downloadOpen"
-                            class="absolute left-0 right-0 z-30 mt-1.5 min-w-[11rem] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg sm:left-auto sm:right-0"
-                        >
-                            <a
-                                v-for="item in downloadFormats"
-                                :key="item.format"
-                                :href="exportUrl(item.format)"
-                                class="block px-3.5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                                @click="downloadOpen = false"
-                            >
-                                {{ item.label }}
-                            </a>
-                        </div>
-                    </div>
-                    <a
-                        v-if="latestDocument"
-                        :href="route('tasks.documents.download', latestDocument.id)"
-                        class="ui-btn-ghost w-full sm:w-auto"
-                        title="Оруулсан эх Word файлыг татах"
-                    >
-                        Эх файл
-                    </a>
-                    <button
-                        v-if="canManage && kindTabs.length > 1 && ! source.is_locked"
-                        type="button"
-                        class="ui-btn-ghost w-full text-red-600 sm:w-auto"
-                        :disabled="deletingKind"
-                        @click="removeKind"
-                    >
-                        Үүрэг даалгавар устгах
-                    </button>
-                    <button
-                        v-if="canEdit"
-                        type="button"
-                        class="ui-btn-accent w-full sm:w-auto"
-                        :disabled="addingRow"
-                        @click="addRow"
-                    >
-                        <template v-if="addingRow">Нэмж байна…</template>
-                        <template v-else>
-                            {{ hasColumn('text') && ! hasColumn('sector') ? 'Үүрэг чиглэл нэмэх' : 'Мөр нэмэх' }}
-                        </template>
-                    </button>
-                </div>
-            </div>
             <p v-if="uploadForm.errors.file" class="text-sm text-red-600">{{ uploadForm.errors.file }}</p>
             <p v-if="kindError" class="text-sm text-red-600">{{ kindError }}</p>
 
@@ -1923,8 +1782,174 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                             </button>
                         </template>
 
+                        <div class="ml-auto flex flex-wrap items-center gap-1">
+
+                        <!-- Үйлдлүүд — зөвхөн хүснэгтэд, бүгд icon-оор -->
+                        <template v-if="viewMode === 'table'">
+                            <input
+                                ref="fileInput"
+                                type="file"
+                                accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                class="hidden"
+                                @change="onFileChange"
+                            />
+
+                            <button
+                                v-if="canEdit || canEditProgress"
+                                type="button"
+                                class="ui-icon-btn relative"
+                                :disabled="undoCount < 1 || undoing"
+                                :title="undoCount ? 'Сүүлийн үйлдлийг буцаах (' + undoCount + ')' : 'Буцаах үйлдэл алга'"
+                                aria-label="Буцаах"
+                                @click="undo"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path d="M9 14L4 9l5-5" stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M4 9h10a6 6 0 010 12h-3" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                <span v-if="undoCount" class="ui-icon-badge">{{ undoCount }}</span>
+                            </button>
+
+                            <button
+                                v-if="canEdit || canEditProgress"
+                                type="button"
+                                class="ui-icon-btn relative"
+                                :disabled="redoCount < 1 || redoing"
+                                :title="redoCount ? 'Буцаасан үйлдлийг дахин хийх (' + redoCount + ')' : 'Дахин хийх үйлдэл алга'"
+                                aria-label="Дахин"
+                                @click="redo"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path d="M15 14l5-5-5-5" stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M20 9H10a6 6 0 000 12h3" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                <span v-if="redoCount" class="ui-icon-badge">{{ redoCount }}</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                class="ui-icon-btn"
+                                :title="tableExpanded ? 'Хэвийн хэмжээнд буцах (Esc)' : 'Хүснэгтийг дэлгэц дүүрэн харах'"
+                                :aria-label="tableExpanded ? 'Хаах' : 'Дэлгэц дүүрэн'"
+                                @click="tableExpanded = ! tableExpanded"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path
+                                        v-if="tableExpanded"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M9 9L5 5m0 0h4M5 5v4m10 0l4-4m0 0h-4m4 0v4M9 15l-4 4m0 0h4m-4 0v-4m10 0l4 4m0 0h-4m4 0v-4"
+                                    />
+                                    <path
+                                        v-else
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M4 9V5a1 1 0 011-1h4M20 9V5a1 1 0 00-1-1h-4M4 15v4a1 1 0 001 1h4M20 15v4a1 1 0 01-1 1h-4"
+                                    />
+                                </svg>
+                            </button>
+
+                            <button
+                                type="button"
+                                class="ui-icon-btn"
+                                title="Түүх — хэн, хэзээ, юуг өөрчилснийг харах"
+                                aria-label="Түүх"
+                                @click="openLogs"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2" />
+                                    <circle cx="12" cy="12" r="8.5" />
+                                </svg>
+                            </button>
+
+                            <button
+                                v-if="canImport"
+                                type="button"
+                                class="ui-icon-btn"
+                                :disabled="wordPreviewing"
+                                :title="wordPreviewing ? 'Уншиж байна…' : 'Word файлаас оруулах'"
+                                aria-label="Word оруулах"
+                                @click="pickWordFile"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L8 8m4-4l4 4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+                                </svg>
+                            </button>
+
+                            <div v-if="canExport" ref="downloadRoot" class="relative">
+                                <button
+                                    type="button"
+                                    class="ui-icon-btn"
+                                    :aria-expanded="downloadOpen"
+                                    title="Хүснэгтийг Word, Excel, PDF-ээр татах"
+                                    aria-label="Татах"
+                                    @click.stop="toggleDownload"
+                                >
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+                                    </svg>
+                                </button>
+                                <div
+                                    v-if="downloadOpen"
+                                    class="absolute right-0 z-30 mt-1.5 min-w-[11rem] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                                >
+                                    <a
+                                        v-for="item in downloadFormats"
+                                        :key="item.format"
+                                        :href="exportUrl(item.format)"
+                                        class="block px-3.5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                                        @click="downloadOpen = false"
+                                    >
+                                        {{ item.label }}
+                                    </a>
+                                </div>
+                            </div>
+
+                            <a
+                                v-if="latestDocument"
+                                :href="route('tasks.documents.download', latestDocument.id)"
+                                class="ui-icon-btn"
+                                title="Оруулсан эх Word файлыг татах"
+                                aria-label="Эх файл"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 3.5H7a2 2 0 00-2 2v13a2 2 0 002 2h10a2 2 0 002-2V8.5L14 3.5zM14 3.5V8h5" />
+                                </svg>
+                            </a>
+
+                            <button
+                                v-if="canManage && kindTabs.length > 1 && ! source.is_locked"
+                                type="button"
+                                class="ui-icon-btn ui-icon-btn--danger"
+                                :disabled="deletingKind"
+                                title="Энэ үүрэг даалгаврын хэсгийг устгах"
+                                aria-label="Хэсэг устгах"
+                                @click="removeKind"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13" />
+                                </svg>
+                            </button>
+
+                            <button
+                                v-if="canEdit"
+                                type="button"
+                                class="ui-icon-btn border-transparent bg-brand-orange-500 text-white hover:bg-brand-orange-600 hover:text-white"
+                                :disabled="addingRow"
+                                :title="addingRow ? 'Нэмж байна…' : (hasColumn('text') && ! hasColumn('sector') ? 'Үүрэг чиглэл нэмэх' : 'Мөр нэмэх')"
+                                aria-label="Мөр нэмэх"
+                                @click="addRow"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
+                                </svg>
+                            </button>
+
+                            <span class="mx-0.5 h-5 w-px bg-slate-200" />
+                        </template>
+
                         <!-- Харагдац: хүснэгт / цаглалт -->
-                        <div class="ml-auto flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-0.5">
+                        <div class="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-0.5">
                             <button
                                 type="button"
                                 class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition"
@@ -1961,6 +1986,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                                 </svg>
                                 Цаглалт
                             </button>
+                        </div>
                         </div>
                     </div>
 

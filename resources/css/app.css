@@ -369,6 +369,12 @@
             dark:hover:bg-slate-700 dark:hover:text-brand-navy-200;
     }
 
+    /* Icon товчны булан дээрх тоон тэмдэглэгээ (буцаах/дахин г.м.). */
+    .ui-icon-badge {
+        @apply absolute -right-1 -top-1 inline-flex h-4 min-w-[1rem] items-center justify-center
+            rounded-full bg-brand-navy-600 px-1 text-[10px] font-bold leading-none text-white;
+    }
+
     .ui-icon-btn--danger {
         @apply text-red-500 hover:bg-red-50 hover:text-red-600;
     }
