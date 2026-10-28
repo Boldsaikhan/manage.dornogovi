@@ -6,6 +6,7 @@ use App\Models\System;
 use App\Models\User;
 use App\Models\UserCredential;
 use App\Support\Vault;
+use App\Support\VaultSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -58,7 +59,7 @@ class AdminVaultGrantTest extends TestCase
             'password_encrypted' => 'sZ7!secret',
         ]);
 
-        Vault::grant($user, 60);
+        Vault::grant($user, 8);
 
         // Session-д юу ч нээгээгүй хэрнээ нэвтэрнэ.
         $this->actingAs($user->fresh())
@@ -70,7 +71,7 @@ class AdminVaultGrantTest extends TestCase
     public function test_the_user_can_still_close_a_vault_the_admin_opened(): void
     {
         $user = User::factory()->create();
-        Vault::grant($user, 60);
+        Vault::grant($user, 8);
 
         $this->actingAs($user->fresh())
             ->postJson(route('vault.lock'))
@@ -90,5 +91,40 @@ class AdminVaultGrantTest extends TestCase
             ->assertForbidden();
 
         $this->assertNull(Vault::grantedUntil($other->fresh()));
+    }
+
+    public function test_an_open_vault_extends_itself_while_the_user_works(): void
+    {
+        VaultSettings::save(['auto_extend' => true]);
+
+        $user = User::factory()->create();
+        Vault::grant($user, 8);
+
+        // 7 цагийн дараа хуудас үзэхэд хугацаа дахин 8 цаг болно.
+        $this->travel(7)->hours();
+        $this->actingAs($user->fresh())->get(route('dashboard'));
+
+        $this->assertGreaterThan(
+            now()->addHours(7)->timestamp,
+            (int) Vault::grantedUntil($user->fresh()),
+        );
+
+        $this->travelBack();
+    }
+
+    public function test_auto_extend_can_be_switched_off(): void
+    {
+        VaultSettings::save(['auto_extend' => false]);
+
+        $user = User::factory()->create();
+        Vault::grant($user, 8);
+        $before = Vault::grantedUntil($user->fresh());
+
+        $this->travel(7)->hours();
+        $this->actingAs($user->fresh())->get(route('dashboard'));
+
+        $this->assertSame($before, Vault::grantedUntil($user->fresh()));
+
+        $this->travelBack();
     }
 }

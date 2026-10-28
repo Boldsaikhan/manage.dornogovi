@@ -31,7 +31,39 @@ class Vault
             return;
         }
 
-        $request->session()->put(self::SESSION_KEY, now()->addMinutes(self::MINUTES)->timestamp);
+        if ($request->hasSession()) {
+            $request->session()->put(self::SESSION_KEY, now()->addMinutes(self::MINUTES)->timestamp);
+        }
+
+        self::extendGrant($request->user());
+    }
+
+    /**
+     * Админаас нээж өгсөн хугацааг ашиглалтын явцад өөрөө сунгана.
+     *
+     * Үлдсэн хугацаа талаас нь бага болоход л бичих тул өдөр бүр ганц хоёр
+     * удаа л хүснэгт хөндөнө.
+     */
+    private static function extendGrant(?object $user): void
+    {
+        if (! $user instanceof User || ! VaultSettings::autoExtend()) {
+            return;
+        }
+
+        $hours = (int) ($user->vault_open_hours ?? 0);
+        $until = self::grantedUntil($user);
+
+        if ($hours < 1 || $until === null) {
+            return;
+        }
+
+        $remaining = $until - now()->timestamp;
+
+        if ($remaining > $hours * 1800) {
+            return;
+        }
+
+        $user->forceFill(['vault_open_until' => now()->addHours($hours)])->save();
     }
 
     /**
@@ -59,11 +91,13 @@ class Vault
      * Админаас тухайн албан хаагчийн санг нээх (өөрийнх нь session биш тул
      * хугацаагаар бүртгэнэ).
      */
-    public static function grant(User $user, int $minutes, ?User $by = null): void
+    public static function grant(User $user, int $hours, ?User $by = null): void
     {
         $user->forceFill([
-            'vault_open_until' => now()->addMinutes($minutes),
+            'vault_open_until' => now()->addHours($hours),
             'vault_opened_by' => $by?->id,
+            // Автоматаар сунгахад ижил урттай сунгана.
+            'vault_open_hours' => $hours,
         ])->save();
     }
 
@@ -76,6 +110,7 @@ class Vault
         $user->forceFill([
             'vault_open_until' => null,
             'vault_opened_by' => null,
+            'vault_open_hours' => null,
         ])->save();
     }
 

@@ -15,6 +15,7 @@ use App\Support\LoginFormDetector;
 use App\Support\DesktopRelease;
 use App\Support\ModuleAccess;
 use App\Support\Vault;
+use App\Support\VaultSettings;
 use App\Support\ModuleOrder;
 use App\Support\ModuleVisibility;
 use App\Support\MongolianCase;
@@ -64,6 +65,7 @@ class SystemSettingsController extends Controller
                 ]),
             // Албан хаагч бүрийн нэвтрэх мэдээллийн сангийн төлөв.
             'vaultUsers' => $this->vaultUsers(),
+            'vaultSettings' => VaultSettings::all(),
             'ai' => $aiSettings->forAdmin(),
             'verify' => $verify->forAdmin(),
             'desktop' => [
@@ -121,9 +123,23 @@ class SystemSettingsController extends Controller
             'hours' => ['required', 'integer', 'min:1', 'max:720'],
         ]);
 
-        Vault::grant($user, $validated['hours'] * 60, $request->user());
+        Vault::grant($user, $validated['hours'], $request->user());
 
         return back()->with('success', $user->name . ' — сан нээгдлээ.');
+    }
+
+    /**
+     * Сангийн ерөнхий тохиргоо — хугацааг автоматаар сунгах эсэх.
+     */
+    public function updateVaultSettings(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'auto_extend' => ['required', 'boolean'],
+        ]);
+
+        VaultSettings::save($validated);
+
+        return back()->with('success', 'Хадгаллаа.');
     }
 
     /**

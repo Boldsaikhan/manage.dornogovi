@@ -234,6 +234,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/desktop-settings', [SystemSettingsController::class, 'updateDesktop'])->name('desktop-settings.update');
 
         // Албан хаагч бүрийн нэвтрэх мэдээллийн сан.
+        Route::patch('/vault/settings', [SystemSettingsController::class, 'updateVaultSettings'])->name('vault.settings.update');
         Route::post('/vault/users/{user}/open', [SystemSettingsController::class, 'openUserVault'])->name('vault.users.open');
         Route::post('/vault/users/{user}/close', [SystemSettingsController::class, 'closeUserVault'])->name('vault.users.close');
 

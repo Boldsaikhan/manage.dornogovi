@@ -70,24 +70,12 @@ const lock = async () => {
         </div>
 
         <template v-if="unlocked">
-            <p class="text-sm text-slate-600">
-                Холбосон систем дээр дарахад хадгалсан нэр, нууц үгээр шууд нэвтэрнэ.
-                Ажлаа дуусгасан бол санг хаая.
-            </p>
-
             <button type="button" class="ui-btn-ghost" :disabled="busy" @click="lock">
                 {{ busy ? 'Хааж байна…' : 'Сан хаах' }}
             </button>
         </template>
 
         <template v-else>
-            <p class="text-sm text-slate-600">
-                Холбосон систем рүү хадгалсан нэр, нууц үгээр нэвтрэхийн тулд санг нээнэ.
-                Доор <b>Manage-ийн өөрийн нууц үгээ</b> бичээд «Сан нээх» дарна.
-                Нэг удаа нээхэд тодорхой хугацаанд нээлттэй байж, системээс гарахад
-                дахин түгжигдэнэ.
-            </p>
-
             <VaultUnlockForm />
         </template>
     </div>
