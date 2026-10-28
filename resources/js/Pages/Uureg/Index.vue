@@ -832,8 +832,6 @@ const barColor = (value) => ({
 
 const isPendingProgress = (value) => progressLevel(value) === 'pending';
 
-/** Явцын зурвасын өргөн — 0..100 хооронд барина. */
-const progressWidth = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
 const openDashboard = () => {
     showDashboard.value = true;
@@ -2171,7 +2169,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                             :key="'w-' + col.key"
                             :style="col.key === flexColumnKey ? undefined : { width: `${columnWidthPx(col)}px` }"
                         />
-                        <col style="width: 118px" />
+                        <col style="width: 86px" />
                         <col v-if="canEdit" style="width: 48px" />
                     </colgroup>
                     <thead>
@@ -2292,20 +2290,11 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                                     :editable="canEditProgress"
                                     @commit="() => saveProgress(task.id)"
                                 >
-                                    <span class="flex w-full items-center gap-2 px-1 py-0.5">
-                                        <span class="block h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-                                            <span
-                                                class="block h-full rounded-full transition-[width] duration-200"
-                                                :class="barColor(drafts[task.id].progress)"
-                                                :style="{ width: progressWidth(drafts[task.id].progress) + '%' }"
-                                            />
-                                        </span>
-                                        <span
-                                            class="w-10 shrink-0 text-right text-xs font-bold tabular-nums"
-                                            :class="progressTextClass(drafts[task.id].progress)"
-                                        >
-                                            {{ drafts[task.id].progress ?? 0 }}%
-                                        </span>
+                                    <span
+                                        class="block w-full py-0.5 text-center text-sm font-bold tabular-nums"
+                                        :class="progressTextClass(drafts[task.id].progress)"
+                                    >
+                                        {{ drafts[task.id].progress ?? 0 }}%
                                     </span>
                                 </SheetCell>
                             </td>

@@ -248,6 +248,8 @@
     .ui-table-scroll-body {
         overflow-x: hidden;
         scrollbar-gutter: stable;
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 transparent;
     }
 
     .ui-table-scroll-body::-webkit-scrollbar:horizontal {
@@ -255,16 +257,55 @@
         height: 0;
     }
 
+    /* Босоо зурвас — нимгэн, бүдэг. Хулгана ойртоход тодорно. */
+    .ui-table-scroll-body::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    .ui-table-scroll-body::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .ui-table-scroll-body::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border: 3px solid transparent;
+        border-radius: 9999px;
+        background-clip: content-box;
+    }
+
+    .ui-table-scroll-body:hover::-webkit-scrollbar-thumb {
+        background-color: #94a3b8;
+    }
+
     .ui-table-hscroll {
         overflow-x: scroll;
         overflow-y: hidden;
         scrollbar-gutter: stable;
         -webkit-overflow-scrolling: touch;
-        height: 1.25rem;
-        min-height: 1.25rem;
-        max-height: 1.25rem;
-        scrollbar-width: auto;
-        scrollbar-color: #64748b #e2e8f0;
+        height: 0.875rem;
+        min-height: 0.875rem;
+        max-height: 0.875rem;
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 transparent;
+    }
+
+    .ui-table-hscroll::-webkit-scrollbar {
+        height: 10px;
+    }
+
+    .ui-table-hscroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .ui-table-hscroll::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border: 3px solid transparent;
+        border-radius: 9999px;
+        background-clip: content-box;
+    }
+
+    .ui-table-hscroll:hover::-webkit-scrollbar-thumb {
+        background-color: #94a3b8;
     }
 
     .ui-table-hscroll-track {
