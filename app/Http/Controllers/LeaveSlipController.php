@@ -11,8 +11,8 @@ use Illuminate\Http\Request;
 /**
  * Чөлөөний хуудас — албан хэрэг хөтлөлтийн загвараар хэвлэнэ.
  *
- * Цаасны хэмжээ (A4/A5), чиглэл (босоо/хэвтээ), нэг хуудсанд багтаах
- * ширхгийг хэвлэхийн өмнө сонгоно.
+ * Нэг A4 босоо хуудсанд хоёр хувь гарна — хэвлэхийн өмнө юу ч асуухгүй.
+ * Шаардлагатай бол хаягийн мөрөөр (copies/paper/orient) өөрчилж болно.
  */
 class LeaveSlipController extends Controller
 {
@@ -22,8 +22,8 @@ class LeaveSlipController extends Controller
     {
         abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
 
-        $copies = (int) $request->query('copies', 6);
-        $copies = in_array($copies, [1, 2, 4, 6], true) ? $copies : 6;
+        $copies = (int) $request->query('copies', 2);
+        $copies = in_array($copies, [1, 2, 4, 6], true) ? $copies : 2;
 
         // Цаасны хэмжээ, чиглэл — хэвлэхийн өмнө сонгоно.
         $paper = $request->query('paper') === 'a5' ? 'a5' : 'a4';

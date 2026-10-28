@@ -17,7 +17,8 @@
         $gapY = 6;
         $contentH = $pageHeight - $marginTop - $marginBottom;
         $contentW = $pageWidth - $marginLeft - $marginRight;
-        $cols = $copies >= 2 ? 2 : 1;
+        // 2 хувь — дээр доор нь (хагас A4). 4, 6 — хоёр баганаар.
+        $cols = $copies >= 4 ? 2 : 1;
         $rows = (int) ceil($copies / max(1, $cols));
         $slipH = ($contentH - ($rows - 1) * $gapY) / max(1, $rows);
 

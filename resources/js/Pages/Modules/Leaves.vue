@@ -94,9 +94,6 @@ const resetLimits = () => {
     });
 };
 
-/** Чөлөөний хуудас нэг A4-д 6 ширхэгээр багтана. */
-const PRINT_COPIES = 6;
-
 /*
  * Толгой гурван мөртэй (гарчиг, хугацааны дэд гарчиг, хайлт) тул
  * наалдах байрлалыг бодит өндрөөр нь тооцно.
@@ -356,46 +353,14 @@ const saveField = (id, field, value) => {
     );
 };
 
-/* ── Хэвлэх тохиргоо ─────────────────────────────────────────────────
+/* ── Хэвлэх ──────────────────────────────────────────────────────────
  *
- * Цаасны хэмжээ, чиглэл, нэг хуудсанд багтаах ширхгийг сонгоод
- * хэвлэнэ. Сонголт хөтөчид хадгалагдана.
+ * Сонголт асуухгүй — A4 босоо цаасанд хоёр хувь гарна.
  */
-const PRINT_KEY = 'leaves-print-options';
-
-const printRow = ref(null);
-const printOptions = reactive({ paper: 'a4', orient: 'portrait', copies: PRINT_COPIES });
-
-try {
-    Object.assign(printOptions, JSON.parse(localStorage.getItem(PRINT_KEY) || '{}'));
-} catch {
-    // Хадгалсан сонголт алга.
-}
-
-const slipPrintUrl = (row) => {
-    const base = row.slip_url || route('leaves.slip', row.id);
-    const params = new URLSearchParams({
-        copies: String(printOptions.copies),
-        paper: printOptions.paper,
-        orient: printOptions.orient,
-    });
-
-    return `${base}?${params.toString()}`;
-};
+const slipPrintUrl = (row) => row.slip_url || route('leaves.slip', row.id);
 
 const startPrint = (row) => {
-    printRow.value = row;
-};
-
-const confirmPrint = () => {
-    try {
-        localStorage.setItem(PRINT_KEY, JSON.stringify({ ...printOptions }));
-    } catch {
-        // Хадгалж чадсангүй.
-    }
-
-    window.open(slipPrintUrl(printRow.value), '_blank', 'noopener');
-    printRow.value = null;
+    window.open(slipPrintUrl(row), '_blank', 'noopener');
 };
 
 const kindLabel = (key) => ({
@@ -969,82 +934,6 @@ const visibleRows = computed(() => {
 
         <!-- Өөрчлөлтийн түүх -->
         <!-- Албан хаагчийн нийт чөлөө -->
-        <!-- Хэвлэхийн өмнөх сонголт -->
-        <Modal :show="!! printRow" max-width="sm" @close="printRow = null">
-            <div class="p-5">
-                <h2 class="text-base font-semibold text-brand-navy-900">Чөлөөний хуудас хэвлэх</h2>
-                <p class="mt-0.5 text-xs text-slate-500">{{ printRow?.person_name }}</p>
-
-                <div class="mt-4 space-y-4">
-                    <div>
-                        <label class="ui-label">Цаас</label>
-                        <div class="flex gap-2">
-                            <button
-                                v-for="size in ['a4', 'a5']"
-                                :key="size"
-                                type="button"
-                                class="flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition"
-                                :class="printOptions.paper === size
-                                    ? 'border-brand-navy-600 bg-brand-navy-50 text-brand-navy-800'
-                                    : 'border-slate-200 text-slate-600 hover:border-brand-navy-200'"
-                                @click="printOptions.paper = size"
-                            >
-                                {{ size.toUpperCase() }}
-                            </button>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="ui-label">Чиглэл</label>
-                        <div class="flex gap-2">
-                            <button
-                                type="button"
-                                class="flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition"
-                                :class="printOptions.orient === 'portrait'
-                                    ? 'border-brand-navy-600 bg-brand-navy-50 text-brand-navy-800'
-                                    : 'border-slate-200 text-slate-600 hover:border-brand-navy-200'"
-                                @click="printOptions.orient = 'portrait'"
-                            >
-                                Босоо
-                            </button>
-                            <button
-                                type="button"
-                                class="flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition"
-                                :class="printOptions.orient === 'landscape'
-                                    ? 'border-brand-navy-600 bg-brand-navy-50 text-brand-navy-800'
-                                    : 'border-slate-200 text-slate-600 hover:border-brand-navy-200'"
-                                @click="printOptions.orient = 'landscape'"
-                            >
-                                Хэвтээ
-                            </button>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="ui-label">Нэг хуудсанд</label>
-                        <div class="flex gap-2">
-                            <button
-                                v-for="n in [1, 2, 4, 6]"
-                                :key="n"
-                                type="button"
-                                class="flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition"
-                                :class="printOptions.copies === n
-                                    ? 'border-brand-navy-600 bg-brand-navy-50 text-brand-navy-800'
-                                    : 'border-slate-200 text-slate-600 hover:border-brand-navy-200'"
-                                @click="printOptions.copies = n"
-                            >
-                                {{ n }}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-5 flex justify-end gap-2">
-                    <button type="button" class="ui-btn-ghost" @click="printRow = null">Болих</button>
-                    <button type="button" class="ui-btn-primary" @click="confirmPrint">Хэвлэх</button>
-                </div>
-            </div>
-        </Modal>
 
         <Modal :show="!! personSummary" max-width="4xl" @close="personSummary = null">
             <div v-if="personSummary" class="ui-card-pad space-y-4">
