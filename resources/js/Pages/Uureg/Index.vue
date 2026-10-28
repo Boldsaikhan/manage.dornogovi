@@ -2193,12 +2193,17 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                                 {{ col.label }}
                             </th>
                             <th
-                                class="sticky top-0 z-10 bg-brand-navy-50 text-center ui-sticky-progress"
+                                rowspan="2"
+                                class="sticky top-0 z-10 bg-brand-navy-50 text-center align-middle ui-sticky-progress"
                                 title="Биелэлтийн хувь"
                             >
                                 Биелэлт
                             </th>
-                            <th v-if="canEdit" class="sticky top-0 z-10 bg-brand-navy-50 text-center ui-sticky-actions" />
+                            <th
+                                v-if="canEdit"
+                                rowspan="2"
+                                class="sticky top-0 z-10 bg-brand-navy-50 text-center align-middle ui-sticky-actions"
+                            />
                         </tr>
                         <!-- Багана тус бүрд хайх мөр -->
                         <tr class="ui-filters">
@@ -2231,8 +2236,6 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                                     :aria-label="col.label + ' хайх'"
                                 />
                             </th>
-                            <th class="ui-sticky-progress" />
-                            <th v-if="canEdit" class="ui-sticky-actions" />
                         </tr>
                     </thead>
                     <tbody>
