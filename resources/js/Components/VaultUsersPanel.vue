@@ -20,19 +20,55 @@ const DURATIONS = [
 ];
 
 const search = ref('');
+const department = ref('all');
+const status = ref('all');
 const hours = ref(24);
 const busyId = ref(null);
+
+/** Хэлтсийн жагсаалт — сонгож шүүнэ. */
+const departments = computed(() => {
+    const names = new Set();
+
+    props.users.forEach((u) => {
+        if (u.department) {
+            names.add(u.department);
+        }
+    });
+
+    return [...names].sort((a, b) => a.localeCompare(b, 'mn'));
+});
+
+const hasNoDepartment = computed(() => props.users.some((u) => ! u.department));
 
 const rows = computed(() => {
     const needle = search.value.trim().toLowerCase();
 
-    if (! needle) {
-        return props.users;
-    }
+    return props.users.filter((u) => {
+        if (department.value === 'none' && u.department) {
+            return false;
+        }
 
-    return props.users.filter((u) => [u.name, u.position, u.department]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(needle)));
+        if (department.value !== 'all' && department.value !== 'none'
+            && u.department !== department.value) {
+            return false;
+        }
+
+        if (status.value === 'open' && ! u.open_until) {
+            return false;
+        }
+
+        if (status.value === 'closed' && u.open_until) {
+            return false;
+        }
+
+        if (! needle) {
+            return true;
+        }
+
+        return [u.name, u.position, u.department]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(needle));
+    });
 });
 
 const openCount = computed(() => props.users.filter((u) => u.open_until).length);
@@ -79,14 +115,30 @@ const close = (user) => {
 <template>
     <div class="space-y-3">
         <div class="flex flex-wrap items-end gap-3">
-            <div class="min-w-[14rem] flex-1">
+            <div class="min-w-[12rem] flex-1">
                 <label class="ui-label">Хайх</label>
                 <input
                     v-model="search"
                     type="search"
                     class="ui-input"
-                    placeholder="Нэр, албан тушаал, хэлтэс"
+                    placeholder="Нэр, албан тушаал"
                 >
+            </div>
+            <div class="min-w-[14rem]">
+                <label class="ui-label">Хэлтэс</label>
+                <select v-model="department" class="ui-input">
+                    <option value="all">Бүх хэлтэс</option>
+                    <option v-for="name in departments" :key="name" :value="name">{{ name }}</option>
+                    <option v-if="hasNoDepartment" value="none">Хэлтэс оруулаагүй</option>
+                </select>
+            </div>
+            <div class="min-w-[9rem]">
+                <label class="ui-label">Төлөв</label>
+                <select v-model="status" class="ui-input">
+                    <option value="all">Бүгд</option>
+                    <option value="open">Нээлттэй</option>
+                    <option value="closed">Хаалттай</option>
+                </select>
             </div>
             <div>
                 <label class="ui-label">Нээх хугацаа</label>
@@ -96,6 +148,7 @@ const close = (user) => {
             </div>
             <p class="pb-2 text-sm text-slate-500">
                 Нээлттэй: <b class="text-emerald-700">{{ openCount }}</b> / {{ users.length }}
+                <span class="block text-xs text-slate-400">Харагдаж буй: {{ rows.length }}</span>
             </p>
         </div>
 
