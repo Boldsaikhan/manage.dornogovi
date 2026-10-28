@@ -867,6 +867,11 @@ const clearPeriodFilter = () => {
     periodFilter.value = null;
 };
 
+/** Бүх үүргийг шүүлтгүйгээр хүснэгтээр харуулна. */
+const showAllAsTable = () => {
+    showTasksFromCalendar({ label: null, ids: null });
+};
+
 /** Хүснэгтээс цаглалт руу буцах. */
 const backToCalendar = () => {
     periodFilter.value = null;
@@ -1519,15 +1524,6 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                         v-if="hasKinds"
                         type="button"
                         class="ui-btn-ghost w-full sm:w-auto"
-                        :title="viewMode === 'calendar' ? 'Бүх үүрэг даалгаврыг хүснэгтээр харах' : 'Цаглалт руу буцах'"
-                        @click="viewMode === 'calendar' ? showTasksFromCalendar({ label: null, ids: null }) : backToCalendar()"
-                    >
-                        {{ viewMode === 'calendar' ? 'Хүснэгт' : 'Цаглалт' }}
-                    </button>
-                    <button
-                        v-if="hasKinds"
-                        type="button"
-                        class="ui-btn-ghost w-full sm:w-auto"
                         title="Хэн, хэзээ, юуг өөрчилснийг харах"
                         @click="openLogs"
                     >
@@ -1778,7 +1774,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
             <!-- Зүүн талын навигац: үүсгэсэн үүрэг даалгавар + харагдац -->
             <div
                 v-if="hasKinds"
-                class="grid min-h-0 gap-3 lg:grid-cols-[16rem_minmax(0,1fr)]"
+                class="grid min-h-0 gap-2 lg:grid-cols-[16rem_minmax(0,1fr)]"
                 :class="viewMode === 'table' ? 'ui-tasks-table-shell lg:grid-rows-[minmax(0,1fr)]' : ''"
             >
                 <aside class="ui-card flex min-h-0 max-h-full flex-col self-start p-2.5 lg:sticky lg:top-3 lg:max-h-[calc(100vh-6rem)]">
@@ -1894,36 +1890,78 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                 </aside>
 
                 <section
-                    class="flex min-h-0 flex-col gap-1.5"
+                    class="flex min-h-0 flex-col gap-1"
                     :class="viewMode === 'table' ? 'overflow-hidden' : ''"
                 >
-                    <!-- Удирдлагаас өгсөн чиглэл — албан тушаалын сонголт -->
+                    <!-- Чиглэл өгсөн албан тушаал + харагдацын сонголт -->
                     <div
-                        v-if="isLeadershipKind"
-                        class="ui-card flex flex-wrap items-center gap-1.5 px-3 py-1.5"
+                        v-if="hasKinds"
+                        class="ui-card flex flex-wrap items-center gap-1.5 px-2.5 py-1"
                     >
-                        <span class="text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                            Чиглэл өгсөн
-                        </span>
-                        <button
-                            v-for="item in leadershipTabs"
-                            :key="item.key"
-                            type="button"
-                            class="rounded-full border px-3 py-1.5 text-left text-sm transition"
-                            :class="kind === item.key
-                                ? 'border-transparent bg-brand-navy-600 font-semibold text-white shadow-sm'
-                                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'"
-                            @click="switchKind(item.key)"
-                        >
-                            {{ item.label }}
-                            <span
-                                v-if="item.holder"
-                                class="ml-1.5 text-xs"
-                                :class="kind === item.key ? 'text-white/80' : 'text-slate-500'"
-                            >
-                                {{ item.holder }}
+                        <template v-if="isLeadershipKind">
+                            <span class="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                                Чиглэл өгсөн
                             </span>
-                        </button>
+                            <button
+                                v-for="item in leadershipTabs"
+                                :key="item.key"
+                                type="button"
+                                class="rounded-full border px-3 py-1.5 text-left text-sm transition"
+                                :class="kind === item.key
+                                    ? 'border-transparent bg-brand-navy-600 font-semibold text-white shadow-sm'
+                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'"
+                                @click="switchKind(item.key)"
+                            >
+                                {{ item.label }}
+                                <span
+                                    v-if="item.holder"
+                                    class="ml-1.5 text-xs"
+                                    :class="kind === item.key ? 'text-white/80' : 'text-slate-500'"
+                                >
+                                    {{ item.holder }}
+                                </span>
+                            </button>
+                        </template>
+
+                        <!-- Харагдац: хүснэгт / цаглалт -->
+                        <div class="ml-auto flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-0.5">
+                            <button
+                                type="button"
+                                class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition"
+                                :class="viewMode === 'table'
+                                    ? 'bg-brand-navy-600 text-white shadow-sm'
+                                    : 'text-slate-500 hover:bg-white hover:text-brand-navy-700'"
+                                title="Үүрэг даалгаврыг хүснэгтээр харах"
+                                @click="showAllAsTable"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M3 5.5h18M3 12h18M3 18.5h18M8.5 5.5v13"
+                                    />
+                                </svg>
+                                Хүснэгт
+                            </button>
+                            <button
+                                type="button"
+                                class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition"
+                                :class="viewMode === 'calendar'
+                                    ? 'bg-brand-navy-600 text-white shadow-sm'
+                                    : 'text-slate-500 hover:bg-white hover:text-brand-navy-700'"
+                                title="Цаглалтаар харах"
+                                @click="backToCalendar"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M4 7.5a2 2 0 012-2h12a2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2v-11zM8 3.5v4M16 3.5v4M4 10.5h16"
+                                    />
+                                </svg>
+                                Цаглалт
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Цаглалт / төлөвлөгөө -->
