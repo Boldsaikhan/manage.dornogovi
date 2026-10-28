@@ -523,6 +523,9 @@ class PhoneDirectoryController extends Controller
             }
         });
 
+        // Бөөн импорт нь модель event өдөөхгүй тул түр санамжийг гараар хаяна.
+        PhoneDirectoryEntry::flushNameCache();
+
         return redirect()
             ->route('phone-directory.index')
             ->with('success', count($rows).' мөр импортлолоо.');

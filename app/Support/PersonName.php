@@ -32,8 +32,34 @@ class PersonName
         return ['', $name];
     }
 
+    /** @var array<string, array<int, string>> Хүсэлтийн доторх түр санамж. */
+    private static array $patternCache = [];
+
+    /** Тестэд болон жагсаалт шинэчлэхэд түр санамжийг хаяна. */
+    public static function forgetPatterns(): void
+    {
+        self::$patternCache = [];
+    }
+
     /** @return array<int, string> */
     public static function matchPatterns(User $user): array
+    {
+        $key = implode('|', [
+            PhoneDirectoryEntry::$nameCacheGeneration,
+            (string) $user->getKey(),
+            (string) $user->name,
+            (string) $user->phone,
+        ]);
+
+        if (isset(self::$patternCache[$key])) {
+            return self::$patternCache[$key];
+        }
+
+        return self::$patternCache[$key] = self::buildMatchPatterns($user);
+    }
+
+    /** @return array<int, string> */
+    private static function buildMatchPatterns(User $user): array
     {
         $candidates = [
             self::short($user->name),
@@ -75,6 +101,9 @@ class PersonName
             return false;
         }
 
+        $patterns = self::matchPatterns($user);
+        $userShort = self::short($user->name);
+
         foreach (preg_split('#[/;|]+#u', $value) ?: [] as $part) {
             $part = trim($part);
 
@@ -82,12 +111,12 @@ class PersonName
                 continue;
             }
 
-            foreach (self::matchPatterns($user) as $pattern) {
-                if ($part === $pattern || str_contains($part, $pattern) || str_contains($pattern, $part)) {
-                    return true;
-                }
+            if ($patterns !== [] && self::short($part) === $userShort) {
+                return true;
+            }
 
-                if (self::short($part) === self::short($user->name)) {
+            foreach ($patterns as $pattern) {
+                if ($part === $pattern || str_contains($part, $pattern) || str_contains($pattern, $part)) {
                     return true;
                 }
             }
