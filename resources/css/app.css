@@ -54,7 +54,7 @@
 
     /* Хэсэг олонтой хуудсанд (үүрэг даалгавар г.м.) зайг шахна. */
     .ui-page--tight {
-        @apply !space-y-3;
+        @apply !space-y-2;
     }
 
     .ui-card {
@@ -299,7 +299,7 @@
 
     .ui-page--tasks-table,
     .ui-page--reports-table {
-        @apply flex min-h-0 flex-1 flex-col gap-3 overflow-hidden !space-y-0;
+        @apply flex min-h-0 flex-1 flex-col gap-2 overflow-hidden !space-y-0;
     }
 
     .ui-page--tasks-table > :not(.ui-tasks-table-shell) {

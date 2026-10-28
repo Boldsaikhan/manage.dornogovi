@@ -1781,7 +1781,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                 class="grid min-h-0 gap-3 lg:grid-cols-[16rem_minmax(0,1fr)]"
                 :class="viewMode === 'table' ? 'ui-tasks-table-shell lg:grid-rows-[minmax(0,1fr)]' : ''"
             >
-                <aside class="ui-card flex min-h-0 max-h-full flex-col self-start p-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-7rem)]">
+                <aside class="ui-card flex min-h-0 max-h-full flex-col self-start p-2.5 lg:sticky lg:top-3 lg:max-h-[calc(100vh-6rem)]">
                     <!-- Дээд талын үйлдлүүд — icon-оор -->
                     <div class="mb-2 flex items-center gap-2 border-b border-slate-200 pb-2">
                         <button
