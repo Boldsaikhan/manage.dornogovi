@@ -109,4 +109,54 @@ class UnitTaskSourceTest extends TestCase
 
         $this->assertContains(TaskSource::KEY_DEPARTMENT, $this->tabKeys($admin));
     }
+
+    public function test_the_people_picker_only_offers_that_units_staff(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'org_name' => 'Архивын тасаг',
+            'person_name' => 'А.Урангоо',
+            'position' => 'Мэдээллийн технологийн ажилтан',
+        ]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'org_name' => 'Нийгмийн бодлогын хэлтэс',
+            'person_name' => 'А.Ханддорж',
+            'position' => 'Соёл, спортын бодлого хариуцсан мэргэжилтэн',
+        ]);
+
+        $people = [];
+
+        $this->actingAs($admin)
+            ->get(route('tasks.index', ['kind' => 'unit_04']))
+            ->assertInertia(function (AssertableInertia $page) use (&$people) {
+                $people = collect($page->toArray()['props']['people'])->pluck('full')->all();
+            });
+
+        $this->assertContains('А.Урангоо', $people);
+        $this->assertNotContains('А.Ханддорж', $people);
+    }
+
+    public function test_the_picker_falls_back_to_everyone_when_the_unit_has_nobody(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        \App\Models\PhoneDirectoryEntry::create([
+            'org_name' => 'Нийгмийн бодлогын хэлтэс',
+            'person_name' => 'А.Ханддорж',
+            'position' => 'Мэргэжилтэн',
+        ]);
+
+        $people = [];
+
+        // «Теле камерын хяналтын дэд төв»-д хэн ч бүртгэлгүй.
+        $this->actingAs($admin)
+            ->get(route('tasks.index', ['kind' => 'unit_12']))
+            ->assertInertia(function (AssertableInertia $page) use (&$people) {
+                $people = collect($page->toArray()['props']['people'])->pluck('full')->all();
+            });
+
+        $this->assertContains('А.Ханддорж', $people);
+    }
 }

@@ -119,7 +119,7 @@ class TaskController extends Controller
             'columnChoices' => TaskSource::columnCatalog(),
             'tasks' => $tasks,
             'documents' => $documents,
-            'people' => $this->phoneDirectoryPeople(),
+            'people' => $this->phoneDirectoryPeople($source),
             ...ModuleAccess::taskPagePermissions($user),
             'undoCount' => EditUndo::query()->where('user_id', $user->id)
                         ->where('kind', EditUndo::UNDO)->count(),
@@ -272,9 +272,54 @@ class TaskController extends Controller
      *
      * @return array<int, array{value: string, label: string, hint: string, org: string, category: string}>
      */
-    private function phoneDirectoryPeople(): array
+    private function phoneDirectoryPeople(?TaskSource $source = null): array
     {
-        return PhoneDirectoryEntry::peopleOptions();
+        $people = PhoneDirectoryEntry::peopleOptions();
+
+        if (! $source || ! $source->isUnit()) {
+            return $people;
+        }
+
+        return $this->unitPeople($source, $people);
+    }
+
+    /**
+     * Нэгжийн хуудсанд «Хариуцах эзэн»-ийг зөвхөн тэр нэгжийн албан
+     * хаагчдаас сонгоно. Тохирох хүн олдохгүй бол бүгдийг нь үлдээнэ —
+     * сонголт хоосон байснаас дээр.
+     *
+     * @param  list<array<string, mixed>>  $people
+     * @return list<array<string, mixed>>
+     */
+    private function unitPeople(TaskSource $source, array $people): array
+    {
+        $unit = TaskSource::normalizeUnitName($source->unit_name ?: $source->name);
+
+        $departmentIds = \App\Models\Department::query()
+            ->get(['id', 'name'])
+            ->filter(fn ($d) => (int) $d->id === (int) $source->department_id
+                || TaskSource::normalizeUnitName($d->name) === $unit)
+            ->pluck('id');
+
+        $names = $departmentIds->isEmpty()
+            ? collect()
+            : \App\Models\User::query()
+                ->whereIn('department_id', $departmentIds)
+                ->pluck('name')
+                ->flatMap(fn (string $name) => [
+                    mb_strtolower(trim($name)),
+                    mb_strtolower(trim(PersonName::short($name))),
+                ])
+                ->filter()
+                ->unique();
+
+        $picked = array_values(array_filter($people, fn (array $person) => (
+            TaskSource::normalizeUnitName($person['org'] ?? '') === $unit
+            || $names->contains(mb_strtolower(trim((string) ($person['full'] ?? ''))))
+            || $names->contains(mb_strtolower(trim((string) ($person['label'] ?? ''))))
+        )));
+
+        return $picked ?: $people;
     }
 
     public function store(Request $request): RedirectResponse
