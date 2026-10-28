@@ -141,7 +141,8 @@
     }
 
     /* Толгойн доод зааг — мөрүүдээс тод ялгарна. */
-    .ui-table thead tr:last-child th {
+    .ui-table thead tr:last-child th,
+    .ui-table thead th[rowspan] {
         @apply border-b-2 border-b-brand-navy-200 dark:border-b-slate-600;
     }
 
