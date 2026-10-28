@@ -2,7 +2,6 @@
 import { computed, ref, watch } from 'vue';
 import { Head, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import VaultUnlockForm from '@/Components/VaultUnlockForm.vue';
 
 /**
  * Холбосон системийн хуудас.
@@ -111,12 +110,10 @@ const reload = () => {
                 </template>
 
                 <template v-else>
-                    <p class="mb-3 text-sm text-slate-600">
-                        {{ pendingLaunch
-                            ? 'Сан түгжээтэй байна. Нээвэл ' + system.name + ' рүү шууд үргэлжилнэ.'
-                            : 'Хадгалсан мэдээллээр нэвтрэхийн тулд сангаа нээнэ үү.' }}
+                    <p class="text-sm text-slate-600">
+                        Сан түгжээтэй байна. <b>Системийн тохиргоо → Нэвтрэх мэдээллийн сан</b>
+                        (эсвэл <b>Профайл</b>) хэсгээс нээсний дараа энэ системд шууд нэвтэрнэ.
                     </p>
-                    <VaultUnlockForm />
                 </template>
             </section>
 

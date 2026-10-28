@@ -1,15 +1,13 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
-import { router, useForm, usePage } from '@inertiajs/vue3';
+import { router, useForm } from '@inertiajs/vue3';
 import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
-import VaultUnlockForm from '@/Components/VaultUnlockForm.vue';
 
 /**
  * Холбосон системийн нэвтрэх тохиргоо — хажуугийн цэснээс жижиг цонхоор.
  *
- * Бүтэн хуудас (Systems/View) нь хадгалсан нууц үгийг харах зэрэг
- * нэмэлт боломжтой хэвээр үлдэнэ.
+ * Сан нээх/хаах нь энд биш — Системийн тохиргоо (эсвэл Профайл)-д байна.
  */
 const props = defineProps({
     show: { type: Boolean, default: false },
@@ -17,9 +15,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close']);
-
-const page = usePage();
-const vaultUnlocked = computed(() => page.props.vault?.unlocked ?? false);
 
 const loading = ref(false);
 const loadError = ref('');
@@ -263,15 +258,6 @@ const remove = () => {
                     Энэ төхөөрөмжийг санах
                 </label>
 
-                <div
-                    v-if="saved && ! vaultUnlocked"
-                    class="rounded-xl border border-slate-200 bg-slate-50 p-3"
-                >
-                    <p class="mb-2 text-xs text-slate-600">
-                        Хадгалсан мэдээллээр нэвтрэхийн тулд сангаа нээнэ үү.
-                    </p>
-                    <VaultUnlockForm />
-                </div>
 
                 <div class="flex items-center justify-between gap-2 pt-1">
                     <button
