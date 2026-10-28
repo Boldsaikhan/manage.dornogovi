@@ -299,7 +299,7 @@ const showDay = (cell) => {
             <div
                 v-for="(weekday, index) in MONGOLIAN_WEEKDAYS"
                 :key="weekday"
-                class="px-1 py-2"
+                class="px-1 py-1"
                 :class="index >= 5 ? 'text-brand-orange-600' : ''"
             >
                 {{ weekday }}
@@ -310,7 +310,7 @@ const showDay = (cell) => {
             <div
                 v-for="(cell, index) in cells"
                 :key="cell.key"
-                class="min-h-[7rem] border-b border-r border-slate-100 p-1.5 align-top transition last:border-r-0"
+                class="min-h-[4.25rem] border-b border-r border-slate-100 p-1 align-top transition last:border-r-0"
                 :class="[
                     cell.inMonth
                         ? (isWeekend(index) ? 'bg-brand-orange-50/30' : 'bg-white')
@@ -318,9 +318,9 @@ const showDay = (cell) => {
                     cell.inMonth ? 'hover:bg-brand-navy-50/50' : '',
                 ]"
             >
-                <div class="mb-1 flex items-center justify-between gap-1">
+                <div class="mb-0.5 flex items-center justify-between gap-1">
                     <span
-                        class="inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full px-1 text-xs font-semibold"
+                        class="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1 text-[11px] font-semibold"
                         :class="cell.key === todayKey
                             ? 'bg-brand-navy-600 text-white shadow-sm'
                             : (cell.inMonth ? 'text-slate-700' : 'text-slate-300')"
@@ -330,7 +330,7 @@ const showDay = (cell) => {
                     <button
                         v-if="tasksOnDay(cell.key).length"
                         type="button"
-                        class="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-brand-orange-50 px-1 text-[10px] font-semibold text-brand-orange-700 transition hover:bg-brand-orange-100"
+                        class="inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-brand-orange-50 px-1 text-[10px] font-semibold text-brand-orange-700 transition hover:bg-brand-orange-100"
                         title="Хүснэгтээр харах"
                         @click="showDay(cell)"
                     >
@@ -340,7 +340,7 @@ const showDay = (cell) => {
 
                 <div class="space-y-0.5">
                     <button
-                        v-for="task in tasksOnDay(cell.key).slice(0, 3)"
+                        v-for="task in tasksOnDay(cell.key).slice(0, 2)"
                         :key="task.id + '-' + cell.key"
                         type="button"
                         class="block w-full truncate rounded border-l-2 px-1.5 py-0.5 text-left text-[10px] leading-tight transition hover:brightness-95"
@@ -351,12 +351,12 @@ const showDay = (cell) => {
                         {{ taskLabel(task) }}
                     </button>
                     <button
-                        v-if="tasksOnDay(cell.key).length > 3"
+                        v-if="tasksOnDay(cell.key).length > 2"
                         type="button"
                         class="px-1 text-[10px] font-medium text-brand-navy-600 hover:underline"
                         @click="showDay(cell)"
                     >
-                        +{{ tasksOnDay(cell.key).length - 3 }} бусад
+                        +{{ tasksOnDay(cell.key).length - 2 }} бусад
                     </button>
                 </div>
             </div>
