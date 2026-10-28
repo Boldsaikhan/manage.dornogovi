@@ -52,7 +52,38 @@ const toggleAiPanel = (value) => {
     }
 };
 
+/**
+ * Хураасан цэс дээр хулгана очиход түр дэлгэнэ.
+ *
+ * Хажуугийн багана `fixed` тул өргөсөхдөө голын агуулгыг түлхэхгүй,
+ * дээр нь давхарлан гарч ирнэ. Агуулгын зүүн зай нь `sidebarCollapsed`-
+ * оор тодорхойлогддог тул хөдлөхгүй.
+ */
+const sidebarHovered = ref(false);
+
+const navCollapsed = computed(() => sidebarCollapsed.value && ! sidebarHovered.value);
+
+const isDesktop = () => {
+    try {
+        return window.matchMedia('(min-width: 1024px)').matches;
+    } catch {
+        return false;
+    }
+};
+
+const onSidebarEnter = () => {
+    if (sidebarCollapsed.value && isDesktop()) {
+        sidebarHovered.value = true;
+    }
+};
+
+const onSidebarLeave = () => {
+    sidebarHovered.value = false;
+    hideNavTip();
+};
+
 const toggleSidebarCollapse = () => {
+    sidebarHovered.value = false;
     sidebarCollapsed.value = !sidebarCollapsed.value;
     hideNavTip();
     try {
@@ -63,7 +94,7 @@ const toggleSidebarCollapse = () => {
 };
 
 const showNavTip = (event, text) => {
-    if (!sidebarCollapsed.value || !text) return;
+    if (!navCollapsed.value || !text) return;
     const rect = event.currentTarget.getBoundingClientRect();
     navTip.value = {
         show: true,
@@ -265,23 +296,26 @@ const onLinkedSystemClick = (sys, event) => {
             class="fixed inset-y-0 left-0 z-40 flex flex-col border-r border-slate-200/80 bg-white shadow-soft transition-[width,transform] duration-200 ease-out dark:border-slate-800 dark:bg-slate-900 lg:translate-x-0"
             :class="[
                 sidebarOpen ? 'translate-x-0' : '-translate-x-full',
-                sidebarCollapsed ? 'w-[17.5rem] lg:w-[4.25rem]' : 'w-[17.5rem]',
+                navCollapsed ? 'w-[17.5rem] lg:w-[4.25rem]' : 'w-[17.5rem]',
+                sidebarCollapsed && ! navCollapsed ? 'lg:shadow-2xl' : '',
             ]"
+            @mouseenter="onSidebarEnter"
+            @mouseleave="onSidebarLeave"
         >
             <div
                 class="relative flex h-[4.5rem] shrink-0 items-center border-b border-slate-100 dark:border-slate-800"
-                :class="sidebarCollapsed ? 'lg:justify-center lg:px-2' : 'gap-1 px-3'"
+                :class="navCollapsed ? 'lg:justify-center lg:px-2' : 'gap-1 px-3'"
             >
                 <Link
                     :href="route('dept.dashboard')"
                     class="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-2 transition hover:bg-slate-50 dark:hover:bg-slate-800"
-                    :class="sidebarCollapsed ? 'lg:flex-none lg:justify-center lg:px-2' : ''"
-                    :title="sidebarCollapsed ? 'manage дотоод систем' : undefined"
+                    :class="navCollapsed ? 'lg:flex-none lg:justify-center lg:px-2' : ''"
+                    :title="navCollapsed ? 'manage дотоод систем' : undefined"
                 >
                     <StateEmblem class="h-10 w-10 shrink-0" />
                     <div
                         class="min-w-0 leading-tight"
-                        :class="sidebarCollapsed ? 'lg:hidden' : ''"
+                        :class="navCollapsed ? 'lg:hidden' : ''"
                     >
                         <div class="truncate text-sm font-bold tracking-tight text-brand-navy-800 dark:text-brand-navy-300">manage</div>
                         <div class="text-[11px] font-medium tracking-wide text-slate-500 dark:text-slate-400">дотоод систем</div>
@@ -291,7 +325,7 @@ const onLinkedSystemClick = (sys, event) => {
                 <button
                     type="button"
                     class="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-brand-navy-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-navy-300 lg:inline-flex"
-                    :class="sidebarCollapsed ? 'lg:absolute lg:-right-3 lg:top-[1.15rem] lg:z-50 lg:border lg:border-slate-200 lg:bg-white lg:shadow-sm dark:lg:border-slate-700 dark:lg:bg-slate-900' : ''"
+                    :class="navCollapsed ? 'lg:absolute lg:-right-3 lg:top-[1.15rem] lg:z-50 lg:border lg:border-slate-200 lg:bg-white lg:shadow-sm dark:lg:border-slate-700 dark:lg:bg-slate-900' : ''"
                     :title="sidebarCollapsed ? 'Цэс нээх' : 'Цэс хураах'"
                     :aria-label="sidebarCollapsed ? 'Цэс нээх' : 'Цэс хураах'"
                     @click="toggleSidebarCollapse"
@@ -304,21 +338,21 @@ const onLinkedSystemClick = (sys, event) => {
 
             <nav
                 class="flex-1 space-y-px overflow-y-auto p-3"
-                :class="sidebarCollapsed ? 'lg:px-2' : ''"
+                :class="navCollapsed ? 'lg:px-2' : ''"
             >
                 <template v-for="block in sidebarBlocks" :key="block.type === 'linked-systems' ? 'linked-systems' : block.group.key">
                     <template v-if="block.type === 'linked-systems'">
                         <button
                             type="button"
                             class="ui-section-label"
-                            :class="sidebarCollapsed ? 'lg:mx-auto lg:!mt-3 lg:h-px lg:w-6 lg:overflow-hidden lg:bg-slate-200 lg:p-0 lg:text-[0px]' : ''"
+                            :class="navCollapsed ? 'lg:mx-auto lg:!mt-3 lg:h-px lg:w-6 lg:overflow-hidden lg:bg-slate-200 lg:p-0 lg:text-[0px]' : ''"
                             :aria-expanded="isGroupOpen('linked-systems')"
                             @click="toggleGroup('linked-systems')"
                         >
                             Холбосон системүүд
                             <svg
                                 class="ui-section-label__chevron"
-                                :class="[isGroupOpen('linked-systems') ? '' : '-rotate-90', sidebarCollapsed ? 'lg:hidden' : '']"
+                                :class="[isGroupOpen('linked-systems') ? '' : '-rotate-90', navCollapsed ? 'lg:hidden' : '']"
                                 fill="none"
                                 stroke="currentColor"
                                 stroke-width="2.5"
@@ -340,7 +374,7 @@ const onLinkedSystemClick = (sys, event) => {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 class="ui-nav-link relative min-w-0 flex-1"
-                                :class="sidebarCollapsed ? 'lg:justify-center lg:px-0' : 'pr-9'"
+                                :class="navCollapsed ? 'lg:justify-center lg:px-0' : 'pr-9'"
                                 @click="onLinkedSystemClick(sys, $event)"
                                 @mouseenter="showNavTip($event, sys.name)"
                                 @mouseleave="hideNavTip"
@@ -350,12 +384,12 @@ const onLinkedSystemClick = (sys, event) => {
                                 <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                                     <path :d="iconPaths.globe" />
                                 </svg>
-                                <span class="min-w-0 flex-1 truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ sys.name }}</span>
+                                <span class="min-w-0 flex-1 truncate" :class="navCollapsed ? 'lg:hidden' : ''">{{ sys.name }}</span>
                             </a>
 
                             <!-- Засах — нэвтрэх нэр, нууц үгийн тохиргоо -->
                             <button
-                                v-if="! sidebarCollapsed"
+                                v-if="! navCollapsed"
                                 type="button"
                                 class="absolute right-1.5 rounded-lg p-1.5 text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-brand-navy-700 focus:opacity-100 group-hover/sys:opacity-100 dark:hover:bg-slate-800 dark:hover:text-brand-navy-300"
                                 :title="sys.name + ' — нэвтрэх тохиргоо'"
@@ -373,14 +407,14 @@ const onLinkedSystemClick = (sys, event) => {
                         <button
                             type="button"
                             class="ui-section-label"
-                            :class="sidebarCollapsed ? 'lg:mx-auto lg:!mt-3 lg:h-px lg:w-6 lg:overflow-hidden lg:bg-slate-200 lg:p-0 lg:text-[0px]' : ''"
+                            :class="navCollapsed ? 'lg:mx-auto lg:!mt-3 lg:h-px lg:w-6 lg:overflow-hidden lg:bg-slate-200 lg:p-0 lg:text-[0px]' : ''"
                             :aria-expanded="isGroupOpen(block.group.key)"
                             @click="toggleGroup(block.group.key)"
                         >
                             {{ block.group.label }}
                             <svg
                                 class="ui-section-label__chevron"
-                                :class="[isGroupOpen(block.group.key) ? '' : '-rotate-90', sidebarCollapsed ? 'lg:hidden' : '']"
+                                :class="[isGroupOpen(block.group.key) ? '' : '-rotate-90', navCollapsed ? 'lg:hidden' : '']"
                                 fill="none"
                                 stroke="currentColor"
                                 stroke-width="2.5"
@@ -398,7 +432,7 @@ const onLinkedSystemClick = (sys, event) => {
                             class="ui-nav-link relative"
                             :class="[
                                 isCurrent(item.route) ? 'ui-nav-link-active' : '',
-                                sidebarCollapsed ? 'lg:justify-center lg:px-0' : '',
+                                navCollapsed ? 'lg:justify-center lg:px-0' : '',
                             ]"
                             @mouseenter="showNavTip($event, item.label + (badgeFor(item.key) ? ` (${badgeFor(item.key)})` : ''))"
                             @mouseleave="hideNavTip"
@@ -408,7 +442,7 @@ const onLinkedSystemClick = (sys, event) => {
                             <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                                 <path :d="iconPaths[item.icon] || iconPaths.clipboard" />
                             </svg>
-                            <span class="min-w-0 flex-1 truncate" :class="sidebarCollapsed ? 'lg:hidden' : ''">{{ item.label }}</span>
+                            <span class="min-w-0 flex-1 truncate" :class="navCollapsed ? 'lg:hidden' : ''">{{ item.label }}</span>
                             <span
                                 v-if="badgeFor(item.key)"
                                 class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none tabular-nums"
@@ -416,7 +450,7 @@ const onLinkedSystemClick = (sys, event) => {
                                     isCurrent(item.route)
                                         ? 'bg-white/25 text-white'
                                         : 'bg-brand-orange-500 text-white',
-                                    sidebarCollapsed ? 'lg:absolute lg:right-1 lg:top-1 lg:min-w-[1.1rem] lg:px-1 lg:text-center' : '',
+                                    navCollapsed ? 'lg:absolute lg:right-1 lg:top-1 lg:min-w-[1.1rem] lg:px-1 lg:text-center' : '',
                                 ]"
                             >
                                 {{ badgeLabel(badgeFor(item.key)) }}
@@ -429,7 +463,7 @@ const onLinkedSystemClick = (sys, event) => {
 
             <div
                 class="space-y-px border-t border-slate-100 p-3 dark:border-slate-800"
-                :class="sidebarCollapsed ? 'lg:px-2' : ''"
+                :class="navCollapsed ? 'lg:px-2' : ''"
             >
                 <Link
                     v-if="user.is_admin"
@@ -437,7 +471,7 @@ const onLinkedSystemClick = (sys, event) => {
                     class="ui-nav-link"
                     :class="[
                         isCurrent('admin.users.*') ? 'ui-nav-link-active' : '',
-                        sidebarCollapsed ? 'lg:justify-center lg:px-0' : '',
+                        navCollapsed ? 'lg:justify-center lg:px-0' : '',
                     ]"
                     @mouseenter="showNavTip($event, 'Хандах эрх')"
                     @mouseleave="hideNavTip"
@@ -447,7 +481,7 @@ const onLinkedSystemClick = (sys, event) => {
                     <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path :d="iconPaths.users" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
-                    <span :class="sidebarCollapsed ? 'lg:hidden' : ''">Хандах эрх</span>
+                    <span :class="navCollapsed ? 'lg:hidden' : ''">Хандах эрх</span>
                 </Link>
 
                 <Link
@@ -456,7 +490,7 @@ const onLinkedSystemClick = (sys, event) => {
                     class="ui-nav-link"
                     :class="[
                         isCurrent('admin.systems.*') ? 'ui-nav-link-active' : '',
-                        sidebarCollapsed ? 'lg:justify-center lg:px-0' : '',
+                        navCollapsed ? 'lg:justify-center lg:px-0' : '',
                     ]"
                     @mouseenter="showNavTip($event, 'Системийн тохиргоо')"
                     @mouseleave="hideNavTip"
@@ -466,12 +500,12 @@ const onLinkedSystemClick = (sys, event) => {
                     <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                         <path :d="iconPaths.settings" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
-                    <span :class="sidebarCollapsed ? 'lg:hidden' : ''">Системийн тохиргоо</span>
+                    <span :class="navCollapsed ? 'lg:hidden' : ''">Системийн тохиргоо</span>
                 </Link>
 
                 <div
                     class="flex items-center justify-center gap-2 px-2 pt-2"
-                    :class="sidebarCollapsed ? 'lg:hidden' : ''"
+                    :class="navCollapsed ? 'lg:hidden' : ''"
                 >
                     <span class="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
                     <OrnamentMark class="h-2.5 w-6 text-brand-orange-500" />
@@ -484,7 +518,7 @@ const onLinkedSystemClick = (sys, event) => {
 
         <Teleport to="body">
             <div
-                v-if="navTip.show && sidebarCollapsed"
+                v-if="navTip.show && navCollapsed"
                 class="pointer-events-none fixed z-[100] hidden -translate-y-1/2 whitespace-nowrap rounded-md bg-brand-navy-800 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg lg:block"
                 :style="{ left: `${navTip.x}px`, top: `${navTip.y}px` }"
             >
