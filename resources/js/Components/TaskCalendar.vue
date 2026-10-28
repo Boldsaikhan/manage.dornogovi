@@ -212,24 +212,28 @@ const showDay = (cell) => {
 
         <!-- Сарын хавчуурга + баруун талд хэрэгжилтийн тоо -->
         <div class="flex items-center gap-2 border-b border-slate-200 bg-white px-2.5 py-1">
-        <div class="flex min-w-0 flex-1 gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <span class="shrink-0 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                Сар
+            </span>
+
+        <div class="flex min-w-0 flex-1 gap-1">
             <button
                 v-for="entry in monthlySummary"
                 :key="'tab-' + entry.month"
                 type="button"
-                class="flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition"
+                class="relative flex min-w-0 flex-1 items-center justify-center rounded-lg border py-1.5 text-sm font-semibold transition"
                 :class="entry.month === viewMonth
                     ? 'border-brand-navy-600 bg-brand-navy-600 text-white shadow-sm'
                     : 'border-slate-200 bg-white text-slate-600 hover:border-brand-navy-300 hover:text-brand-navy-700'"
                 :title="entry.label + ' — хуанлийг харах'"
                 @click="selectMonth(entry)"
             >
-                {{ entry.label }}
+                {{ entry.month + 1 }}
                 <span
                     v-if="entry.ids.length"
-                    class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
+                    class="ml-1 rounded-full px-1 text-[10px] font-bold leading-none"
                     :class="entry.month === viewMonth
-                        ? 'bg-white/20 text-white'
+                        ? 'bg-white/25 text-white'
                         : 'bg-brand-orange-50 text-brand-orange-700'"
                 >
                     {{ entry.ids.length }}
