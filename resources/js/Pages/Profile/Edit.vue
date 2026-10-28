@@ -2,7 +2,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
-import VaultPanel from '@/Components/VaultPanel.vue';
 import { Head } from '@inertiajs/vue3';
 
 defineProps({
@@ -45,19 +44,6 @@ defineProps({
                     <UpdatePasswordForm class="max-w-xl" />
                 </div>
 
-                <div
-                    class="bg-white p-4 shadow sm:rounded-lg sm:p-8"
-                >
-                    <header class="mb-4">
-                        <h2 class="text-lg font-medium text-gray-900">Нэвтрэх мэдээллийн сан</h2>
-                        <p class="mt-1 text-sm text-gray-600">
-                            Холбосон системүүдэд хадгалсан нэр, нууц үгээ ашиглахын тулд
-                            санг нээнэ.
-                        </p>
-                    </header>
-
-                    <VaultPanel />
-                </div>
             </div>
         </div>
     </AuthenticatedLayout>

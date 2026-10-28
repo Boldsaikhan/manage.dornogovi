@@ -259,7 +259,7 @@ const onLinkedSystemClick = (sys, event) => {
         event.preventDefault();
         router.visit(user.value?.is_admin
             ? `${route('admin.systems.index')}?tab=vault`
-            : route('profile.edit'));
+            : route('systems.show', sys.id));
     }
 };
 </script>
