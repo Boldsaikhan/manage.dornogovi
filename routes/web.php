@@ -233,6 +233,10 @@ Route::middleware('auth')->group(function () {
         Route::patch('/menu-settings', [SystemSettingsController::class, 'updateMenus'])->name('menu-settings.update');
         Route::patch('/desktop-settings', [SystemSettingsController::class, 'updateDesktop'])->name('desktop-settings.update');
 
+        // Албан хаагч бүрийн нэвтрэх мэдээллийн сан.
+        Route::post('/vault/users/{user}/open', [SystemSettingsController::class, 'openUserVault'])->name('vault.users.open');
+        Route::post('/vault/users/{user}/close', [SystemSettingsController::class, 'closeUserVault'])->name('vault.users.close');
+
         Route::get('/users', [UserAccessController::class, 'index'])->name('users.index');
         Route::post('/users/provision-heltes', [UserAccessController::class, 'provisionHeltes'])->name('users.provision-heltes');
         Route::patch('/users/{user}', [UserAccessController::class, 'update'])->name('users.update');

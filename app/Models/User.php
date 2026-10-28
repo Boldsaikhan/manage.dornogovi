@@ -51,6 +51,7 @@ class User extends Authenticatable
             'is_admin' => 'boolean',
             'is_department_head' => 'boolean',
             'is_specialist' => 'boolean',
+            'vault_open_until' => 'datetime',
         ];
     }
 
@@ -62,6 +63,12 @@ class User extends Authenticatable
     public function modulePermissions(): HasMany
     {
         return $this->hasMany(UserModulePermission::class);
+    }
+
+    /** Холбосон системүүдэд хадгалсан нэвтрэх мэдээлэл. */
+    public function systemCredentials(): HasMany
+    {
+        return $this->hasMany(UserCredential::class);
     }
 
     public function webauthnCredentials(): HasMany
