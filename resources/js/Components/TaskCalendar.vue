@@ -11,9 +11,37 @@ import {
 
 const props = defineProps({
     tasks: { type: Array, default: () => [] },
+    /** Биелэлтийн хураангуй: { count, done, pending, overdue, progress }. */
+    stats: { type: Object, default: () => ({}) },
+    statusFilter: { type: String, default: null },
 });
 
-const emit = defineEmits(['focus-task', 'show-tasks']);
+const emit = defineEmits(['focus-task', 'show-tasks', 'toggle-status']);
+
+/** Сарын мөрний баруун талд гарах хэрэгжилтийн шүүлтүүр. */
+const statusChips = computed(() => [
+    {
+        key: 'done',
+        label: 'Дууссан',
+        count: props.stats.done ?? 0,
+        active: 'bg-emerald-600 text-white',
+        idle: 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
+    },
+    {
+        key: 'pending',
+        label: 'Эхлээгүй',
+        count: props.stats.pending ?? 0,
+        active: 'bg-orange-500 text-white',
+        idle: 'border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100',
+    },
+    {
+        key: 'overdue',
+        label: 'Хэтэрсэн',
+        count: props.stats.overdue ?? 0,
+        active: 'bg-red-600 text-white',
+        idle: 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100',
+    },
+]);
 
 const today = new Date();
 const viewYear = ref(today.getFullYear());
@@ -209,38 +237,62 @@ const showDay = (cell) => {
             </button>
         </div>
 
-        <!-- Сонгосон сар -->
-        <div class="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-2">
-            <button
-                type="button"
-                class="rounded-lg px-2.5 py-1 text-base leading-none text-brand-navy-600 transition hover:bg-brand-navy-50"
-                aria-label="Өмнөх сар"
-                @click="shiftMonth(-1)"
-            >
-                &lsaquo;
-            </button>
+        <!-- Сонгосон сар — баруун талд хэрэгжилт -->
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-3 py-2">
+            <div class="flex items-center gap-1">
+                <button
+                    type="button"
+                    class="rounded-lg px-2.5 py-1 text-base leading-none text-brand-navy-600 transition hover:bg-brand-navy-50"
+                    aria-label="Өмнөх сар"
+                    @click="shiftMonth(-1)"
+                >
+                    &lsaquo;
+                </button>
 
-            <button
-                type="button"
-                class="rounded-lg px-3 py-1 text-sm font-semibold text-brand-navy-800 transition"
-                :class="activeMonthCount ? 'hover:bg-brand-navy-50' : 'cursor-default'"
-                :title="activeMonthCount ? 'Энэ сарын үүргүүдийг хүснэгтээр харах' : ''"
-                @click="showMonthTable"
-            >
-                {{ monthLabel }}
-                <span v-if="activeMonthCount" class="ml-1 text-xs font-normal text-slate-500">
-                    · {{ activeMonthCount }} үүрэг
-                </span>
-            </button>
+                <button
+                    type="button"
+                    class="rounded-lg px-3 py-1 text-sm font-semibold text-brand-navy-800 transition"
+                    :class="activeMonthCount ? 'hover:bg-brand-navy-50' : 'cursor-default'"
+                    :title="activeMonthCount ? 'Энэ сарын үүргүүдийг хүснэгтээр харах' : ''"
+                    @click="showMonthTable"
+                >
+                    {{ monthLabel }}
+                    <span v-if="activeMonthCount" class="ml-1 text-xs font-normal text-slate-500">
+                        · {{ activeMonthCount }} үүрэг
+                    </span>
+                </button>
 
-            <button
-                type="button"
-                class="rounded-lg px-2.5 py-1 text-base leading-none text-brand-navy-600 transition hover:bg-brand-navy-50"
-                aria-label="Дараагийн сар"
-                @click="shiftMonth(1)"
-            >
-                &rsaquo;
-            </button>
+                <button
+                    type="button"
+                    class="rounded-lg px-2.5 py-1 text-base leading-none text-brand-navy-600 transition hover:bg-brand-navy-50"
+                    aria-label="Дараагийн сар"
+                    @click="shiftMonth(1)"
+                >
+                    &rsaquo;
+                </button>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-1.5">
+                <button
+                    v-for="chip in statusChips"
+                    :key="chip.key"
+                    type="button"
+                    class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition"
+                    :class="statusFilter === chip.key
+                        ? chip.active + ' border-transparent shadow-sm'
+                        : chip.idle"
+                    :title="chip.label + ' — хүснэгтээр шүүх'"
+                    @click="emit('toggle-status', chip.key)"
+                >
+                    {{ chip.label }}
+                    <span
+                        class="rounded-full px-1.5 text-[11px] font-bold"
+                        :class="statusFilter === chip.key ? 'bg-white/20' : 'bg-white/70'"
+                    >
+                        {{ chip.count }}
+                    </span>
+                </button>
+            </div>
         </div>
 
         <div class="grid grid-cols-7 border-b border-slate-200 bg-brand-navy-50 text-center text-xs font-semibold uppercase tracking-wide text-brand-navy-500">

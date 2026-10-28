@@ -866,6 +866,24 @@ const toggleStatusFilter = (key) => {
     statusFilter.value = statusFilter.value === key ? null : key;
 };
 
+/**
+ * Цаглалтын сарын мөрөнд байрлах хэрэгжилтийн шүүлтүүр.
+ *
+ * Цаглалт дээр төлвөөр шүүх боломжгүй тул хүснэгт рүү шилжүүлж харуулна.
+ */
+const toggleStatusFromCalendar = (key) => {
+    const turningOn = statusFilter.value !== key;
+
+    periodFilter.value = null;
+    filter.value = null;
+    toggleStatusFilter(key);
+
+    if (turningOn) {
+        showDashboard.value = false;
+        viewMode.value = 'table';
+    }
+};
+
 const clearStatusFilter = () => {
     statusFilter.value = null;
 };
@@ -1797,57 +1815,6 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                             <span class="block h-full rounded-full" :class="barColor(overall.progress)" :style="{ width: overall.progress + '%' }" />
                         </span>
 
-                <div class="flex flex-col gap-0.5 rounded-xl border border-slate-200 bg-slate-50/80 p-1">
-                    <button
-                        type="button"
-                        class="inline-flex w-full items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition"
-                        :class="statusFilter === 'done'
-                            ? 'bg-emerald-600 text-white shadow-sm'
-                            : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-700'"
-                        @click="toggleStatusFilter('done')"
-                    >
-                        Дууссан
-                        <span
-                            class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
-                            :class="statusFilter === 'done' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'"
-                        >
-                            {{ overall.done }}
-                        </span>
-                    </button>
-                    <button
-                        type="button"
-                        class="inline-flex w-full items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition"
-                        :class="statusFilter === 'pending'
-                            ? 'bg-orange-500 text-white shadow-sm'
-                            : 'text-slate-600 hover:bg-orange-50 hover:text-orange-700'"
-                        @click="toggleStatusFilter('pending')"
-                    >
-                        Эхлээгүй
-                        <span
-                            class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
-                            :class="statusFilter === 'pending' ? 'bg-white/20 text-white' : 'bg-orange-50 text-orange-700'"
-                        >
-                            {{ overall.pending }}
-                        </span>
-                    </button>
-                    <button
-                        type="button"
-                        class="inline-flex w-full items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition"
-                        :class="statusFilter === 'overdue'
-                            ? 'bg-red-600 text-white shadow-sm'
-                            : 'text-slate-600 hover:bg-red-50 hover:text-red-700'"
-                        @click="toggleStatusFilter('overdue')"
-                    >
-                        <span class="hidden sm:inline">Хугацаа хэтэрсэн</span>
-                        <span class="sm:hidden">Хэтэрсэн</span>
-                        <span
-                            class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
-                            :class="statusFilter === 'overdue' ? 'bg-white/20 text-white' : 'bg-red-50 text-red-700'"
-                        >
-                            {{ overall.overdue }}
-                        </span>
-                    </button>
-                </div>
                     </div>
 
                     <!-- Хэсгүүдийн жагсаалт — дэлгэцэнд багтаж, илүү нь гүйнэ -->
@@ -1929,8 +1896,11 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                     <TaskCalendar
                         v-if="viewMode === 'calendar'"
                         :tasks="tasks"
+                        :stats="overall"
+                        :status-filter="statusFilter"
                         @focus-task="focusTaskRow"
                         @show-tasks="showTasksFromCalendar"
+                        @toggle-status="toggleStatusFromCalendar"
                     />
 
                     <template v-if="viewMode === 'table'">
