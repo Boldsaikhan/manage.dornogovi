@@ -267,6 +267,10 @@ Route::middleware('auth')->group(function () {
         Route::delete('/roles/{role}', [UserAccessController::class, 'destroyRole'])->name('roles.destroy');
     });
 
+    // Системийн алдааны бүртгэл — зөвхөн админ.
+    Route::get('/admin/logs', [\App\Http\Controllers\Admin\SystemLogController::class, 'index'])
+        ->name('admin.logs');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

@@ -120,6 +120,10 @@ php artisan config:clear
 # логт тод тэмдэглэнэ (set -e нь энд зогсооно).
 if ! php artisan migrate --force; then
     echo "!! $(date '+%F %T') [${BRANCH}] MIGRATION БҮТЭЛГҮЙТЛЭЭ — схем шинэчлэгдсэнгүй." >&2
+    # Шинэ код + хуучин route/view кэш = бүх хуудас 500. Тиймээс кэшийг
+    # хаяж, аппыг эх файлаасаа уншдаг болгож үлдээнэ.
+    php artisan route:clear >/dev/null 2>&1 || true
+    php artisan view:clear >/dev/null 2>&1 || true
     exit 1
 fi
 php artisan config:cache
