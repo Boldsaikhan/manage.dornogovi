@@ -303,7 +303,7 @@ const onLinkedSystemClick = (sys, event) => {
             </div>
 
             <nav
-                class="flex-1 space-y-0.5 overflow-y-auto p-3"
+                class="flex-1 space-y-px overflow-y-auto p-3"
                 :class="sidebarCollapsed ? 'lg:px-2' : ''"
             >
                 <template v-for="block in sidebarBlocks" :key="block.type === 'linked-systems' ? 'linked-systems' : block.group.key">
@@ -428,7 +428,7 @@ const onLinkedSystemClick = (sys, event) => {
 
 
             <div
-                class="space-y-1 border-t border-slate-100 p-3 dark:border-slate-800"
+                class="space-y-px border-t border-slate-100 p-3 dark:border-slate-800"
                 :class="sidebarCollapsed ? 'lg:px-2' : ''"
             >
                 <Link

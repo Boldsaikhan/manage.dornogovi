@@ -742,7 +742,7 @@
     }
 
     .ui-nav-link {
-        @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600
+        @apply flex items-center gap-2.5 rounded-xl px-3 py-1.5 text-sm font-medium text-slate-600
             transition hover:bg-brand-navy-50 hover:text-brand-navy-700
             dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-navy-200;
     }
@@ -769,7 +769,7 @@
 
     /* Бүлгийн гарчиг — дарахад хураагддаг тул товч шиг аашилна. */
     .ui-section-label {
-        @apply !mt-4 flex w-full items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-bold
+        @apply !mt-2.5 flex w-full items-center gap-1.5 rounded-lg px-3 py-1 text-[10px] font-bold
             uppercase tracking-[0.14em] text-brand-navy-700 transition
             dark:text-brand-navy-300;
     }
