@@ -497,6 +497,12 @@ const onKeydown = (event) => {
             event.preventDefault();
             pickOption(filteredOptions.value[highlight.value]);
 
+            // Нэр бичээд Enter дарахад тэр хүн сонгогдоод нүд хаагдана.
+            // (Олон хүн сонгох бол хулганаар дарж үргэлжлүүлнэ.)
+            if (props.multiple) {
+                commitMulti();
+            }
+
             return;
         }
     }
