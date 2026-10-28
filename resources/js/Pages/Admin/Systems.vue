@@ -685,7 +685,7 @@ const saveAi = () => {
         </div>
 
         <div
-            class="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200"
+            class="mb-4 flex flex-wrap gap-1.5 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm"
             role="tablist"
             aria-label="Системийн тохиргоо"
         >
@@ -694,10 +694,10 @@ const saveAi = () => {
                 :key="tab.id"
                 type="button"
                 role="tab"
-                class="-mb-px shrink-0 border-b-2 px-3.5 py-2.5 text-sm font-semibold transition sm:px-4"
+                class="shrink-0 rounded-xl px-3.5 py-2 text-sm font-semibold transition sm:px-4"
                 :class="activeTab === tab.id
-                    ? 'border-brand-navy-600 text-brand-navy-800'
-                    : 'border-transparent text-slate-500 hover:text-brand-navy-700'"
+                    ? 'bg-brand-navy-600 text-white shadow-sm shadow-brand-navy-600/25'
+                    : 'text-slate-600 hover:bg-brand-navy-50 hover:text-brand-navy-700'"
                 :aria-selected="activeTab === tab.id"
                 @click="selectTab(tab.id)"
             >
