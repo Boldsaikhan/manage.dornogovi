@@ -33,6 +33,15 @@ const shiftMonth = (delta) => {
     viewMonth.value = next.getMonth();
 };
 
+const shiftYear = (delta) => {
+    viewYear.value += delta;
+};
+
+/** Сарын хавчуурга дээр дарахад тэр сарын хуанли гарна. */
+const selectMonth = (entry) => {
+    viewMonth.value = entry.month;
+};
+
 const goToday = () => {
     viewYear.value = today.getFullYear();
     viewMonth.value = today.getMonth();
@@ -64,12 +73,17 @@ const monthlySummary = computed(() => MONGOLIAN_MONTHS.map((label, month) => {
     return { month, label, ids };
 }));
 
+/** Сонгосон сард хэдэн үүрэг хамаарч байгаа. */
+const activeMonthCount = computed(
+    () => monthlySummary.value[viewMonth.value]?.ids.length ?? 0,
+);
+
 const taskChipClass = (progress) => {
     const value = Number(progress ?? 0);
-    if (value >= 100) return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-    if (value > 0) return 'bg-amber-50 text-amber-900 border-amber-200';
+    if (value >= 100) return 'border-emerald-400 bg-emerald-50 text-emerald-800';
+    if (value > 0) return 'border-amber-400 bg-amber-50 text-amber-900';
 
-    return 'bg-slate-100 text-slate-700 border-slate-200';
+    return 'border-slate-300 bg-slate-50 text-slate-700';
 };
 
 const taskLabel = (task) => {
@@ -80,6 +94,9 @@ const taskLabel = (task) => {
     return text.length > 42 ? `${no}${text.slice(0, 40)}…` : `${no}${text}`;
 };
 
+/** Долоо хоногийн амралтын багана (Бя, Ня). */
+const isWeekend = (index) => index % 7 >= 5;
+
 const focusTask = (task) => {
     emit('focus-task', task);
 };
@@ -89,13 +106,13 @@ const showAll = () => {
     emit('show-tasks', { label: null, ids: null });
 };
 
-/** Тухайн сарын үүргүүдийг хүснэгтээр харуулна. */
-const showMonth = (entry) => {
-    if (! entry.ids.length) {
+/** Сонгосон сарын үүргүүдийг хүснэгтээр харуулна. */
+const showMonthTable = () => {
+    const entry = monthlySummary.value[viewMonth.value];
+
+    if (! entry || ! entry.ids.length) {
         return;
     }
-
-    viewMonth.value = entry.month;
 
     emit('show-tasks', {
         label: `${viewYear.value} оны ${entry.label}`,
@@ -118,150 +135,197 @@ const showDay = (cell) => {
 </script>
 
 <template>
-    <div class="ui-page">
-        <!-- Эхний багана — бүх үүрэг даалгавар, дараагийнх — сар тус бүрийн тоо -->
-        <div class="ui-table-wrap">
-            <table class="ui-table">
-                <thead>
-                    <tr>
-                        <th class="whitespace-nowrap">Бүх үүрэг даалгавар</th>
-                        <th
-                            v-for="entry in monthlySummary"
-                            :key="'head-' + entry.month"
-                            class="whitespace-nowrap text-center"
-                        >
-                            {{ entry.label }}
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="whitespace-nowrap">
-                            <button
-                                type="button"
-                                class="ui-btn-accent px-3 py-1.5 text-sm"
-                                title="Бүх үүрэг даалгаврыг хүснэгтээр харах"
-                                @click="showAll"
-                            >
-                                Нийт {{ props.tasks.length }} — бүгдийг харах
-                            </button>
-                        </td>
-                        <td
-                            v-for="entry in monthlySummary"
-                            :key="'count-' + entry.month"
-                            class="text-center"
-                        >
-                            <button
-                                v-if="entry.ids.length"
-                                type="button"
-                                class="ui-btn-ghost px-3 py-1.5 text-sm font-semibold"
-                                :class="entry.month === viewMonth ? 'border-brand-navy-400 text-brand-navy-700' : ''"
-                                :title="entry.label + ' — хүснэгтээр харах'"
-                                @click="showMonth(entry)"
-                            >
-                                {{ entry.ids.length }}
-                            </button>
-                            <span v-else class="text-sm text-slate-300">—</span>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+    <div class="ui-card overflow-hidden">
+        <!-- Толгой: нэрлэл, жилийн шилжилт, бүгдийг харах -->
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-gradient-to-r from-brand-navy-50 to-white px-4 py-3">
+            <div>
+                <h3 class="text-sm font-semibold text-brand-navy-900">Цаглалт / төлөвлөгөө</h3>
+                <p class="text-xs text-slate-500">
+                    Сар дээр дарж тухайн сарын хуанлийг харна (хугацааны жишээ: 08.01–09.30)
+                </p>
+            </div>
 
-        <div class="ui-card overflow-hidden">
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
-                <div>
-                    <h3 class="text-sm font-semibold text-slate-800">Цаглалт / төлөвлөгөө</h3>
-                    <p class="text-xs text-slate-500">Хугацааны мөрөөр сарын хуанли дээр харуулна (жишээ: 08.01–09.30)</p>
-                </div>
-                <div class="flex flex-wrap items-center gap-2">
-                    <button type="button" class="ui-btn-ghost px-2.5 py-1.5 text-sm" @click="shiftMonth(-1)" aria-label="Өмнөх сар">
+            <div class="flex flex-wrap items-center gap-2">
+                <div class="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-1 py-0.5">
+                    <button
+                        type="button"
+                        class="rounded-lg px-2 py-1 text-base leading-none text-brand-navy-600 transition hover:bg-brand-navy-50"
+                        aria-label="Өмнөх жил"
+                        @click="shiftYear(-1)"
+                    >
                         &lsaquo;
                     </button>
-                    <span class="min-w-[9rem] text-center text-sm font-semibold text-slate-800">{{ monthLabel }}</span>
-                    <button type="button" class="ui-btn-ghost px-2.5 py-1.5 text-sm" @click="shiftMonth(1)" aria-label="Дараагийн сар">
+                    <span class="min-w-[3.25rem] text-center text-sm font-semibold text-brand-navy-800">
+                        {{ viewYear }}
+                    </span>
+                    <button
+                        type="button"
+                        class="rounded-lg px-2 py-1 text-base leading-none text-brand-navy-600 transition hover:bg-brand-navy-50"
+                        aria-label="Дараагийн жил"
+                        @click="shiftYear(1)"
+                    >
                         &rsaquo;
                     </button>
-                    <button type="button" class="ui-btn-ghost px-2.5 py-1.5 text-xs" @click="goToday">
-                        Өнөөдөр
+                </div>
+
+                <button type="button" class="ui-btn-ghost px-3 py-1.5 text-xs" @click="goToday">
+                    Өнөөдөр
+                </button>
+
+                <button
+                    type="button"
+                    class="ui-btn-accent px-3 py-1.5 text-sm"
+                    title="Бүх үүрэг даалгаврыг хүснэгтээр харах"
+                    @click="showAll"
+                >
+                    Нийт {{ props.tasks.length }} — бүгдийг харах
+                </button>
+            </div>
+        </div>
+
+        <!-- Сарын хавчуурга — тоо нь тухайн сард хамаарах үүргийн тоо -->
+        <div class="flex gap-1.5 overflow-x-auto border-b border-slate-200 bg-white px-3 py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <button
+                v-for="entry in monthlySummary"
+                :key="'tab-' + entry.month"
+                type="button"
+                class="flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition"
+                :class="entry.month === viewMonth
+                    ? 'border-brand-navy-600 bg-brand-navy-600 text-white shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-brand-navy-300 hover:text-brand-navy-700'"
+                :title="entry.label + ' — хуанлийг харах'"
+                @click="selectMonth(entry)"
+            >
+                {{ entry.label }}
+                <span
+                    v-if="entry.ids.length"
+                    class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
+                    :class="entry.month === viewMonth
+                        ? 'bg-white/20 text-white'
+                        : 'bg-brand-orange-50 text-brand-orange-700'"
+                >
+                    {{ entry.ids.length }}
+                </span>
+            </button>
+        </div>
+
+        <!-- Сонгосон сар -->
+        <div class="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-2">
+            <button
+                type="button"
+                class="rounded-lg px-2.5 py-1 text-base leading-none text-brand-navy-600 transition hover:bg-brand-navy-50"
+                aria-label="Өмнөх сар"
+                @click="shiftMonth(-1)"
+            >
+                &lsaquo;
+            </button>
+
+            <button
+                type="button"
+                class="rounded-lg px-3 py-1 text-sm font-semibold text-brand-navy-800 transition"
+                :class="activeMonthCount ? 'hover:bg-brand-navy-50' : 'cursor-default'"
+                :title="activeMonthCount ? 'Энэ сарын үүргүүдийг хүснэгтээр харах' : ''"
+                @click="showMonthTable"
+            >
+                {{ monthLabel }}
+                <span v-if="activeMonthCount" class="ml-1 text-xs font-normal text-slate-500">
+                    · {{ activeMonthCount }} үүрэг
+                </span>
+            </button>
+
+            <button
+                type="button"
+                class="rounded-lg px-2.5 py-1 text-base leading-none text-brand-navy-600 transition hover:bg-brand-navy-50"
+                aria-label="Дараагийн сар"
+                @click="shiftMonth(1)"
+            >
+                &rsaquo;
+            </button>
+        </div>
+
+        <div class="grid grid-cols-7 border-b border-slate-200 bg-brand-navy-50 text-center text-xs font-semibold uppercase tracking-wide text-brand-navy-500">
+            <div
+                v-for="(weekday, index) in MONGOLIAN_WEEKDAYS"
+                :key="weekday"
+                class="px-1 py-2"
+                :class="index >= 5 ? 'text-brand-orange-600' : ''"
+            >
+                {{ weekday }}
+            </div>
+        </div>
+
+        <div class="grid grid-cols-7">
+            <div
+                v-for="(cell, index) in cells"
+                :key="cell.key"
+                class="min-h-[7rem] border-b border-r border-slate-100 p-1.5 align-top transition last:border-r-0"
+                :class="[
+                    cell.inMonth
+                        ? (isWeekend(index) ? 'bg-brand-orange-50/30' : 'bg-white')
+                        : 'bg-slate-50/70',
+                    cell.inMonth ? 'hover:bg-brand-navy-50/50' : '',
+                ]"
+            >
+                <div class="mb-1 flex items-center justify-between gap-1">
+                    <span
+                        class="inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full px-1 text-xs font-semibold"
+                        :class="cell.key === todayKey
+                            ? 'bg-brand-navy-600 text-white shadow-sm'
+                            : (cell.inMonth ? 'text-slate-700' : 'text-slate-300')"
+                    >
+                        {{ cell.date.getDate() }}
+                    </span>
+                    <button
+                        v-if="tasksOnDay(cell.key).length"
+                        type="button"
+                        class="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-brand-orange-50 px-1 text-[10px] font-semibold text-brand-orange-700 transition hover:bg-brand-orange-100"
+                        title="Хүснэгтээр харах"
+                        @click="showDay(cell)"
+                    >
+                        {{ tasksOnDay(cell.key).length }}
                     </button>
                 </div>
-            </div>
 
-            <div class="grid grid-cols-7 border-b border-slate-200 bg-brand-navy-50/60 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <div v-for="weekday in MONGOLIAN_WEEKDAYS" :key="weekday" class="px-1 py-2">
-                    {{ weekday }}
-                </div>
-            </div>
-
-            <div class="grid grid-cols-7">
-                <div
-                    v-for="cell in cells"
-                    :key="cell.key"
-                    class="min-h-[6.5rem] border-b border-r border-slate-100 p-1.5 align-top last:border-r-0"
-                    :class="cell.inMonth ? 'bg-white' : 'bg-slate-50/70'"
-                >
-                    <div class="mb-1 flex items-center justify-between gap-1">
-                        <span
-                            class="inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full px-1 text-xs font-semibold"
-                            :class="cell.key === todayKey
-                                ? 'bg-brand-navy-600 text-white'
-                                : (cell.inMonth ? 'text-slate-700' : 'text-slate-400')"
-                        >
-                            {{ cell.date.getDate() }}
-                        </span>
-                        <button
-                            v-if="tasksOnDay(cell.key).length"
-                            type="button"
-                            class="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-brand-orange-50 px-1 text-[10px] font-semibold text-brand-orange-700 transition hover:bg-brand-orange-100"
-                            title="Хүснэгтээр харах"
-                            @click="showDay(cell)"
-                        >
-                            {{ tasksOnDay(cell.key).length }}
-                        </button>
-                    </div>
-
-                    <div class="space-y-0.5">
-                        <button
-                            v-for="task in tasksOnDay(cell.key).slice(0, 3)"
-                            :key="task.id + '-' + cell.key"
-                            type="button"
-                            class="block w-full truncate rounded border px-1.5 py-0.5 text-left text-[10px] leading-tight transition hover:brightness-95"
-                            :class="taskChipClass(task.progress)"
-                            :title="task.text"
-                            @click="focusTask(task)"
-                        >
-                            {{ taskLabel(task) }}
-                        </button>
-                        <button
-                            v-if="tasksOnDay(cell.key).length > 3"
-                            type="button"
-                            class="px-1 text-[10px] font-medium text-brand-navy-600 hover:underline"
-                            @click="showDay(cell)"
-                        >
-                            +{{ tasksOnDay(cell.key).length - 3 }} бусад
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div v-if="monthTasks.unscheduled.length" class="border-t border-slate-200 bg-slate-50/80 px-4 py-3">
-                <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Хугацаа тодорхойгүй эсвэл уншиж чадаагүй
-                </p>
-                <div class="flex flex-wrap gap-2">
+                <div class="space-y-0.5">
                     <button
-                        v-for="task in monthTasks.unscheduled"
-                        :key="'unscheduled-' + task.id"
+                        v-for="task in tasksOnDay(cell.key).slice(0, 3)"
+                        :key="task.id + '-' + cell.key"
                         type="button"
-                        class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 transition hover:border-brand-navy-300"
-                        :title="task.period || task.text"
+                        class="block w-full truncate rounded border-l-2 px-1.5 py-0.5 text-left text-[10px] leading-tight transition hover:brightness-95"
+                        :class="taskChipClass(task.progress)"
+                        :title="task.text"
                         @click="focusTask(task)"
                     >
-                        <span class="font-medium text-slate-500">{{ task.period || '—' }}:</span>
                         {{ taskLabel(task) }}
                     </button>
+                    <button
+                        v-if="tasksOnDay(cell.key).length > 3"
+                        type="button"
+                        class="px-1 text-[10px] font-medium text-brand-navy-600 hover:underline"
+                        @click="showDay(cell)"
+                    >
+                        +{{ tasksOnDay(cell.key).length - 3 }} бусад
+                    </button>
                 </div>
+            </div>
+        </div>
+
+        <div v-if="monthTasks.unscheduled.length" class="border-t border-slate-200 bg-slate-50/80 px-4 py-3">
+            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Хугацаа тодорхойгүй эсвэл уншиж чадаагүй
+            </p>
+            <div class="flex flex-wrap gap-2">
+                <button
+                    v-for="task in monthTasks.unscheduled"
+                    :key="'unscheduled-' + task.id"
+                    type="button"
+                    class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 transition hover:border-brand-navy-300"
+                    :title="task.period || task.text"
+                    @click="focusTask(task)"
+                >
+                    <span class="font-medium text-slate-500">{{ task.period || '—' }}:</span>
+                    {{ taskLabel(task) }}
+                </button>
             </div>
         </div>
     </div>
