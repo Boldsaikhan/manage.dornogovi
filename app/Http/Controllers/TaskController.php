@@ -73,7 +73,7 @@ class TaskController extends Controller
         $kind = $source->key;
 
         $tasksQuery = $source->tasks();
-        $this->applyTaskListScope($tasksQuery, $user);
+        $this->applyTaskListScope($tasksQuery, $user, $source);
         $tasks = $tasksQuery
             ->get([
                 'id', 'task_source_id', 'text', 'measure', 'period', 'responsible',
@@ -149,7 +149,7 @@ class TaskController extends Controller
         abort_unless(in_array($format, ['docx', 'xlsx', 'pdf'], true), 404);
 
         $tasksQuery = $source->tasks();
-        $this->applyTaskListScope($tasksQuery, $request->user());
+        $this->applyTaskListScope($tasksQuery, $request->user(), $source);
         $tasks = $tasksQuery
             ->get([
                 'id', 'text', 'measure', 'period', 'responsible', 'collaborator', 'sector', 'note', 'progress', 'sort_order',
@@ -1004,8 +1004,13 @@ class TaskController extends Controller
     /**
      * «Хамааралтай» эрх — зөвхөн assignee-тай мөр; «бүгд» — бүх мөр.
      */
-    private function applyTaskListScope($query, \App\Models\User $user): void
+    private function applyTaskListScope($query, \App\Models\User $user, ?TaskSource $source = null): void
     {
+        // Өөрийн нэгжийн дотоод хэсгийг бүтнээр нь харуулна.
+        if ($source && $source->isUnitMemberSection($user->loadMissing('department:id,name'))) {
+            return;
+        }
+
         ModuleOwnScope::apply($query, $user, 'tasks');
     }
 
@@ -1036,26 +1041,35 @@ class TaskController extends Controller
             ->orderBy('sort_order')
             ->orderBy('id');
 
-        // Хамааралтай эрх — зөвхөн өөрт хамаатай үүрэгтэй хэсэг.
-        if (ModuleAccess::scopeOwnOnly($user, 'tasks')) {
-            $patterns = PersonName::matchPatterns($user);
-
-            if ($patterns === []) {
-                return [];
-            }
-
-            $query->whereHas('tasks', function ($tasks) use ($user): void {
-                ModuleOwnScope::restrictTasksToAssignee($tasks, $user);
-            });
-        }
-
         $user->loadMissing('department:id,name');
+
+        // Хамааралтай эрх — зөвхөн өөрт хамаатай үүрэгтэй хэсэг. Харин
+        // өөрийнх нь нэгжийн дотоод хэсэг үргэлж харагдана.
+        $ownOnly = ModuleAccess::scopeOwnOnly($user, 'tasks');
+        $mineIds = null;
+
+        if ($ownOnly) {
+            if (PersonName::matchPatterns($user) === []) {
+                $mineIds = collect();
+            } else {
+                $mineIds = TaskSource::query()
+                    ->whereHas('tasks', function ($tasks) use ($user): void {
+                        ModuleOwnScope::restrictTasksToAssignee($tasks, $user);
+                    })
+                    ->pluck('id');
+            }
+        }
 
         return $query
             ->get()
             // Нэгжийн дотоодын үүрэг даалгавар — зөвхөн тухайн нэгжийнхэнд.
             ->filter(fn (TaskSource $source) => $user->is_admin
                 || $source->isVisibleToUnitMember($user))
+            // Хамааралтай эрхтэй бол өөрийн нэгжийн хэсэг, эсвэл өөрт
+            // хамаатай үүрэг байгаа хэсэг л үлдэнэ.
+            ->filter(fn (TaskSource $source) => $mineIds === null
+                || $source->isUnitMemberSection($user)
+                || $mineIds->contains($source->id))
             // Хуучин нэгдсэн «Хэлтсийн үүрэг даалгавар» хэсгийг мөргүй бол нуруулна.
             ->reject(fn (TaskSource $source) => $source->key === TaskSource::KEY_DEPARTMENT
                 && $source->tasks()->count() === 0)
