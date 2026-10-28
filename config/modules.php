@@ -32,6 +32,8 @@ return [
             'group' => 'work',
             'icon' => 'clipboard',
             'own_scope' => 'task_assignee',
+            // «Удирдах (хэлтсийн)» — зөвхөн өөрийн нэгжийн хэсэгт.
+            'unit_scope' => true,
         ],
         [
             'key' => 'work_groups',

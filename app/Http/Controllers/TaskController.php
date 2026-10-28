@@ -337,6 +337,13 @@ class TaskController extends Controller
             'sector' => ['nullable', 'string', 'max:255'],
         ]);
 
+        // Хэлтсийн эрхтэй хүн зөвхөн өөрийн нэгжийн хэсэгт мөр нэмнэ.
+        // («Нэмэх (хамааралтай)» эрхэд хориг тавихгүй — тэр хүн өөртөө
+        //  анхны үүргээ үүсгэх ёстой.)
+        if (ModuleAccess::scopeUnitOnly($request->user(), 'tasks')) {
+            $this->authorizeKind($request->user(), $data['kind']);
+        }
+
         $source = TaskSource::query()->where('key', $data['kind'])->firstOrFail();
         $next = ((int) $source->tasks()->max('sort_order')) + 1;
         $text = trim((string) ($data['text'] ?? ''));
@@ -1043,6 +1050,16 @@ class TaskController extends Controller
 
         $user->loadMissing('department:id,name');
 
+        // «Удирдах (хэлтсийн)» — зөвхөн өөрийн нэгжийн хэсэг.
+        if (ModuleAccess::scopeUnitOnly($user, 'tasks')) {
+            return $query
+                ->get()
+                ->filter(fn (TaskSource $source) => $source->isUnitMemberSection($user))
+                ->map(fn (TaskSource $source) => $this->kindTabRow($source))
+                ->values()
+                ->all();
+        }
+
         // Хамааралтай эрх — зөвхөн өөрт хамаатай үүрэгтэй хэсэг. Харин
         // өөрийнх нь нэгжийн дотоод хэсэг үргэлж харагдана.
         $ownOnly = ModuleAccess::scopeOwnOnly($user, 'tasks');
@@ -1073,18 +1090,26 @@ class TaskController extends Controller
             // Хуучин нэгдсэн «Хэлтсийн үүрэг даалгавар» хэсгийг мөргүй бол нуруулна.
             ->reject(fn (TaskSource $source) => $source->key === TaskSource::KEY_DEPARTMENT
                 && $source->tasks()->count() === 0)
-            ->map(fn (TaskSource $source) => [
-                'key' => $source->key,
-                'label' => $source->name,
-                'layout' => $source->layout ?: $source->key,
-                'is_system' => $source->isSystem(),
-                'is_locked' => $source->isLocked(),
-                'is_leadership' => $source->isLeadership(),
-                // Албан тушаалыг хашиж буй хүний нэр — утасны жагсаалтаас.
-                'holder' => $source->leaderName(),
-            ])
+            ->map(fn (TaskSource $source) => $this->kindTabRow($source))
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function kindTabRow(TaskSource $source): array
+    {
+        return [
+            'key' => $source->key,
+            'label' => $source->name,
+            'layout' => $source->layout ?: $source->key,
+            'is_system' => $source->isSystem(),
+            'is_locked' => $source->isLocked(),
+            'is_leadership' => $source->isLeadership(),
+            // Албан тушаалыг хашиж буй хүний нэр — утасны жагсаалтаас.
+            'holder' => $source->leaderName(),
+        ];
     }
 
     /**
