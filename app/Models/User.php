@@ -51,7 +51,7 @@ class User extends Authenticatable
             'is_admin' => 'boolean',
             'is_department_head' => 'boolean',
             'is_specialist' => 'boolean',
-            'vault_open_until' => 'datetime',
+            'vault_opened_at' => 'datetime',
         ];
     }
 

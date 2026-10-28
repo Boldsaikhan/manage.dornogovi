@@ -69,7 +69,6 @@ class CredentialFormTest extends TestCase
         ]);
 
         $this->actingAs($user);
-        $this->withSession([Vault::SESSION_KEY => now()->subMinute()->timestamp]);
 
         $this->get(route('systems.show', $system->id))
             ->assertInertia(fn (AssertableInertia $page) => $page->where('system.saved_username', null));

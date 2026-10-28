@@ -20,20 +20,7 @@ const props = defineProps({
     desktop: { type: Object, default: () => ({}) },
     genitiveWords: { type: Array, default: () => [] },
     vaultUsers: { type: Array, default: () => [] },
-    vaultSettings: { type: Object, default: () => ({}) },
 });
-
-/* ── Нэвтрэх мэдээллийн сан ─────────────────────────────────────────── */
-const vaultForm = useForm({
-    auto_extend: Boolean(props.vaultSettings.auto_extend ?? true),
-});
-
-const saveVaultSettings = () => {
-    vaultForm.patch(route('admin.vault.settings.update'), {
-        preserveScroll: true,
-        preserveState: true,
-    });
-};
 
 /* ── Ширээний програм ───────────────────────────────────────────────
  *
@@ -1156,25 +1143,6 @@ const saveAi = () => {
             </div>
 
             <VaultPanel />
-
-            <div class="mt-6 border-t border-brand-navy-100 pt-5">
-                <h3 class="text-base font-semibold text-brand-navy-900">Хугацаа сунгалт</h3>
-
-                <label class="mt-3 flex max-w-xl items-start gap-3 rounded-xl border border-brand-navy-100 bg-brand-navy-50/50 p-3">
-                    <input
-                        v-model="vaultForm.auto_extend"
-                        type="checkbox"
-                        class="mt-0.5 rounded border-slate-300 text-brand-navy-600"
-                        @change="saveVaultSettings"
-                    >
-                    <span class="text-sm text-brand-navy-800">
-                        Нээсэн хугацааг автоматаар сунгах
-                        <span class="block text-xs text-brand-navy-400">
-                            Албан хаагч системийг ашиглаж байвал хугацаа нь өөрөө сунгагдана.
-                        </span>
-                    </span>
-                </label>
-            </div>
 
             <div class="mt-6 border-t border-brand-navy-100 pt-5">
                 <h3 class="text-base font-semibold text-brand-navy-900">

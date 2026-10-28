@@ -6,7 +6,6 @@ use App\Models\System;
 use App\Models\User;
 use App\Models\UserCredential;
 use App\Support\Vault;
-use App\Support\VaultSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -34,16 +33,16 @@ class AdminVaultGrantTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($admin)
-            ->post(route('admin.vault.users.open', $user->id), ['hours' => 24])
+            ->post(route('admin.vault.users.open', $user->id))
             ->assertRedirect();
 
-        $this->assertNotNull(Vault::grantedUntil($user->fresh()));
+        $this->assertNotNull(Vault::openedAt($user->fresh()));
 
         $this->actingAs($admin)
             ->post(route('admin.vault.users.close', $user->id))
             ->assertRedirect();
 
-        $this->assertNull(Vault::grantedUntil($user->fresh()));
+        $this->assertNull(Vault::openedAt($user->fresh()));
     }
 
     public function test_a_granted_vault_lets_the_user_launch_without_unlocking(): void
@@ -59,7 +58,7 @@ class AdminVaultGrantTest extends TestCase
             'password_encrypted' => 'sZ7!secret',
         ]);
 
-        Vault::grant($user, 8);
+        Vault::grant($user);
 
         // Session-д юу ч нээгээгүй хэрнээ нэвтэрнэ.
         $this->actingAs($user->fresh())
@@ -71,14 +70,14 @@ class AdminVaultGrantTest extends TestCase
     public function test_the_user_can_still_close_a_vault_the_admin_opened(): void
     {
         $user = User::factory()->create();
-        Vault::grant($user, 8);
+        Vault::grant($user);
 
         $this->actingAs($user->fresh())
             ->postJson(route('vault.lock'))
             ->assertOk()
             ->assertJson(['unlocked' => false]);
 
-        $this->assertNull(Vault::grantedUntil($user->fresh()));
+        $this->assertNull(Vault::openedAt($user->fresh()));
     }
 
     public function test_a_normal_user_cannot_open_someone_elses_vault(): void
@@ -87,43 +86,20 @@ class AdminVaultGrantTest extends TestCase
         $other = User::factory()->create();
 
         $this->actingAs($user)
-            ->post(route('admin.vault.users.open', $other->id), ['hours' => 24])
+            ->post(route('admin.vault.users.open', $other->id))
             ->assertForbidden();
 
-        $this->assertNull(Vault::grantedUntil($other->fresh()));
+        $this->assertNull(Vault::openedAt($other->fresh()));
     }
 
-    public function test_an_open_vault_extends_itself_while_the_user_works(): void
+    public function test_an_open_vault_never_expires_on_its_own(): void
     {
-        VaultSettings::save(['auto_extend' => true]);
-
         $user = User::factory()->create();
-        Vault::grant($user, 8);
+        Vault::grant($user);
 
-        // 7 цагийн дараа хуудас үзэхэд хугацаа дахин 8 цаг болно.
-        $this->travel(7)->hours();
-        $this->actingAs($user->fresh())->get(route('dashboard'));
-
-        $this->assertGreaterThan(
-            now()->addHours(7)->timestamp,
-            (int) Vault::grantedUntil($user->fresh()),
-        );
-
-        $this->travelBack();
-    }
-
-    public function test_auto_extend_can_be_switched_off(): void
-    {
-        VaultSettings::save(['auto_extend' => false]);
-
-        $user = User::factory()->create();
-        Vault::grant($user, 8);
-        $before = Vault::grantedUntil($user->fresh());
-
-        $this->travel(7)->hours();
-        $this->actingAs($user->fresh())->get(route('dashboard'));
-
-        $this->assertSame($before, Vault::grantedUntil($user->fresh()));
+        // Сар өнгөрсөн ч гараар хаагаагүй бол нээлттэй хэвээр.
+        $this->travel(40)->days();
+        $this->assertNotNull(Vault::openedAt($user->fresh()));
 
         $this->travelBack();
     }

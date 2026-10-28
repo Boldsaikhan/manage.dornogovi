@@ -37,10 +37,6 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        // Хэрэглэгч ажиллаж байхад сангийн хугацааг сунгана — өөрөө хаагаагүй
-        // бол холбосон систем дээр дарахад дахин нууц үг асуухгүй.
-        Vault::touch($request);
-
         return [
             ...parent::share($request),
             'auth' => [
@@ -55,7 +51,6 @@ class HandleInertiaRequests extends Middleware
             ],
             'vault' => fn () => [
                 'unlocked' => Vault::isUnlocked($request),
-                'until' => Vault::unlockedUntil($request),
             ],
             'appLock' => function () use ($request) {
                 $user = $request->user();

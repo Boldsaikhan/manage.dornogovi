@@ -25,11 +25,7 @@ class VaultController extends Controller
 
         Vault::unlock($request);
 
-        return response()->json([
-            'unlocked' => true,
-            'until' => Vault::unlockedUntil($request),
-            'minutes' => Vault::MINUTES,
-        ]);
+        return response()->json(['unlocked' => true]);
     }
 
     /**
@@ -116,14 +112,15 @@ class VaultController extends Controller
         return response()->json([
             'status' => 'approved',
             'unlocked' => true,
-            'until' => Vault::unlockedUntil($request),
-            'minutes' => Vault::MINUTES,
         ]);
     }
 
     public function lock(Request $request): JsonResponse
     {
         Vault::lock($request);
+
+        // Хэрэглэгч өөрөө хаалаа гэдэг нь админаас нээж өгснийг ч хаана гэсэн үг.
+        Vault::revoke($request->user());
 
         return response()->json(['unlocked' => false]);
     }

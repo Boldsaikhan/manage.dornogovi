@@ -5,24 +5,16 @@ import { router } from '@inertiajs/vue3';
 /**
  * Албан хаагч бүрийн нэвтрэх мэдээллийн санг админ тусад нь нээх, хаах хэсэг.
  *
- * Нээх нь нууц үгийг харуулахгүй — зөвхөн тухайн хүн холбосон систем дээр
- * дарахад дахин нууц үгээ бичихгүй болгоно.
+ * Хугацаагаар хаагдахгүй — гараар нээж, гараар хаана. Нээх нь нууц үгийг
+ * харуулахгүй, зөвхөн тухайн хүн дахин нууц үгээ бичихгүй болгоно.
  */
 const props = defineProps({
     users: { type: Array, default: () => [] },
 });
 
-const DURATIONS = [
-    { hours: 8, label: '8 цаг' },
-    { hours: 24, label: '1 хоног' },
-    { hours: 168, label: '7 хоног' },
-    { hours: 720, label: '30 хоног' },
-];
-
 const search = ref('');
 const department = ref('all');
 const status = ref('all');
-const hours = ref(24);
 const busyId = ref(null);
 
 /** Хэлтсийн жагсаалт — сонгож шүүнэ. */
@@ -53,11 +45,11 @@ const rows = computed(() => {
             return false;
         }
 
-        if (status.value === 'open' && ! u.open_until) {
+        if (status.value === 'open' && ! u.opened_at) {
             return false;
         }
 
-        if (status.value === 'closed' && u.open_until) {
+        if (status.value === 'closed' && u.opened_at) {
             return false;
         }
 
@@ -71,9 +63,9 @@ const rows = computed(() => {
     });
 });
 
-const openCount = computed(() => props.users.filter((u) => u.open_until).length);
+const openCount = computed(() => props.users.filter((u) => u.opened_at).length);
 
-const untilText = (seconds) => {
+const openedText = (seconds) => {
     if (! seconds) {
         return '';
     }
@@ -103,7 +95,7 @@ const send = (url, data) => {
 
 const open = (user) => {
     busyId.value = user.id;
-    send(route('admin.vault.users.open', user.id), { hours: hours.value });
+    send(route('admin.vault.users.open', user.id), {});
 };
 
 const close = (user) => {
@@ -140,12 +132,6 @@ const close = (user) => {
                     <option value="closed">Хаалттай</option>
                 </select>
             </div>
-            <div>
-                <label class="ui-label">Нээх хугацаа</label>
-                <select v-model.number="hours" class="ui-input">
-                    <option v-for="d in DURATIONS" :key="d.hours" :value="d.hours">{{ d.label }}</option>
-                </select>
-            </div>
             <p class="pb-2 text-sm text-slate-500">
                 Нээлттэй: <b class="text-emerald-700">{{ openCount }}</b> / {{ users.length }}
                 <span class="block text-xs text-slate-400">Харагдаж буй: {{ rows.length }}</span>
@@ -175,10 +161,10 @@ const close = (user) => {
                         <td class="text-center text-slate-600">{{ user.credentials }}</td>
                         <td>
                             <span
-                                v-if="user.open_until"
+                                v-if="user.opened_at"
                                 class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
                             >
-                                Нээлттэй · {{ untilText(user.open_until) }} хүртэл
+                                Нээлттэй · {{ openedText(user.opened_at) }}-нд нээсэн
                             </span>
                             <span
                                 v-else
@@ -189,7 +175,7 @@ const close = (user) => {
                         </td>
                         <td class="text-right">
                             <button
-                                v-if="user.open_until"
+                                v-if="user.opened_at"
                                 type="button"
                                 class="ui-btn-ghost !px-3 !py-1.5 text-xs"
                                 :disabled="busyId === user.id"

@@ -13,21 +13,17 @@ class VaultQrUnlockTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_vault_stays_unlocked_for_four_hours(): void
+    public function test_vault_stays_unlocked_until_it_is_closed_by_hand(): void
     {
-        $this->assertSame(240, Vault::MINUTES);
-
         $user = User::factory()->create(['password' => bcrypt('secret')]);
 
         $this->actingAs($user)
             ->postJson(route('vault.unlock'), ['account_password' => 'secret'])
             ->assertOk()
-            ->assertJsonPath('minutes', 240);
+            ->assertJsonPath('unlocked', true);
 
-        $until = session(Vault::SESSION_KEY);
-        $this->assertIsInt($until);
-        $this->assertGreaterThan(now()->addMinutes(230)->timestamp, $until);
-        $this->assertLessThanOrEqual(now()->addMinutes(241)->timestamp, $until);
+        // Хугацаагаар хаагддаггүй — зүгээр нээлттэй гэсэн тэмдэг.
+        $this->assertTrue((bool) session(Vault::SESSION_KEY));
     }
 
     public function test_phone_qr_unlocks_vault_for_same_user(): void

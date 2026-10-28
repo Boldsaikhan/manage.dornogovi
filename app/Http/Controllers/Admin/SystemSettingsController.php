@@ -15,7 +15,6 @@ use App\Support\LoginFormDetector;
 use App\Support\DesktopRelease;
 use App\Support\ModuleAccess;
 use App\Support\Vault;
-use App\Support\VaultSettings;
 use App\Support\ModuleOrder;
 use App\Support\ModuleVisibility;
 use App\Support\MongolianCase;
@@ -65,7 +64,6 @@ class SystemSettingsController extends Controller
                 ]),
             // Албан хаагч бүрийн нэвтрэх мэдээллийн сангийн төлөв.
             'vaultUsers' => $this->vaultUsers(),
-            'vaultSettings' => VaultSettings::all(),
             'ai' => $aiSettings->forAdmin(),
             'verify' => $verify->forAdmin(),
             'desktop' => [
@@ -106,40 +104,22 @@ class SystemSettingsController extends Controller
                 'position' => $u->position,
                 'department' => $u->department?->name,
                 'credentials' => (int) $u->system_credentials_count,
-                'open_until' => Vault::grantedUntil($u),
+                'opened_at' => Vault::openedAt($u),
             ])
             ->all();
     }
 
     /**
-     * Нэг албан хаагчийн санг тодорхой хугацаагаар нээнэ.
+     * Нэг албан хаагчийн санг нээнэ — хаах хүртэл нээлттэй.
      *
      * Админ нууц үгийг нь харахгүй — зөвхөн тухайн хүн холбосон систем дээр
      * дарахад дахин нууц үг асуухгүй болно.
      */
     public function openUserVault(Request $request, User $user): RedirectResponse
     {
-        $validated = $request->validate([
-            'hours' => ['required', 'integer', 'min:1', 'max:720'],
-        ]);
-
-        Vault::grant($user, $validated['hours'], $request->user());
+        Vault::grant($user, $request->user());
 
         return back()->with('success', $user->name . ' — сан нээгдлээ.');
-    }
-
-    /**
-     * Сангийн ерөнхий тохиргоо — хугацааг автоматаар сунгах эсэх.
-     */
-    public function updateVaultSettings(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'auto_extend' => ['required', 'boolean'],
-        ]);
-
-        VaultSettings::save($validated);
-
-        return back()->with('success', 'Хадгаллаа.');
     }
 
     /**

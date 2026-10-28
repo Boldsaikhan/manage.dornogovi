@@ -12,19 +12,6 @@ import VaultUnlockForm from '@/Components/VaultUnlockForm.vue';
 const page = usePage();
 
 const unlocked = computed(() => page.props.vault?.unlocked ?? false);
-const until = computed(() => page.props.vault?.until ?? null);
-
-const untilText = computed(() => {
-    if (! until.value) {
-        return '';
-    }
-
-    const at = new Date(until.value);
-
-    return Number.isNaN(at.getTime())
-        ? ''
-        : at.toLocaleTimeString('mn-MN', { hour: '2-digit', minute: '2-digit' });
-});
 
 const busy = ref(false);
 
@@ -63,9 +50,6 @@ const lock = async () => {
             </svg>
             <span>
                 <b>{{ unlocked ? 'Сан нээлттэй' : 'Сан түгжээтэй' }}</b>
-                <span v-if="unlocked && untilText" class="block text-xs opacity-80">
-                    {{ untilText }} хүртэл нээлттэй байна.
-                </span>
             </span>
         </div>
 
