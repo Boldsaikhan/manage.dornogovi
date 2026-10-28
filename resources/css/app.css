@@ -52,6 +52,11 @@
         @apply space-y-5;
     }
 
+    /* Хэсэг олонтой хуудсанд (үүрэг даалгавар г.м.) зайг шахна. */
+    .ui-page--tight {
+        @apply !space-y-3;
+    }
+
     .ui-card {
         @apply rounded-2xl border border-slate-200/80 bg-white shadow-soft dark:border-slate-800 dark:bg-slate-900;
     }
@@ -294,7 +299,7 @@
 
     .ui-page--tasks-table,
     .ui-page--reports-table {
-        @apply flex min-h-0 flex-1 flex-col gap-5 overflow-hidden !space-y-0;
+        @apply flex min-h-0 flex-1 flex-col gap-3 overflow-hidden !space-y-0;
     }
 
     .ui-page--tasks-table > :not(.ui-tasks-table-shell) {
