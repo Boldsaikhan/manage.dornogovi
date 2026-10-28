@@ -1752,7 +1752,106 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                 class="grid min-h-0 gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]"
                 :class="viewMode === 'table' ? 'ui-tasks-table-shell lg:grid-rows-[minmax(0,1fr)]' : ''"
             >
-                <aside class="ui-card min-h-0 max-h-full self-start overflow-y-auto p-3">
+                <aside class="ui-card flex min-h-0 max-h-full flex-col self-start p-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-7rem)]">
+                    <!-- Дээд талын үйлдлүүд — icon-оор -->
+                    <div class="mb-3 flex items-center gap-2 border-b border-slate-200 pb-3">
+                        <button
+                            v-if="canManage"
+                            type="button"
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-dashed border-brand-navy-300 text-brand-navy-600 transition hover:bg-brand-navy-50"
+                            title="Үүрэг даалгавар нэмэх"
+                            aria-label="Үүрэг даалгавар нэмэх"
+                            @click="showNewKind = ! showNewKind"
+                        >
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
+                            </svg>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-brand-navy-700 transition hover:bg-brand-navy-50"
+                            title="Хэрэгжилт — дэлгэрэнгүй"
+                            aria-label="Хэрэгжилт"
+                            @click="openDashboard"
+                        >
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path d="M4 20V10M10 20V4M16 20v-6M22 20H2" stroke-linecap="round" />
+                            </svg>
+                        </button>
+
+                        <span class="ml-auto text-lg font-bold" :class="progressTextClass(overall.progress)">
+                            {{ overall.progress }}%
+                        </span>
+                    </div>
+
+                    <!-- Хэрэгжилт — дээд талын icon-ы доор -->
+                    <div class="mb-3 flex flex-col gap-1.5">
+                        <div class="flex items-center justify-between text-xs text-slate-500">
+                            <span>Нийт {{ overall.count }}</span>
+                            <button type="button" class="hover:text-brand-navy-700 hover:underline" @click="openDashboard">
+                                дэлгэрэнгүй
+                            </button>
+                        </div>
+                        <span class="block h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                            <span class="block h-full rounded-full" :class="barColor(overall.progress)" :style="{ width: overall.progress + '%' }" />
+                        </span>
+
+                <div class="flex flex-col gap-0.5 rounded-xl border border-slate-200 bg-slate-50/80 p-1">
+                    <button
+                        type="button"
+                        class="inline-flex w-full items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition"
+                        :class="statusFilter === 'done'
+                            ? 'bg-emerald-600 text-white shadow-sm'
+                            : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-700'"
+                        @click="toggleStatusFilter('done')"
+                    >
+                        Дууссан
+                        <span
+                            class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
+                            :class="statusFilter === 'done' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'"
+                        >
+                            {{ overall.done }}
+                        </span>
+                    </button>
+                    <button
+                        type="button"
+                        class="inline-flex w-full items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition"
+                        :class="statusFilter === 'pending'
+                            ? 'bg-orange-500 text-white shadow-sm'
+                            : 'text-slate-600 hover:bg-orange-50 hover:text-orange-700'"
+                        @click="toggleStatusFilter('pending')"
+                    >
+                        Эхлээгүй
+                        <span
+                            class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
+                            :class="statusFilter === 'pending' ? 'bg-white/20 text-white' : 'bg-orange-50 text-orange-700'"
+                        >
+                            {{ overall.pending }}
+                        </span>
+                    </button>
+                    <button
+                        type="button"
+                        class="inline-flex w-full items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition"
+                        :class="statusFilter === 'overdue'
+                            ? 'bg-red-600 text-white shadow-sm'
+                            : 'text-slate-600 hover:bg-red-50 hover:text-red-700'"
+                        @click="toggleStatusFilter('overdue')"
+                    >
+                        <span class="hidden sm:inline">Хугацаа хэтэрсэн</span>
+                        <span class="sm:hidden">Хэтэрсэн</span>
+                        <span
+                            class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
+                            :class="statusFilter === 'overdue' ? 'bg-white/20 text-white' : 'bg-red-50 text-red-700'"
+                        >
+                            {{ overall.overdue }}
+                        </span>
+                    </button>
+                </div>
+                    </div>
+
+                    <!-- Хэсгүүдийн жагсаалт — дэлгэцэнд багтаж, илүү нь гүйнэ -->
+                    <div class="-mr-1 min-h-0 flex-1 overflow-y-auto pr-1">
                     <template v-if="leadershipTabs.length">
                         <p class="mb-2 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
                             Удирдлагаас өгсөн үүрэг даалгавар
@@ -1816,132 +1915,9 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                         >
                             {{ item.label }}
                         </Link>
-                        <button
-                            v-if="canManage"
-                            type="button"
-                            class="block w-full rounded-lg border border-dashed border-brand-navy-300 px-2.5 py-2 text-left text-sm font-semibold text-brand-navy-600 transition hover:bg-brand-navy-50"
-                            @click="showNewKind = ! showNewKind"
-                        >
-                            + Үүрэг даалгавар нэмэх
-                        </button>
                     </nav>
 
-                    <p class="mb-2 mt-4 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                        Харагдац
-                    </p>
-                    <nav class="space-y-0.5">
-                        <button
-                            type="button"
-                            class="block w-full rounded-lg px-2.5 py-2 text-left text-sm transition"
-                            :class="viewMode === 'calendar'
-                                ? 'bg-brand-navy-600 font-semibold text-white'
-                                : 'text-slate-700 hover:bg-slate-100'"
-                            @click="backToCalendar"
-                        >
-                            Цаглалт / төлөвлөгөө
-                        </button>
-                        <button
-                            type="button"
-                            class="block w-full rounded-lg px-2.5 py-2 text-left text-sm transition"
-                            :class="viewMode === 'table'
-                                ? 'bg-brand-navy-600 font-semibold text-white'
-                                : 'text-slate-700 hover:bg-slate-100'"
-                            @click="showTasksFromCalendar({ label: null, ids: null })"
-                        >
-                            Хүснэгт
-                            <span class="ml-1 text-xs opacity-80">({{ tasks.length }})</span>
-                        </button>
-                    </nav>
 
-                    <!-- Хэрэгжилт — хажуу талын баганад босоогоор -->
-                    <p class="mb-2 mt-4 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                        Хэрэгжилт
-                    </p>
-                    <div class="flex flex-col gap-1">
-                <button
-                    type="button"
-                    class="w-full rounded-lg px-2 py-2 text-left transition hover:bg-slate-100"
-                    @click="openDashboard"
-                >
-                    <span class="flex items-center gap-2">
-                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-brand-navy-50 text-brand-navy-700">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                            <path d="M4 20V10M10 20V4M16 20v-6M22 20H2" stroke-linecap="round" />
-                        </svg>
-                    </span>
-                    <span class="min-w-0 flex-1">
-                        <span class="block text-sm font-semibold text-slate-800">Хэрэгжилт</span>
-                        <span class="block text-xs text-slate-500">Нийт {{ overall.count }} · дэлгэрэнгүй</span>
-                    </span>
-                    <span class="flex shrink-0 items-center gap-1 text-lg font-bold" :class="progressTextClass(overall.progress)">
-                        <svg
-                            v-if="isPendingProgress(overall.progress)"
-                            class="h-4 w-4 text-orange-500 sm:h-5 sm:w-5"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                            aria-hidden="true"
-                        >
-                            <path d="M12 3.2L2.5 19.5A1.2 1.2 0 003.55 21.2h16.9a1.2 1.2 0 001.05-1.7L12 3.2zm0 5.3c.55 0 1 .4 1 .95v4.6c0 .55-.45 1-1 1s-1-.45-1-1v-4.6c0-.55.45-.95 1-.95zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z" />
-                        </svg>
-                        {{ overall.progress }}%
-                    </span>
-                    </span>
-                    <span class="mt-1.5 block h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                        <span class="block h-full rounded-full" :class="barColor(overall.progress)" :style="{ width: overall.progress + '%' }" />
-                    </span>
-                </button>
-
-                <div class="flex flex-col gap-0.5 rounded-xl border border-slate-200 bg-slate-50/80 p-1">
-                    <button
-                        type="button"
-                        class="inline-flex w-full items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition"
-                        :class="statusFilter === 'done'
-                            ? 'bg-emerald-600 text-white shadow-sm'
-                            : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-700'"
-                        @click="toggleStatusFilter('done')"
-                    >
-                        Дууссан
-                        <span
-                            class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
-                            :class="statusFilter === 'done' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'"
-                        >
-                            {{ overall.done }}
-                        </span>
-                    </button>
-                    <button
-                        type="button"
-                        class="inline-flex w-full items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition"
-                        :class="statusFilter === 'pending'
-                            ? 'bg-orange-500 text-white shadow-sm'
-                            : 'text-slate-600 hover:bg-orange-50 hover:text-orange-700'"
-                        @click="toggleStatusFilter('pending')"
-                    >
-                        Эхлээгүй
-                        <span
-                            class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
-                            :class="statusFilter === 'pending' ? 'bg-white/20 text-white' : 'bg-orange-50 text-orange-700'"
-                        >
-                            {{ overall.pending }}
-                        </span>
-                    </button>
-                    <button
-                        type="button"
-                        class="inline-flex w-full items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition"
-                        :class="statusFilter === 'overdue'
-                            ? 'bg-red-600 text-white shadow-sm'
-                            : 'text-slate-600 hover:bg-red-50 hover:text-red-700'"
-                        @click="toggleStatusFilter('overdue')"
-                    >
-                        <span class="hidden sm:inline">Хугацаа хэтэрсэн</span>
-                        <span class="sm:hidden">Хэтэрсэн</span>
-                        <span
-                            class="rounded-full px-1.5 py-0.5 text-[11px] font-bold"
-                            :class="statusFilter === 'overdue' ? 'bg-white/20 text-white' : 'bg-red-50 text-red-700'"
-                        >
-                            {{ overall.overdue }}
-                        </span>
-                    </button>
-                </div>
                     </div>
                 </aside>
 
