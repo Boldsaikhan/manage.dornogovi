@@ -122,12 +122,13 @@ class TaskSourceColumnsTest extends TestCase
                 $this->assertTrue($governor['is_leadership']);
                 $this->assertSame('О.Батжаргал', $governor['holder']);
 
-                $department = collect($page->toArray()['props']['kinds'])
-                    ->firstWhere('key', TaskSource::KEY_DEPARTMENT);
+                // Нэгжийн дотоодын хэсэг — байнгын, удирдлагынх биш.
+                $unit = collect($page->toArray()['props']['kinds'])
+                    ->firstWhere('key', 'unit_01');
 
-                $this->assertSame(TaskSource::DEPARTMENT_NAME, $department['label']);
-                $this->assertFalse($department['is_leadership']);
-                $this->assertTrue($department['is_locked']);
+                $this->assertSame(TaskSource::UNITS['unit_01'], $unit['label']);
+                $this->assertFalse($unit['is_leadership']);
+                $this->assertTrue($unit['is_locked']);
             });
     }
 
@@ -169,7 +170,11 @@ class TaskSourceColumnsTest extends TestCase
 
         // Байнгын хэсгүүд устахгүй тул тэднийг шууд хасна.
         TaskSource::query()
-            ->whereIn('key', [...array_keys(TaskSource::LEADERSHIP), TaskSource::KEY_DEPARTMENT])
+            ->whereIn('key', [
+                ...array_keys(TaskSource::LEADERSHIP),
+                ...array_keys(TaskSource::UNITS),
+                TaskSource::KEY_DEPARTMENT,
+            ])
             ->delete();
 
         // Нэгээс бусдыг нь устгана.

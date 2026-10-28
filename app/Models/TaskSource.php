@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
@@ -32,6 +33,27 @@ class TaskSource extends Model
 
     public const DEPARTMENT_NAME = 'Хэлтсийн үүрэг даалгавар';
 
+    /**
+     * Дотоодын үүрэг даалгавар өгдөг нэгжүүд — «Хэлтсийн үүрэг даалгавар»
+     * хэсэгт нэг нэгээр нь гарна. Тухайн нэгжийн албан хаагчид л хармаар.
+     *
+     * @var array<string, string>
+     */
+    public const UNITS = [
+        'unit_01' => 'Төрийн захиргааны удирдлагын хэлтэс',
+        'unit_02' => 'Хэвлэл мэдээллийн алба',
+        'unit_03' => 'Хууль, эрх зүйн хэлтэс',
+        'unit_04' => 'Архивын тасаг',
+        'unit_05' => 'Салбарын хяналт, зохицуулалтын хэлтэс',
+        'unit_06' => 'Бүс, орон нутгийн хөрөнгө оруулалт, бодлого төлөвлөлтийн хэлтэс',
+        'unit_07' => 'Санхүү, төрийн сангийн хэлтэс',
+        'unit_08' => 'Нийгмийн бодлогын хэлтэс',
+        'unit_09' => 'Хяналт-шинжилгээ, үнэлгээ, дотоод аудитын хэлтэс',
+        'unit_10' => 'Цэргийн штаб',
+        'unit_11' => 'Санхүү, аж ахуй',
+        'unit_12' => 'Теле камерын хяналтын дэд төв',
+    ];
+
     public const COLUMN_SECTOR = 'sector';
 
     public const COLUMN_MEASURE = 'measure';
@@ -46,13 +68,18 @@ class TaskSource extends Model
 
     public const COLUMN_NOTE = 'note';
 
-    protected $fillable = ['key', 'name', 'period', 'sort_order', 'layout', 'columns'];
+    protected $fillable = ['key', 'name', 'period', 'sort_order', 'layout', 'columns', 'department_id', 'unit_name'];
 
     protected function casts(): array
     {
         return [
             'columns' => 'array',
         ];
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
     }
 
     public function tasks(): HasMany
@@ -75,7 +102,52 @@ class TaskSource extends Model
      */
     public function isLocked(): bool
     {
-        return $this->isLeadership() || $this->key === self::KEY_DEPARTMENT;
+        return $this->isLeadership()
+            || $this->key === self::KEY_DEPARTMENT
+            || $this->isUnit();
+    }
+
+    /**
+     * Тодорхой нэгжийн дотоодын үүрэг даалгаврын хэсэг эсэх.
+     */
+    public function isUnit(): bool
+    {
+        return array_key_exists((string) $this->key, self::UNITS);
+    }
+
+    /**
+     * Нэгжийн нэрийг харьцуулахад тохируулна — таслал, зураас, эхний
+     * дугаарлалтыг («7. Цэргийн штаб») үл тооно.
+     */
+    public static function normalizeUnitName(?string $name): string
+    {
+        $name = (string) $name;
+        $name = preg_replace('/^\s*\d+[.)]\s*/u', '', $name) ?? $name;
+        $name = preg_replace('/[\s,.\-–—]+/u', ' ', $name) ?? $name;
+
+        return trim(mb_strtolower($name));
+    }
+
+    /**
+     * Энэ хэсгийг тухайн хэрэглэгч харах эрхтэй эсэх (нэгжийн хэсгийн хувьд).
+     */
+    public function isVisibleToUnitMember(?User $user): bool
+    {
+        if (! $this->isUnit()) {
+            return true;
+        }
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($this->department_id && (int) $user->department_id === (int) $this->department_id) {
+            return true;
+        }
+
+        $mine = self::normalizeUnitName($user->department?->name);
+
+        return $mine !== '' && $mine === self::normalizeUnitName($this->unit_name ?: $this->name);
     }
 
     public function isLeadership(): bool

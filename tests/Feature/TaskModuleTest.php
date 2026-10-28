@@ -228,7 +228,8 @@ class TaskModuleTest extends TestCase
                 ->component('Uureg/Index')
                 ->where('kind', $source->key)
                 ->where('source.layout', 'directive')
-                ->has('kinds', 5 + count(TaskSource::LEADERSHIP))
+                // Мөргүй нэгдсэн «Хэлтсийн үүрэг даалгавар» харагдахгүй.
+                ->has('kinds', 4 + count(TaskSource::LEADERSHIP) + count(TaskSource::UNITS))
             );
 
         $this->actingAs($admin)

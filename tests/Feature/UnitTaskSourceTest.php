@@ -1,0 +1,112 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Department;
+use App\Models\Task;
+use App\Models\TaskSource;
+use App\Models\User;
+use App\Support\ModuleAccess;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
+use Tests\TestCase;
+
+/**
+ * Нэгж тус бүрийн дотоодын үүрэг даалгавар — зөвхөн тухайн нэгжийнхэнд.
+ */
+class UnitTaskSourceTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function staff(string $departmentName): User
+    {
+        $department = Department::create([
+            'name' => $departmentName,
+            'code' => substr(md5($departmentName), 0, 6),
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+
+        $user = User::factory()->create(['department_id' => $department->id]);
+
+        $user->modulePermissions()->updateOrCreate(['module_key' => 'tasks'], ['level' => 'manage']);
+
+        return $user->fresh();
+    }
+
+    private function tabKeys(User $user): array
+    {
+        $keys = [];
+
+        $this->actingAs($user)
+            ->followingRedirects()
+            ->get(route('tasks.index'))
+            ->assertInertia(function (AssertableInertia $page) use (&$keys) {
+                $keys = collect($page->toArray()['props']['kinds'])->pluck('key')->all();
+            });
+
+        return $keys;
+    }
+
+    public function test_every_listed_unit_has_its_own_section(): void
+    {
+        $this->assertCount(12, TaskSource::UNITS);
+
+        foreach (TaskSource::UNITS as $key => $name) {
+            $this->assertDatabaseHas('task_sources', ['key' => $key, 'unit_name' => $name]);
+        }
+    }
+
+    public function test_staff_only_see_their_own_units_section(): void
+    {
+        $user = $this->staff('Архивын тасаг');
+
+        $keys = $this->tabKeys($user);
+
+        $this->assertContains('unit_04', $keys);
+        $this->assertNotContains('unit_01', $keys);
+        $this->assertNotContains('unit_08', $keys);
+    }
+
+    public function test_the_unit_name_is_matched_even_with_numbering_and_commas(): void
+    {
+        $user = $this->staff('7. Цэргийн штаб');
+
+        $this->assertContains('unit_10', $this->tabKeys($user));
+    }
+
+    public function test_an_admin_sees_every_unit(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $keys = $this->tabKeys($admin);
+
+        foreach (array_keys(TaskSource::UNITS) as $key) {
+            $this->assertContains($key, $keys);
+        }
+    }
+
+    public function test_staff_cannot_open_another_units_section(): void
+    {
+        $user = $this->staff('Архивын тасаг');
+
+        // Өөр нэгжийн хэсгийг нээхийг оролдвол өөрт харагдах хэсэг рүү буцаана.
+        $response = $this->actingAs($user)
+            ->get(route('tasks.index', ['kind' => 'unit_01']));
+
+        $response->assertRedirect();
+        $this->assertStringNotContainsString('unit_01', (string) $response->headers->get('Location'));
+    }
+
+    public function test_the_old_shared_section_shows_up_only_when_it_has_rows(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->assertNotContains(TaskSource::KEY_DEPARTMENT, $this->tabKeys($admin));
+
+        $source = TaskSource::query()->where('key', TaskSource::KEY_DEPARTMENT)->first();
+        Task::create(['task_source_id' => $source->id, 'text' => 'Жишээ үүрэг']);
+
+        $this->assertContains(TaskSource::KEY_DEPARTMENT, $this->tabKeys($admin));
+    }
+}

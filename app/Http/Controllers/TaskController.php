@@ -1004,8 +1004,16 @@ class TaskController extends Controller
             });
         }
 
+        $user->loadMissing('department:id,name');
+
         return $query
             ->get()
+            // Нэгжийн дотоодын үүрэг даалгавар — зөвхөн тухайн нэгжийнхэнд.
+            ->filter(fn (TaskSource $source) => $user->is_admin
+                || $source->isVisibleToUnitMember($user))
+            // Хуучин нэгдсэн «Хэлтсийн үүрэг даалгавар» хэсгийг мөргүй бол нуруулна.
+            ->reject(fn (TaskSource $source) => $source->key === TaskSource::KEY_DEPARTMENT
+                && $source->tasks()->count() === 0)
             ->map(fn (TaskSource $source) => [
                 'key' => $source->key,
                 'label' => $source->name,
