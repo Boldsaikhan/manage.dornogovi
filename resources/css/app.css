@@ -151,11 +151,11 @@
     }
 
     .ui-table tbody tr:nth-child(even) {
-        @apply bg-slate-50/60 dark:bg-slate-800/40;
+        @apply bg-slate-50 dark:bg-slate-800;
     }
 
     .ui-table tbody tr:hover {
-        @apply bg-brand-navy-50/40 dark:bg-slate-700/40;
+        @apply bg-brand-navy-50 dark:bg-slate-700;
     }
 
     /* Засах горимд — фокус орсон мөр бүхэлдээ бага зэрэг ялгарна */
@@ -187,6 +187,25 @@
 
     .ui-table--pin-actions .ui-sticky-actions {
         right: 0;
+    }
+
+    /*
+     * Наалдсан багана бүрэн дүүрэн дэвсгэртэй байх ёстой — эс бөгөөс
+     * доогуур нь гүйж өнгөрөх бичвэр нэвт харагдана.
+     */
+    .ui-table--pin-actions tbody td.ui-sticky-progress,
+    .ui-table--pin-actions tbody td.ui-sticky-actions {
+        @apply bg-white dark:bg-slate-900;
+    }
+
+    .ui-table--pin-actions tbody tr:nth-child(even) td.ui-sticky-progress,
+    .ui-table--pin-actions tbody tr:nth-child(even) td.ui-sticky-actions {
+        @apply bg-slate-50 dark:bg-slate-800;
+    }
+
+    .ui-table--pin-actions tbody tr:hover td.ui-sticky-progress,
+    .ui-table--pin-actions tbody tr:hover td.ui-sticky-actions {
+        @apply bg-brand-navy-50 dark:bg-slate-700;
     }
 
     /*
@@ -475,7 +494,7 @@
     /* Засаж байгаа нүдний агуулга хөрш багана руу халин бүтнээрээ гарна. */
     .ui-table td.ui-sheet-td:has(.ui-sheet-cell.is-editing) {
         @apply relative overflow-visible;
-        z-index: 25;
+        z-index: 40;
     }
 
     .ui-sheet-cell {
@@ -557,7 +576,7 @@
         min-width: 16rem;
         max-width: none;
         min-height: 100%;
-        z-index: 30;
+        z-index: 41;
     }
 
     /* Баруун ирмэгт ойрхон нүд — зүүн тийшээ дэлгэгдэнэ. */
