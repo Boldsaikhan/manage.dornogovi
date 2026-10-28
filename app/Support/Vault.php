@@ -6,64 +6,18 @@ use App\Models\User;
 use Illuminate\Http\Request;
 
 /**
- * Нэвтрэх мэдээллийн сан нь нууц үгийн менежер шиг ажиллана: нэг удаа өөрийн нууц үгээр
- * нээгээд, түүнээс хойш тодорхой хугацаанд нэг товшилтоор системүүд рүү нэвтэрнэ.
+ * Нэвтрэх мэдээллийн сан — холбосон системүүдийн нэр, нууц үгийг ашиглах зөвшөөрөл.
+ *
+ * Хугацаагаар өөрөө хаагдахгүй: гараар нээж, гараар хаана. Албан хаагч өөрөө
+ * нууц үгээрээ нээх, эсвэл админ «Албан хаагчдын сан» хэсгээс нээж өгч болно.
  */
 class Vault
 {
     public const SESSION_KEY = 'vault.unlocked_until';
 
-    public const MINUTES = 240;
-
     public static function unlock(Request $request): void
     {
-        $request->session()->put(self::SESSION_KEY, now()->addMinutes(self::MINUTES)->timestamp);
-    }
-
-    /**
-     * Нээлттэй сангийн хугацааг хэрэглэгчийн идэвх дээр сунгана — ажлын
-     * өдрийн турш холбосон систем дээр дарахад дахин нууц үг асуухгүй.
-     * Хаалттай буюу хугацаа нь дууссан санг энэ нээхгүй.
-     */
-    public static function touch(Request $request): void
-    {
-        if (! $request->user() || self::unlockedUntil($request) === null) {
-            return;
-        }
-
-        if ($request->hasSession()) {
-            $request->session()->put(self::SESSION_KEY, now()->addMinutes(self::MINUTES)->timestamp);
-        }
-
-        self::extendGrant($request->user());
-    }
-
-    /**
-     * Админаас нээж өгсөн хугацааг ашиглалтын явцад өөрөө сунгана.
-     *
-     * Үлдсэн хугацаа талаас нь бага болоход л бичих тул өдөр бүр ганц хоёр
-     * удаа л хүснэгт хөндөнө.
-     */
-    private static function extendGrant(?object $user): void
-    {
-        if (! $user instanceof User || ! VaultSettings::autoExtend()) {
-            return;
-        }
-
-        $hours = (int) ($user->vault_open_hours ?? 0);
-        $until = self::grantedUntil($user);
-
-        if ($hours < 1 || $until === null) {
-            return;
-        }
-
-        $remaining = $until - now()->timestamp;
-
-        if ($remaining > $hours * 1800) {
-            return;
-        }
-
-        $user->forceFill(['vault_open_until' => now()->addHours($hours)])->save();
+        $request->session()->put(self::SESSION_KEY, true);
     }
 
     /**
@@ -72,88 +26,66 @@ class Vault
     public static function unlockCurrentSession(): void
     {
         try {
-            session()->put(self::SESSION_KEY, now()->addMinutes(self::MINUTES)->timestamp);
+            session()->put(self::SESSION_KEY, true);
         } catch (\Throwable) {
             // Session байхгүй орчинд (console) алгасна.
         }
     }
 
+    /**
+     * Энэ session дээр хаана. Админаас нээж өгсөн нь хэвээр үлдэнэ — түүнийг
+     * хэрэглэгч өөрөө «Сан хаах» дарж, эсвэл админ хаана (revoke).
+     */
     public static function lock(Request $request): void
     {
         $request->session()->forget(self::SESSION_KEY);
+    }
 
-        // Админаас нээсэн байсан бол түүнийг нь ч хаана — эс бөгөөс
-        // «Сан хаах» дараад хаагдахгүй байх болно.
-        self::revoke($request->user());
+    public static function isUnlocked(Request $request): bool
+    {
+        if ($request->hasSession() && $request->session()->get(self::SESSION_KEY)) {
+            return true;
+        }
+
+        return self::isOpenFor($request->user());
     }
 
     /**
-     * Админаас тухайн албан хаагчийн санг нээх (өөрийнх нь session биш тул
-     * хугацаагаар бүртгэнэ).
+     * Админаас нээж өгсөн эсэх.
      */
-    public static function grant(User $user, int $hours, ?User $by = null): void
+    public static function isOpenFor(?object $user): bool
+    {
+        return $user instanceof User && $user->vault_opened_at !== null;
+    }
+
+    /**
+     * Админаас тухайн албан хаагчийн санг нээх — хаах хүртэл нээлттэй.
+     */
+    public static function grant(User $user, ?User $by = null): void
     {
         $user->forceFill([
-            'vault_open_until' => now()->addHours($hours),
+            'vault_opened_at' => now(),
             'vault_opened_by' => $by?->id,
-            // Автоматаар сунгахад ижил урттай сунгана.
-            'vault_open_hours' => $hours,
         ])->save();
     }
 
     public static function revoke(?object $user): void
     {
-        if (! $user instanceof User || ! $user->vault_open_until) {
+        if (! $user instanceof User || $user->vault_opened_at === null) {
             return;
         }
 
         $user->forceFill([
-            'vault_open_until' => null,
+            'vault_opened_at' => null,
             'vault_opened_by' => null,
-            'vault_open_hours' => null,
         ])->save();
     }
 
     /**
-     * Админаас нээсэн хугацаа (хүчинтэй бол), эсвэл null.
+     * Админаас хэзээ нээснийг харуулахад.
      */
-    public static function grantedUntil(?object $user): ?int
+    public static function openedAt(?object $user): ?int
     {
-        if (! $user instanceof User || ! $user->vault_open_until) {
-            return null;
-        }
-
-        $until = $user->vault_open_until->timestamp;
-
-        return $until > now()->timestamp ? $until : null;
-    }
-
-    public static function isUnlocked(Request $request): bool
-    {
-        return self::unlockedUntil($request) !== null;
-    }
-
-    /**
-     * Түгжээ тайлагдсан бол дуусах хугацаа, эсвэл null.
-     */
-    public static function unlockedUntil(Request $request): ?int
-    {
-        $best = null;
-
-        if ($request->hasSession()) {
-            $until = $request->session()->get(self::SESSION_KEY);
-
-            if (is_int($until) && $until > now()->timestamp) {
-                $best = $until;
-            }
-        }
-
-        $granted = self::grantedUntil($request->user());
-
-        if ($granted !== null && ($best === null || $granted > $best)) {
-            $best = $granted;
-        }
-
-        return $best;
+        return self::isOpenFor($user) ? $user->vault_opened_at->timestamp : null;
     }
 }
