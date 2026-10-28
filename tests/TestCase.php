@@ -80,5 +80,7 @@ abstract class TestCase extends BaseTestCase
         AiSettings::forgetDisplayName();
         ModuleVisibility::forget();
         ModuleOrder::forget();
+        \App\Models\PhoneDirectoryEntry::flushNameCache();
+        \App\Support\PersonName::forgetPatterns();
     }
 }

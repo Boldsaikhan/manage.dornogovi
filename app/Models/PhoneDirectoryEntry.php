@@ -387,31 +387,71 @@ class PhoneDirectoryEntry extends Model
             return [];
         }
 
-        $names = [];
+        return self::namesByPhone()[$phone] ?? [];
+    }
+
+    /** @var array<string, list<string>>|null */
+    private static ?array $namesByPhone = null;
+
+    /** Жагсаалт өөрчлөгдөхөд түр санамж хоосрохыг мэдэгдэх тоолуур. */
+    public static int $nameCacheGeneration = 0;
+
+    /**
+     * Утас → нэрс. Урьд нь энэ тооцоог хэрэглэгч бүрийн төлөө дахин
+     * хийдэг тул бүх жагсаалт олон зуун удаа уншигдаж, үүрэг даалгаварт
+     * хариуцагч сонгоход хүсэлт цагтаа амждаггүй байв.
+     *
+     * @return array<string, list<string>>
+     */
+    private static function namesByPhone(): array
+    {
+        if (self::$namesByPhone !== null) {
+            return self::$namesByPhone;
+        }
+
+        $map = [];
 
         static::query()
             ->get(['person_name', 'mobile_phone', 'office_phone'])
-            ->each(function (self $row) use ($phone, &$names): void {
-                $mobile = \App\Models\User::normalizePhone($row->mobile_phone);
-                $office = \App\Models\User::normalizePhone($row->office_phone);
-
-                if ($mobile !== $phone && $office !== $phone) {
-                    return;
-                }
-
+            ->each(function (self $row) use (&$map): void {
                 $full = trim((string) $row->person_name);
+
                 if ($full === '') {
                     return;
                 }
 
-                $names[] = $full;
+                $names = [$full];
                 $short = \App\Support\PersonName::short($full);
                 if ($short !== '' && $short !== $full) {
                     $names[] = $short;
                 }
+
+                foreach ([$row->mobile_phone, $row->office_phone] as $raw) {
+                    $phone = \App\Models\User::normalizePhone($raw);
+
+                    if ($phone === null) {
+                        continue;
+                    }
+
+                    $map[$phone] = array_values(array_unique(
+                        array_merge($map[$phone] ?? [], $names)
+                    ));
+                }
             });
 
-        return array_values(array_unique($names));
+        return self::$namesByPhone = $map;
+    }
+
+    public static function flushNameCache(): void
+    {
+        self::$namesByPhone = null;
+        self::$nameCacheGeneration++;
+    }
+
+    protected static function booted(): void
+    {
+        static::saved(fn () => self::flushNameCache());
+        static::deleted(fn () => self::flushNameCache());
     }
 
     /**
