@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import { Link, usePage, Head } from '@inertiajs/vue3';
+import { Link, router, usePage, Head } from '@inertiajs/vue3';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import StateEmblem from '@/Components/StateEmblem.vue';
@@ -238,12 +238,28 @@ const openSystemSettings = (sys) => {
 const onLinkedSystemClick = (sys, event) => {
     sidebarOpen.value = false;
 
-    // Мэдээлэл хадгалаагүй, эсвэл сан түгжээтэй үед шинэ таб нээхгүй,
-    // апп дотроо үлдэнэ — үгүй бол дарах тутамд сан нээхийг хүлээж
-    // зогссон хоосон шинэ таб дараалан нээгдэж, "үсэрдэггүй" мэт санагддаг.
-    if (sys.requires_login && (! sys.has_credential || ! vaultUnlocked.value)) {
+    if (! sys.requires_login) {
+        return;
+    }
+
+    /*
+     * Мэдээлэл хадгалаагүй бол шинэ таб нээхгүй — энд нь бөглүүлнэ.
+     * (Үгүй бол дарах тутамд хоосон шинэ таб нээгдэж, «үсэрдэггүй»
+     * мэт санагддаг.)
+     */
+    if (! sys.has_credential) {
         event.preventDefault();
         openSystemSettings(sys);
+
+        return;
+    }
+
+    // Сан түгжээтэй бол нээх газар руу нь аваачна.
+    if (! vaultUnlocked.value) {
+        event.preventDefault();
+        router.visit(user.value?.is_admin
+            ? `${route('admin.systems.index')}?tab=vault`
+            : route('profile.edit'));
     }
 };
 </script>
