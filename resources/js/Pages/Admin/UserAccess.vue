@@ -438,7 +438,9 @@ const roleSummary = (roleKey) => {
         return 'Бүх модуль хаалттай';
     }
 
-    const manage = entries.filter(([, l]) => l === 'manage' || l === 'manage_own').length;
+    const manage = entries.filter(
+        ([, l]) => l === 'manage' || l === 'manage_own' || l === 'manage_unit',
+    ).length;
     const edit = entries.filter(
         ([, l]) => l === 'edit' || l === 'edit_own' || l === 'add_own',
     ).length;
@@ -467,6 +469,11 @@ const levelOptions = (module) => {
                 options.push({ value, label: labels[value] });
             }
         });
+    }
+
+    // Хэлтсийн хэмжээнд — зөвхөн өөрийн нэгжийн хэсгийг бүрэн удирдана.
+    if (module.unit_scope) {
+        options.push({ value: 'manage_unit', label: 'Удирдах (хэлтсийн)' });
     }
 
     options.push(

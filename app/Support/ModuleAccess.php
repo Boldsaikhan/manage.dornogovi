@@ -22,7 +22,7 @@ class ModuleAccess
      * бөглөж чадна. «edit_own» нь зөвхөн хэрэгжилт бичдэг тул хоорондоо
      * ялгаатай.
      */
-    public const LEVELS = ['view', 'edit', 'manage', 'view_own', 'edit_own', 'add_own', 'manage_own', 'closed'];
+    public const LEVELS = ['view', 'edit', 'manage', 'manage_unit', 'view_own', 'edit_own', 'add_own', 'manage_own', 'closed'];
 
     /** Дэд хэсгийг эх модулиасаа үл хамааран хаах утга. */
     public const LEVEL_CLOSED = 'closed';
@@ -95,6 +95,7 @@ class ModuleAccess
                     'parent' => $parent,
                     'own_scope' => filled($definition['own_scope'] ?? null),
                     'own_levels' => $definition['own_levels'] ?? null,
+                    'unit_scope' => (bool) ($definition['unit_scope'] ?? false),
                 ];
             }
         }
@@ -179,7 +180,7 @@ class ModuleAccess
 
         $level = self::level($user, $moduleKey);
 
-        return in_array($level, ['edit', 'manage', 'edit_own', 'add_own', 'manage_own'], true);
+        return in_array($level, ['edit', 'manage', 'manage_unit', 'edit_own', 'add_own', 'manage_own'], true);
     }
 
     /**
@@ -201,7 +202,7 @@ class ModuleAccess
 
         $level = self::level($user, $moduleKey);
 
-        return in_array($level, ['manage', 'manage_own'], true);
+        return in_array($level, ['manage', 'manage_unit', 'manage_own'], true);
     }
 
     public static function level(?User $user, string $moduleKey): ?string
@@ -328,6 +329,10 @@ class ModuleAccess
                 continue;
             }
 
+            if ($level === 'manage_unit' && ! self::supportsUnitScope($module)) {
+                continue;
+            }
+
             $desired[$module] = $level;
         }
 
@@ -396,6 +401,26 @@ class ModuleAccess
         return filled(self::find($moduleKey)['own_scope'] ?? null);
     }
 
+    /** Модуль нь «Удирдах (хэлтсийн)» эрхийг дэмждэг эсэх. */
+    public static function supportsUnitScope(string $moduleKey): bool
+    {
+        [$parent] = self::splitKey($moduleKey);
+
+        return (bool) (self::find($parent)['unit_scope'] ?? false);
+    }
+
+    /**
+     * «Удирдах (хэлтсийн)» — зөвхөн өөрийн нэгжийн хэсгийг удирдана.
+     */
+    public static function scopeUnitOnly(?User $user, string $moduleKey): bool
+    {
+        if (! $user || $user->is_admin) {
+            return false;
+        }
+
+        return self::level($user, $moduleKey) === 'manage_unit';
+    }
+
     public static function isOwnLevel(?string $level): bool
     {
         return in_array($level, ['view_own', 'edit_own', 'add_own', 'manage_own'], true);
@@ -406,6 +431,7 @@ class ModuleAccess
         return match ($level) {
             self::LEVEL_CLOSED => 'Хаалттай',
             'manage' => 'Удирдах (бүгд)',
+            'manage_unit' => 'Удирдах (хэлтсийн)',
             'manage_own' => 'Удирдах (хамааралтай)',
             'edit' => 'Оруулах (бүгд)',
             'add_own' => 'Нэмэх, оруулах (хамааралтай)',

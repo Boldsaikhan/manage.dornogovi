@@ -36,6 +36,7 @@ class UserAccessController extends Controller
                     'label' => $m['label'],
                     'own_scope' => ModuleAccess::supportsOwnScope($m['key']),
                     'own_levels' => $m['own_levels'] ?? null,
+                    'unit_scope' => ModuleAccess::supportsUnitScope($m['key']),
                     'parent' => null,
                 ]],
                 $subModules->get($m['key'], collect())
@@ -44,6 +45,7 @@ class UserAccessController extends Controller
                         'label' => $sub['label'],
                         'own_scope' => $sub['own_scope'],
                         'own_levels' => $sub['own_levels'],
+                        'unit_scope' => $sub['unit_scope'] ?? false,
                         'parent' => $sub['parent'],
                     ])
                     ->all(),

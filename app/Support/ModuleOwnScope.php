@@ -58,7 +58,16 @@ class ModuleOwnScope
 
     public static function allows(User $user, string $moduleKey, Model $record): bool
     {
-        if ($user->is_admin || ! ModuleAccess::scopeOwnOnly($user, $moduleKey)) {
+        if ($user->is_admin) {
+            return true;
+        }
+
+        // «Удирдах (хэлтсийн)» — зөвхөн өөрийн нэгжийн хэсгийн мөр.
+        if (ModuleAccess::scopeUnitOnly($user, $moduleKey)) {
+            return self::belongsToUnitSection($user, $record);
+        }
+
+        if (! ModuleAccess::scopeOwnOnly($user, $moduleKey)) {
             return true;
         }
 
@@ -69,6 +78,21 @@ class ModuleOwnScope
         }
 
         return self::allowsByType($user, $moduleKey, $record, $type);
+    }
+
+    /**
+     * Үүрэг даалгавар нь тухайн хэрэглэгчийн нэгжийн хэсэгт байгаа эсэх.
+     */
+    private static function belongsToUnitSection(User $user, Model $record): bool
+    {
+        if (! $record instanceof \App\Models\Task) {
+            return false;
+        }
+
+        $record->loadMissing('source');
+        $user->loadMissing('department:id,name');
+
+        return $record->source?->isUnitMemberSection($user) ?? false;
     }
 
     private static function applyByType(Builder $builder, User $user, string $moduleKey, string $type): Builder
