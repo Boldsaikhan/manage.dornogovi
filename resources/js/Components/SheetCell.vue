@@ -48,6 +48,14 @@ const editing = ref(false);
 const local = ref(props.modelValue ?? '');
 const search = ref('');
 const selected = ref([]);
+
+/*
+ * Ижил нэртэй хоёр албан хаагч жагсаалтад байвал хадгалагдах утга нь
+ * (нэр) ижил тул хоёул сонгогдсон мэт харагддаг байв. Тиймээс энэ
+ * удаад яг аль мөрийг дарсныг нь тусад нь цээжилж, зөвхөн түүнийг
+ * тэмдэглэнэ.
+ */
+const pickedIds = ref([]);
 const categoryOn = ref({ ...sharedCategoryFilters });
 const inputRef = ref(null);
 const rootRef = ref(null);
@@ -83,6 +91,7 @@ const toggleAllCategories = () => {
 
 const clearSelection = () => {
     selected.value = [];
+    pickedIds.value = [];
 };
 
 const selectedSet = computed(() => new Set(selected.value));
@@ -372,6 +381,7 @@ const commitValue = (value) => {
     local.value = next;
     search.value = '';
     selected.value = [];
+    pickedIds.value = [];
     emit('update:modelValue', next);
     emit('commit', next);
 };
@@ -379,6 +389,7 @@ const commitValue = (value) => {
 // Нүдийг нэг товшилтоор цэвэрлэнэ (жагсаалтаас сонгосон нэрийг устгах).
 const clearCell = () => {
     selected.value = [];
+    pickedIds.value = [];
     search.value = '';
     commitValue('');
 };
@@ -400,6 +411,7 @@ const finish = () => {
             search.value = '';
             local.value = props.modelValue ?? '';
             selected.value = [];
+            pickedIds.value = [];
             stopListeners();
         }
 
@@ -426,11 +438,29 @@ const cancel = () => {
     local.value = props.modelValue ?? '';
     search.value = '';
     selected.value = [];
+    pickedIds.value = [];
     editing.value = false;
     stopListeners();
 };
 
-const isSelected = (opt) => selectedSet.value.has(String(opt.value ?? opt.label ?? ''));
+/** Нэг утгад хэдэн мөр ноогдож байгаа (ижил нэртэй хүмүүс). */
+const sameValueCount = (value) => (props.options || [])
+    .filter((o) => String(o.value ?? o.label ?? '') === value).length;
+
+const isSelected = (opt) => {
+    const value = String(opt.value ?? opt.label ?? '');
+
+    if (! selectedSet.value.has(value)) {
+        return false;
+    }
+
+    // Ижил нэртэй хэд хэдэн мөр байхад зөвхөн дарсныг нь тэмдэглэнэ.
+    if (opt.id != null && pickedIds.value.length && sameValueCount(value) > 1) {
+        return pickedIds.value.includes(opt.id);
+    }
+
+    return true;
+};
 
 const pickOption = (opt) => {
     ignoreBlur.value = true;
@@ -441,11 +471,32 @@ const pickOption = (opt) => {
 
     if (props.multiple) {
         const idx = selected.value.indexOf(value);
-        if (idx >= 0) {
+        const pickedIdx = opt.id != null ? pickedIds.value.indexOf(opt.id) : -1;
+
+        if (idx >= 0 && (opt.id == null || pickedIdx >= 0 || sameValueCount(value) < 2)) {
+            // Дарсан мөрөө дахин дарвал — сонголтоос хасна.
             selected.value.splice(idx, 1);
+
+            if (pickedIdx >= 0) {
+                pickedIds.value.splice(pickedIdx, 1);
+            }
         } else {
-            selected.value.push(value);
+            if (idx < 0) {
+                selected.value.push(value);
+            }
+
+            // Ижил нэртэй өөр мөр дарагдвал тэмдэглэгээ нь тийш шилжинэ.
+            if (opt.id != null) {
+                pickedIds.value = pickedIds.value
+                    .filter((id) => {
+                        const other = (props.options || []).find((o) => o.id === id);
+
+                        return ! other || String(other.value ?? other.label ?? '') !== value;
+                    })
+                    .concat(opt.id);
+            }
         }
+
         releaseIgnoreBlur();
 
         return;
