@@ -560,6 +560,12 @@
         z-index: 30;
     }
 
+    /* Баруун ирмэгт ойрхон нүд — зүүн тийшээ дэлгэгдэнэ. */
+    .ui-sheet-cell.is-editing.is-anchor-right .ui-sheet-editor:not([type='date']):not([type='number']) {
+        left: auto;
+        right: 0;
+    }
+
     /*
      * Бүртгэлийн хүснэгт — албан ёсны, зөөлөн харагдах байдал.
      *

@@ -250,12 +250,34 @@ const displayText = () => {
     return String(value);
 };
 
+/**
+ * Дэлгэцийн баруун ирмэгт ойрхон нүд засагдахад талбар нь баруун
+ * тийшээ халиад таслагдахгүй — зүүн тийшээ дэлгэгдэнэ.
+ */
+const editorAnchorRight = ref(false);
+
+const EDITOR_MIN_PX = 256;
+
+const positionEditor = () => {
+    const el = rootRef.value;
+
+    if (! el) {
+        return;
+    }
+
+    const rect = el.getBoundingClientRect();
+    const room = window.innerWidth - rect.left - 12;
+
+    editorAnchorRight.value = room < EDITOR_MIN_PX;
+};
+
 const startEdit = async () => {
     if (! props.editable || editing.value) {
         return;
     }
 
     editing.value = true;
+    positionEditor();
     highlight.value = 0;
     // Сүүлийн шүүлтийг хадгална (өөр нүд/хүснэгт рүү шилжихэд идэвхтэй үлдэнэ).
     categoryOn.value = { ...sharedCategoryFilters };
@@ -269,9 +291,11 @@ const startEdit = async () => {
     }
 
     await nextTick();
+    positionEditor();
     updateMenuPosition();
     window.addEventListener('scroll', updateMenuPosition, true);
     window.addEventListener('resize', updateMenuPosition);
+    window.addEventListener('resize', positionEditor);
     if (hasOptions.value) {
         document.addEventListener('pointerdown', onPointerDownOutside, true);
     }
@@ -292,6 +316,7 @@ const startEdit = async () => {
 const stopListeners = () => {
     window.removeEventListener('scroll', updateMenuPosition, true);
     window.removeEventListener('resize', updateMenuPosition);
+    window.removeEventListener('resize', positionEditor);
     document.removeEventListener('pointerdown', onPointerDownOutside, true);
 };
 
@@ -505,6 +530,7 @@ onBeforeUnmount(() => {
         class="ui-sheet-cell"
         :class="{
             'is-editing': editing,
+            'is-anchor-right': editing && editorAnchorRight,
             'is-editable': editable,
             'is-center': align === 'center',
             'is-placeholder': ! modelValue && !! placeholder,
