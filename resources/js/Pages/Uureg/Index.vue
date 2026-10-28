@@ -1450,7 +1450,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
     <Head :title="source.name" />
 
     <AuthenticatedLayout :title="source.name">
-        <div class="ui-page" :class="viewMode === 'table' ? 'ui-page--tasks-table' : ''">
+        <div class="ui-page ui-page--tight" :class="viewMode === 'table' ? 'ui-page--tasks-table' : ''">
             <!-- Үйлдлийн товчнууд зөвхөн хүснэгтэд, өөрчлөлт оруулах үед хэрэгтэй. -->
             <div
                 v-if="hasKinds && viewMode === 'table'"
@@ -1894,13 +1894,13 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                 </aside>
 
                 <section
-                    class="flex min-h-0 flex-col gap-2"
+                    class="flex min-h-0 flex-col gap-1.5"
                     :class="viewMode === 'table' ? 'overflow-hidden' : ''"
                 >
                     <!-- Удирдлагаас өгсөн чиглэл — албан тушаалын сонголт -->
                     <div
                         v-if="isLeadershipKind"
-                        class="ui-card flex flex-wrap items-center gap-2 px-3 py-2"
+                        class="ui-card flex flex-wrap items-center gap-1.5 px-3 py-1.5"
                     >
                         <span class="text-[11px] font-bold uppercase tracking-wide text-slate-400">
                             Чиглэл өгсөн
