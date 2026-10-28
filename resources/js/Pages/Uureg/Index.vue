@@ -1778,12 +1778,12 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
             <!-- Зүүн талын навигац: үүсгэсэн үүрэг даалгавар + харагдац -->
             <div
                 v-if="hasKinds"
-                class="grid min-h-0 gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]"
+                class="grid min-h-0 gap-3 lg:grid-cols-[16rem_minmax(0,1fr)]"
                 :class="viewMode === 'table' ? 'ui-tasks-table-shell lg:grid-rows-[minmax(0,1fr)]' : ''"
             >
                 <aside class="ui-card flex min-h-0 max-h-full flex-col self-start p-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-7rem)]">
                     <!-- Дээд талын үйлдлүүд — icon-оор -->
-                    <div class="mb-3 flex items-center gap-2 border-b border-slate-200 pb-3">
+                    <div class="mb-2 flex items-center gap-2 border-b border-slate-200 pb-2">
                         <button
                             v-if="canManage"
                             type="button"
@@ -1815,7 +1815,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                     </div>
 
                     <!-- Хэрэгжилт — дээд талын icon-ы доор -->
-                    <div class="mb-3 flex flex-col gap-1.5">
+                    <div class="mb-2 flex flex-col gap-1">
                         <div class="flex items-center justify-between text-xs text-slate-500">
                             <span>Нийт {{ overall.count }}</span>
                             <button type="button" class="hover:text-brand-navy-700 hover:underline" @click="openDashboard">
@@ -1831,7 +1831,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                     <!-- Хэсгүүдийн жагсаалт — дэлгэцэнд багтаж, илүү нь гүйнэ -->
                     <div class="-mr-1 min-h-0 flex-1 overflow-y-auto pr-1">
                     <template v-if="leadershipTabs.length">
-                        <nav class="mb-4">
+                        <nav class="mb-3">
                             <Link
                                 :href="route('tasks.index', { kind: leadershipEntryKey })"
                                 class="block rounded-lg px-2.5 py-2 text-sm transition"
@@ -1852,10 +1852,10 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                     </template>
 
                     <template v-if="departmentTabs.length">
-                        <p class="mb-2 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                        <p class="mb-1 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
                             Хэлтсийн үүрэг даалгавар
                         </p>
-                        <nav class="mb-4 space-y-0.5">
+                        <nav class="mb-3 space-y-0.5">
                             <Link
                                 v-for="item in departmentTabs"
                                 :key="item.key"
@@ -1871,7 +1871,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                         </nav>
                     </template>
 
-                    <p class="mb-2 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                    <p class="mb-1 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
                         Үүсгэсэн үүрэг даалгавар
                     </p>
                     <nav class="space-y-0.5">
