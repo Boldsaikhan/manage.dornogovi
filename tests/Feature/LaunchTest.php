@@ -6,6 +6,7 @@ use App\Models\System;
 use App\Models\User;
 use App\Models\UserCredential;
 use App\Support\Vault;
+use Illuminate\Http\Request;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -45,6 +46,41 @@ class LaunchTest extends TestCase
         $this->actingAs($user)
             ->get(route('systems.launch', $system))
             ->assertRedirect(route('systems.show', $system));
+    }
+
+    public function test_activity_keeps_an_open_vault_from_expiring(): void
+    {
+        $user = User::factory()->create();
+
+        $request = Request::create('/dashboard');
+        $request->setLaravelSession(app('session.store'));
+        $request->setUserResolver(fn () => $user);
+
+        $request->session()->put(Vault::SESSION_KEY, now()->addMinutes(10)->timestamp);
+
+        // Идэвх гарахад хугацаа бүтэн сунгагдана.
+        $this->travel(5)->minutes();
+        Vault::touch($request);
+
+        $this->travel(30)->minutes();
+        $this->assertTrue(Vault::isUnlocked($request));
+
+        $this->travelBack();
+    }
+
+    public function test_activity_does_not_reopen_an_expired_vault(): void
+    {
+        $user = User::factory()->create();
+
+        $request = Request::create('/dashboard');
+        $request->setLaravelSession(app('session.store'));
+        $request->setUserResolver(fn () => $user);
+
+        $request->session()->put(Vault::SESSION_KEY, now()->subMinute()->timestamp);
+
+        Vault::touch($request);
+
+        $this->assertFalse(Vault::isUnlocked($request));
     }
 
     public function test_unlocking_requires_the_correct_account_password(): void

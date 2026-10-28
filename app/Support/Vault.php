@@ -20,6 +20,20 @@ class Vault
     }
 
     /**
+     * Нээлттэй сангийн хугацааг хэрэглэгчийн идэвх дээр сунгана — ажлын
+     * өдрийн турш холбосон систем дээр дарахад дахин нууц үг асуухгүй.
+     * Хаалттай буюу хугацаа нь дууссан санг энэ нээхгүй.
+     */
+    public static function touch(Request $request): void
+    {
+        if (! $request->user() || self::unlockedUntil($request) === null) {
+            return;
+        }
+
+        $request->session()->put(self::SESSION_KEY, now()->addMinutes(self::MINUTES)->timestamp);
+    }
+
+    /**
      * Идэвхтэй session дээр нээнэ (хүсэлтгүй газраас, ж: нэвтрэлтийн event).
      */
     public static function unlockCurrentSession(): void

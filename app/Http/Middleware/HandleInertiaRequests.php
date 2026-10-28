@@ -37,6 +37,10 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        // Хэрэглэгч ажиллаж байхад сангийн хугацааг сунгана — өөрөө хаагаагүй
+        // бол холбосон систем дээр дарахад дахин нууц үг асуухгүй.
+        Vault::touch($request);
+
         return [
             ...parent::share($request),
             'auth' => [
