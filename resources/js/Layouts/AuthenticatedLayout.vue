@@ -20,7 +20,12 @@ defineProps({
 
 const page = usePage();
 const sidebarOpen = ref(false);
-const sidebarCollapsed = ref(false);
+/**
+ * Цэс анхнаасаа хураалттай — ажлын талбар илүү өргөн болно. Хулгана
+ * очиход түр дэлгэрэх тул энэ нь хэрэглэгчийг хязгаарлахгүй. Өөрөө
+ * нээсэн бол тэр сонголт нь хадгалагдана.
+ */
+const sidebarCollapsed = ref(true);
 const SIDEBAR_COLLAPSE_KEY = 'sidebar_collapsed';
 const AI_PANEL_KEY = 'ai_panel_open';
 const aiOpen = ref(false);
@@ -34,10 +39,10 @@ const themeLabel = computed(() => (
 onMounted(() => {
     publishSystemHosts();
     try {
-        sidebarCollapsed.value = localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === '1';
+        sidebarCollapsed.value = localStorage.getItem(SIDEBAR_COLLAPSE_KEY) !== '0';
         aiOpen.value = localStorage.getItem(AI_PANEL_KEY) === '1';
     } catch {
-        sidebarCollapsed.value = false;
+        sidebarCollapsed.value = true;
         aiOpen.value = false;
     }
 });
