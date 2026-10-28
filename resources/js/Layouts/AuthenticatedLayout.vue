@@ -87,6 +87,46 @@ const onSidebarLeave = () => {
     hideNavTip();
 };
 
+/**
+ * Бүрэн шинэчлэх (hard refresh).
+ *
+ * Хуучин хувилбарын файл хөтөч эсвэл десктоп апп-д үлдэхэд хуудас
+ * хачин ажиллах тохиолдол гардаг. Энэ нь service worker, кэшийг
+ * цэвэрлээд хуудсыг шинээр татаж ачаална.
+ */
+const refreshing = ref(false);
+
+const hardRefresh = async () => {
+    if (refreshing.value) {
+        return;
+    }
+
+    refreshing.value = true;
+
+    try {
+        if ('serviceWorker' in navigator) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(regs.map((reg) => reg.unregister()));
+        }
+    } catch {
+        // Service worker байхгүй / хаалттай бол алгасна.
+    }
+
+    try {
+        if (window.caches) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map((key) => caches.delete(key)));
+        }
+    } catch {
+        // Кэш руу хандах эрхгүй бол алгасна.
+    }
+
+    // Хаягт нэг удаагийн тэмдэг нэмж, кэшнээс биш серверээс татуулна.
+    const url = new URL(window.location.href);
+    url.searchParams.set('_r', String(Date.now()));
+    window.location.replace(url.toString());
+};
+
 const toggleSidebarCollapse = () => {
     sidebarHovered.value = false;
     sidebarCollapsed.value = !sidebarCollapsed.value;
@@ -594,6 +634,17 @@ const onLinkedSystemClick = (sys, event) => {
                         </template>
                         <template #content>
                             <DropdownLink :href="route('profile.edit')">Профайл</DropdownLink>
+
+                            <button
+                                type="button"
+                                class="block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 transition duration-150 ease-in-out hover:bg-gray-100 focus:bg-gray-100 focus:outline-none disabled:opacity-60 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus:bg-slate-700"
+                                :disabled="refreshing"
+                                title="Кэшийг цэвэрлээд хуудсыг шинээр ачаална"
+                                @click="hardRefresh"
+                            >
+                                {{ refreshing ? 'Шинэчилж байна…' : 'Бүрэн шинэчлэх' }}
+                            </button>
+
                             <DropdownLink :href="route('logout')" method="post" as="button">Гарах</DropdownLink>
                         </template>
                     </Dropdown>
