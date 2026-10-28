@@ -128,7 +128,6 @@ const sidebarBlocks = computed(() => {
     return blocks;
 });
 
-const vaultUnlocked = computed(() => page.props.vault?.unlocked ?? false);
 const navBadges = computed(() => page.props.navBadges ?? {});
 const linkedSystems = computed(() => (page.props.nav ?? []).filter((s) => ! s.is_internal));
 
@@ -211,12 +210,12 @@ const isCurrent = (routeName) => {
 
 const linkedSystemOpenUrl = (sys) => {
     /*
-     * Мэдээлэл хадгалсан, сан нээлттэй бол завсрын хуудсаар дамжиж
-     * автоматаар нэвтэрнэ. Сан түгжээтэй бол саатуулахгүй — тухайн
-     * системийн хуудсыг шууд нээж, хэрэглэгч гараар нэвтрэх боломжтой.
+     * Мэдээлэл хадгалсан бол завсрын хуудсаар дамжиж автоматаар нэвтэрнэ
+     * (ДАН-аар нэвтэрдэг системүүд ч мөн адил). Сан хаалттай байвал тэр
+     * хуудас өөрөө нээлгээд үргэлжлүүлнэ.
      */
     if (sys.requires_login && sys.has_credential) {
-        return vaultUnlocked.value ? route('systems.launch', sys.id) : sys.entry_url;
+        return route('systems.launch', sys.id);
     }
 
     // Нэвтрэх шаардлагатай хэрнээ мэдээлэл хадгалаагүй — системийн хуудсанд хадгалуулна.
