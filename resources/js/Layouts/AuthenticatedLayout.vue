@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import { Link, router, usePage, Head } from '@inertiajs/vue3';
+import { Link, usePage, Head } from '@inertiajs/vue3';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import StateEmblem from '@/Components/StateEmblem.vue';
@@ -210,10 +210,13 @@ const isCurrent = (routeName) => {
 };
 
 const linkedSystemOpenUrl = (sys) => {
-    // Мэдээлэл хадгалсан бол сан түгжээтэй эсэхээс үл хамааран завсрын хуудсаар
-    // явна — тэр хуудас өөрөө сан нээлгээд үргэлжлүүлнэ.
+    /*
+     * Мэдээлэл хадгалсан, сан нээлттэй бол завсрын хуудсаар дамжиж
+     * автоматаар нэвтэрнэ. Сан түгжээтэй бол саатуулахгүй — тухайн
+     * системийн хуудсыг шууд нээж, хэрэглэгч гараар нэвтрэх боломжтой.
+     */
     if (sys.requires_login && sys.has_credential) {
-        return route('systems.launch', sys.id);
+        return vaultUnlocked.value ? route('systems.launch', sys.id) : sys.entry_url;
     }
 
     // Нэвтрэх шаардлагатай хэрнээ мэдээлэл хадгалаагүй — системийн хуудсанд хадгалуулна.
@@ -246,20 +249,12 @@ const onLinkedSystemClick = (sys, event) => {
      * Мэдээлэл хадгалаагүй бол шинэ таб нээхгүй — энд нь бөглүүлнэ.
      * (Үгүй бол дарах тутамд хоосон шинэ таб нээгдэж, «үсэрдэггүй»
      * мэт санагддаг.)
+     *
+     * Бусад тохиолдолд саатуулахгүй — систем нь шууд нээгдэнэ.
      */
     if (! sys.has_credential) {
         event.preventDefault();
         openSystemSettings(sys);
-
-        return;
-    }
-
-    // Сан түгжээтэй бол нээх газар руу нь аваачна.
-    if (! vaultUnlocked.value) {
-        event.preventDefault();
-        router.visit(user.value?.is_admin
-            ? `${route('admin.systems.index')}?tab=vault`
-            : route('systems.show', sys.id));
     }
 };
 </script>
