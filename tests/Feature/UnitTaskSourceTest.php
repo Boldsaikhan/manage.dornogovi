@@ -159,4 +159,39 @@ class UnitTaskSourceTest extends TestCase
 
         $this->assertContains('А.Ханддорж', $people);
     }
+
+    public function test_own_only_staff_still_see_their_units_section_and_all_its_tasks(): void
+    {
+        $user = $this->staff('Хэвлэл мэдээллийн алба');
+        $user->modulePermissions()->updateOrCreate(['module_key' => 'tasks'], ['level' => 'view_own']);
+        $user = $user->fresh();
+
+        $source = TaskSource::where('key', 'unit_02')->firstOrFail();
+
+        Task::create([
+            'task_source_id' => $source->id,
+            'text' => 'Нэгжийн нийтийн үүрэг',
+            'responsible' => 'Өөр хүн',
+            'sort_order' => 1,
+        ]);
+
+        $this->assertContains('unit_02', $this->tabKeys($user));
+
+        $this->actingAs($user)
+            ->followingRedirects()
+            ->get(route('tasks.index', ['kind' => 'unit_02']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('kind', 'unit_02')
+                ->has('tasks', 1));
+    }
+
+    public function test_own_only_staff_do_not_see_other_units_section(): void
+    {
+        $user = $this->staff('Хэвлэл мэдээллийн алба');
+        $user->modulePermissions()->updateOrCreate(['module_key' => 'tasks'], ['level' => 'view_own']);
+        $user = $user->fresh();
+
+        $this->assertNotContains('unit_03', $this->tabKeys($user));
+    }
+
 }

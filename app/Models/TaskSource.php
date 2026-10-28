@@ -150,6 +150,17 @@ class TaskSource extends Model
         return $mine !== '' && $mine === self::normalizeUnitName($this->unit_name ?: $this->name);
     }
 
+    /**
+     * Энэ нь тухайн хэрэглэгчийн ХАРЬЯА нэгжийн дотоод хэсэг мөн эсэх.
+     *
+     * Ийм хэсгийн үүрэг даалгаврыг нэгжийн бүх албан хаагч бүтнээр нь
+     * харна — «зөвхөн өөрийн үүрэг» эрх энд хамаарахгүй.
+     */
+    public function isUnitMemberSection(?User $user): bool
+    {
+        return $this->isUnit() && $this->isVisibleToUnitMember($user);
+    }
+
     public function isLeadership(): bool
     {
         return array_key_exists((string) $this->key, self::LEADERSHIP);
