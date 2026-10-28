@@ -11,7 +11,7 @@ return [
         'scope_column' => 'scope',
         'scope_label' => 'Хамрах хүрээ',
         'scopes' => [
-            'udirdlaga' => 'Аймгийн удирдлагууд',
+            'udirdlaga' => 'Удирдлагууд',
             'agentlag' => 'Агентлаг',
             'sum' => 'Сумд',
             'baiguullaga' => 'АЗДТГ',
@@ -27,7 +27,7 @@ return [
         ],
         'fields' => [
             ['name' => 'scope', 'label' => 'Хамрах хүрээ', 'type' => 'select', 'required' => true, 'options' => [
-                'udirdlaga' => 'Аймгийн удирдлагууд',
+                'udirdlaga' => 'Удирдлагууд',
                 'agentlag' => 'Агентлаг',
                 'sum' => 'Сумд',
                 'baiguullaga' => 'АЗДТГ',

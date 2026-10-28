@@ -8,7 +8,7 @@ import {
 } from '@/utils/soumGovernors';
 
 const CATEGORY_FILTERS = [
-    { key: 'udirdlaga', label: 'Аймгийн удирдлагууд', short: 'Удирдлага' },
+    { key: 'udirdlaga', label: 'Удирдлагууд', short: 'Удирдлага' },
     { key: 'sum', label: 'Сум', short: 'Сум' },
     { key: 'heltes', label: 'АЗДТГ', short: 'АЗДТГ' },
     { key: 'agentlag', label: 'Агентлаг', short: 'Агентлаг' },
