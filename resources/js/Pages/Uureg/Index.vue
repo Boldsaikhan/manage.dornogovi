@@ -1760,6 +1760,46 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                         v-if="hasKinds"
                         class="ui-card flex flex-wrap items-center gap-1.5 px-2.5 py-1"
                     >
+                        <!-- Харагдац: хүснэгт / цаглалт -->
+                        <div class="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-0.5">
+                            <button
+                                type="button"
+                                class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition"
+                                :class="viewMode === 'table'
+                                    ? 'bg-brand-navy-600 text-white shadow-sm'
+                                    : 'text-slate-500 hover:bg-white hover:text-brand-navy-700'"
+                                title="Үүрэг даалгаврыг хүснэгтээр харах"
+                                @click="showAllAsTable"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M3 5.5h18M3 12h18M3 18.5h18M8.5 5.5v13"
+                                    />
+                                </svg>
+                                Хүснэгт
+                            </button>
+                            <button
+                                type="button"
+                                class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition"
+                                :class="viewMode === 'calendar'
+                                    ? 'bg-brand-navy-600 text-white shadow-sm'
+                                    : 'text-slate-500 hover:bg-white hover:text-brand-navy-700'"
+                                title="Цаглалтаар харах"
+                                @click="backToCalendar"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M4 7.5a2 2 0 012-2h12a2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2v-11zM8 3.5v4M16 3.5v4M4 10.5h16"
+                                    />
+                                </svg>
+                                Цаглалт
+                            </button>
+                        </div>
+
                         <template v-if="isLeadershipKind">
                             <span class="text-[11px] font-bold uppercase tracking-wide text-slate-400">
                                 Чиглэл өгсөн
@@ -1948,48 +1988,8 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                                 </svg>
                             </button>
 
-                            <span class="mx-0.5 h-5 w-px bg-slate-200" />
                         </template>
 
-                        <!-- Харагдац: хүснэгт / цаглалт -->
-                        <div class="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-0.5">
-                            <button
-                                type="button"
-                                class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition"
-                                :class="viewMode === 'table'
-                                    ? 'bg-brand-navy-600 text-white shadow-sm'
-                                    : 'text-slate-500 hover:bg-white hover:text-brand-navy-700'"
-                                title="Үүрэг даалгаврыг хүснэгтээр харах"
-                                @click="showAllAsTable"
-                            >
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M3 5.5h18M3 12h18M3 18.5h18M8.5 5.5v13"
-                                    />
-                                </svg>
-                                Хүснэгт
-                            </button>
-                            <button
-                                type="button"
-                                class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition"
-                                :class="viewMode === 'calendar'
-                                    ? 'bg-brand-navy-600 text-white shadow-sm'
-                                    : 'text-slate-500 hover:bg-white hover:text-brand-navy-700'"
-                                title="Цаглалтаар харах"
-                                @click="backToCalendar"
-                            >
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M4 7.5a2 2 0 012-2h12a2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2v-11zM8 3.5v4M16 3.5v4M4 10.5h16"
-                                    />
-                                </svg>
-                                Цаглалт
-                            </button>
-                        </div>
                         </div>
                     </div>
 
