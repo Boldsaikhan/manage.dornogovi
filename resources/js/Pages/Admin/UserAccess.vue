@@ -448,6 +448,48 @@ const roleSummary = (roleKey) => {
     return entries.length + ' модуль нээлттэй · ' + edit + ' оруулах · ' + manage + ' удирдах';
 };
 
+/** Эрхийн түвшин тус бүр юу зөвшөөрдгийг нэг дор харуулна. */
+const levelGuideOpen = ref(false);
+
+const levelGuide = [
+    {
+        label: 'Хаалттай',
+        text: 'Модуль хажуугийн цэсэнд огт гарахгүй. Шууд холбоосоор орох оролдлогыг ч хаана.',
+    },
+    {
+        label: 'Харах (хамааралтай)',
+        text: 'Зөвхөн өөрт нь холбоотой бүртгэлийг хардаг. Юу ч засахгүй.',
+    },
+    {
+        label: 'Оруулах (хамааралтай)',
+        text: 'Өөрт нь холбоотой бүртгэлийн мэдээллийг нөхнө. Үүрэг даалгаварт зөвхөн хэрэгжилт, биелэлтийн хувийг бичнэ.',
+    },
+    {
+        label: 'Нэмэх, оруулах (хамааралтай)',
+        text: 'Дээрхээс гадна шинэ мөр нэмнэ. Нэмсэн мөр нь өөрт нь холбогдоно.',
+    },
+    {
+        label: 'Удирдах (хамааралтай)',
+        text: 'Өөрт нь холбоотой бүртгэлийг бүрэн удирдана — нэмэх, засах, устгах, файл оруулах.',
+    },
+    {
+        label: 'Удирдах (хэлтсийн)',
+        text: 'Зөвхөн үүрэг даалгаварт. Өөрийн харьяа нэгжийн хэсгийг бүтнээр нь хардаг бөгөөд бүрэн удирдана. Бусад хэсэг харагдахгүй.',
+    },
+    {
+        label: 'Харах (бүгд)',
+        text: 'Модулийн бүх бүртгэлийг хардаг. Юу ч засахгүй.',
+    },
+    {
+        label: 'Оруулах (бүгд)',
+        text: 'Бүх бүртгэлийн мөрийг засварлана. Хэсэг нэмэх, устгах зэрэг удирдлагын үйлдэл хийхгүй.',
+    },
+    {
+        label: 'Удирдах (бүгд)',
+        text: 'Модулийг бүрэн удирдана — хэсэг нэмэх, Word-оос импортлох, устгах бүгд нээлттэй.',
+    },
+];
+
 const levelOptions = (module) => {
     // Дэд мөр ч эцэг мөртэй ижил — тохируулаагүй бол хаалттай.
     const options = [{ value: '', label: 'Хаалттай' }];
@@ -751,6 +793,42 @@ const saveUser = () => {
                     >
                         Ролийн загвар
                     </button>
+                </div>
+
+                <!-- Эрхийн түвшний тайлбар -->
+                <div class="ui-card shrink-0">
+                    <button
+                        type="button"
+                        class="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left"
+                        @click="levelGuideOpen = ! levelGuideOpen"
+                    >
+                        <span class="text-sm font-semibold text-brand-navy-800">
+                            Эрхийн түвшний тайлбар
+                        </span>
+                        <span class="text-xs text-slate-500">
+                            {{ levelGuideOpen ? 'Хаах' : 'Харах' }}
+                        </span>
+                    </button>
+
+                    <div v-if="levelGuideOpen" class="border-t border-slate-200 px-4 py-3">
+                        <dl class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                            <div
+                                v-for="row in levelGuide"
+                                :key="row.label"
+                                class="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2"
+                            >
+                                <dt class="text-sm font-semibold text-brand-navy-800">{{ row.label }}</dt>
+                                <dd class="mt-0.5 text-xs leading-relaxed text-slate-600">{{ row.text }}</dd>
+                            </div>
+                        </dl>
+
+                        <p class="mt-2 text-[11px] leading-relaxed text-slate-400">
+                            «Хамааралтай» гэдэг нь тухайн албан хаагчийн нэр хариуцагч, хяналт,
+                            эсвэл бүртгэл үүсгэгчээр тавигдсан мөрийг хэлнэ. Дэд мөр (Мөр засварлах,
+                            Татах, Word оруулах г.м.) нь тусдаа тохируулагддаг — эцэг мөрийг нээхэд
+                            дэд эрх автоматаар нээгдэхгүй.
+                        </p>
+                    </div>
                 </div>
 
                 <template v-if="panelMode === 'employee'">
