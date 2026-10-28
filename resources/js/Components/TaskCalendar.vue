@@ -129,11 +129,6 @@ const focusTask = (task) => {
     emit('focus-task', task);
 };
 
-/** Бүх үүрэг даалгаврыг хүснэгтээр харуулна. */
-const showAll = () => {
-    emit('show-tasks', { label: null, ids: null });
-};
-
 /** Сонгосон сарын үүргүүдийг хүснэгтээр харуулна. */
 const showMonthTable = () => {
     const entry = monthlySummary.value[viewMonth.value];
@@ -200,14 +195,9 @@ const showDay = (cell) => {
                     Өнөөдөр
                 </button>
 
-                <button
-                    type="button"
-                    class="ui-btn-accent px-3 py-1.5 text-sm"
-                    title="Бүх үүрэг даалгаврыг хүснэгтээр харах"
-                    @click="showAll"
-                >
-                    Нийт {{ props.tasks.length }} — бүгдийг харах
-                </button>
+                <span class="rounded-full bg-brand-navy-50 px-3 py-1 text-xs font-semibold text-brand-navy-700">
+                    Нийт {{ props.tasks.length }} үүрэг
+                </span>
             </div>
         </div>
 
