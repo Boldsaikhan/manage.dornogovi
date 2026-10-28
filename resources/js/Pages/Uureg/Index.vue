@@ -2171,7 +2171,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                             :key="'w-' + col.key"
                             :style="col.key === flexColumnKey ? undefined : { width: `${columnWidthPx(col)}px` }"
                         />
-                        <col style="width: 96px" />
+                        <col style="width: 118px" />
                         <col v-if="canEdit" style="width: 48px" />
                     </colgroup>
                     <thead>
@@ -2194,7 +2194,12 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                             >
                                 {{ col.label }}
                             </th>
-                            <th class="sticky top-0 z-10 bg-brand-navy-50 text-center ui-sticky-progress">Биелэлтийн хувь</th>
+                            <th
+                                class="sticky top-0 z-10 bg-brand-navy-50 text-center ui-sticky-progress"
+                                title="Биелэлтийн хувь"
+                            >
+                                Биелэлт
+                            </th>
                             <th v-if="canEdit" class="sticky top-0 z-10 bg-brand-navy-50 text-center ui-sticky-actions" />
                         </tr>
                         <!-- Багана тус бүрд хайх мөр -->
@@ -2287,19 +2292,19 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                                     :editable="canEditProgress"
                                     @commit="() => saveProgress(task.id)"
                                 >
-                                    <span class="flex w-full flex-col items-center gap-1 py-0.5">
-                                        <span
-                                            class="text-xs font-bold tabular-nums"
-                                            :class="progressTextClass(drafts[task.id].progress)"
-                                        >
-                                            {{ drafts[task.id].progress ?? 0 }}%
-                                        </span>
-                                        <span class="block h-1.5 w-full max-w-[4.5rem] overflow-hidden rounded-full bg-slate-200">
+                                    <span class="flex w-full items-center gap-2 px-1 py-0.5">
+                                        <span class="block h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
                                             <span
                                                 class="block h-full rounded-full transition-[width] duration-200"
                                                 :class="barColor(drafts[task.id].progress)"
                                                 :style="{ width: progressWidth(drafts[task.id].progress) + '%' }"
                                             />
+                                        </span>
+                                        <span
+                                            class="w-10 shrink-0 text-right text-xs font-bold tabular-nums"
+                                            :class="progressTextClass(drafts[task.id].progress)"
+                                        >
+                                            {{ drafts[task.id].progress ?? 0 }}%
                                         </span>
                                     </span>
                                 </SheetCell>
