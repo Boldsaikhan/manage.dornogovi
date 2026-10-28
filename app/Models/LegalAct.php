@@ -20,6 +20,10 @@ class LegalAct extends Model
         'scope',
         'title',
         'number',
+        // Салбарын үзүүлэлт — суурь тоон мэдээлэл.
+        'measure_unit',
+        'base_year',
+        'base_value',
         'approved_on',
         'effective_on',
         'unit_name',

@@ -233,6 +233,18 @@ return [
             'said' => 'Сайдын тушаал',
             'oron_nutag' => 'Орон нутгийн',
             'busad' => 'Бусад',
+            'uzuulelt' => 'Салбарын үзүүлэлт',
+        ],
+        // Табуудыг бүлэглэж харуулна.
+        'scope_groups' => [
+            'huuli_togtoomj' => [
+                'label' => 'Хууль тогтоомж',
+                'scopes' => ['huuli', 'uih', 'zasgiin_gazar', 'said', 'oron_nutag', 'busad'],
+            ],
+            'uzuulelt' => [
+                'label' => 'Салбарын үзүүлэлт',
+                'scopes' => ['uzuulelt'],
+            ],
         ],
         'row_number' => '№',
         'columns' => [
@@ -258,6 +270,34 @@ return [
                 'accept' => '.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                 'mimes' => 'pdf,doc,docx', 'max_kb' => 20480,
                 'folder' => 'legal-acts', 'store_as' => 'file_path', 'name_as' => 'file_name'],
+        ],
+        // Салбарын үзүүлэлт — суурь тоон мэдээлэл тусдаа багануудтай.
+        'scope_views' => [
+            'uzuulelt' => [
+                'columns' => [
+                    ['key' => 'title', 'label' => 'Үзүүлэлтийн нэр', 'width' => '30%', 'align' => 'left', 'edit' => 'title'],
+                    ['key' => 'measure_unit', 'label' => 'Хэмжих нэгж', 'width' => '11%', 'edit' => 'measure_unit'],
+                    ['key' => 'base_year', 'label' => 'Суурь он', 'width' => '8%', 'edit' => 'base_year'],
+                    ['key' => 'base_value', 'label' => 'Суурь үзүүлэлт', 'width' => '11%', 'edit' => 'base_value'],
+                    ['key' => 'unit_name', 'label' => 'Хамаарах нэгж', 'width' => '16%', 'edit' => 'unit_name'],
+                    ['key' => 'note', 'label' => 'Тэмдэглэл', 'width' => '18%', 'align' => 'left', 'edit' => 'note'],
+                    ['key' => 'source_url', 'label' => 'Эх сурвалж', 'type' => 'link', 'icon_only' => true, 'width' => '3%', 'edit' => 'source_url'],
+                    ['key' => 'file_label', 'label' => 'Файл', 'type' => 'file', 'icon_only' => true, 'upload' => 'file', 'width' => '3%'],
+                ],
+                'fields' => [
+                    ['name' => 'title', 'label' => 'Үзүүлэлтийн нэр', 'type' => 'text', 'required' => true],
+                    ['name' => 'measure_unit', 'label' => 'Хэмжих нэгж (хүн, ширхэг, сая төгрөг…)', 'type' => 'text'],
+                    ['name' => 'base_year', 'label' => 'Суурь он', 'type' => 'text'],
+                    ['name' => 'base_value', 'label' => 'Суурь үзүүлэлт', 'type' => 'text'],
+                    ['name' => 'unit_name', 'label' => 'Хамаарах нэгж', 'type' => 'text'],
+                    ['name' => 'source_url', 'label' => 'Эх сурвалжийн холбоос', 'type' => 'text'],
+                    ['name' => 'note', 'label' => 'Тэмдэглэл', 'type' => 'textarea'],
+                    ['name' => 'file', 'label' => 'Файл (Word / PDF / Excel)', 'type' => 'file',
+                        'accept' => '.pdf,.doc,.docx,.xls,.xlsx',
+                        'mimes' => 'pdf,doc,docx,xls,xlsx', 'max_kb' => 20480,
+                        'folder' => 'legal-acts', 'store_as' => 'file_path', 'name_as' => 'file_name'],
+                ],
+            ],
         ],
         'defaults' => [],
         // Хоосон мөр нэмээд нүдэн дээр нь бөглөнө.
