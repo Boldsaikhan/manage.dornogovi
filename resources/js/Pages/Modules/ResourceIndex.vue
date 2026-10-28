@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
-import { router, useForm } from '@inertiajs/vue3';
+import { Link, router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
@@ -720,7 +720,15 @@ const destroyRow = (id) => {
                         {{ tab.group_label }}
                     </span>
 
+                    <Link
+                        v-if="tab.href"
+                        :href="tab.href"
+                        class="shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                    >
+                        {{ tab.label }}
+                    </Link>
                     <button
+                        v-else
                         type="button"
                         class="shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-semibold transition"
                         :class="

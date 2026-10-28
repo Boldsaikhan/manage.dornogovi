@@ -22,6 +22,7 @@ use App\Http\Controllers\ReportCatalogController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PhoneDirectoryController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SectorIndicatorController;
 use App\Http\Controllers\PwaManifestController;
 use App\Http\Controllers\RegulationCategoryController;
 use App\Http\Controllers\SystemViewController;
@@ -164,6 +165,24 @@ Route::middleware('auth')->group(function () {
     Route::delete('/modules/decrees/{decree}', [DecreeController::class, 'destroy'])->name('decrees.destroy');
     Route::get('/modules/contracts', [ModuleResourceController::class, 'index'])->name('contracts.index');
     Route::get('/modules/legal_acts', [ModuleResourceController::class, 'index'])->name('legal-acts.index');
+
+    // Салбарын үзүүлэлт — нэгж бүрийн суурь тоон мэдээлэл.
+    Route::get('/modules/legal_acts/indicators', [SectorIndicatorController::class, 'index'])
+        ->name('indicators.index');
+    Route::post('/modules/legal_acts/indicators', [SectorIndicatorController::class, 'store'])
+        ->name('indicators.store');
+    Route::patch('/modules/legal_acts/indicators/{indicator}', [SectorIndicatorController::class, 'update'])
+        ->name('indicators.update');
+    Route::patch('/modules/legal_acts/indicators/{indicator}/value', [SectorIndicatorController::class, 'updateValue'])
+        ->name('indicators.value');
+    Route::delete('/modules/legal_acts/indicators/{indicator}', [SectorIndicatorController::class, 'destroy'])
+        ->name('indicators.destroy');
+    Route::post('/modules/legal_acts/indicator-periods', [SectorIndicatorController::class, 'storePeriod'])
+        ->name('indicators.periods.store');
+    Route::patch('/modules/legal_acts/indicator-periods/{period}', [SectorIndicatorController::class, 'updatePeriod'])
+        ->name('indicators.periods.update');
+    Route::delete('/modules/legal_acts/indicator-periods/{period}', [SectorIndicatorController::class, 'destroyPeriod'])
+        ->name('indicators.periods.destroy');
     Route::get('/modules/archives', [ModuleResourceController::class, 'index'])->name('archives.index');
     Route::get('/modules/doc_standards', [DocumentStandardController::class, 'index'])->name('doc-standards.index');
     Route::patch('/document-formats/{format}', [DocumentStandardController::class, 'updateFormat'])->name('document-formats.update');

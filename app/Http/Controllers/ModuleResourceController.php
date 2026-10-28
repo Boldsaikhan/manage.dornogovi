@@ -109,6 +109,20 @@ class ModuleResourceController extends Controller
                     'group_label' => $groupOf[$value]['label'] ?? null,
                 ];
             }
+
+            // Өөр хуудас руу чиглүүлэх таб (жишээ нь салбарын үзүүлэлт).
+            foreach ($config['scope_links'] ?? [] as $link) {
+                $groupKey = $link['group'] ?? null;
+
+                $scopeTabs[] = [
+                    'value' => 'link:'.($link['route'] ?? ''),
+                    'label' => $link['label'] ?? '',
+                    'count' => null,
+                    'href' => route($link['route']),
+                    'group' => $groupKey,
+                    'group_label' => $groupKey ? ($groups[$groupKey]['label'] ?? null) : null,
+                ];
+            }
         }
 
         /*
