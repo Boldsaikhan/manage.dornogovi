@@ -1032,7 +1032,7 @@ const saveUser = () => {
                             <thead>
                                 <tr>
                                     <th>Модуль</th>
-                                    <th class="w-40">Эрх</th>
+                                    <th class="w-[17rem]">Эрх</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1049,7 +1049,7 @@ const saveUser = () => {
                                     </td>
                                     <td>
                                         <select
-                                            class="ui-input !py-1.5"
+                                            class="ui-input w-full min-w-[15.5rem] !py-1.5"
                                             v-model="roleState[activeRole.key][m.key]"
                                             @change="rolesDirty = true"
                                         >
