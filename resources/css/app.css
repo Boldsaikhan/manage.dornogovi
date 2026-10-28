@@ -430,6 +430,12 @@
         max-width: 0;
     }
 
+    /* Засаж байгаа нүдний агуулга хөрш багана руу халин бүтнээрээ гарна. */
+    .ui-table td.ui-sheet-td:has(.ui-sheet-cell.is-editing) {
+        @apply relative overflow-visible;
+        z-index: 25;
+    }
+
     .ui-sheet-cell {
         @apply relative min-h-[2.35rem] w-full min-w-0 overflow-hidden;
     }
@@ -488,6 +494,28 @@
     .ui-sheet-editor[type='number'] {
         -moz-appearance: textfield;
         appearance: textfield;
+    }
+
+    /*
+     * Засаж байхад талбар бүтнээрээ харагдана.
+     *
+     * Багана нарийн байсан ч оролтын талбар хамгийн багадаа 16rem болж,
+     * хөрш нүдний дээр давхарлан гарна. Огноо, тоон талбар богино тул
+     * хэвээр үлдэнэ.
+     */
+    .ui-sheet-cell.is-editing {
+        @apply z-30;
+        overflow: visible;
+    }
+
+    .ui-sheet-cell.is-editing .ui-sheet-editor:not([type='date']):not([type='number']) {
+        @apply absolute left-0 top-0 rounded-md bg-white px-1.5 py-1 shadow-xl
+            ring-2 ring-brand-navy-500/40 dark:bg-slate-800;
+        width: 100%;
+        min-width: 16rem;
+        max-width: none;
+        min-height: 100%;
+        z-index: 30;
     }
 
     /*
