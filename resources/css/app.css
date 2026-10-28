@@ -131,12 +131,18 @@
     }
 
     .ui-table thead {
-        @apply bg-brand-navy-50 text-left text-xs font-semibold uppercase tracking-wide text-brand-navy-700
-            dark:bg-slate-800 dark:text-brand-navy-200;
+        @apply bg-gradient-to-b from-brand-navy-50 to-brand-navy-100/60 text-left text-[11px]
+            font-bold uppercase tracking-wide text-brand-navy-700
+            dark:from-slate-800 dark:to-slate-800 dark:text-brand-navy-200;
     }
 
     .ui-table th {
-        @apply border border-slate-200 px-2 py-1.5 dark:border-slate-700;
+        @apply border border-slate-200 px-2 py-2 align-middle leading-tight dark:border-slate-700;
+    }
+
+    /* Толгойн доод зааг — мөрүүдээс тод ялгарна. */
+    .ui-table thead tr:last-child th {
+        @apply border-b-2 border-b-brand-navy-200 dark:border-b-slate-600;
     }
 
     .ui-table td {
