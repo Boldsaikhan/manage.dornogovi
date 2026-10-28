@@ -165,7 +165,7 @@ const showDay = (cell) => {
 <template>
     <div class="ui-card overflow-hidden">
         <!-- Толгой: нэрлэл, жилийн шилжилт, бүгдийг харах -->
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-gradient-to-r from-brand-navy-50 to-white px-4 py-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-gradient-to-r from-brand-navy-50 to-white px-3 py-2">
             <div>
                 <h3 class="text-sm font-semibold text-brand-navy-900">Цаглалт / төлөвлөгөө</h3>
                 <p class="text-xs text-slate-500">
@@ -212,7 +212,7 @@ const showDay = (cell) => {
         </div>
 
         <!-- Сарын хавчуурга — тоо нь тухайн сард хамаарах үүргийн тоо -->
-        <div class="flex gap-1.5 overflow-x-auto border-b border-slate-200 bg-white px-3 py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div class="flex gap-1 overflow-x-auto border-b border-slate-200 bg-white px-2.5 py-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
                 v-for="entry in monthlySummary"
                 :key="'tab-' + entry.month"
@@ -238,7 +238,7 @@ const showDay = (cell) => {
         </div>
 
         <!-- Сонгосон сар — баруун талд хэрэгжилт -->
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-3 py-2">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-2.5 py-1.5">
             <div class="flex items-center gap-1">
                 <button
                     type="button"
