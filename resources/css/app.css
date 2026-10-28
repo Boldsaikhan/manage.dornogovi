@@ -798,13 +798,16 @@
             dark:bg-brand-navy-600 dark:text-white dark:hover:bg-brand-navy-600;
     }
 
-    /* Цэсний icon-ууд үндсэн цэнхэр — идэвхтэй мөрөнд цагаан. */
+    /*
+     * Цэсний icon — өнгөгүй, саарал. Бичвэрээсээ сарниулахгүй, идэвхтэй
+     * мөр дээр л цагаан болж тодорно.
+     */
     .ui-nav-link svg {
-        @apply text-brand-navy-600 dark:text-brand-navy-300;
+        @apply text-slate-400 transition-colors dark:text-slate-500;
     }
 
     .ui-nav-link:hover svg {
-        @apply text-brand-navy-700 dark:text-brand-navy-200;
+        @apply text-slate-600 dark:text-slate-300;
     }
 
     .ui-nav-link-active svg,
@@ -812,19 +815,24 @@
         @apply text-white;
     }
 
-    /* Бүлгийн гарчиг — дарахад хураагддаг тул товч шиг аашилна. */
+    /*
+     * Бүлгийн гарчиг — хуудсууд дээрх бусад бүлгийн нэртэй ижил
+     * (жижиг, саарал, тод үсэг). Дарахад хураагддаг тул товч шиг аашилна.
+     */
     .ui-section-label {
-        @apply !mt-2.5 flex w-full items-center gap-1.5 rounded-lg px-3 py-1 text-[10px] font-bold
-            uppercase tracking-[0.14em] text-brand-navy-700 transition
-            dark:text-brand-navy-300;
+        @apply !mt-3 flex w-full items-center gap-1.5 rounded-lg px-3 py-1 text-[11px] font-bold
+            uppercase tracking-wide text-slate-400 transition
+            dark:text-slate-500;
     }
 
     button.ui-section-label {
-        @apply hover:bg-brand-navy-50 dark:hover:bg-slate-800;
+        @apply hover:bg-slate-100 hover:text-slate-500
+            focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-400/40
+            dark:hover:bg-slate-800 dark:hover:text-slate-400;
     }
 
     .ui-section-label__chevron {
-        @apply ml-auto h-3 w-3 shrink-0 text-slate-400 transition-transform dark:text-slate-500;
+        @apply ml-auto h-3 w-3 shrink-0 text-slate-300 transition-transform dark:text-slate-600;
     }
 
     nav > .ui-section-label:first-child {
