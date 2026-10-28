@@ -186,6 +186,9 @@ const remove = () => {
                         class="ui-input"
                         :placeholder="isDan ? 'Жишээ: УХ98010112' : 'И-мэйл, утас эсвэл нэвтрэх нэр'"
                     >
+                    <p v-if="saved && ! detail.saved_username" class="mt-1 text-xs text-amber-700">
+                        Сан түгжээтэй тул хадгалсан нэр харагдахгүй байна. Засах бол дахин бичнэ.
+                    </p>
                     <InputError :message="form.errors.username" class="mt-1" />
                 </div>
 
