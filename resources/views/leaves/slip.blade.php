@@ -21,6 +21,18 @@
         $cols = $copies >= 4 ? 2 : 1;
         $rows = (int) ceil($copies / max(1, $cols));
         $slipH = ($contentH - ($rows - 1) * $gapY) / max(1, $rows);
+        $slipW = ($contentW - ($cols - 1) * $gapX) / max(1, $cols);
+
+        /*
+         * Бичвэрийг өөрчлөхгүйгээр хуудастаа багтаана.
+         *
+         * Нэг хувийн талбай багасах тусам фонт жаахан жижигрэнэ — A5
+         * дээр ч, нэг A4-д 6 хувь байрлуулахад ч бичвэр таслагдахгүй.
+         */
+        $area = $slipH * $slipW;
+        $fontPt = max(7.5, min(10.5, round(sqrt($area) / 7.4, 1)));
+        $titlePt = round($fontPt + 0.5, 1);
+        $signPt = round($fontPt - 1, 1);
 
         $fill = function (?string $value, int $width) {
             $text = trim((string) $value);
@@ -86,6 +98,7 @@
         }
 
         .toolbar .primary { background: #1c55a5; border-color: #1c55a5; color: #fff; }
+        .toolbar .sep { color: #64748b; margin-left: 6px; }
         .toolbar .active { border-color: #1c55a5; font-weight: 700; }
 
         .sheet {
@@ -111,19 +124,20 @@
         }
 
         .slip h1 {
-            font-size: 11pt;
+            font-size: {{ $titlePt }}pt;
             font-weight: 700;
             text-align: center;
             margin: 0;
             letter-spacing: 0.02em;
         }
 
-        .slip .no { text-align: center; margin: 1mm 0 2mm; font-size: 10pt; }
+        .slip .no { text-align: center; margin: 1mm 0 2mm; font-size: {{ $fontPt }}pt; }
 
         .slip .body {
             margin: 0;
             text-align: justify;
-            line-height: 1.55;
+            line-height: 1.5;
+            font-size: {{ $fontPt }}pt;
             flex: 1;
         }
 
@@ -145,7 +159,7 @@
             gap: 4mm;
             margin-top: 3mm;
             line-height: 1.25;
-            font-size: 9.5pt;
+            font-size: {{ $signPt }}pt;
         }
 
         .sign .title {
@@ -169,9 +183,23 @@
 <body>
     <div class="toolbar">
         <button class="primary" onclick="window.print()">Хэвлэх</button>
-        <span>Нэг A4 хуудсанд:</span>
+
+        <span class="sep">Цаас:</span>
+        @foreach (['a4' => 'A4', 'a5' => 'A5'] as $value => $label)
+            <a href="{{ request()->fullUrlWithQuery(['paper' => $value]) }}"
+               class="{{ $paper === $value ? 'active' : '' }}">{{ $label }}</a>
+        @endforeach
+
+        <span class="sep">Чиглэл:</span>
+        @foreach (['portrait' => 'Босоо', 'landscape' => 'Хөндлөн'] as $value => $label)
+            <a href="{{ request()->fullUrlWithQuery(['orient' => $value]) }}"
+               class="{{ ($landscape ? 'landscape' : 'portrait') === $value ? 'active' : '' }}">{{ $label }}</a>
+        @endforeach
+
+        <span class="sep">Нэг хуудсанд:</span>
         @foreach ([1, 2, 4, 6] as $option)
-            <a href="{{ request()->fullUrlWithQuery(['copies' => $option]) }}" class="{{ $copies === $option ? 'active' : '' }}">{{ $option }}</a>
+            <a href="{{ request()->fullUrlWithQuery(['copies' => $option]) }}"
+               class="{{ $copies === $option ? 'active' : '' }}">{{ $option }}</a>
         @endforeach
     </div>
 

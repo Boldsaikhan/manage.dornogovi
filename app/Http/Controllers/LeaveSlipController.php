@@ -40,6 +40,8 @@ class LeaveSlipController extends Controller
         return view('leaves.slip', [
             'leave' => $leave,
             'copies' => $copies,
+            'paper' => $paper,
+            'landscape' => $landscape,
             'pageWidth' => $width,
             'pageHeight' => $height,
             'signerTitle' => $leave->signerTitle(),

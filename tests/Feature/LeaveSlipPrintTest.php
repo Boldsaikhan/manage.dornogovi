@@ -58,4 +58,61 @@ class LeaveSlipPrintTest extends TestCase
             ->assertOk()
             ->assertViewHas('copies', 2);
     }
+
+    public function test_a5_and_landscape_can_be_chosen(): void
+    {
+        $leave = $this->leave();
+
+        $this->actingAs($this->admin())
+            ->get(route('leaves.slip', $leave).'?paper=a5')
+            ->assertOk()
+            ->assertViewHas('pageWidth', 148)
+            ->assertViewHas('pageHeight', 210);
+
+        $this->actingAs($this->admin())
+            ->get(route('leaves.slip', $leave).'?paper=a5&orient=landscape')
+            ->assertOk()
+            ->assertViewHas('pageWidth', 210)
+            ->assertViewHas('pageHeight', 148);
+    }
+
+    public function test_the_toolbar_offers_paper_and_orientation(): void
+    {
+        $this->actingAs($this->admin())
+            ->get(route('leaves.slip', $this->leave()))
+            ->assertOk()
+            ->assertSee('Цаас:')
+            ->assertSee('Чиглэл:')
+            ->assertSee('Хөндлөн')
+            ->assertSee('A5');
+    }
+
+    public function test_the_text_shrinks_only_when_the_slip_gets_small(): void
+    {
+        $leave = $this->leave();
+
+        // Нэг A4-д нэг хувь — бүтэн хэмжээ.
+        $full = $this->actingAs($this->admin())
+            ->get(route('leaves.slip', $leave).'?copies=1')
+            ->assertOk();
+
+        // A5-д зургаан хувь — багтаахын тулд жижигрэнэ.
+        $tight = $this->actingAs($this->admin())
+            ->get(route('leaves.slip', $leave).'?paper=a5&copies=6')
+            ->assertOk();
+
+        $this->assertGreaterThan(
+            $this->bodyFontPt($tight->getContent()),
+            $this->bodyFontPt($full->getContent()),
+        );
+    }
+
+    /** `.slip .body` дотор бичигдсэн фонтын хэмжээ. */
+    private function bodyFontPt(string $html): float
+    {
+        preg_match('/\.slip \.body \{[^}]*font-size:\s*([\d.]+)pt/s', $html, $m);
+
+        return (float) ($m[1] ?? 0);
+    }
+
 }
