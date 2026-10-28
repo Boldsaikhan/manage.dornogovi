@@ -2,6 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
+import LoginSessionsCard from './Partials/LoginSessionsCard.vue';
 import { Head } from '@inertiajs/vue3';
 
 defineProps({
@@ -10,6 +11,10 @@ defineProps({
     },
     status: {
         type: String,
+    },
+    loginSessions: {
+        type: Array,
+        default: () => [],
     },
 });
 </script>
@@ -43,6 +48,8 @@ defineProps({
                 >
                     <UpdatePasswordForm class="max-w-xl" />
                 </div>
+
+                <LoginSessionsCard :sessions="loginSessions" />
 
             </div>
         </div>
