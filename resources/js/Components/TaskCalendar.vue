@@ -19,9 +19,19 @@ const props = defineProps({
 const emit = defineEmits(['focus-task', 'show-tasks', 'toggle-status']);
 
 /** Сарын мөрний баруун талд гарах хэрэгжилтийн шүүлтүүр. */
+const STATUS_ICONS = {
+    // Дууссан — чагт
+    done: 'M5 12.5l4.5 4.5L19 7.5',
+    // Эхлээгүй — цаг
+    pending: 'M12 7.5v4.75l3 1.75',
+    // Хэтэрсэн — анхааруулга
+    overdue: 'M12 8v5m0 3.5v.01M10.3 3.9L2.8 17a2 2 0 001.7 3h15a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z',
+};
+
 const statusChips = computed(() => [
     {
         key: 'done',
+        icon: STATUS_ICONS.done,
         label: 'Дууссан',
         count: props.stats.done ?? 0,
         active: 'bg-emerald-600 text-white',
@@ -29,6 +39,7 @@ const statusChips = computed(() => [
     },
     {
         key: 'pending',
+        icon: STATUS_ICONS.pending,
         label: 'Эхлээгүй',
         count: props.stats.pending ?? 0,
         active: 'bg-orange-500 text-white',
@@ -36,6 +47,7 @@ const statusChips = computed(() => [
     },
     {
         key: 'overdue',
+        icon: STATUS_ICONS.overdue,
         label: 'Хэтэрсэн',
         count: props.stats.overdue ?? 0,
         active: 'bg-red-600 text-white',
@@ -195,14 +207,12 @@ const showDay = (cell) => {
                     Өнөөдөр
                 </button>
 
-                <span class="rounded-full bg-brand-navy-50 px-3 py-1 text-xs font-semibold text-brand-navy-700">
-                    Нийт {{ props.tasks.length }} үүрэг
-                </span>
             </div>
         </div>
 
-        <!-- Сарын хавчуурга — тоо нь тухайн сард хамаарах үүргийн тоо -->
-        <div class="flex gap-1 overflow-x-auto border-b border-slate-200 bg-white px-2.5 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <!-- Сарын хавчуурга + баруун талд хэрэгжилтийн тоо -->
+        <div class="flex items-center gap-2 border-b border-slate-200 bg-white px-2.5 py-1">
+        <div class="flex min-w-0 flex-1 gap-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
                 v-for="entry in monthlySummary"
                 :key="'tab-' + entry.month"
@@ -225,6 +235,39 @@ const showDay = (cell) => {
                     {{ entry.ids.length }}
                 </span>
             </button>
+        </div>
+
+            <!-- Хэрэгжилт — icon + тоо -->
+            <div class="flex shrink-0 items-center gap-1">
+                <button
+                    v-for="chip in statusChips"
+                    :key="chip.key"
+                    type="button"
+                    class="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-bold transition"
+                    :class="statusFilter === chip.key
+                        ? chip.active + ' border-transparent shadow-sm'
+                        : chip.idle"
+                    :title="chip.label + ' — хүснэгтээр шүүх'"
+                    :aria-label="chip.label"
+                    @click="emit('toggle-status', chip.key)"
+                >
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                        <circle v-if="chip.key === 'pending'" cx="12" cy="12" r="8.5" stroke-width="1.8" />
+                        <path :d="chip.icon" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    {{ chip.count }}
+                </button>
+
+                <span
+                    class="inline-flex items-center gap-1 rounded-full border border-brand-navy-200 bg-brand-navy-50 px-2 py-1 text-xs font-bold text-brand-navy-700"
+                    :title="'Нийт ' + props.tasks.length + ' үүрэг'"
+                >
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6.5h16M4 12h16M4 17.5h10" />
+                    </svg>
+                    {{ props.tasks.length }}
+                </span>
+            </div>
         </div>
 
         <!-- Сонгосон сар — баруун талд хэрэгжилт -->
@@ -259,28 +302,6 @@ const showDay = (cell) => {
                     @click="shiftMonth(1)"
                 >
                     &rsaquo;
-                </button>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-1.5">
-                <button
-                    v-for="chip in statusChips"
-                    :key="chip.key"
-                    type="button"
-                    class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition"
-                    :class="statusFilter === chip.key
-                        ? chip.active + ' border-transparent shadow-sm'
-                        : chip.idle"
-                    :title="chip.label + ' — хүснэгтээр шүүх'"
-                    @click="emit('toggle-status', chip.key)"
-                >
-                    {{ chip.label }}
-                    <span
-                        class="rounded-full px-1.5 text-[11px] font-bold"
-                        :class="statusFilter === chip.key ? 'bg-white/20' : 'bg-white/70'"
-                    >
-                        {{ chip.count }}
-                    </span>
                 </button>
             </div>
         </div>
