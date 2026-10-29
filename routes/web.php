@@ -113,6 +113,8 @@ Route::middleware('auth')->group(function () {
     Route::patch('/phone-directory/reorder', [PhoneDirectoryController::class, 'reorder'])->name('phone-directory.reorder');
     Route::patch('/phone-directory/reorder-row', [PhoneDirectoryController::class, 'reorderRow'])->name('phone-directory.reorder-row');
     // Parameterized routes last — otherwise "category"/"export" match as {entry}.
+    Route::patch('/phone-directory/{entry}/field', [PhoneDirectoryController::class, 'updateField'])
+        ->name('phone-directory.field');
     Route::patch('/phone-directory/{entry}', [PhoneDirectoryController::class, 'update'])->name('phone-directory.update');
     Route::delete('/phone-directory/{entry}', [PhoneDirectoryController::class, 'destroy'])->name('phone-directory.destroy');
 

@@ -1,8 +1,9 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
+import SheetCell from '@/Components/SheetCell.vue';
 import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
 
@@ -454,6 +455,45 @@ const destroyRow = (id) => {
 
 const flash = computed(() => page.props.flash?.success ?? null);
 
+/* ── Мөр бүрийг нүдэн дээр нь шууд засах ───────────────────────────
+ *
+ * Засварын горимд нэр, албан тушаал, утаснуудыг нүд тус бүрээр нь
+ * засна — фокус алдмагц тэр талбар дангаараа хадгалагдана.
+ */
+const cellDrafts = reactive({});
+
+const syncCellDrafts = () => {
+    Object.keys(cellDrafts).forEach((key) => delete cellDrafts[key]);
+
+    (props.groups || []).forEach((group) => {
+        (group.rows || []).forEach((row) => {
+            cellDrafts[row.id] = {
+                person_name: row.person_name ?? '',
+                position: row.position ?? '',
+                office_phone: row.office_phone ?? '',
+                mobile_phone: row.mobile_phone ?? '',
+            };
+        });
+    });
+};
+
+syncCellDrafts();
+watch(() => props.groups, syncCellDrafts, { deep: true });
+
+const saveCell = (row, field) => {
+    const value = cellDrafts[row.id]?.[field] ?? '';
+
+    if (value === (row[field] ?? '')) {
+        return;
+    }
+
+    router.patch(
+        route('phone-directory.field', row.id),
+        { field, value },
+        { preserveScroll: true, preserveState: true },
+    );
+};
+
 const resetDirectoryForm = () => {
     form.reset();
     form.clearErrors();
@@ -791,14 +831,49 @@ const closeDirectoryForm = () => {
                                     >⠿</span>
                                     {{ index + 1 }}
                                 </td>
-                                <td>
-                                    <span class="ui-clamp-2" :title="row.person_name">{{ row.person_name }}</span>
+                                <td :class="editingActive ? 'ui-sheet-td' : ''">
+                                    <SheetCell
+                                        v-if="editingActive && cellDrafts[row.id]"
+                                        v-model="cellDrafts[row.id].person_name"
+                                        :editable="true"
+                                        placeholder="Овог нэр…"
+                                        @commit="() => saveCell(row, 'person_name')"
+                                    />
+                                    <span v-else class="ui-clamp-2" :title="row.person_name">{{ row.person_name }}</span>
                                 </td>
-                                <td>
-                                    <span class="ui-clamp-2" :title="row.position || ''">{{ row.position || '—' }}</span>
+                                <td :class="editingActive ? 'ui-sheet-td' : ''">
+                                    <SheetCell
+                                        v-if="editingActive && cellDrafts[row.id]"
+                                        v-model="cellDrafts[row.id].position"
+                                        multiline
+                                        :editable="true"
+                                        placeholder="Албан тушаал…"
+                                        @commit="() => saveCell(row, 'position')"
+                                    />
+                                    <span v-else class="ui-clamp-2" :title="row.position || ''">{{ row.position || '—' }}</span>
                                 </td>
-                                <td class="text-center">{{ row.office_phone || '—' }}</td>
-                                <td class="text-center">{{ row.mobile_phone || '—' }}</td>
+                                <td class="text-center" :class="editingActive ? 'ui-sheet-td' : ''">
+                                    <SheetCell
+                                        v-if="editingActive && cellDrafts[row.id]"
+                                        v-model="cellDrafts[row.id].office_phone"
+                                        align="center"
+                                        :editable="true"
+                                        placeholder="—"
+                                        @commit="() => saveCell(row, 'office_phone')"
+                                    />
+                                    <template v-else>{{ row.office_phone || '—' }}</template>
+                                </td>
+                                <td class="text-center" :class="editingActive ? 'ui-sheet-td' : ''">
+                                    <SheetCell
+                                        v-if="editingActive && cellDrafts[row.id]"
+                                        v-model="cellDrafts[row.id].mobile_phone"
+                                        align="center"
+                                        :editable="true"
+                                        placeholder="—"
+                                        @commit="() => saveCell(row, 'mobile_phone')"
+                                    />
+                                    <template v-else>{{ row.mobile_phone || '—' }}</template>
+                                </td>
                                 <td v-if="editingActive" class="text-right whitespace-nowrap">
                                     <button
                                         v-if="isAdmin"
