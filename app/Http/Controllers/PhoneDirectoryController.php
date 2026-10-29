@@ -234,6 +234,30 @@ class PhoneDirectoryController extends Controller
             ->with('success', 'Бүртгэл нэмэгдлээ.');
     }
 
+    /**
+     * Нэг нүдийг шууд засна — мөр бүрийг тусад нь засварлах боломж.
+     */
+    public function updateField(Request $request, PhoneDirectoryEntry $entry): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
+
+        $data = $request->validate([
+            'field' => ['required', Rule::in(['person_name', 'position', 'office_phone', 'mobile_phone'])],
+            'value' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $value = trim((string) ($data['value'] ?? ''));
+
+        // Нэр хоосон үлдэж болохгүй — жагсаалтад танигдахаа болино.
+        if ($data['field'] === 'person_name' && $value === '') {
+            return back(303)->with('error', 'Овог нэр хоосон байж болохгүй.');
+        }
+
+        $entry->update([$data['field'] => $value !== '' ? $value : null]);
+
+        return back(303);
+    }
+
     public function update(Request $request, PhoneDirectoryEntry $entry): RedirectResponse
     {
         abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
