@@ -158,10 +158,13 @@ class PhoneDirectoryController extends Controller
             'office_phone' => ['nullable', 'string', 'max:64'],
             'mobile_phone' => ['nullable', 'string', 'max:64'],
             'before_org_name' => ['nullable', 'string', 'max:255'],
+            // Заасан мөрийн ЯГ ӨМНӨ оруулна (хоосон бол бүлгийн ард).
+            'before_id' => ['nullable', 'integer'],
         ]);
 
         $beforeOrg = trim((string) ($data['before_org_name'] ?? ''));
-        unset($data['before_org_name']);
+        $beforeId = $data['before_id'] ?? null;
+        unset($data['before_org_name'], $data['before_id']);
 
         if (($data['category'] ?? '') === '') {
             // Формоос «Сонголтгүй» — байгууллагын одоогийн ангиллыг авна (байхгүй бол null).
@@ -198,6 +201,30 @@ class PhoneDirectoryController extends Controller
 
         $data['org_order'] = (int) ((clone $sibling)->value('org_order')
             ?? (PhoneDirectoryEntry::query()->max('org_order') + 1));
+
+        // Мөр хоорондуур оруулах — доод мөрүүдийг нэгээр ухраана.
+        $anchor = $beforeId
+            ? PhoneDirectoryEntry::query()
+                ->where('org_name', $data['org_name'])
+                ->whereKey($beforeId)
+                ->first()
+            : null;
+
+        if ($anchor) {
+            DB::transaction(function () use ($data, $anchor) {
+                PhoneDirectoryEntry::query()
+                    ->where('org_name', $data['org_name'])
+                    ->where('sort_order', '>=', (int) $anchor->sort_order)
+                    ->increment('sort_order');
+
+                PhoneDirectoryEntry::create($data + ['sort_order' => (int) $anchor->sort_order]);
+            });
+
+            return redirect()
+                ->route('phone-directory.index')
+                ->with('success', 'Бүртгэл нэмэгдлээ.');
+        }
+
         $data['sort_order'] = (int) (clone $sibling)->max('sort_order') + 1;
 
         PhoneDirectoryEntry::create($data);
