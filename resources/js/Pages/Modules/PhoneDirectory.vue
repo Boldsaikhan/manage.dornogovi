@@ -500,6 +500,7 @@ const resetDirectoryForm = () => {
     editingId.value = null;
 };
 
+// Хамгийн ард шинэ хүснэгт (байгууллага/хэлтэс) үүсгэнэ.
 const openAdd = () => {
     resetDirectoryForm();
     showForm.value = true;
@@ -641,18 +642,6 @@ const closeDirectoryForm = () => {
                         </svg>
                     </button>
 
-                    <button
-                        v-if="editingActive"
-                        type="button"
-                        class="ui-icon-btn bg-brand-orange-500 text-white hover:bg-brand-orange-600"
-                        title="Шинэ бүртгэл нэмэх"
-                        aria-label="Нэмэх"
-                        @click="openAdd"
-                    >
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" d="M12 5v14M5 12h14" />
-                        </svg>
-                    </button>
                 </div>
 
             </div>
