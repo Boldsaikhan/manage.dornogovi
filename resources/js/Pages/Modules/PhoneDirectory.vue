@@ -35,6 +35,8 @@ const form = useForm({
     mobile_phone: '',
     // Хоосон биш бол шинэ хүснэгтийг тухайн бүлгийн ӨМНӨ байрлуулна.
     before_org_name: '',
+    // Хоосон биш бол шинэ мөрийг тухайн мөрийн ЯГ ӨМНӨ байрлуулна.
+    before_id: '',
 });
 
 /* ---------- Сонголт: хайлтын үр дүнгээс сонгоод Word-оор татах ---------- */
@@ -470,6 +472,15 @@ const openAddRow = (group) => {
     showForm.value = true;
 };
 
+// Хоёр мөрийн хооронд шинэ албан хаагч оруулна (before нь хоосон бол ард нь).
+const openInsertRow = (group, beforeRow = null) => {
+    resetDirectoryForm();
+    form.org_name = group.org_name;
+    form.category = group.category || '';
+    form.before_id = beforeRow ? String(beforeRow.id) : '';
+    showForm.value = true;
+};
+
 // Хоёр бүлгийн хооронд шинэ хүснэгт (байгууллага/хэлтэс) оруулна.
 const openInsertGroup = (beforeGroup) => {
     resetDirectoryForm();
@@ -607,7 +618,7 @@ const closeDirectoryForm = () => {
 
             <!-- Tab 1: directory -->
             <div v-if="isDirectory" class="ui-table-wrap overflow-x-auto">
-                <table class="ui-table min-w-[720px]">
+                <table class="ui-table ui-table--sticky-head min-w-[720px]">
                     <thead>
                         <tr>
                             <th class="w-10 text-center">
@@ -741,9 +752,20 @@ const closeDirectoryForm = () => {
                                     </button>
                                 </td>
                             </tr>
+                            <template v-for="(row, index) in group.rows" :key="'r-' + row.id">
+                            <tr v-if="canInsert" class="group/row">
+                                <td :colspan="editingActive ? 7 : 6" class="!border-0 !py-0">
+                                    <button
+                                        type="button"
+                                        class="flex w-full items-center justify-center gap-1 rounded py-0.5 text-[11px] font-medium text-brand-navy-600 opacity-0 transition hover:bg-brand-navy-50 focus:opacity-100 group-hover/row:opacity-100"
+                                        title="Энэ мөрийн дээр шинэ албан хаагч нэмэх"
+                                        @click="openInsertRow(group, row)"
+                                    >
+                                        ＋ энд мөр нэмэх
+                                    </button>
+                                </td>
+                            </tr>
                             <tr
-                                v-for="(row, index) in group.rows"
-                                :key="row.id"
                                 :class="[
                                     isDraggingRow && dragging.id === row.id ? 'opacity-40' : '',
                                     dropToken === 'row:' + row.id ? 'outline outline-2 -outline-offset-2 outline-brand-navy-500' : '',
@@ -806,6 +828,21 @@ const closeDirectoryForm = () => {
                                     </span>
                                     <button type="button" class="ui-btn-ghost mr-1 !py-1 text-xs" @click="openEdit(row, group)">Засах</button>
                                     <button type="button" class="ui-btn-danger !py-1 text-xs" @click="destroyRow(row.id)">Устгах</button>
+                                </td>
+                            </tr>
+                            </template>
+
+                            <!-- Бүлгийн хамгийн доор — ард нь мөр нэмэх -->
+                            <tr v-if="canInsert" class="group/row">
+                                <td :colspan="editingActive ? 7 : 6" class="!border-0 !py-0">
+                                    <button
+                                        type="button"
+                                        class="flex w-full items-center justify-center gap-1 rounded py-0.5 text-[11px] font-medium text-brand-navy-600 opacity-0 transition hover:bg-brand-navy-50 focus:opacity-100 group-hover/row:opacity-100"
+                                        title="Энэ хэлтсийн ард шинэ албан хаагч нэмэх"
+                                        @click="openInsertRow(group)"
+                                    >
+                                        ＋ энд мөр нэмэх
+                                    </button>
                                 </td>
                             </tr>
                             <tr
