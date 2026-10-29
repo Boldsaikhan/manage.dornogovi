@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import Modal from '@/Components/Modal.vue';
 import InputError from '@/Components/InputError.vue';
 
@@ -617,7 +618,7 @@ const closeDirectoryForm = () => {
             </div>
 
             <!-- Tab 1: directory -->
-            <div v-if="isDirectory" class="ui-table-wrap overflow-x-auto">
+            <TableScrollViewport v-if="isDirectory">
                 <table class="ui-table ui-table--sticky-head min-w-[720px]">
                     <thead>
                         <tr>
@@ -888,7 +889,7 @@ const closeDirectoryForm = () => {
                         </tr>
                     </tbody>
                 </table>
-            </div>
+            </TableScrollViewport>
         </div>
 
         <!-- Modal: нэвтрэх нэр, нууц үг -->

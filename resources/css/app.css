@@ -126,6 +126,21 @@
         @apply ui-card overflow-hidden;
     }
 
+    /*
+     * Хүснэгтийг гүйлгэхэд баганын нэр дээрээ үлдэнэ.
+     *
+     * Гүйдэг хүрээ нь `TableScrollViewport` тул наалдах цэг нь түүний
+     * дээд ирмэг (top: 0). Наалдсан нүдний хүрээг хөтөч зурдаггүй тул
+     * доод ирмэгийг дотоод сүүдрээр өгнө.
+     */
+    .ui-table--sticky-head thead th {
+        position: sticky;
+        top: 0;
+        z-index: 14;
+        @apply bg-brand-navy-50 dark:bg-slate-800;
+        box-shadow: inset 0 -2px 0 theme('colors.brand-navy.200');
+    }
+
     .ui-table {
         @apply w-full min-w-full border-collapse text-sm;
     }
