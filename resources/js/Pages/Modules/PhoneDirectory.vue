@@ -794,18 +794,6 @@ const closeDirectoryForm = () => {
                                 </td>
                             </tr>
                             <template v-for="(row, index) in group.rows" :key="'r-' + row.id">
-                            <tr v-if="canInsert" class="group/row">
-                                <td :colspan="editingActive ? 7 : 6" class="!border-0 !py-0">
-                                    <button
-                                        type="button"
-                                        class="flex w-full items-center justify-center gap-1 rounded py-0.5 text-[11px] font-medium text-brand-navy-600 opacity-0 transition hover:bg-brand-navy-50 focus:opacity-100 group-hover/row:opacity-100"
-                                        title="Энэ мөрийн дээр шинэ албан хаагч нэмэх"
-                                        @click="openInsertRow(group, row)"
-                                    >
-                                        ＋ энд мөр нэмэх
-                                    </button>
-                                </td>
-                            </tr>
                             <tr
                                 :class="[
                                     isDraggingRow && dragging.id === row.id ? 'opacity-40' : '',
@@ -874,53 +862,110 @@ const closeDirectoryForm = () => {
                                     />
                                     <template v-else>{{ row.mobile_phone || '—' }}</template>
                                 </td>
-                                <td v-if="editingActive" class="text-right whitespace-nowrap">
-                                    <button
-                                        v-if="isAdmin"
-                                        type="button"
-                                        class="mr-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 hover:border-brand-navy-300 hover:bg-slate-50"
-                                        :title="row.account
-                                            ? 'Нэвтрэх нэр, нууц үгийг шинэчлэх'
-                                            : 'Нэвтрэх эрх үүсээгүй байна'"
-                                        @click="openAccount(row)"
-                                    >
-                                        {{ row.account ? '🔑' : '🔒' }}
-                                    </button>
-                                    <span v-if="canInsert" class="mr-1 inline-flex align-middle">
+                                <td v-if="editingActive" class="whitespace-nowrap text-right">
+                                    <span class="inline-flex items-center gap-0.5">
+                                        <button
+                                            v-if="isAdmin"
+                                            type="button"
+                                            class="ui-icon-btn !h-7 !w-7"
+                                            :title="row.account
+                                                ? 'Нэвтрэх нэр, нууц үгийг шинэчлэх'
+                                                : 'Нэвтрэх эрх үүсээгүй байна'"
+                                            :aria-label="row.account ? 'Нууц үг шинэчлэх' : 'Нэвтрэх эрх'"
+                                            @click="openAccount(row)"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                <path
+                                                    v-if="row.account"
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M15 7a4 4 0 11-3.1 6.5L8 17.4V20H5v-3l6.5-6.5A4 4 0 0115 7z"
+                                                />
+                                                <path
+                                                    v-else
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M7 10.5V8a5 5 0 1110 0v2.5M6 10.5h12v9H6v-9z"
+                                                />
+                                            </svg>
+                                        </button>
+
+                                        <template v-if="canInsert">
+                                            <button
+                                                type="button"
+                                                class="ui-icon-btn !h-7 !w-7 disabled:opacity-30"
+                                                :disabled="index === 0"
+                                                title="Дээш зөөх"
+                                                aria-label="Дээш зөөх"
+                                                @click="moveRowBy(group, index, -1)"
+                                            >
+                                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0l-6 6m6-6l6 6" />
+                                                </svg>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="ui-icon-btn !h-7 !w-7 disabled:opacity-30"
+                                                :disabled="index === group.rows.length - 1"
+                                                title="Доош зөөх"
+                                                aria-label="Доош зөөх"
+                                                @click="moveRowBy(group, index, 1)"
+                                            >
+                                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m0 0l6-6m-6 6l-6-6" />
+                                                </svg>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                class="ui-icon-btn !h-7 !w-7"
+                                                title="Энэ мөрийн ДЭЭР шинэ мөр нэмэх"
+                                                aria-label="Дээр нь мөр нэмэх"
+                                                @click="openInsertRow(group, row)"
+                                            >
+                                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v8m0 0l-3-3m3 3l3-3M4 15h16M4 19h16" />
+                                                </svg>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="ui-icon-btn !h-7 !w-7"
+                                                title="Энэ мөрийн ДООР шинэ мөр нэмэх"
+                                                aria-label="Доор нь мөр нэмэх"
+                                                @click="openInsertRow(group, group.rows[index + 1] || null)"
+                                            >
+                                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 5h16M4 9h16m-8 4v8m0 0l-3-3m3 3l3-3" />
+                                                </svg>
+                                            </button>
+                                        </template>
+
                                         <button
                                             type="button"
-                                            class="rounded-l-lg border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-30"
-                                            :disabled="index === 0"
-                                            title="Дээш зөөх"
-                                            @click="moveRowBy(group, index, -1)"
-                                        >↑</button>
+                                            class="ui-icon-btn !h-7 !w-7"
+                                            title="Дэлгэрэнгүй засах (хэлтэс, ангилал)"
+                                            aria-label="Засах"
+                                            @click="openEdit(row, group)"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 20h4l10-10a2.1 2.1 0 10-3-3L5 17v3z" />
+                                            </svg>
+                                        </button>
                                         <button
                                             type="button"
-                                            class="-ml-px rounded-r-lg border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-30"
-                                            :disabled="index === group.rows.length - 1"
-                                            title="Доош зөөх"
-                                            @click="moveRowBy(group, index, 1)"
-                                        >↓</button>
+                                            class="ui-icon-btn ui-icon-btn--danger !h-7 !w-7"
+                                            title="Мөрийг устгах"
+                                            aria-label="Устгах"
+                                            @click="destroyRow(row.id)"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13" />
+                                            </svg>
+                                        </button>
                                     </span>
-                                    <button type="button" class="ui-btn-ghost mr-1 !py-1 text-xs" @click="openEdit(row, group)">Засах</button>
-                                    <button type="button" class="ui-btn-danger !py-1 text-xs" @click="destroyRow(row.id)">Устгах</button>
                                 </td>
                             </tr>
                             </template>
-
-                            <!-- Бүлгийн хамгийн доор — ард нь мөр нэмэх -->
-                            <tr v-if="canInsert" class="group/row">
-                                <td :colspan="editingActive ? 7 : 6" class="!border-0 !py-0">
-                                    <button
-                                        type="button"
-                                        class="flex w-full items-center justify-center gap-1 rounded py-0.5 text-[11px] font-medium text-brand-navy-600 opacity-0 transition hover:bg-brand-navy-50 focus:opacity-100 group-hover/row:opacity-100"
-                                        title="Энэ хэлтсийн ард шинэ албан хаагч нэмэх"
-                                        @click="openInsertRow(group)"
-                                    >
-                                        ＋ энд мөр нэмэх
-                                    </button>
-                                </td>
-                            </tr>
                             <tr
                                 v-if="canInsert && dragging"
                                 :data-drop="'end:' + group.org_name"
