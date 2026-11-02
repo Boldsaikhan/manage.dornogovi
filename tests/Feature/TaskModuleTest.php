@@ -92,6 +92,24 @@ class TaskModuleTest extends TestCase
         $this->assertSame('Б.Дулмаа', $task->fresh()->responsible);
     }
 
+    public function test_clearing_the_task_text_is_stored_as_an_empty_string(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $source = TaskSource::where('key', TaskSource::KEY_DIRECTIVE)->firstOrFail();
+        $task = Task::create([
+            'task_source_id' => $source->id,
+            'text' => 'Арилгах үүрэг',
+            'sort_order' => 1,
+            'progress' => 0,
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('tasks.update', $task), ['text' => ''])
+            ->assertRedirect();
+
+        $this->assertSame('', $task->fresh()->text);
+    }
+
     public function test_admin_can_upload_and_download_word_document(): void
     {
         Storage::fake('local');
