@@ -365,6 +365,42 @@ PROMPT;
      */
     private function humanizeTool(string $tool, array $data): string
     {
+        if ($tool === 'check_document_draft') {
+            $lines = [(string) ($data['headline'] ?? 'Бичиг хэргийн стандартын шалгалт')];
+            $findings = $data['findings'] ?? [];
+            if ($findings === []) {
+                $lines[] = 'Хадгалсан хүчинтэй дүрмээр илэрхий зөрчил илрээгүй.';
+            } else {
+                $lines[] = 'Илэрхий зөрчил:';
+                foreach ($findings as $row) {
+                    $lines[] = '• '.($row['clause'] ?? '').' — '.($row['message'] ?? '');
+                }
+            }
+            if (! empty($data['checklist'])) {
+                $lines[] = 'Тухайн төрөлд мөрдөх бүрдэл:';
+                foreach ($data['checklist'] as $row) {
+                    $lines[] = '• '.($row['clause'] ?? '').' — '.($row['message'] ?? '');
+                }
+            }
+            if (! empty($data['note'])) {
+                $lines[] = (string) $data['note'];
+            }
+
+            return implode("\n", $lines);
+        }
+
+        if ($tool === 'list_document_standards') {
+            $lines = [(string) ($data['headline'] ?? 'Бичиг хэргийн стандарт')];
+            foreach ($data['items'] ?? [] as $i => $item) {
+                $lines[] = ($i + 1).'. '.($item['title'] ?? '').' — '.($item['code'] ?? '').', '.($item['status_label'] ?? '').', '.($item['source'] ?? '');
+            }
+            if (($data['items'] ?? []) === []) {
+                $lines[] = 'Харуулах стандарт алга.';
+            }
+
+            return implode("\n", $lines);
+        }
+
         if ($tool === 'get_dashboard_briefing') {
             $lines = [(string) ($data['title'] ?? 'Товч мэдээлэл')];
             foreach ($data['items'] ?? [] as $item) {

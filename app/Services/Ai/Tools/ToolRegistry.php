@@ -23,6 +23,7 @@ class ToolRegistry
         private TaskTools $tasks,
         private LeaveTools $leaves,
         private DocumentTools $documents,
+        private DocumentStandardTools $standards,
         private AiSettings $settings,
     ) {
         $this->register('get_dashboard_briefing', null, fn (User $u, array $a) => $this->system->dashboardBriefing($u, $a));
@@ -50,6 +51,9 @@ class ToolRegistry
         $this->register('search_meetings', 'meetings', fn (User $u, array $a) => $this->documents->searchMeetings($u, $a));
         $this->register('search_reports', 'reports', fn (User $u, array $a) => $this->documents->searchReports($u, $a));
         $this->register('get_my_business_trips', 'assignments', fn (User $u, array $a) => $this->documents->myTrips($u, $a));
+
+        $this->register('check_document_draft', 'doc_standards', fn (User $u, array $a) => $this->standards->check($u, $a));
+        $this->register('list_document_standards', 'doc_standards', fn (User $u, array $a) => $this->standards->list($u, $a));
     }
 
     public function register(
