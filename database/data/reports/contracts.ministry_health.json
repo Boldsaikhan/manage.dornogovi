@@ -1,0 +1,1659 @@
+{
+    "report_key": "contracts.ministry_health",
+    "source_file": "19.Эрүүл мэндийн сайд - 2026_.docx",
+    "sheet": null,
+    "imported_at": "2026-11-02T09:37:10+01:00",
+    "row_count": 165,
+    "rows": [
+        {
+            "no": "1",
+            "document": "",
+            "count": "",
+            "goal": "Артерийн даралт ихсэх өвчний эрт илрүүлэгт хамрагдсан 18 ба түүнээс дээшнасны хүн амын эзлэх хувь",
+            "measure": "",
+            "clause": "",
+            "progress": "91.0\n93.1",
+            "note": "79.8"
+        },
+        {
+            "no": "2",
+            "document": "",
+            "count": "",
+            "goal": "Чихрийн шижин хэв шинж-2 өвчний эрт илрүүлэгт хамрагдсан 35 ба түүнээсдээш насны хүн амын эзлэх хувь",
+            "measure": "",
+            "clause": "",
+            "progress": "95.9\n98.0",
+            "note": "86.9"
+        },
+        {
+            "no": "3",
+            "document": "",
+            "count": "",
+            "goal": "Хөхний өмөнгийн эрт илрүүлэгт хамрагдсан 30 ба түүнээс дээш насныэмэгтэйчүүдийн тоо",
+            "measure": "",
+            "clause": "",
+            "progress": "14923\n15340",
+            "note": "14727"
+        },
+        {
+            "no": "4",
+            "document": "",
+            "count": "",
+            "goal": "Умайн хүзүүний өмөнгийн эрт илрүүлэгт хамрагдсан 30 ба гүүнээс дээшнасны эмэгтэйчүүдийн эзлэх хувь",
+            "measure": "",
+            "clause": "",
+            "progress": "42.7\n44.0",
+            "note": "42.4"
+        },
+        {
+            "no": "5",
+            "document": "",
+            "count": "",
+            "goal": "Урьдчилан сэргийлэх үзлэгийн хувь",
+            "measure": "",
+            "clause": "",
+            "progress": "29.0\n29.7",
+            "note": "25.0"
+        },
+        {
+            "no": "6",
+            "document": "",
+            "count": "",
+            "goal": "В вируст хепатитийн эсрэг сэргийлэх тарилгын 24 цагийн хамралтын хувь*",
+            "measure": "",
+            "clause": "",
+            "progress": "96.4\n98.2",
+            "note": "97.6"
+        },
+        {
+            "no": "7",
+            "document": "",
+            "count": "",
+            "goal": "Тавт (сахуу, хөхүүл ханиад, татран, В хепатит, хемофилюсинфлюенза)сэргийлэх тарилгын хамралтын хувь /3-р тун/*",
+            "measure": "",
+            "clause": "",
+            "progress": "96.4\n98.1",
+            "note": "90.7"
+        },
+        {
+            "no": "8",
+            "document": "",
+            "count": "",
+            "goal": "Улаанбурхан-гахайн хавдар-улаануудын (УГУ) эсрэг сэргийлэх тарилгынхамралтын хувь /2-р түн/*",
+            "measure": "",
+            "clause": "",
+            "progress": "98.0\n100.1",
+            "note": "85.7"
+        },
+        {
+            "no": "9",
+            "document": "",
+            "count": "",
+            "goal": "Эхийн эндэгдлийн тувшин (100 000 амьд төрөлт тутамд)",
+            "measure": "",
+            "clause": "",
+            "progress": "116.0\n112.8",
+            "note": "0.0"
+        },
+        {
+            "no": "10",
+            "document": "",
+            "count": "",
+            "goal": "Нялхсын эндэгдлийн түвшин (1000 амьд төрөлт тутамд)",
+            "measure": "",
+            "clause": "",
+            "progress": "15.1\n14.7",
+            "note": "10.9"
+        },
+        {
+            "no": "11",
+            "document": "",
+            "count": "",
+            "goal": "Нярайн эндэгдлийн тувшин (1000 амьд төрөлт тутамд)",
+            "measure": "",
+            "clause": "",
+            "progress": "10.4\n10.1",
+            "note": "6.9"
+        },
+        {
+            "no": "12",
+            "document": "",
+            "count": "",
+            "goal": "5 хүртэлх насны хүүхдийн эндэгдлийн түвшин (1000 амьд төрөлт тутамд)",
+            "measure": "",
+            "clause": "",
+            "progress": "19.7\n19.1",
+            "note": "15.9"
+        },
+        {
+            "no": "13",
+            "document": "",
+            "count": "",
+            "goal": "Амьгуй төрөлтийн түвшин (1000 төрөлт тутамд)",
+            "measure": "",
+            "clause": "",
+            "progress": "4.6\n4.5",
+            "note": "2.0"
+        },
+        {
+            "no": "14",
+            "document": "",
+            "count": "",
+            "goal": "Жирэмсний эхний 3 сард хяналтад орсон эхийн эзлэх хувь",
+            "measure": "",
+            "clause": "",
+            "progress": "89.9\n92.0",
+            "note": "87.9"
+        },
+        {
+            "no": "15",
+            "document": "",
+            "count": "",
+            "goal": "Өсвөр насны 1000 эмэгтэйд ногдох төрөлтийн түвшин",
+            "measure": "",
+            "clause": "",
+            "progress": "6.3\n6.1",
+            "note": "6.9"
+        },
+        {
+            "no": "16",
+            "document": "",
+            "count": "",
+            "goal": "Сүрьеэгийн өвчлөлийн түвшин, 10 000 хүн амд",
+            "measure": "",
+            "clause": "",
+            "progress": "6.7\n6.5",
+            "note": "6.4"
+        },
+        {
+            "no": "17",
+            "document": "",
+            "count": "",
+            "goal": "Вирүст хепатитын өвчлөлийн түвшин, 10 000 хүнд",
+            "measure": "",
+            "clause": "",
+            "progress": "0.4\n0.4",
+            "note": "0.4"
+        },
+        {
+            "no": "18",
+            "document": "",
+            "count": "",
+            "goal": "Зүрх судасны өвчний шалтгаант нас баралтын түвшин, 10 000 хүнд",
+            "measure": "",
+            "clause": "",
+            "progress": "11.6\n11.2",
+            "note": "9.2"
+        },
+        {
+            "no": "19",
+            "document": "",
+            "count": "",
+            "goal": "Хорт хавдарын шалттаант нас баралтын түвшин, 10 000 хүнд",
+            "measure": "",
+            "clause": "",
+            "progress": "13.5\n13.1",
+            "note": "15.1"
+        },
+        {
+            "no": "20",
+            "document": "",
+            "count": "",
+            "goal": "Амиа хорлож нас барсан тохиолдлын түвшин, 10 000 хүнд",
+            "measure": "",
+            "clause": "",
+            "progress": "2.7\n2.6",
+            "note": "2.2"
+        },
+        {
+            "no": "21",
+            "document": "",
+            "count": "",
+            "goal": "Санамсаргүй хордох, хорт бодист өртсөнөөс шалтгаалсан нас баралтынтүвшин, 10 000 хүнд /Х40-Х49/",
+            "measure": "",
+            "clause": "",
+            "progress": "3.1\n3.0",
+            "note": "2.7"
+        },
+        {
+            "no": "22",
+            "document": "",
+            "count": "",
+            "goal": "0-5 насны хүүхдийн түлэгдэлтийн түвшин, (10 000 хүүхдэд, Т20-Т32)",
+            "measure": "",
+            "clause": "",
+            "progress": "81.3\n79.4",
+            "note": "74.2"
+        },
+        {
+            "no": "23",
+            "document": "",
+            "count": "",
+            "goal": "Хүүхдийн зам тээврийн ослын шалтгаант нас баралтын түвшин, (10 000хүухдэд. \\/00-\\/99)",
+            "measure": "",
+            "clause": "",
+            "progress": "0.5\n0.5",
+            "note": "2.2"
+        },
+        {
+            "no": "Нэмэлт",
+            "document": "",
+            "count": "",
+            "goal": "",
+            "measure": "",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "24",
+            "document": "",
+            "count": "",
+            "goal": "Чихрийн шижингийн шалтгаант нас баралтын түвшин, 10000 хүнд",
+            "measure": "",
+            "clause": "",
+            "progress": "1.7\n1.6",
+            "note": "2.2"
+        },
+        {
+            "no": "25",
+            "document": "",
+            "count": "",
+            "goal": "Амьсгалын замын архаг өвчний шалттаант нас баралтын түвшин, 10000 хүнд",
+            "measure": "",
+            "clause": "",
+            "progress": "5.2\n5",
+            "note": "4.9"
+        },
+        {
+            "no": "26",
+            "document": "",
+            "count": "",
+            "goal": "Сэргийлэх боломжтой эмнэлгийн бус нас баралтын нийт нас баралтад эзлэххувь",
+            "measure": "",
+            "clause": "",
+            "progress": "61.7\n60.2",
+            "note": "62.3"
+        },
+        {
+            "no": "27",
+            "document": "",
+            "count": "",
+            "goal": "Халдварт өвчний тохиолдлын тоо, 10000 хүнд",
+            "measure": "",
+            "clause": "",
+            "progress": "144.9\n141",
+            "note": "139.5"
+        },
+        {
+            "no": "28",
+            "document": "",
+            "count": "",
+            "goal": "Бүх хэлбэрийн сүрьеэгийн эмчилгээний амжилтын хувь",
+            "measure": "",
+            "clause": "",
+            "progress": "90.2\n94.0",
+            "note": "93.4"
+        },
+        {
+            "no": "29",
+            "document": "",
+            "count": "",
+            "goal": "Үр хөндөлтийн харьцаа, 1000 амьд төрөлтөд ногдох",
+            "measure": "",
+            "clause": "",
+            "progress": "322.5\n315.6",
+            "note": "331.3"
+        },
+        {
+            "no": "30",
+            "document": "",
+            "count": "",
+            "goal": "Жирэмсний хугацаанд 6 ба түүнээс дээш удаа хяналтад хамрагдсанэмэгтэйчүүдийн хувь",
+            "measure": "",
+            "clause": "",
+            "progress": "88.4\n90.6",
+            "note": "84.9"
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "2026 онытөсөв",
+            "goal": "",
+            "measure": "БАЙГУУЛЛАГА",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "2,545,276.0",
+            "goal": "",
+            "measure": "Дорноговь",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "2,545,276.0",
+            "goal": "",
+            "measure": "НИЙТ ЗАРЛАГА ба ЦЭВЭР ЗЭЭЛИЙН ДҮН",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "2,545,276.0",
+            "goal": "",
+            "measure": "УРСГАЛ ЗАРДАЛ",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "1,158,933.5",
+            "goal": "",
+            "measure": "БАРАА, ҮЙЛЧИЛГЭЭНИЙ ЗАРДАЛ",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "934,061.5",
+            "goal": "",
+            "measure": "Цалин, хөлс болон нэмэгдэл урамшил",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "527,509.1",
+            "goal": "",
+            "measure": "Үндсэн цалин",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "255,374.0",
+            "goal": "",
+            "measure": "Нэмэгдэл",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "63,260.2",
+            "goal": "",
+            "measure": "Унаа хоолны Хөнгөлөлт",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "87,918.2",
+            "goal": "",
+            "measure": "Урамшуулал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "116,757.6",
+            "goal": "",
+            "measure": "Ажил олгогчоос нийгмийн даатгалд төлөх шимтгэл",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "79,395.2",
+            "goal": "",
+            "measure": "Тэтгэврийн даатгал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "9,340.6",
+            "goal": "",
+            "measure": "Тэтгэмжийн даатгал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "4,670.3",
+            "goal": "",
+            "measure": "ҮОМШ-ний даатгал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "4,670.3",
+            "goal": "",
+            "measure": "Ажилгүйдлийн даатгал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "18,681.2",
+            "goal": "",
+            "measure": "Эрүүл мэндийн даатгал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "51,145.7",
+            "goal": "",
+            "measure": "Байр ашиглалттай холбоотой тогтмол зардал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "10,663.3",
+            "goal": "",
+            "measure": "Гэрэл, цахилгаан",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "34,277.6",
+            "goal": "",
+            "measure": "Түлш, халаалт",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "6,204.8",
+            "goal": "",
+            "measure": "Цэвэр, бохир ус",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "33,869.5",
+            "goal": "",
+            "measure": "Хангамж, бараа материалын зардал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "3,424.3",
+            "goal": "",
+            "measure": "Бичиг хэрэг",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "21,339.3",
+            "goal": "",
+            "measure": "Тээвэр, шатахуун",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "8,018.2",
+            "goal": "",
+            "measure": "Шуудан, холбоо, интернэтийн төлбөр",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "351.8\n735.9",
+            "goal": "",
+            "measure": "Хог хаягдал зайлуулах, хортон мэрэгчдийн устгал, арБага үнэтэй, түргэн элэгдэх, ахуйн эд зүйлс",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "1,769.5",
+            "goal": "",
+            "measure": "Нормативт зардал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "879.0",
+            "goal": "",
+            "measure": "Эм, бэлдмэл, эмнэлгийн хэрэгсэл",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "890.5",
+            "goal": "",
+            "measure": "Нормын хувцас, зөөлөн эдлэл",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "2,115.9",
+            "goal": "",
+            "measure": "Эд хогшил, урсгал засварын зардал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "428.0",
+            "goal": "",
+            "measure": "Багаж, техник, хэрэгсэл",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "952.1",
+            "goal": "",
+            "measure": "Хөдөлмөр хамгааллын хэрэглэл",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "735.8",
+            "goal": "",
+            "measure": "Урсгал засвар",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "8,560.6",
+            "goal": "",
+            "measure": "Томилолт, зочны зардал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "8,560.6",
+            "goal": "",
+            "measure": "Дотоод албан томилолт",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "5,484.6",
+            "goal": "",
+            "measure": "Нийтлэг ажил, үйлчилгээний төлбөр, хураамж",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "1,027.3",
+            "goal": "",
+            "measure": "Даатгалын үйлчилгээ",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "231.1",
+            "goal": "",
+            "measure": "Тээврийн хэрэгслийн татвар, оношилгоо",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "2,778.0",
+            "goal": "",
+            "measure": "Мэдээллийн технологийн үйлчилгээ",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "164.1",
+            "goal": "",
+            "measure": "Нийтлэг үйлчилгээний төлбөр, хураамж",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "1,284.1",
+            "goal": "",
+            "measure": "Хувийн хэвшлээр гүйцэтгүүлэх үйлчилгээ",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "5,168.6",
+            "goal": "",
+            "measure": "Бараа үйлчилгээний бусад зардал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "4,312.5",
+            "goal": "",
+            "measure": "Бараа үйлчилгээний бусад зардал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "856.1",
+            "goal": "",
+            "measure": "Сургалт, дадлага, бэлтгэлийн зардал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "1,386,342.5",
+            "goal": "",
+            "measure": "УРСГАЛ ШИЛЖҮҮЛЭГ",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "1,386,342.5",
+            "goal": "",
+            "measure": "Бусад урсгал шилжүүлэг",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "275,605.4",
+            "goal": "",
+            "measure": "Тэтгэвэрт гарахад олгох нэг удаагийн мөнгөн тэтгэмж",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "1,110,737.1",
+            "goal": "",
+            "measure": "Хөдөө орон нутагт тогтвор суурьшилтай ажилласан а",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "2,545,276.0",
+            "goal": "",
+            "measure": "ЗАРДЛЫГ САНХҮҮЖҮҮЛЭХ ЭХ ҮҮСВЭР",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "2,545,276.0",
+            "goal": "",
+            "measure": "Улсын төсвөөс санхүүжих",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "2,545,276.0",
+            "goal": "",
+            "measure": "Улсын төсвөөс санхүүжих",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "84.0",
+            "goal": "",
+            "measure": "ТӨСВИЙН БУСАД МЭДЭЭЛЛИЙН АНГИЛАЛ",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "1.0",
+            "goal": "",
+            "measure": "БАЙГ^УЛЛАГЫН ТОО",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "1.0",
+            "goal": "",
+            "measure": "Төсвийн байгууллага",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "32.0",
+            "goal": "",
+            "measure": "АЖИЛЛАГСДЫН ТОО",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "1.0",
+            "goal": "",
+            "measure": "Удирдах ажилтан",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "26.0",
+            "goal": "",
+            "measure": "Гүйцэтгэх ажилтан",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "5.0",
+            "goal": "",
+            "measure": "Үйлчлэх ажилтан",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "32.0",
+            "goal": "",
+            "measure": "ОРОН ТООНЫ МЭДЭЭЛЭЛ",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "14.0",
+            "goal": "",
+            "measure": "Төрийн захиргааны албан хаагч (ТЗ)",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "8.0",
+            "goal": "",
+            "measure": "Эрүүл мэндийн салбарын төрийн үйлчилгээний алба!",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "7.0",
+            "goal": "",
+            "measure": "Төрийн нийтлэг үйлчилгээний албан хаагч (ТҮ)",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "3.0",
+            "goal": "",
+            "measure": "Төрийн үйлчилгээний мэргэжлийн (ТҮМ)",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "19.0",
+            "goal": "",
+            "measure": "НИЙТ ТЭТГЭВЭРТ ГАРАГЧ",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "19.0",
+            "goal": "",
+            "measure": "Төрийн албаны тухай хуулиар тэтгэвэрт гарагч",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "2,545,276.0",
+            "goal": "",
+            "measure": "Эрүүл мэндпйн газар",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "2,545,276.0",
+            "goal": "",
+            "measure": "НИЙТ ЗАРЛАГА ба ЦЭВЭР ЗЭЭЛИЙН ДҮН",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "2,545,276.0",
+            "goal": "",
+            "measure": "УРСГАЛ ЗАРДАЛ",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "1,158,933.5",
+            "goal": "",
+            "measure": "БАРАА, ҮЙЛЧИЛГЭЭНИЙ ЗАРДАЛ",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "934,061.5",
+            "goal": "",
+            "measure": "Цалин, хөлс болон нэмэгдэл урамшил",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "527,509.1",
+            "goal": "",
+            "measure": "Үндсэн цалин",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "255,374.0",
+            "goal": "",
+            "measure": "Нэмэгдэл",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "63,260.2",
+            "goal": "",
+            "measure": "Унаа хоолны Хөнгөлөлт",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "87,918.2",
+            "goal": "",
+            "measure": "Урамшуулал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "116,757.6",
+            "goal": "",
+            "measure": "Ажил олгогчоос нийгмийн даатгалд төлөх шимтгэл",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "79,395.2",
+            "goal": "",
+            "measure": "Тэтгэврийн даатгал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "9,340.6",
+            "goal": "",
+            "measure": "Тэтгэмжийн даатгал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "4,670.3",
+            "goal": "",
+            "measure": "ҮОМШ-ний даатгал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "4,670.3",
+            "goal": "",
+            "measure": "Ажилгүйдлийн даатгал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "18,681.2",
+            "goal": "",
+            "measure": "Эрүүл мэндийн даатгал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "51,145.7",
+            "goal": "",
+            "measure": "Байр ашиглалттай холбоотой тогтмол зардал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "10,663.3",
+            "goal": "",
+            "measure": "Гэрэл, цахилгаан",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "34,277.6",
+            "goal": "",
+            "measure": "Түлш, халаалт",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "6,204.8",
+            "goal": "",
+            "measure": "Цэвэр, бохир ус",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "33,869.5",
+            "goal": "",
+            "measure": "Хангамж, бараа материалын зардал",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "3,424.3",
+            "goal": "",
+            "measure": "Бичиг хэрэг",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "|Г—",
+            "document": "",
+            "count": "21,339.3",
+            "goal": "",
+            "measure": "Тээвэр, шатахуун",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Шуудан, холбоо, интернэтийн төлбөр",
+            "count": "",
+            "goal": "",
+            "measure": "8,018.2",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Хог хаягдал зайлуулах, хортон мэрэгчдийн ус-",
+            "count": "",
+            "goal": "",
+            "measure": "351.8",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Бага үнэтэй, түргэн элэгдэх, ахуйн эд зүйлс",
+            "count": "",
+            "goal": "",
+            "measure": "735.9",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "Нормативт зардал",
+            "document": "",
+            "count": "",
+            "goal": "",
+            "measure": "1,769.5",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Эм, бэлдмэл, эмнэлгийн хэрэгсэл",
+            "count": "",
+            "goal": "",
+            "measure": "879.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Нормын хувцас, зөөлөн эдлэл",
+            "count": "",
+            "goal": "",
+            "measure": "890.5",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Эд хогшил, урсгал засварын зардал",
+            "count": "",
+            "goal": "",
+            "measure": "2,115.9",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "Багаж, техник, хэрэгсэл",
+            "document": "",
+            "count": "",
+            "goal": "",
+            "measure": "428.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Хөдөлмөр хамгааллын хэрэглэл",
+            "count": "",
+            "goal": "",
+            "measure": "952.1",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "Урсгал засвар",
+            "document": "",
+            "count": "",
+            "goal": "",
+            "measure": "735.8",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "Томилолт, зочны зардал",
+            "document": "",
+            "count": "",
+            "goal": "",
+            "measure": "8,560.6",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "Дотоод албан томилолт",
+            "document": "",
+            "count": "",
+            "goal": "",
+            "measure": "8,560.6",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Нийтлэг ажил, үйлчилгээний төлбөр, хураамж",
+            "count": "",
+            "goal": "",
+            "measure": "5,484.6",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "Даатгалын үйлчилгээ",
+            "document": "",
+            "count": "",
+            "goal": "",
+            "measure": "1,027.3",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Тээврийн хэрэгслийн татвар, оношилгоо",
+            "count": "",
+            "goal": "",
+            "measure": "231.1",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Мэдээллийн технологийн үйлчилгээ",
+            "count": "",
+            "goal": "",
+            "measure": "2,778.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Нийтлэг үйлчилгээний төлбөр, хураамж",
+            "count": "",
+            "goal": "",
+            "measure": "164.1",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Хувийн хэвшлээр гүйцэтгүүлэх үйлчилгээ",
+            "count": "",
+            "goal": "",
+            "measure": "1,284.1",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Бараа үйлчилгээний бусад зардал",
+            "count": "",
+            "goal": "",
+            "measure": "5,168.6",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Бараа үйлчилгээний бусад зардал",
+            "count": "",
+            "goal": "",
+            "measure": "4,312.5",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Сургалт, дадлага, бэлтгэлийн зардал",
+            "count": "",
+            "goal": "",
+            "measure": "856.1",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "УРСГАЛ ШИЛЖҮҮЛЭГ",
+            "document": "",
+            "count": "",
+            "goal": "",
+            "measure": "1,386,342.5",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "Бусад урсгал шилжүүлэг",
+            "document": "",
+            "count": "",
+            "goal": "",
+            "measure": "1,386,342.5",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Тэтгэвэрт гарахад олгох нэг удаагийн мөнгөн •",
+            "count": "",
+            "goal": "",
+            "measure": "275,605.4",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Хөдөө орон нутагт тогтвор суурьшилтай ажил^",
+            "count": "",
+            "goal": "",
+            "measure": "1,110,737.1",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "ЗАРДЛЫГ САНХҮҮЖҮҮЛЭХ ЭХ ҮҮСВЭР",
+            "count": "",
+            "goal": "",
+            "measure": "2,545,276.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "Улсын төсвөөс санхүүжих",
+            "document": "",
+            "count": "",
+            "goal": "",
+            "measure": "2,545,276.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "Улсын төсвөөс санхүүжих",
+            "document": "",
+            "count": "",
+            "goal": "",
+            "measure": "2,545,276.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "ТӨСВИЙН БУСАД МЭДЭЭЛЛИЙН АНГИЛАЛ",
+            "count": "",
+            "goal": "",
+            "measure": "84.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "БАЙГУУЛЛАГЫН ТОО",
+            "document": "",
+            "count": "",
+            "goal": "",
+            "measure": "1.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "Төсвийн байгууллага",
+            "document": "",
+            "count": "",
+            "goal": "",
+            "measure": "1.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "АЖИЛЛАГСДЫН ТОО",
+            "document": "",
+            "count": "",
+            "goal": "",
+            "measure": "32.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "Удирдах ажилтан",
+            "document": "",
+            "count": "",
+            "goal": "",
+            "measure": "1.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "Гүйцэтгэх ажилтан",
+            "document": "",
+            "count": "",
+            "goal": "",
+            "measure": "26.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "Үйлчлэх ажилтан",
+            "document": "",
+            "count": "",
+            "goal": "",
+            "measure": "5.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "ОРОН ТООНЫ МЭДЭЭЛЭЛ",
+            "document": "",
+            "count": "",
+            "goal": "",
+            "measure": "32.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Төрийн захиргааны албан хаагч (ТЗ)",
+            "count": "",
+            "goal": "",
+            "measure": "14.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Эрүүл мэндийн салбарын төрийн үйлчилгээни",
+            "count": "",
+            "goal": "",
+            "measure": "8.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Төрийн нийтлэг үйлчилгээний албан хаагч (ТҮ",
+            "count": "",
+            "goal": "",
+            "measure": "7.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Төрийн үйлчилгээний мэргэжлийн (ТҮМ)",
+            "count": "",
+            "goal": "",
+            "measure": "3.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "НИЙТ ТЭТГЭВЭРТ ГАРАГЧ",
+            "document": "",
+            "count": "",
+            "goal": "",
+            "measure": "19.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Төрийн албаны тухай хуулиар тэтгэвэрт гарап",
+            "count": "",
+            "goal": "",
+            "measure": "19.0",
+            "clause": "",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "Гадаадын зээл, тусламж",
+            "count": "1,050.8",
+            "goal": "",
+            "measure": "",
+            "clause": "4,955.6",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "1.Барилга байгууламж",
+            "count": "901.3",
+            "goal": "",
+            "measure": "",
+            "clause": "4,399.8",
+            "progress": "",
+            "note": ""
+        },
+        {
+            "no": "",
+            "document": "13844 (СО1_)",
+            "count": "4,399.8",
+            "goal": "",
+            "measure": "Эрүүл мэндийн төвийнбарилга, 12 ор /Дорноговь,Эрдэнэ сум/",
+            "clause": "2023\n2026",
+            "progress": "",
+            "note": "901.3"
+        },
+        {
+            "no": "",
+            "document": "",
+            "count": "555.8",
+            "goal": "",
+            "measure": "III. Тоногтөхөөрөмж",
+            "clause": "",
+            "progress": "",
+            "note": "149.5"
+        },
+        {
+            "no": "",
+            "document": "1_3844 (СО1_)",
+            "count": "555.8",
+            "goal": "",
+            "measure": "Эрүүл мэндийн төвийн тоногтөхөөрөмж /Дорноговь,Эрдэнэ сум/",
+            "clause": "2025\n2026",
+            "progress": "",
+            "note": "149.5"
+        },
+        {
+            "no": "",
+            "document": "нийт дүн",
+            "count": "1,050.8",
+            "goal": "",
+            "measure": "",
+            "clause": "4,955.6",
+            "progress": "",
+            "note": ""
+        }
+    ]
+}
