@@ -27,6 +27,12 @@ const savingCell = ref(null);
 
 const cellKey = (row, col) => `${row._index}:${col}`;
 
+const cellTitle = (value) => {
+    if (value == null || value === '') return undefined;
+
+    return String(value);
+};
+
 const isDepartmentColumn = (key) => key === props.departmentColumn;
 
 /** Нэг нүдийг хадгална. Хэлтэс бол сонгосон хэлтсийн id явна. */
@@ -540,6 +546,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                             <td
                                                 :colspan="report.columns.length"
                                                 class="bg-brand-navy-50 px-2 py-1.5 text-xs font-semibold leading-snug text-brand-navy-900"
+                                                :title="cellTitle(row._span_text)"
                                             >
                                                 <div class="flex items-start gap-2">
                                                     <button
@@ -563,6 +570,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                             v-for="col in report.columns"
                                             :key="col.key"
                                             class="overflow-hidden px-2 py-1.5 text-slate-700"
+                                            :title="tableEditing ? undefined : cellTitle(row[col.key])"
                                             :class="[
                                                 cellClass(col.key),
                                                 isPinnedColumn(col.key) ? 'sticky left-0 z-10 bg-inherit font-semibold text-slate-500 shadow-[2px_0_6px_-2px_rgba(15,23,42,0.08)]' : '',
