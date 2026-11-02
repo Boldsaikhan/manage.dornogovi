@@ -39,7 +39,7 @@ const sectionNavItems = computed(() => {
                 />
             </div>
 
-            <div class="grid min-h-0 flex-1 gap-2 lg:grid-cols-[16rem_minmax(0,1fr)]">
+            <div class="ui-reports-table-shell grid min-h-0 gap-2 lg:grid-cols-[16rem_minmax(0,1fr)]">
                 <aside class="ui-card min-h-0 overflow-y-auto p-3">
                     <p class="mb-2 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
                         Дэд тайлан
@@ -61,7 +61,7 @@ const sectionNavItems = computed(() => {
                 </aside>
 
                 <section class="ui-card flex min-h-0 flex-col overflow-hidden p-3">
-                    <ReportsDashboard class="min-h-0 flex-1" />
+                    <ReportsDashboard class="min-h-0 flex-1" :dashboard="dashboard" />
                 </section>
             </div>
         </div>
