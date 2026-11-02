@@ -65,6 +65,23 @@ class TaskWordMappingTest extends TestCase
         $this->assertNull($built[1]['collaborator']);
     }
 
+    public function test_number_in_text_and_sentence_in_period_are_swapped(): void
+    {
+        $rows = [
+            ['1', 'Хэлтэс бүр дотооддоо албан хаагчдаа сургах ажлыг зохион байгуулах', 'Хэлтсийн дарга нарт'],
+        ];
+
+        $built = app(TaskDocxParser::class)->rowsFromMapping($rows, [
+            'text' => 0,
+            'period' => 1,
+            'responsible' => 2,
+        ]);
+
+        $this->assertSame('Хэлтэс бүр дотооддоо албан хаагчдаа сургах ажлыг зохион байгуулах', $built[0]['text']);
+        $this->assertNull($built[0]['period']);
+        $this->assertSame('Хэлтсийн дарга нарт', $built[0]['responsible']);
+    }
+
     public function test_rows_survive_when_the_section_has_no_text_column(): void
     {
         $rows = [['1', 'Ажлын чиглэл А', '08.01-09.30']];
