@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Department;
 use App\Models\IndicatorPeriod;
 use App\Models\SectorIndicator;
+use App\Models\SectorIndicatorValue;
 use App\Models\User;
 use App\Support\IndicatorMeasure;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -224,6 +225,58 @@ class SectorIndicatorTest extends TestCase
 
         $this->assertSame('1200', IndicatorMeasure::normalize('тоо', '1 200'));
         $this->assertSame('80', IndicatorMeasure::normalize('төгрөг', '80.4₮'));
+    }
+
+    public function test_the_employee_dashboard_charts_the_units_baseline(): void
+    {
+        $mine = $this->department('Архивын тасаг');
+        $other = $this->department('Цэргийн штаб');
+        $user = $this->staff($mine, 'edit');
+        $period = $this->period('2024');
+
+        $row = SectorIndicator::create([
+            'department_id' => $mine->id,
+            'title' => 'ERP систем',
+            'measure_unit' => 'тоо',
+            'target' => '200',
+            'sort_order' => 1,
+        ]);
+        SectorIndicatorValue::create([
+            'sector_indicator_id' => $row->id,
+            'indicator_period_id' => $period->id,
+            'slot' => 'year',
+            'value' => '150',
+        ]);
+        SectorIndicator::create([
+            'department_id' => $other->id,
+            'title' => 'Нууц',
+            'measure_unit' => 'хувь',
+            'target' => '100',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('dept.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('indicatorDashboard.unitId', $mine->id)
+                ->has('indicatorDashboard.rows', 1)
+                ->where('indicatorDashboard.rows.0.title', 'ERP систем')
+                ->where('indicatorDashboard.rows.0.points.0.value', 150)
+                ->where('indicatorDashboard.rows.0.progress', 75)
+                ->where('indicatorDashboard.units', []));
+
+        $admin = User::factory()->create([
+            'is_admin' => true,
+            'department_id' => $mine->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('dept.dashboard', ['unit' => $other->id]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('indicatorDashboard.unitId', $other->id)
+                ->where('indicatorDashboard.rows.0.title', 'Нууц')
+                ->has('indicatorDashboard.units'));
     }
 
     public function test_a_user_without_access_cannot_open_it(): void
