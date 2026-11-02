@@ -90,27 +90,6 @@ const defaultColumnWidths = {
     note: '8rem',
 };
 
-const textWrapKeys = new Set([
-    'policy_unit',
-    'clause',
-    'goal',
-    'activity',
-    'measure',
-    'indicator',
-    'report_to',
-    'department',
-    'agency',
-    'document',
-    'goal',
-    'clause_text',
-    'decision_title',
-    'action_plan',
-    'decision_title',
-    'clause_text',
-    'half_year',
-    'note',
-]);
-
 const remToPx = (value) => {
     const match = /^([\d.]+)rem$/.exec(value);
 
@@ -142,10 +121,12 @@ const isPinnedColumn = (key) => key === 'no';
 
 const isCenteredColumn = (key) => ['no', 'percent', 'count', 'unit', 'baseline', 'target', 'progress'].includes(key);
 
+const nowrapKeys = new Set(['no', 'percent', 'unit']);
+
 const cellClass = (key) => ({
-    'text-center': isCenteredColumn(key),
-    'break-words text-xs leading-snug': textWrapKeys.has(key),
-    'whitespace-nowrap text-xs': ! textWrapKeys.has(key),
+    'text-center': isCenteredColumn(key) && nowrapKeys.has(key),
+    'whitespace-pre-line break-words text-xs leading-snug': ! nowrapKeys.has(key),
+    'whitespace-nowrap text-xs': nowrapKeys.has(key),
 });
 
 const tableExpanded = ref(false);
@@ -533,7 +514,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                         <td
                                             v-for="col in report.columns"
                                             :key="col.key"
-                                            class="px-2 py-1.5 text-slate-700"
+                                            class="overflow-hidden px-2 py-1.5 text-slate-700"
                                             :class="[
                                                 cellClass(col.key),
                                                 isPinnedColumn(col.key) ? 'sticky left-0 z-10 bg-inherit font-semibold text-slate-500 shadow-[2px_0_6px_-2px_rgba(15,23,42,0.08)]' : '',
