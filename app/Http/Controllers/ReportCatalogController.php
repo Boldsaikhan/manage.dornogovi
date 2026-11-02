@@ -8,6 +8,7 @@ use App\Support\DocxTableWriter;
 use App\Support\ModuleAccess;
 use App\Support\PdfTableWriter;
 use App\Support\ReportRows;
+use App\Support\ReportSpan;
 use App\Support\ReportTableImporter;
 use App\Support\ReportsCatalog;
 use App\Support\ReportsData;
@@ -274,12 +275,17 @@ class ReportCatalogController extends Controller
         }
 
         $columns = collect($item['columns'] ?? [])->pluck('key')->all();
+        $columns[] = ReportSpan::COLUMN;
 
         $data = $request->validate([
             'column' => ['required', 'string', Rule::in($columns)],
             'value' => ['nullable', 'string', 'max:5000'],
             'department_id' => ['nullable', 'integer', 'exists:departments,id'],
         ]);
+
+        if ($data['column'] === ReportSpan::COLUMN) {
+            $data['value'] = ($data['value'] ?? '') === '1' ? '1' : '0';
+        }
 
         abort_if($index < 0 || $index >= ReportRows::length($report), 404);
 
@@ -320,6 +326,19 @@ class ReportCatalogController extends Controller
 
         $docxRows = [];
         foreach ($rows as $row) {
+            if (! empty($row[ReportSpan::COLUMN])) {
+                $docxRows[] = [
+                    'type' => 'group',
+                    'text' => (string) ($row['_span_text'] ?? ''),
+                    'cells' => array_merge(
+                        [(string) ($row['_span_text'] ?? '')],
+                        array_fill(0, max(0, count($columns) - 1), ''),
+                    ),
+                ];
+
+                continue;
+            }
+
             $cells = [];
             foreach ($columns as $column) {
                 $key = (string) ($column['key'] ?? '');

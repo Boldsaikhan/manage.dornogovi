@@ -29,6 +29,10 @@ const cellKey = (row, col) => `${row._index}:${col}`;
 const isDepartmentColumn = (key) => key === props.departmentColumn;
 
 /** Нэг нүдийг хадгална. Хэлтэс бол сонгосон хэлтсийн id явна. */
+const toggleSpan = (row) => {
+    saveCell(row, '_span', row._span ? '0' : '1');
+};
+
 const saveCell = (row, column, value) => {
     if (! props.canEdit || row?._index == null) return;
 
@@ -508,9 +512,32 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                     </tr>
                                     <tr
                                         v-for="(row, rowIndex) in report.rows"
-                                        :key="rowIndex"
+                                        :key="row._index ?? rowIndex"
                                         class="align-top"
                                     >
+                                        <template v-if="row._span">
+                                            <td
+                                                :colspan="report.columns.length"
+                                                class="bg-brand-navy-50 px-2 py-1.5 text-xs font-semibold leading-snug text-brand-navy-900"
+                                            >
+                                                <div class="flex items-start gap-2">
+                                                    <button
+                                                        v-if="tableEditing"
+                                                        type="button"
+                                                        class="ui-icon-btn mt-0.5"
+                                                        title="Нэгтгэлийг салгах"
+                                                        aria-label="Нэгтгэлийг салгах"
+                                                        @click="toggleSpan(row)"
+                                                    >
+                                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" d="M4 8h16M4 16h16M12 4v16" />
+                                                        </svg>
+                                                    </button>
+                                                    <span class="min-w-0 flex-1 whitespace-pre-line">{{ row._span_text }}</span>
+                                                </div>
+                                            </td>
+                                        </template>
+                                        <template v-else>
                                         <td
                                             v-for="col in report.columns"
                                             :key="col.key"
@@ -520,6 +547,18 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                                 isPinnedColumn(col.key) ? 'sticky left-0 z-10 bg-inherit font-semibold text-slate-500 shadow-[2px_0_6px_-2px_rgba(15,23,42,0.08)]' : '',
                                             ]"
                                         >
+                                            <button
+                                                v-if="tableEditing && col.key === 'no'"
+                                                type="button"
+                                                class="ui-icon-btn mb-1"
+                                                title="Мөр нэгтгэх"
+                                                aria-label="Мөр нэгтгэх"
+                                                @click="toggleSpan(row)"
+                                            >
+                                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" />
+                                                </svg>
+                                            </button>
                                             <!-- Хэлтэс — жинхэнэ хэлтсээс сонгоно (харагдах хүрээг тогтооно) -->
                                             <select
                                                 v-if="tableEditing && isDepartmentColumn(col.key)"
@@ -545,6 +584,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 
                                             <template v-else>{{ row[col.key] ?? '' }}</template>
                                         </td>
+                                        </template>
                                     </tr>
                                 </tbody>
                             </table>
