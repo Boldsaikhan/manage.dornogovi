@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ReportNavTree from '@/Components/Reports/ReportNavTree.vue';
@@ -150,6 +150,19 @@ const cellClass = (key) => ({
 const tableExpanded = ref(false);
 const editMode = ref(false);
 const downloadOpen = ref(false);
+const pdfOpen = ref(false);
+
+watch(() => props.report.key, () => {
+    pdfOpen.value = false;
+});
+
+const togglePdf = () => {
+    pdfOpen.value = ! pdfOpen.value;
+    if (pdfOpen.value) {
+        tableExpanded.value = false;
+        downloadOpen.value = false;
+    }
+};
 
 const tableEditing = computed(() => props.canEdit && editMode.value);
 
@@ -169,7 +182,12 @@ const closeExpanded = () => {
 };
 
 const onKeydown = (event) => {
-    if (event.key === 'Escape' && tableExpanded.value) {
+    if (event.key !== 'Escape') return;
+    if (pdfOpen.value) {
+        pdfOpen.value = false;
+        return;
+    }
+    if (tableExpanded.value) {
         closeExpanded();
     }
 };
@@ -201,20 +219,21 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M8 16v-4M12 16V8M16 16v-6" />
                             </svg>
                         </Link>
-                        <a
+                        <button
                             v-if="report.pdf_url"
-                            :href="report.pdf_url"
-                            target="_blank"
-                            rel="noopener"
+                            type="button"
                             class="ui-icon-btn"
-                            title="Гэрээ харах"
-                            aria-label="Гэрээ харах"
+                            :class="pdfOpen ? 'bg-brand-navy-600 text-white' : ''"
+                            :title="pdfOpen ? 'Хүснэгт харах' : 'Гэрээ харах'"
+                            :aria-label="pdfOpen ? 'Хүснэгт харах' : 'Гэрээ харах'"
+                            :aria-pressed="pdfOpen"
+                            @click="togglePdf"
                         >
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z" />
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M14 3v5h5M8 13h8M8 17h6" />
                             </svg>
-                        </a>
+                        </button>
                         <button
                             v-if="canEdit && hasColumns"
                             type="button"
@@ -306,9 +325,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                     :class="tableExpanded ? 'ui-reports-table-overlay' : 'ui-card'"
                 >
                     <iframe
-                        v-if="report.pdf_url && ! tableExpanded"
+                        v-if="report.pdf_url && pdfOpen && ! tableExpanded"
                         :src="report.pdf_url"
-                        class="min-h-0 w-full flex-[1.6] border-0 bg-white"
+                        class="min-h-0 w-full flex-1 border-0 bg-white"
                         :title="report.label"
                     />
 
@@ -326,7 +345,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                     </div>
 
                     <TableScrollViewport
-                        v-if="hasColumns"
+                        v-if="hasColumns && ! pdfOpen"
                         fill
                         class="!rounded-none !border-0 !shadow-none"
                         :measure-key="tableMinWidth"
