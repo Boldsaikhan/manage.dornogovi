@@ -242,7 +242,45 @@ const remapImport = () => {
     importData.value.total = importData.value.entries.length;
 };
 
-const importSample = computed(() => (importData.value?.entries ?? []).slice(0, 8));
+const fileSample = computed(() => (importData.value?.rows ?? []).slice(0, 8));
+
+const fileColumnCount = computed(() => {
+    const headers = importData.value?.headers ?? [];
+    const widest = (importData.value?.rows ?? []).reduce(
+        (max, row) => Math.max(max, row?.length ?? 0),
+        0,
+    );
+
+    return Math.max(headers.length, widest, 1);
+});
+
+const fieldForHeader = (index) => {
+    if (! importData.value) return '';
+
+    const found = Object.entries(importData.value.mapping).find(([, value]) => (
+        value !== null && value !== '' && Number(value) === Number(index)
+    ));
+
+    return found ? found[0] : '';
+};
+
+const assignFileColumn = (index, field) => {
+    if (! importData.value) return;
+
+    const mapping = importData.value.mapping;
+
+    Object.keys(mapping).forEach((key) => {
+        if (mapping[key] !== null && mapping[key] !== '' && Number(mapping[key]) === Number(index)) {
+            mapping[key] = null;
+        }
+    });
+
+    if (field) {
+        mapping[field] = Number(index);
+    }
+
+    remapImport();
+};
 
 const closeImport = () => {
     importData.value = null;
@@ -561,52 +599,54 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                     <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" @click="closeImport">✕</button>
                 </div>
 
-                <div class="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <div v-for="(label, field) in importData.fields" :key="'map-' + field">
-                        <label class="ui-label">{{ label }}</label>
-                        <select
-                            v-model="importData.mapping[field]"
-                            class="ui-input !py-1.5 text-sm"
-                            @change="remapImport"
-                        >
-                            <option :value="null">— оруулахгүй —</option>
-                            <option
-                                v-for="(header, index) in importData.headers"
-                                :key="'h-' + field + '-' + index"
-                                :value="index"
-                            >
-                                {{ index + 1 }}. {{ header || '(нэргүй багана)' }}
-                            </option>
-                        </select>
-                    </div>
-                </div>
-
                 <div class="overflow-x-auto rounded-xl border border-slate-200">
                     <table class="w-full min-w-[720px] text-left text-xs">
-                        <thead class="bg-slate-50 text-slate-500">
-                            <tr>
+                        <thead>
+                            <tr class="bg-brand-navy-50">
                                 <th
-                                    v-for="(label, field) in importData.fields"
-                                    :key="'ph-' + field"
+                                    v-for="index in fileColumnCount"
+                                    :key="'map-' + (index - 1)"
+                                    class="min-w-[9rem] px-2 py-2 align-bottom font-normal"
+                                >
+                                    <select
+                                        class="ui-input !py-1.5 text-xs"
+                                        :value="fieldForHeader(index - 1)"
+                                        @change="assignFileColumn(index - 1, $event.target.value)"
+                                    >
+                                        <option value="">— оруулахгүй —</option>
+                                        <option
+                                            v-for="(label, field) in importData.fields"
+                                            :key="'opt-' + (index - 1) + '-' + field"
+                                            :value="field"
+                                        >
+                                            {{ label }}
+                                        </option>
+                                    </select>
+                                </th>
+                            </tr>
+                            <tr class="bg-slate-50 text-slate-500">
+                                <th
+                                    v-for="index in fileColumnCount"
+                                    :key="'fh-' + (index - 1)"
                                     class="px-2 py-1.5 font-semibold"
                                 >
-                                    {{ label }}
+                                    {{ importData.headers[index - 1] || '(нэргүй багана)' }}
                                 </th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="(entry, i) in importSample" :key="'pr-' + i" class="border-t border-slate-100">
+                            <tr v-for="(row, i) in fileSample" :key="'fr-' + i" class="border-t border-slate-100">
                                 <td
-                                    v-for="(label, field) in importData.fields"
-                                    :key="'pc-' + field + i"
-                                    class="px-2 py-1.5 text-slate-700"
+                                    v-for="index in fileColumnCount"
+                                    :key="'fc-' + i + '-' + (index - 1)"
+                                    class="px-2 py-1.5 align-top text-slate-700"
                                 >
-                                    {{ entry[field] ?? '' }}
+                                    {{ row[index - 1] ?? '' }}
                                 </td>
                             </tr>
-                            <tr v-if="! importSample.length">
-                                <td :colspan="Object.keys(importData.fields).length || 1" class="px-2 py-6 text-center text-slate-400">
-                                    Тааруулсан мөр алга
+                            <tr v-if="! fileSample.length">
+                                <td :colspan="fileColumnCount" class="px-2 py-6 text-center text-slate-400">
+                                    Хүснэгтийн мөр олдсонгүй
                                 </td>
                             </tr>
                         </tbody>
@@ -614,7 +654,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                 </div>
 
                 <p class="mt-2 text-xs text-slate-500">
-                    Эхний {{ importSample.length }} мөрийг үзүүлэв. Нэг удаад хамгийн ихдээ 400 мөр орно.
+                    Эхний {{ fileSample.length }} мөрийг үзүүлэв. Багана бүрийн дээрх жагсаалтаас энэ тайлангийн аль баганад оруулахаа сонгоно. Нэг удаад хамгийн ихдээ 400 мөр орно.
                 </p>
 
                 <div class="mt-5 flex justify-end gap-2 border-t border-slate-100 pt-4">
