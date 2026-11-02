@@ -171,6 +171,15 @@ class SectorIndicatorTest extends TestCase
             ->assertRedirect();
 
         $this->assertDatabaseHas('indicator_periods', ['label' => '2027 он', 'split' => true]);
+
+        $period = IndicatorPeriod::query()->where('label', '2027 он')->firstOrFail();
+
+        $this->actingAs($manager)
+            ->patch(route('indicators.periods.update', $period), ['label' => '2028', 'year' => 2028])
+            ->assertRedirect();
+
+        $this->assertSame('2028', $period->fresh()->label);
+        $this->assertSame(2028, $period->fresh()->year);
     }
 
     public function test_a_user_without_access_cannot_open_it(): void

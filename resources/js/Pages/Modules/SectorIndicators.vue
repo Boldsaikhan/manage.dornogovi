@@ -1,7 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
-import Modal from '@/Components/Modal.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, reactive, ref, watch } from 'vue';
 
@@ -41,7 +40,9 @@ const valueColumnCount = computed(
     () => props.periods.reduce((sum, p) => sum + p.slots.length, 0),
 );
 
-const totalColumns = computed(() => 5 + valueColumnCount.value + (props.canEdit ? 1 : 0));
+const totalColumns = computed(() => (
+    5 + valueColumnCount.value + (props.canManage ? 1 : 0) + (props.canEdit ? 1 : 0)
+));
 
 const switchUnit = (id) => {
     router.get(route('indicators.index'), { unit: id }, {
@@ -86,13 +87,22 @@ const saveValue = (row, period, slot) => {
     }, { preserveScroll: true, preserveState: true });
 };
 
-/* ── Жилийн багана удирдах ───────────────────────────────────────── */
+/* Жилийн баганыг хүснэгтийн толгой дээр шууд засна. */
 
-const showPeriods = ref(false);
-const newPeriod = reactive({ label: '', split: false });
+const periodLabels = reactive({});
+const newYear = ref('');
+
+const syncPeriodLabels = () => {
+    props.periods.forEach((period) => {
+        periodLabels[period.id] = period.label;
+    });
+};
+
+syncPeriodLabels();
+watch(() => props.periods, syncPeriodLabels, { deep: true });
 
 const addPeriod = () => {
-    const label = newPeriod.label.trim();
+    const label = newYear.value.trim();
 
     if (! label) return;
 
@@ -101,14 +111,30 @@ const addPeriod = () => {
     router.post(route('indicators.periods.store'), {
         label,
         year: Number.isNaN(year) ? null : year,
-        split: newPeriod.split,
+        split: false,
     }, {
         preserveScroll: true,
         onSuccess: () => {
-            newPeriod.label = '';
-            newPeriod.split = false;
+            newYear.value = '';
         },
     });
+};
+
+const savePeriodLabel = (period) => {
+    const label = String(periodLabels[period.id] ?? '').trim();
+
+    if (label === '' || label === period.label) {
+        periodLabels[period.id] = period.label;
+
+        return;
+    }
+
+    const year = Number.parseInt(label, 10);
+
+    router.patch(route('indicators.periods.update', period.id), {
+        label,
+        ...(Number.isNaN(year) ? {} : { year }),
+    }, { preserveScroll: true, preserveState: true });
 };
 
 const toggleSplit = (period) => {
@@ -166,19 +192,6 @@ const removePeriod = (period) => {
                     </select>
 
                     <button
-                        v-if="canManage"
-                        type="button"
-                        class="ui-icon-btn"
-                        title="Жилийн багана удирдах"
-                        aria-label="Жилийн багана"
-                        @click="showPeriods = true"
-                    >
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6.5h16M4 12h16M4 17.5h16M9 4v16" />
-                        </svg>
-                    </button>
-
-                    <button
                         v-if="canEdit"
                         type="button"
                         class="ui-icon-btn border-transparent bg-brand-orange-500 text-white hover:bg-brand-orange-600 hover:text-white"
@@ -193,16 +206,10 @@ const removePeriod = (period) => {
                 </div>
             </div>
 
-            <!-- Жилийн багана тохируулаагүй бол -->
-            <div v-if="! periods.length" class="ui-card-pad text-center">
+            <div v-if="! periods.length && ! canManage" class="ui-card-pad text-center">
                 <p class="text-sm font-semibold text-slate-700">Жилийн багана алга.</p>
                 <p class="mt-1 text-xs text-slate-500">
-                    <template v-if="canManage">
-                        Дээрх багана удирдах товчоор «2021 он», «2024 он» гэх мэт баганаа нэмнэ үү.
-                    </template>
-                    <template v-else>
-                        Админ жилийн баганыг тохируулсны дараа мэдээлэл оруулна.
-                    </template>
+                    Админ жилийн баганыг тохируулсны дараа мэдээлэл оруулна.
                 </p>
             </div>
 
@@ -220,9 +227,53 @@ const removePeriod = (period) => {
                                 v-for="period in periods"
                                 :key="'p-' + period.id"
                                 :colspan="period.slots.length"
-                                class="text-center"
+                                class="text-center align-bottom"
                             >
-                                {{ period.label }}
+                                <input
+                                    v-if="canManage"
+                                    v-model="periodLabels[period.id]"
+                                    class="w-full rounded border-0 bg-transparent px-1 py-0.5 text-center text-sm font-semibold focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
+                                    @blur="savePeriodLabel(period)"
+                                    @keyup.enter="$event.target.blur()"
+                                />
+                                <span v-else>{{ period.label }}</span>
+                                <div v-if="canManage" class="mt-0.5 flex items-center justify-center gap-1">
+                                    <button
+                                        type="button"
+                                        class="rounded px-1.5 py-0.5 text-[10px] font-semibold"
+                                        :class="period.split
+                                            ? 'bg-brand-navy-600 text-white'
+                                            : 'text-slate-500 hover:bg-white'"
+                                        :title="period.split ? 'Нэг нүд болгох' : 'Хагас жил, жилийн эцэс гэж хоёр нүд болгох'"
+                                        @click="toggleSplit(period)"
+                                    >
+                                        Хагас
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="rounded px-1 py-0.5 text-[10px] font-semibold text-red-600 hover:bg-red-50"
+                                        title="Баганыг устгах"
+                                        @click="removePeriod(period)"
+                                    >
+                                        Устгах
+                                    </button>
+                                </div>
+                            </th>
+                            <th v-if="canManage" rowspan="2" class="w-28 align-bottom">
+                                <input
+                                    v-model="newYear"
+                                    class="w-full rounded border border-dashed border-slate-300 bg-white px-1 py-0.5 text-center text-sm focus:border-brand-navy-400 focus:ring-1 focus:ring-brand-navy-400"
+                                    placeholder="2026"
+                                    title="Шинэ жилийн багана"
+                                    @keyup.enter="addPeriod"
+                                />
+                                <button
+                                    type="button"
+                                    class="mt-1 w-full text-[10px] font-semibold text-brand-navy-700 hover:underline"
+                                    @click="addPeriod"
+                                >
+                                    Жил нэмэх
+                                </button>
                             </th>
                             <th rowspan="2" class="min-w-[12rem] text-left">Тэмдэглэл</th>
                             <th v-if="canEdit" rowspan="2" class="w-12" />
@@ -294,6 +345,8 @@ const removePeriod = (period) => {
                                 </td>
                             </template>
 
+                            <td v-if="canManage" />
+
                             <td>
                                 <input
                                     v-if="canEdit && drafts[row.id]"
@@ -328,82 +381,5 @@ const removePeriod = (period) => {
                 </table>
             </TableScrollViewport>
         </div>
-
-        <!-- Жилийн багана удирдах -->
-        <Modal :show="showPeriods" max-width="lg" @close="showPeriods = false">
-            <div class="ui-card-pad space-y-4">
-                <div>
-                    <h3 class="ui-title text-base">Жилийн багана</h3>
-                    <p class="ui-subtitle mt-1">
-                        Багана бүр нэг жил. «Хагас жил» сонговол тухайн жил
-                        «хагас жил / жилийн эцэс» гэж хоёр нүдтэй болно.
-                    </p>
-                </div>
-
-                <ul class="divide-y divide-slate-100">
-                    <li
-                        v-for="period in periods"
-                        :key="'m-' + period.id"
-                        class="flex items-center gap-2 py-2"
-                    >
-                        <span class="min-w-0 flex-1 text-sm font-semibold text-brand-navy-800">
-                            {{ period.label }}
-                        </span>
-
-                        <label class="flex items-center gap-1.5 text-xs text-slate-600">
-                            <input
-                                type="checkbox"
-                                class="rounded border-slate-300 text-brand-navy-600"
-                                :checked="period.split"
-                                @change="toggleSplit(period)"
-                            />
-                            Хагас жилтэй
-                        </label>
-
-                        <button
-                            type="button"
-                            class="ui-icon-btn ui-icon-btn--danger"
-                            title="Баганыг устгах"
-                            aria-label="Устгах"
-                            @click="removePeriod(period)"
-                        >
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13" />
-                            </svg>
-                        </button>
-                    </li>
-                    <li v-if="! periods.length" class="py-3 text-sm text-slate-500">
-                        Багана алга.
-                    </li>
-                </ul>
-
-                <div class="flex flex-wrap items-end gap-2 border-t border-slate-200 pt-3">
-                    <label class="min-w-0 flex-1">
-                        <span class="ui-label">Шинэ багана</span>
-                        <input
-                            v-model="newPeriod.label"
-                            class="ui-input"
-                            placeholder="2026 он"
-                            @keyup.enter="addPeriod"
-                        />
-                    </label>
-
-                    <label class="flex items-center gap-1.5 pb-2 text-xs text-slate-600">
-                        <input
-                            v-model="newPeriod.split"
-                            type="checkbox"
-                            class="rounded border-slate-300 text-brand-navy-600"
-                        />
-                        Хагас жилтэй
-                    </label>
-
-                    <button type="button" class="ui-btn-primary" @click="addPeriod">Нэмэх</button>
-                </div>
-
-                <div class="flex justify-end">
-                    <button type="button" class="ui-btn-ghost" @click="showPeriods = false">Хаах</button>
-                </div>
-            </div>
-        </Modal>
     </AuthenticatedLayout>
 </template>
