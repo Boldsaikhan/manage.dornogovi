@@ -7,10 +7,12 @@ import { computed, reactive, ref, watch } from 'vue';
 const props = defineProps({
     units: { type: Array, default: () => [] },
     unitId: { type: Number, default: null },
+    categories: { type: Array, default: () => [] },
     periods: { type: Array, default: () => [] },
     rows: { type: Array, default: () => [] },
     canEdit: { type: Boolean, default: false },
     canManage: { type: Boolean, default: false },
+    canPickUnit: { type: Boolean, default: false },
     measureUnits: { type: Array, default: () => [] },
 });
 
@@ -25,6 +27,7 @@ const syncDrafts = () => {
     props.rows.forEach((row) => {
         drafts[row.id] = {
             title: row.title ?? '',
+            category_id: row.category_id ?? '',
             measure_unit: row.measure_unit ?? '',
             target: row.target ?? '',
             values: { ...row.values },
@@ -108,6 +111,35 @@ watch(() => props.rows.map((row) => row.id).join(','), () => {
     }
 });
 
+const groups = computed(() => {
+    let no = 0;
+    const numbered = (rows) => rows.map((row) => ({ ...row, no: ++no }));
+    const result = [];
+    const loose = props.rows.filter((row) => ! row.category_id);
+
+    if (loose.length || props.categories.length === 0) {
+        result.push({
+            key: 'none',
+            id: null,
+            name: 'Ангилалгүй',
+            showHeader: props.categories.length > 0 && loose.length > 0,
+            rows: numbered(loose),
+        });
+    }
+
+    props.categories.forEach((category) => {
+        result.push({
+            key: `c-${category.id}`,
+            id: category.id,
+            name: category.name,
+            showHeader: true,
+            rows: numbered(props.rows.filter((row) => row.category_id === category.id)),
+        });
+    });
+
+    return result;
+});
+
 const switchUnit = (id) => {
     router.get(route('indicators.index'), { unit: id }, {
         preserveState: false,
@@ -115,8 +147,47 @@ const switchUnit = (id) => {
     });
 };
 
-const addRow = () => {
-    router.post(route('indicators.store'), { unit: props.unitId }, { preserveScroll: true });
+const addRow = (categoryId = null) => {
+    router.post(route('indicators.store'), {
+        unit: props.unitId,
+        ...(categoryId ? { category_id: categoryId } : {}),
+    }, { preserveScroll: true });
+};
+
+const newCategory = ref('');
+
+const addCategory = () => {
+    const name = newCategory.value.trim();
+
+    if (! name) return;
+
+    router.post(route('indicators.categories.store'), {
+        unit: props.unitId,
+        name,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            newCategory.value = '';
+        },
+    });
+};
+
+const removeCategory = (group) => {
+    if (! group.id || ! confirm(`«${group.name}» ангиллыг устгах уу? Үзүүлэлтүүд үлдэнэ.`)) return;
+
+    router.delete(route('indicators.categories.destroy', group.id), { preserveScroll: true });
+};
+
+const saveCategory = (row) => {
+    const raw = drafts[row.id]?.category_id;
+    const next = raw === '' || raw == null ? null : Number(raw);
+
+    if (next === (row.category_id ?? null)) return;
+
+    router.patch(route('indicators.update', row.id), { category_id: next }, {
+        preserveScroll: true,
+        preserveState: true,
+    });
 };
 
 const removeRow = (row) => {
@@ -273,10 +344,25 @@ const removePeriod = (period) => {
 
     <AuthenticatedLayout title="Салбарын үзүүлэлт">
         <div class="ui-page ui-page--tight">
-            <div class="flex flex-wrap items-center justify-end gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
-                <div class="flex items-center gap-1.5">
+            <div class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
+                <form
+                    v-if="canEdit"
+                    class="flex min-w-0 flex-1 items-center gap-1.5"
+                    @submit.prevent="addCategory"
+                >
+                    <input
+                        v-model="newCategory"
+                        class="ui-input !max-w-xs !py-1.5 text-sm"
+                        maxlength="120"
+                        placeholder="Шинэ ангиллын нэр"
+                    />
+                    <button type="submit" class="ui-btn-ghost" :disabled="! newCategory.trim()">
+                        Ангилал нэмэх
+                    </button>
+                </form>
+                <div class="ml-auto flex items-center gap-1.5">
                     <select
-                        v-if="canManage && units.length"
+                        v-if="canPickUnit && units.length"
                         class="ui-input !w-auto !py-1.5 text-sm"
                         :value="unitId"
                         @change="switchUnit($event.target.value)"
@@ -414,20 +500,64 @@ const removePeriod = (period) => {
                     </thead>
 
                     <tbody>
-                        <tr v-for="row in rows" :key="row.id" :class="rowEditing(row) ? 'bg-sky-50/80' : ''">
+                        <template v-for="group in groups" :key="group.key">
+                        <tr v-if="group.showHeader">
+                            <td :colspan="totalColumns" class="bg-brand-navy-50 !py-2">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-sm font-semibold text-brand-navy-900">{{ group.name }}</span>
+                                    <span v-if="canEdit && group.id" class="flex items-center gap-1">
+                                        <button
+                                            type="button"
+                                            class="ui-icon-btn"
+                                            title="Энэ ангилалд үзүүлэлт нэмэх"
+                                            aria-label="Энэ ангилалд үзүүлэлт нэмэх"
+                                            @click="addRow(group.id)"
+                                        >
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="ui-icon-btn ui-icon-btn--danger"
+                                            title="Ангиллыг устгах"
+                                            aria-label="Ангиллыг устгах"
+                                            @click="removeCategory(group)"
+                                        >
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13" />
+                                            </svg>
+                                        </button>
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-for="row in group.rows" :key="row.id" :class="rowEditing(row) ? 'bg-sky-50/80' : ''">
                             <td class="ui-register__cell--no text-center">{{ row.no }}</td>
 
                             <td class="align-top whitespace-normal text-left">
-                                <textarea
-                                    v-if="rowEditing(row) && drafts[row.id]"
-                                    :ref="fitTitle"
-                                    v-model="drafts[row.id].title"
-                                    rows="1"
-                                    class="block w-full resize-none overflow-hidden whitespace-pre-wrap break-words rounded border-0 bg-transparent px-1 py-0.5 text-left text-sm leading-snug focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
-                                    placeholder="Үзүүлэлтийн нэр…"
-                                    @input="fitTitle"
-                                    @blur="saveField(row, 'title')"
-                                />
+                                <template v-if="rowEditing(row) && drafts[row.id]">
+                                    <textarea
+                                        :ref="fitTitle"
+                                        v-model="drafts[row.id].title"
+                                        rows="1"
+                                        class="block w-full resize-none overflow-hidden whitespace-pre-wrap break-words rounded border-0 bg-transparent px-1 py-0.5 text-left text-sm leading-snug focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
+                                        placeholder="Үзүүлэлтийн нэр…"
+                                        @input="fitTitle"
+                                        @blur="saveField(row, 'title')"
+                                    />
+                                    <select
+                                        v-if="categories.length"
+                                        v-model="drafts[row.id].category_id"
+                                        class="mt-1 w-full rounded border border-slate-200 bg-white px-1 py-0.5 text-xs text-slate-600 focus:border-brand-navy-400 focus:ring-1 focus:ring-brand-navy-400"
+                                        @change="saveCategory(row)"
+                                    >
+                                        <option value="">Ангилалгүй</option>
+                                        <option v-for="category in categories" :key="category.id" :value="category.id">
+                                            {{ category.name }}
+                                        </option>
+                                    </select>
+                                </template>
                                 <span v-else class="block whitespace-pre-wrap break-words text-left text-sm leading-snug">{{ row.title }}</span>
                             </td>
 
@@ -532,8 +662,9 @@ const removePeriod = (period) => {
                                 </div>
                             </td>
                         </tr>
+                        </template>
 
-                        <tr v-if="! rows.length">
+                        <tr v-if="! rows.length && ! categories.length">
                             <td :colspan="totalColumns" class="ui-register__empty !py-12 text-center text-slate-400">
                                 Одоогоор үзүүлэлт бүртгэгдээгүй.
                             </td>

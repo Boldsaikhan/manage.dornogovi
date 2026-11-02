@@ -441,6 +441,26 @@ class ModuleAccess
         return self::level($user, $moduleKey) === 'manage_unit';
     }
 
+    /**
+     * «Бүгд» түвшин — хэлтэс, хамааралтай хүрээгээр хязгаарлагдахгүй.
+     */
+    public static function unrestrictedScope(?User $user, string $moduleKey): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->is_admin) {
+            return true;
+        }
+
+        if (self::scopeUnitOnly($user, $moduleKey) || self::scopeOwnOnly($user, $moduleKey)) {
+            return false;
+        }
+
+        return in_array(self::level($user, $moduleKey), ['view', 'edit', 'manage'], true);
+    }
+
     public static function isOwnLevel(?string $level): bool
     {
         return in_array($level, ['view_own', 'edit_own', 'add_own', 'manage_own'], true);
