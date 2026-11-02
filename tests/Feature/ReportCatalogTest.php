@@ -59,7 +59,9 @@ class ReportCatalogTest extends TestCase
                 ->where('report.number', '2.7.4')
                 ->where('report.source_file', '04-АЛБАН ДААЛГАВАР.docx')
                 ->where('report.progress', 38)
-                ->has('report.columns', 4));
+                ->has('report.columns', 6)
+                ->where('report.columns.4.key', 'department')
+                ->where('report.columns.5.key', 'assignee'));
     }
 
     public function test_reports_show_loads_excel_linked_report(): void
@@ -73,7 +75,7 @@ class ReportCatalogTest extends TestCase
                 ->component('Modules/Reports/Show')
                 ->where('report.template', 'law_implementation')
                 ->where('report.source_file', '1. Хууль тогтоомж 2026 оны эхний хагас жил.xlsx')
-                ->has('report.columns', 8));
+                ->has('report.columns', 10));
     }
 
     public function test_reports_show_loads_governor_program_rows(): void
@@ -89,7 +91,7 @@ class ReportCatalogTest extends TestCase
                 ->where('report.number', '2.1')
                 ->where('report.source_file', 'АЗДҮАХ-2024-2028-2026-оны-хагас-жил-ТАЙЛАН-хуваарилалт.xlsx')
                 ->where('report.template', 'governor_program')
-                ->has('report.columns', 16)
+                ->has('report.columns', 17)
                 ->has('report.rows', 324));
     }
 
@@ -106,7 +108,7 @@ class ReportCatalogTest extends TestCase
                 ->where('report.number', '2.2')
                 ->where('report.source_file', 'АЖХТ-2026-ЭЦЭС.xlsx')
                 ->where('report.template', 'annual_plan')
-                ->has('report.columns', 12)
+                ->has('report.columns', 13)
                 ->has('report.rows', 196));
     }
 
@@ -123,7 +125,7 @@ class ReportCatalogTest extends TestCase
                 ->where('report.number', '2.3')
                 ->where('report.source_file', 'ИТХТ-ын хэрэгжилт_2026_.xlsx')
                 ->where('report.template', 'itkh_decision')
-                ->has('report.columns', 8)
+                ->has('report.columns', 9)
                 ->has('report.rows', 33));
     }
 

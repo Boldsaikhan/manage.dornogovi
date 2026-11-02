@@ -19,7 +19,10 @@ const props = defineProps({
     canEdit: { type: Boolean, default: false },
     departments: { type: Array, default: () => [] },
     departmentColumn: { type: String, default: 'department' },
+    people: { type: Array, default: () => [] },
 });
+
+const assigneeColumn = 'assignee';
 
 /* ---------- Мөрийн засвар ---------- */
 
@@ -34,6 +37,32 @@ const cellTitle = (value) => {
 };
 
 const isDepartmentColumn = (key) => key === props.departmentColumn;
+
+const isAssigneeColumn = (key) => key === assigneeColumn;
+
+/** Хэлтэс сонгогдоогүй ч өмнөх текст үлдсэн бол түүнийг алдагдуулахгүй. */
+const departmentSelectValue = (row) => {
+    if (row?.department_id) {
+        return String(row.department_id);
+    }
+
+    const text = String(row?.department ?? '').trim().toLowerCase();
+    if (! text) {
+        return '';
+    }
+
+    const match = props.departments.find((dept) => String(dept.name ?? '').trim().toLowerCase() === text);
+
+    return match ? String(match.id) : '__current__';
+};
+
+const onDepartmentChange = (row, value) => {
+    if (value === '__current__') {
+        return;
+    }
+
+    saveCell(row, props.departmentColumn, value);
+};
 
 /** Нэг нүдийг хадгална. Хэлтэс бол сонгосон хэлтсийн id явна. */
 const toggleSpan = (row) => {
@@ -107,7 +136,13 @@ const remToPx = (value) => {
     return match ? Number(match[1]) * 16 : 80;
 };
 
-const columnWidth = (col) => col.width || defaultColumnWidths[col.key] || '5rem';
+const columnWidth = (col) => {
+    if (col.key === 'department' || col.key === 'assignee') {
+        return '9rem';
+    }
+
+    return col.width || defaultColumnWidths[col.key] || '5rem';
+};
 
 /**
  * Хүснэгт дэлгэцээс нарийн байвал илүү зайг энэ багана шингээнэ.
@@ -120,7 +155,7 @@ const flexColumnKey = computed(() => {
         if (keys.includes(candidate)) return candidate;
     }
 
-    return keys.at(-1) ?? null;
+    return keys.findLast((key) => key !== 'department' && key !== 'assignee' && key !== 'no') ?? keys.at(-1) ?? null;
 });
 
 const tableMinWidth = computed(() => props.report.columns.reduce(
@@ -598,17 +633,32 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                             </button>
                                             <!-- Хэлтэс — жинхэнэ хэлтсээс сонгоно (харагдах хүрээг тогтооно) -->
                                             <select
-                                                v-if="tableEditing && isDepartmentColumn(col.key)"
+                                                v-if="canEdit && isDepartmentColumn(col.key)"
                                                 class="w-full rounded-md border-slate-200 bg-white py-0.5 text-[11px] text-slate-700"
-                                                :value="row.department_id ?? ''"
+                                                :value="departmentSelectValue(row)"
                                                 :disabled="savingCell === cellKey(row, col.key)"
-                                                @change="saveCell(row, col.key, $event.target.value)"
+                                                @change="onDepartmentChange(row, $event.target.value)"
                                             >
                                                 <option value="">— сонгоогүй —</option>
+                                                <option
+                                                    v-if="departmentSelectValue(row) === '__current__'"
+                                                    value="__current__"
+                                                >
+                                                    {{ row.department }}
+                                                </option>
                                                 <option v-for="dept in departments" :key="dept.id" :value="dept.id">
                                                     {{ dept.name }}
                                                 </option>
                                             </select>
+
+                                            <SheetCell
+                                                v-else-if="canEdit && isAssigneeColumn(col.key)"
+                                                :model-value="row[col.key] ?? ''"
+                                                :options="people"
+                                                :editable="true"
+                                                placeholder="Албан хаагч сонгох"
+                                                @commit="(v) => saveCell(row, col.key, v)"
+                                            />
 
                                             <SheetCell
                                                 v-else-if="tableEditing"
