@@ -101,16 +101,24 @@ const kindTabs = computed(() => props.kinds);
 /** Удирдлагаас өгсөн чиглэл — гурван албан тушаал нэг хэсэгт. */
 const leadershipTabs = computed(() => kindTabs.value.filter((item) => item.is_leadership));
 
+const LEADERSHIP_ALL = 'leadership_all';
+
+const isLeadershipAll = computed(() => props.kind === LEADERSHIP_ALL);
+
 /** Хажуугийн цэсэнд нэг мөр — одоо нээлттэй, эсвэл эхний албан тушаал. */
 const leadershipActive = computed(
     () => leadershipTabs.value.find((item) => item.key === props.kind) ?? null,
 );
 
-const isLeadershipKind = computed(() => leadershipActive.value !== null);
+const isLeadershipKind = computed(() => leadershipActive.value !== null || isLeadershipAll.value);
 
-const leadershipEntryKey = computed(
-    () => leadershipActive.value?.key ?? leadershipTabs.value[0]?.key ?? null,
-);
+const leadershipEntryKey = computed(() => {
+    if (isLeadershipAll.value) {
+        return LEADERSHIP_ALL;
+    }
+
+    return leadershipActive.value?.key ?? leadershipTabs.value[0]?.key ?? null;
+});
 
 /** Хэлтсийн үүрэг даалгавар. */
 const departmentTabs = computed(
@@ -138,15 +146,24 @@ const columnChoices = computed(() => (
     props.columnChoices?.length ? props.columnChoices : defaultColumnChoices
 ));
 
-const tableColumns = computed(() => (
-    props.source?.columns?.length ? props.source.columns : (
+const tableColumns = computed(() => {
+    const base = props.source?.columns?.length ? props.source.columns : (
         isDirective.value
             ? defaultColumnChoices.filter((col) => col.key !== 'sector' && col.key !== 'measure')
             : defaultColumnChoices.filter((col) => col.key !== 'measure').map((col) => (
                 col.key === 'text' ? { ...col, label: 'Арга хэмжээ' } : col
             ))
-    )
-));
+    );
+
+    if (! isLeadershipAll.value) {
+        return base;
+    }
+
+    return [
+        { key: 'source_label', label: 'Чиглэл өгсөн', field: 'source_label', type: 'label', width: 200 },
+        ...base,
+    ];
+});
 
 const hasColumn = (key) => tableColumns.value.some((col) => col.key === key);
 
@@ -1448,7 +1465,13 @@ const tableColspan = computed(() => (
     tableColumns.value.length + 2 + (props.canEdit ? 2 : 0)
 ));
 
-const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : props.canEdit);
+const cellEditable = (col) => {
+    if (col.type === 'label') {
+        return false;
+    }
+
+    return col.field === 'note' ? props.canEditProgress : props.canEdit;
+};
 </script>
 
 <template>
@@ -1700,7 +1723,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                                     class="mt-0.5 block text-xs"
                                     :class="isLeadershipKind ? 'text-white/80' : 'text-slate-500'"
                                 >
-                                    {{ isLeadershipKind ? leadershipActive.label : leadershipTabs.length + ' албан тушаал' }}
+                                    {{ isLeadershipAll ? 'Нийт' : (isLeadershipKind ? leadershipActive.label : leadershipTabs.length + ' албан тушаал') }}
                                 </span>
                             </Link>
                         </nav>
@@ -1801,6 +1824,16 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                             <span class="text-[11px] font-bold uppercase tracking-wide text-slate-400">
                                 Чиглэл өгсөн
                             </span>
+                            <button
+                                type="button"
+                                class="rounded-full border px-3 py-1.5 text-sm transition"
+                                :class="isLeadershipAll
+                                    ? 'border-transparent bg-brand-navy-600 font-semibold text-white shadow-sm'
+                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'"
+                                @click="switchKind(LEADERSHIP_ALL)"
+                            >
+                                Нийт
+                            </button>
                             <button
                                 v-for="item in leadershipTabs"
                                 :key="item.key"
@@ -1903,7 +1936,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                             </button>
 
                             <button
-                                v-if="canImport"
+                                v-if="canImport && ! isLeadershipAll"
                                 type="button"
                                 class="ui-icon-btn"
                                 :disabled="wordPreviewing"
@@ -1972,7 +2005,7 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                             </button>
 
                             <button
-                                v-if="canEdit"
+                                v-if="canEdit && ! isLeadershipAll"
                                 type="button"
                                 class="ui-icon-btn border-transparent bg-brand-orange-500 text-white hover:bg-brand-orange-600 hover:text-white"
                                 :disabled="addingRow"
@@ -2258,8 +2291,14 @@ const cellEditable = (col) => (col.field === 'note' ? props.canEditProgress : pr
                                 :key="task.id + '-' + col.key"
                                 class="ui-sheet-td"
                             >
+                                <span
+                                    v-if="col.type === 'label'"
+                                    class="block px-1 py-0.5 text-sm text-slate-700"
+                                >
+                                    {{ task[col.field] || '—' }}
+                                </span>
                                 <TaskPeriodCell
-                                    v-if="col.type === 'period' && drafts[task.id]"
+                                    v-else-if="col.type === 'period' && drafts[task.id]"
                                     v-model="drafts[task.id][col.field]"
                                     :editable="cellEditable(col)"
                                     placeholder="08.01–09.30"

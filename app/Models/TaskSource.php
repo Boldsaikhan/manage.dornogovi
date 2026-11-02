@@ -28,6 +28,9 @@ class TaskSource extends Model
         'chief_of_staff' => 'Аймгийн Засаг даргын Тамгын газрын дарга',
     ];
 
+    /** Гурван удирдлагын хэсгийг нэгтгэж харах виртуал таб. */
+    public const KEY_LEADERSHIP_ALL = 'leadership_all';
+
     /** Хэлтсийн үүрэг даалгаврын байнгын хэсэг. */
     public const KEY_DEPARTMENT = 'department_tasks';
 
