@@ -174,7 +174,7 @@ function switchIndicatorUnit(id) {
             <section class="ui-card-pad">
                 <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
                     <div>
-                        <h2 class="ui-title">Суурь мэдээлэл</h2>
+                        <h2 class="ui-title">Салбарын үзүүлэлт</h2>
                         <p v-if="indicatorDashboard.unitName" class="ui-subtitle">
                             {{ indicatorDashboard.unitName }}
                         </p>
@@ -255,7 +255,7 @@ function switchIndicatorUnit(id) {
                     </article>
                 </div>
 
-                <p v-else class="text-sm text-slate-400">Энэ нэгжид суурь үзүүлэлт алга.</p>
+                <p v-else class="text-sm text-slate-400">Энэ нэгжид салбарын үзүүлэлт алга.</p>
             </section>
 
             <div

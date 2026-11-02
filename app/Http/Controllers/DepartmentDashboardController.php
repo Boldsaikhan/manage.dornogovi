@@ -96,7 +96,7 @@ class DepartmentDashboardController extends Controller
     }
 
     /**
-     * Суурь мэдээллийн үзүүлэлт — нэгжийн жилийн тоог самбар дээр графикаар.
+     * Салбарын үзүүлэлт — нэгжийн жилийн тоог самбар дээр графикаар.
      *
      * @return array<string, mixed>
      */
@@ -174,7 +174,7 @@ class DepartmentDashboardController extends Controller
         ];
     }
 
-    /** Аль нэгжийн суурь үзүүлэлтийг самбарт гаргах вэ. */
+    /** Аль нэгжийн салбарын үзүүлэлтийг самбарт гаргах вэ. */
     private function indicatorUnit(Request $request, $user, bool $isManager, array $allowed): ?int
     {
         if (! $isManager) {

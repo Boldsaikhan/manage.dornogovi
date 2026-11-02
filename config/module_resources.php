@@ -241,14 +241,14 @@ return [
                 'scopes' => ['huuli', 'uih', 'zasgiin_gazar', 'said', 'oron_nutag', 'busad'],
             ],
             'uzuulelt' => [
-                'label' => 'Салбарын үзүүлэлт',
+                'label' => '',
                 'scopes' => [],
             ],
         ],
         // Өөр хуудас руу очих таб.
         'scope_links' => [
             [
-                'label' => 'Суурь мэдээлэл',
+                'label' => 'Салбарын үзүүлэлт',
                 'route' => 'indicators.index',
                 'group' => 'uzuulelt',
             ],
