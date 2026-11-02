@@ -178,6 +178,20 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                 >
                     <template #leading>
                         <a
+                            v-if="report.pdf_url"
+                            :href="report.pdf_url"
+                            target="_blank"
+                            rel="noopener"
+                            class="ui-icon-btn"
+                            title="Гэрээ харах"
+                            aria-label="Гэрээ харах"
+                        >
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M14 3v5h5M8 13h8M8 17h6" />
+                            </svg>
+                        </a>
+                        <a
                             v-if="hasColumns"
                             :href="wordExportUrl"
                             class="ui-icon-btn"
@@ -229,6 +243,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                     class="flex min-h-0 flex-col overflow-hidden"
                     :class="tableExpanded ? 'ui-reports-table-overlay' : 'ui-card'"
                 >
+                    <iframe
+                        v-if="report.pdf_url && ! tableExpanded"
+                        :src="report.pdf_url"
+                        class="min-h-0 w-full flex-[1.6] border-0 bg-white"
+                        :title="report.label"
+                    />
+
                     <div
                         v-if="report.description || report.source_file || tableExpanded"
                         class="shrink-0 border-b border-slate-100 px-4 py-3 text-sm text-slate-600"
