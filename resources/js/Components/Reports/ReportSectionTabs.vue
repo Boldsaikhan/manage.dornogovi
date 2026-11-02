@@ -29,10 +29,13 @@ const tabs = computed(() => props.sections.filter((section) => section.key && se
 
 <template>
     <div
-        class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:rounded-2xl sm:border sm:border-slate-200 sm:bg-white sm:p-1.5 sm:shadow-soft [&::-webkit-scrollbar]:hidden"
+        class="-mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:rounded-2xl sm:border sm:border-slate-200 sm:bg-white sm:p-1.5 sm:shadow-soft [&::-webkit-scrollbar]:hidden"
         role="tablist"
         aria-label="Тайлангийн хэсэг"
     >
+        <div v-if="$slots.leading" class="flex shrink-0 items-center gap-1">
+            <slot name="leading" />
+        </div>
         <Link
             v-for="section in tabs"
             :key="section.key"

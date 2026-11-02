@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ReportNavTree from '@/Components/Reports/ReportNavTree.vue';
 import ReportSectionTabs from '@/Components/Reports/ReportSectionTabs.vue';
@@ -170,82 +170,49 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 
     <AuthenticatedLayout :title="title">
         <div class="ui-page ui-page--reports-table">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-                <div class="min-w-0">
-                    <Link :href="route('reports.index', { section: activeSectionKey })" class="text-sm text-brand-navy-600 hover:underline">
-                        ← Тайлан мэдээлэл
-                    </Link>
-                    <h2 class="ui-title mt-1">
-                        <span v-if="report.number" class="mr-2 text-slate-500">{{ report.number }}</span>
-                        {{ report.label }}
-                    </h2>
-                    <p v-if="report.section_label" class="ui-subtitle">
-                        {{ report.section_label }}
-                        <span v-if="report.department" class="ml-1 rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-700">
-                            {{ report.department }}
-                        </span>
-                        <span v-if="period" class="ml-1 text-slate-400">· {{ period }}</span>
-                    </p>
-                </div>
-                <div class="flex flex-wrap items-center gap-2">
-                    <span
-                        v-if="report.progress != null"
-                        class="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700"
-                    >
-                        {{ report.progress }}% хэрэгжилт
-                    </span>
-                    <span
-                        v-if="report.measures"
-                        class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700"
-                    >
-                        {{ report.measures }} арга хэмжээ
-                    </span>
-                    <span class="rounded-full bg-brand-navy-50 px-3 py-1 text-xs font-medium text-brand-navy-700">
-                        {{ report.template_label || report.template }}
-                    </span>
-                    <a
-                        v-if="hasColumns"
-                        :href="wordExportUrl"
-                        class="ui-btn-ghost"
-                        title="Хүснэгтийг Word файлаар татах"
-                    >
-                        <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M5 19h14" />
-                        </svg>
-                        Word татах
-                    </a>
-                    <button
-                        v-if="hasColumns"
-                        type="button"
-                        class="ui-btn-ghost"
-                        :title="tableExpanded ? 'Хэвийн хэмжээнд буцах' : 'Хүснэгтийг дэлгэц дүүрэн харах'"
-                        @click="tableExpanded = ! tableExpanded"
-                    >
-                        <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                            <path
-                                v-if="tableExpanded"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M9 9L5 5m0 0h4M5 5v4m10 0l4-4m0 0h-4m4 0v4M9 15l-4 4m0 0h4m-4 0v-4m10 0l4 4m0 0h-4m4 0v-4"
-                            />
-                            <path
-                                v-else
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M8 3H4v4M16 3h4v4M4 16v4h4M20 16v4h-4"
-                            />
-                        </svg>
-                        {{ tableExpanded ? 'Хаах' : 'Дэлгэц дүүрэн' }}
-                    </button>
-                </div>
-            </div>
-
             <div>
                 <ReportSectionTabs
                     :sections="navigation"
                     :active-section-key="activeSectionKey"
                     mode="show"
-                />
+                >
+                    <template #leading>
+                        <a
+                            v-if="hasColumns"
+                            :href="wordExportUrl"
+                            class="ui-icon-btn"
+                            title="Word татах"
+                            aria-label="Word татах"
+                        >
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M5 19h14" />
+                            </svg>
+                        </a>
+                        <button
+                            v-if="hasColumns"
+                            type="button"
+                            class="ui-icon-btn"
+                            :title="tableExpanded ? 'Хаах' : 'Дэлгэц дүүрэн'"
+                            :aria-label="tableExpanded ? 'Хаах' : 'Дэлгэц дүүрэн'"
+                            @click="tableExpanded = ! tableExpanded"
+                        >
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path
+                                    v-if="tableExpanded"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M9 9L5 5m0 0h4M5 5v4m10 0l4-4m0 0h-4m4 0v4M9 15l-4 4m0 0h4m-4 0v-4m10 0l4 4m0 0h-4m4 0v-4"
+                                />
+                                <path
+                                    v-else
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M8 3H4v4M16 3h4v4M4 16v4h4M20 16v4h-4"
+                                />
+                            </svg>
+                        </button>
+                    </template>
+                </ReportSectionTabs>
             </div>
 
             <div class="ui-reports-table-shell grid min-h-0 grid-rows-[minmax(0,11rem)_minmax(0,1fr)] gap-4 lg:grid-cols-[18rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
@@ -263,33 +230,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                     :class="tableExpanded ? 'ui-reports-table-overlay' : 'ui-card'"
                 >
                     <div
-                        class="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3"
+                        v-if="report.description || report.source_file || tableExpanded"
+                        class="shrink-0 border-b border-slate-100 px-4 py-3 text-sm text-slate-600"
                     >
-                        <div class="min-w-0 text-sm text-slate-600">
-                            <p v-if="report.description">{{ report.description }}</p>
-                            <p v-if="report.source_file" class="mt-1 text-xs text-slate-500">
-                                Эх файл: <strong class="font-medium text-slate-700">{{ report.source_file }}</strong>
-                            </p>
-                            <p v-if="tableExpanded" class="mt-1 text-xs font-semibold text-brand-navy-700">
-                                {{ report.number ? report.number + ' · ' : '' }}{{ report.label }}
-                            </p>
-                        </div>
-                        <div class="flex shrink-0 flex-wrap items-center gap-2">
-                            <a
-                                v-if="hasColumns"
-                                :href="wordExportUrl"
-                                class="ui-btn-ghost !py-1.5 text-xs"
-                            >
-                                Word татах
-                            </a>
-                            <button
-                                type="button"
-                                class="ui-btn-ghost !py-1.5 text-xs"
-                                @click="tableExpanded = ! tableExpanded"
-                            >
-                                {{ tableExpanded ? 'Хэвийн харах' : 'Дэлгэц дүүрэн' }}
-                            </button>
-                        </div>
+                        <p v-if="report.description">{{ report.description }}</p>
+                        <p v-if="report.source_file" class="mt-1 text-xs text-slate-500">
+                            Эх файл: <strong class="font-medium text-slate-700">{{ report.source_file }}</strong>
+                        </p>
+                        <p v-if="tableExpanded" class="mt-1 text-xs font-semibold text-brand-navy-700">
+                            {{ report.number ? report.number + ' · ' : '' }}{{ report.label }}
+                        </p>
                     </div>
 
                     <TableScrollViewport
