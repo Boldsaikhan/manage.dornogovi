@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Department;
+use App\Models\PhoneDirectoryEntry;
 use App\Models\ReportRowEdit;
 use App\Support\DocxTableWriter;
 use App\Support\ModuleAccess;
@@ -96,6 +97,7 @@ class ReportCatalogController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'departmentColumn' => ReportRowEdit::DEPARTMENT_COLUMN,
+            'people' => PhoneDirectoryEntry::peopleOptions(),
         ]);
     }
 

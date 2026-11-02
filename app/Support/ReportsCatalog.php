@@ -157,9 +157,31 @@ class ReportsCatalog
 
         $report['template'] = $templateKey;
         $report['template_label'] = $template['label'] ?? $templateKey;
-        $report['columns'] = $template['columns'] ?? [];
+        $report['columns'] = self::withAssignmentColumns($template['columns'] ?? []);
 
         return $report;
+    }
+
+    /**
+     * Хүснэгт бүрт хэлтэс, хариуцах албан хаагчийг сонгодог багана.
+     * Аль хэдийн байгаа «department» баганыг давхардуулахгүй.
+     *
+     * @param  list<array<string, mixed>>  $columns
+     * @return list<array<string, mixed>>
+     */
+    public static function withAssignmentColumns(array $columns): array
+    {
+        $keys = array_column($columns, 'key');
+
+        if (! in_array('department', $keys, true)) {
+            $columns[] = ['key' => 'department', 'label' => 'Хэлтэс', 'width' => '9rem'];
+        }
+
+        if (! in_array('assignee', $keys, true)) {
+            $columns[] = ['key' => 'assignee', 'label' => 'Хариуцах албан хаагч', 'width' => '9rem'];
+        }
+
+        return $columns;
     }
 
     /**
