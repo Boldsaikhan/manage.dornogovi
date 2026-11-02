@@ -57,8 +57,6 @@ const sectionLink = (sectionKey) => {
         local_policy: 'local_policy.annual_plan',
         contracts: 'contracts.ministry_gbxn',
         target_programs: 'target_programs.medical_education',
-        memorandum: 'memorandum.summary',
-        investment: 'investment.summary',
     };
 
     return route('reports.show', map[sectionKey] || sectionKey);
