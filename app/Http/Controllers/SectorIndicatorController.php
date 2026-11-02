@@ -6,6 +6,7 @@ use App\Models\Department;
 use App\Models\IndicatorPeriod;
 use App\Models\SectorIndicator;
 use App\Models\SectorIndicatorValue;
+use App\Support\IndicatorMeasure;
 use App\Support\ModuleAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -80,6 +81,7 @@ class SectorIndicatorController extends Controller
             'rows' => $rows,
             'canEdit' => ModuleAccess::canEdit($user, self::MODULE),
             'canManage' => $isManager,
+            'measureUnits' => IndicatorMeasure::options(),
         ]);
     }
 
@@ -132,10 +134,18 @@ class SectorIndicatorController extends Controller
 
         $data = $request->validate([
             'title' => ['sometimes', 'nullable', 'string', 'max:2000'],
-            'measure_unit' => ['sometimes', 'nullable', 'string', 'max:60'],
+            'measure_unit' => ['sometimes', 'nullable', 'string', Rule::in(array_keys(IndicatorMeasure::units()))],
             'target' => ['sometimes', 'nullable', 'string', 'max:60'],
             'note' => ['sometimes', 'nullable', 'string', 'max:2000'],
         ]);
+
+        $unit = array_key_exists('measure_unit', $data)
+            ? $data['measure_unit']
+            : $indicator->measure_unit;
+
+        if (array_key_exists('target', $data)) {
+            $data['target'] = IndicatorMeasure::normalize($unit, $data['target']) ?: null;
+        }
 
         $indicator->fill($data)->save();
 
@@ -155,7 +165,7 @@ class SectorIndicatorController extends Controller
             'value' => ['nullable', 'string', 'max:60'],
         ]);
 
-        $value = trim((string) ($data['value'] ?? ''));
+        $value = IndicatorMeasure::normalize($indicator->measure_unit, $data['value'] ?? '');
 
         $query = SectorIndicatorValue::query()
             ->where('sector_indicator_id', $indicator->id)
