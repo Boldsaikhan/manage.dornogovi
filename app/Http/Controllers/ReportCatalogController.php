@@ -12,6 +12,7 @@ use App\Support\ReportsData;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Validation\Rule;
@@ -67,6 +68,9 @@ class ReportCatalogController extends Controller
             'columns' => $item['columns'] ?? [],
             'description' => $item['description'] ?? null,
             'source_file' => $item['source_file'] ?? null,
+            'pdf_url' => ReportsCatalog::pdfPath($item['pdf'] ?? null)
+                ? route('reports.file', $item['key'])
+                : null,
             'measures' => $item['measures'] ?? ($dataMeta['row_count'] ?? null),
             'progress' => $item['progress'] ?? null,
             'rows' => $rows,
@@ -131,6 +135,25 @@ class ReportCatalogController extends Controller
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'Content-Disposition' => "attachment; filename=\"report.docx\"; filename*=UTF-8''".rawurlencode($fileName),
             'Content-Length' => (string) strlen($content),
+        ]);
+    }
+
+    public function file(Request $request, string $report): BinaryFileResponse
+    {
+        $this->authorizeReports($request);
+
+        $item = ReportsCatalog::find($report);
+        $path = $item ? ReportsCatalog::pdfPath($item['pdf'] ?? null) : null;
+
+        if (! $path) {
+            throw new NotFoundHttpException();
+        }
+
+        return response()->file($path, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.basename($path).'"',
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, max-age=3600',
         ]);
     }
 

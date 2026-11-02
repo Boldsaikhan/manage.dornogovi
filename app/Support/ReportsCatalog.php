@@ -66,6 +66,20 @@ class ReportsCatalog
     }
 
     /**
+     * Гэрээний PDF. Нэр нь зөвхөн файл байх ёстой — зам оруулахгүй.
+     */
+    public static function pdfPath(?string $name): ?string
+    {
+        if (! is_string($name) || ! preg_match('/^[A-Za-z0-9._-]+\.pdf$/', $name)) {
+            return null;
+        }
+
+        $path = base_path('database/data/reports/contracts/'.$name);
+
+        return is_file($path) ? $path : null;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public static function dashboard(): array

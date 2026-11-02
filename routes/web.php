@@ -200,6 +200,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/modules/meetings', [ModuleResourceController::class, 'index'])->name('meetings.index');
     Route::get('/modules/reports', [ReportCatalogController::class, 'index'])->name('reports.index');
     Route::get('/modules/reports/{report}/export', [ReportCatalogController::class, 'export'])->name('reports.export');
+    Route::get('/modules/reports/{report}/file', [ReportCatalogController::class, 'file'])->name('reports.file');
     Route::get('/modules/reports/{report}', [ReportCatalogController::class, 'show'])->name('reports.show');
     Route::patch('/modules/reports/{report}/rows/{index}', [ReportCatalogController::class, 'updateRow'])->name('reports.rows.update');
     Route::get('/modules/onboarding', [ModuleResourceController::class, 'index'])->name('onboarding.index');

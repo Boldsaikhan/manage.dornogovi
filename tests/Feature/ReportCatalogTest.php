@@ -161,4 +161,74 @@ class ReportCatalogTest extends TestCase
         $this->get(route('reports.export', 'local_policy.governor_program'))
             ->assertRedirect(route('login'));
     }
+
+    public function test_contract_pdfs_are_attached_and_under_five_megabytes(): void
+    {
+        $keys = [
+            'contracts.ministry_gbxn',
+            'contracts.ministry_culture',
+            'contracts.ministry_health',
+            'contracts.ministry_education',
+            'contracts.ministry_defense',
+            'contracts.ministry_finance',
+            'contracts.ministry_zgheg',
+            'contracts.deputy_gankhuyag',
+            'contracts.ministry_digital',
+            'contracts.ministry_foreign',
+            'contracts.deputy_dorjhand',
+            'contracts.ministry_legal',
+            'contracts.ministry_economy',
+            'contracts.ministry_environment',
+            'contracts.ministry_mram',
+            'contracts.ministry_urban',
+            'contracts.ministry_food',
+            'contracts.ministry_energy',
+            'contracts.ministry_road',
+        ];
+
+        foreach ($keys as $key) {
+            $path = base_path('database/data/reports/contracts/'.$key.'.pdf');
+            $this->assertFileExists($path, $key);
+            $this->assertLessThanOrEqual(5 * 1024 * 1024, filesize($path), $key);
+            $this->assertSame('%PDF', file_get_contents($path, false, null, 0, 4), $key);
+        }
+
+        $user = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($user)
+            ->get(route('reports.show', 'contracts.ministry_gbxn'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('report.key', 'contracts.ministry_gbxn')
+                ->where('report.number', '3.1')
+                ->where('report.pdf_url', route('reports.file', 'contracts.ministry_gbxn')));
+
+        $response = $this->actingAs($user)
+            ->get(route('reports.file', 'contracts.ministry_culture'));
+
+        $response->assertOk();
+        $this->assertStringContainsString('application/pdf', (string) $response->headers->get('content-type'));
+        $this->assertStringContainsString('inline', (string) $response->headers->get('content-disposition'));
+        $this->assertLessThanOrEqual(5 * 1024 * 1024, (int) $response->headers->get('content-length'));
+        $this->assertGreaterThan(1000, (int) $response->headers->get('content-length'));
+    }
+
+    public function test_report_without_pdf_file_is_not_found(): void
+    {
+        $user = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($user)
+            ->get(route('reports.file', 'local_policy.governor_program'))
+            ->assertNotFound();
+
+        $this->actingAs($user)
+            ->get(route('reports.file', 'missing.report'))
+            ->assertNotFound();
+    }
+
+    public function test_contract_pdf_requires_auth(): void
+    {
+        $this->get(route('reports.file', 'contracts.ministry_gbxn'))
+            ->assertRedirect(route('login'));
+    }
 }
