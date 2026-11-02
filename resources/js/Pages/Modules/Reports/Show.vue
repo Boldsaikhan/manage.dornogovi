@@ -500,6 +500,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                     <TableScrollViewport
                         v-if="hasColumns && ! pdfOpen"
                         fill
+                        pin-start
                         class="!rounded-none !border-0 !shadow-none"
                         :measure-key="tableMinWidth"
                     >
@@ -508,7 +509,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                             class="block w-full max-w-none shrink-0"
                             :style="{ minWidth: `${tableMinWidth}px` }"
                         >
-                            <table class="ui-table table-fixed w-full text-xs" :style="{ minWidth: `${tableMinWidth}px` }">
+                            <table class="ui-table ui-table--pin-no table-fixed w-full text-xs" :style="{ minWidth: `${tableMinWidth}px` }">
                                 <colgroup>
                                     <col
                                         v-for="col in report.columns"
@@ -521,9 +522,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                         <th
                                             v-for="col in report.columns"
                                             :key="col.key"
-                                            class="sticky top-0 z-10 bg-brand-navy-50 px-2 py-2 text-[11px] leading-tight normal-case tracking-normal"
+                                            class="sticky top-0 bg-brand-navy-50 px-2 py-2 text-[11px] leading-tight normal-case tracking-normal"
                                             :class="[
-                                                isPinnedColumn(col.key) ? 'sticky left-0 z-[11] bg-brand-navy-50 shadow-[2px_0_6px_-2px_rgba(15,23,42,0.12)]' : '',
+                                                isPinnedColumn(col.key)
+                                                    ? 'ui-pin-no left-0 z-20 shadow-[2px_0_6px_-2px_rgba(15,23,42,0.18)]'
+                                                    : 'z-10',
                                                 isCenteredColumn(col.key) ? 'text-center' : 'text-left',
                                             ]"
                                         >
@@ -569,11 +572,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                         <td
                                             v-for="col in report.columns"
                                             :key="col.key"
-                                            class="overflow-hidden px-2 py-1.5 text-slate-700"
+                                            class="px-2 py-1.5 text-slate-700"
                                             :title="tableEditing ? undefined : cellTitle(row[col.key])"
                                             :class="[
                                                 cellClass(col.key),
-                                                isPinnedColumn(col.key) ? 'sticky left-0 z-10 bg-inherit font-semibold text-slate-500 shadow-[2px_0_6px_-2px_rgba(15,23,42,0.08)]' : '',
+                                                isPinnedColumn(col.key)
+                                                    ? 'ui-pin-no sticky left-0 z-[2] font-semibold text-slate-500 shadow-[2px_0_6px_-2px_rgba(15,23,42,0.12)]'
+                                                    : 'overflow-hidden',
                                             ]"
                                         >
                                             <button

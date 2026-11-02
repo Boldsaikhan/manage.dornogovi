@@ -7,6 +7,11 @@ const props = defineProps({
     fill: { type: Boolean, default: false },
     /** Контент өөрчлөгдөхөд дахин хэмжих (ж: хүснэгтийн өргөн) */
     measureKey: { type: [String, Number], default: null },
+    /**
+     * Зүүн багана наалдахын тулд хэвтээ тэнхлэг scrollport байх ёстой.
+     * overflow-x: hidden үед position:sticky left ажиллахгүй.
+     */
+    pinStart: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['near-bottom']);
@@ -72,6 +77,13 @@ const onBodyWheel = (e) => {
 
     const deltaX = e.deltaX;
     const deltaY = e.deltaY;
+
+    const overflowX = window.getComputedStyle(el).overflowX;
+    const nativeX = overflowX === 'auto' || overflowX === 'scroll';
+
+    if (nativeX) {
+        return;
+    }
 
     if (e.shiftKey && deltaY !== 0) {
         el.scrollLeft += deltaY;
@@ -151,11 +163,12 @@ watch(() => props.fill, () => nextTick(measure));
         :class="fill ? 'min-h-0 flex-1 basis-0' : ''"
         :style="fill ? undefined : { height: maxHeight, maxHeight }"
     >
-        <!-- overflow-x нь .ui-table-scroll-body-д тодорхойлогдоно: хулгана дээр
-             хаалттай (доод зурвасаар), мэдрэгчтэй дээр нээлттэй (хуруугаар). -->
+        <!-- Хулганаар хэвтээ гүйлгээ доод зурвасаар. pinStart үед overflow-x: auto —
+             эс бөгөөс зүүн баганын position: sticky ажиллахгүй. -->
         <div
             ref="bodyRef"
             class="ui-table-scroll-body min-h-0 flex-1 overflow-y-auto overscroll-contain"
+            :class="pinStart ? 'overflow-x-auto' : ''"
             @scroll="onBodyScroll"
             @wheel="onBodyWheel"
         >
