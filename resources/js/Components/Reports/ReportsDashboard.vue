@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
+import { openReportSubnav } from '@/composables/useReportSubnav';
 
 const props = defineProps({
     dashboard: { type: Object, required: true },
@@ -102,6 +103,7 @@ const assignments = computed(() => props.dashboard.official_assignments ?? []);
                     :key="section.key"
                     :href="sectionLink(section.key)"
                     class="flex min-w-0 items-center gap-2 rounded-lg border border-slate-200 px-2 py-1.5 transition hover:border-brand-navy-400 hover:shadow-soft"
+                    @click="openReportSubnav()"
                 >
                     <div class="relative h-10 w-10 shrink-0">
                         <svg viewBox="0 0 130 130" class="h-10 w-10 -rotate-90">
