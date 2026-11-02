@@ -270,6 +270,46 @@
         @apply bg-sky-50 dark:bg-sky-950/50;
     }
 
+    /*
+     * Зүүн талын дугаар — хэвтээ гүйлгээнд үлдэнэ.
+     * border-collapse: collapse дээр зүүн sticky зарим хөтөчид алгасдаг.
+     */
+    .ui-table--pin-no {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .ui-table--pin-no th,
+    .ui-table--pin-no td {
+        border-width: 0 1px 1px 0;
+    }
+
+    .ui-table--pin-no tr > :first-child {
+        border-left-width: 1px;
+    }
+
+    .ui-table--pin-no thead tr:first-child > th {
+        border-top-width: 1px;
+    }
+
+    .ui-table--pin-no tbody td.ui-pin-no {
+        background-clip: padding-box;
+        @apply bg-white dark:bg-slate-900;
+    }
+
+    .ui-table--pin-no tbody tr:nth-child(even) td.ui-pin-no {
+        @apply bg-slate-50 dark:bg-slate-800;
+    }
+
+    .ui-table--pin-no tbody tr:hover td.ui-pin-no {
+        @apply bg-brand-navy-50 dark:bg-slate-700;
+    }
+
+    .ui-table--pin-no tbody tr:focus-within td.ui-pin-no,
+    .ui-table--pin-no tbody tr:focus-within:hover td.ui-pin-no {
+        @apply bg-sky-50 dark:bg-sky-950/50;
+    }
+
     /* Сонголтын товчнууд нэг мөрөнд — багтахгүй бол хажуу тийш гүйнэ */
     .ui-pill-row {
         scrollbar-width: none;
