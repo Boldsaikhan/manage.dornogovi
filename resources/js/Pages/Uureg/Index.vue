@@ -153,10 +153,9 @@ const hasColumn = (key) => tableColumns.value.some((col) => col.key === key);
 const columnLabel = (key, fallback) => tableColumns.value.find((col) => col.key === key)?.label || fallback;
 
 /*
- * Цэс дээр дарахад шууд цаглалтаар харагдана. Цаглалтын тоон дээр
- * дарж тухайн хугацааны үүргүүдийг хүснэгтээр үзнэ.
+ * Цэс нээгдэхэд хүснэгт эхэлж харагдана. Цаглалт руу товчоор шилжинэ.
  */
-const viewMode = ref('calendar');
+const viewMode = ref('table');
 
 /** Хүснэгтийг дэлгэц дүүрэн харах (Esc дарж хаана). */
 const tableExpanded = ref(false);
@@ -1203,7 +1202,7 @@ watch(
     () => {
         clearSelection();
         resetBulkForm();
-        viewMode.value = 'calendar';
+        viewMode.value = 'table';
         statusFilter.value = null;
         periodFilter.value = null;
     },
