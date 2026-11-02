@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Task;
 use App\Models\TaskSource;
 use App\Models\User;
+use App\Support\XlsxTableReader;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -50,6 +51,46 @@ class TaskExportTest extends TestCase
         $pdf = $this->actingAs($admin)
             ->get(route('tasks.export', ['kind' => 'directive', 'format' => 'pdf']));
         $this->assertSame('%PDF', substr($pdf->getContent(), 0, 4));
+    }
+
+    public function test_export_downloads_only_selected_rows(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $source = TaskSource::where('key', TaskSource::KEY_DIRECTIVE)->first();
+
+        $kept = Task::create([
+            'task_source_id' => $source->id,
+            'text' => 'Сонгосон үүрэг',
+            'progress' => 80,
+            'sort_order' => 1,
+        ]);
+        Task::create([
+            'task_source_id' => $source->id,
+            'text' => 'Үлдээх үүрэг',
+            'progress' => 10,
+            'sort_order' => 2,
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->get(route('tasks.export', [
+                'kind' => 'directive',
+                'format' => 'xlsx',
+                'ids' => (string) $kept->id,
+            ]));
+
+        $response->assertOk();
+
+        $path = storage_path('framework/testing/task-selected.xlsx');
+        if (! is_dir(dirname($path))) {
+            mkdir(dirname($path), 0777, true);
+        }
+        file_put_contents($path, $response->getContent());
+
+        $flat = collect(app(XlsxTableReader::class)->rows($path))->flatten()->implode(' ');
+        $this->assertStringContainsString('Сонгосон үүрэг', $flat);
+        $this->assertStringNotContainsString('Үлдээх үүрэг', $flat);
+
+        @unlink($path);
     }
 
     public function test_export_rejects_unknown_format(): void
