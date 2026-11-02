@@ -11,6 +11,7 @@ const props = defineProps({
     rows: { type: Array, default: () => [] },
     canEdit: { type: Boolean, default: false },
     canManage: { type: Boolean, default: false },
+    measureUnits: { type: Array, default: () => [] },
 });
 
 const SLOT_LABELS = { half: 'хагас жил', year: 'жилийн эцэс' };
@@ -80,8 +81,56 @@ const removeRow = (row) => {
     router.delete(route('indicators.destroy', row.id), { preserveScroll: true });
 };
 
+const unitOf = (unit) => props.measureUnits.find((item) => item.value === unit) ?? null;
+
+const normalizeMeasure = (raw, unit) => {
+    const text = String(raw ?? '').trim();
+    const kind = unitOf(unit)?.kind;
+
+    if (text === '' || ! kind) return text;
+
+    const cleaned = text.replace(/[\s\u00a0]/g, '').replace(',', '.').replace(/[^\d.-]/g, '');
+    const number = Number(cleaned);
+
+    if (cleaned === '' || Number.isNaN(number)) return '';
+
+    if (kind === 'integer' || kind === 'money') return String(Math.round(number));
+
+    const decimals = kind === 'percent' ? 1 : 2;
+    const fixed = number.toFixed(decimals);
+
+    return fixed.replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+};
+
+const formatMeasure = (raw, unit) => {
+    const text = String(raw ?? '').trim();
+
+    if (text === '') return '';
+
+    const option = unitOf(unit);
+
+    if (! option) return text;
+
+    const number = Number(text);
+
+    if (Number.isNaN(number)) return text;
+
+    if (option.kind === 'percent') return `${text}%`;
+
+    if (option.kind === 'money' || option.kind === 'integer') {
+        return new Intl.NumberFormat('mn-MN', { maximumFractionDigits: 0 }).format(number);
+    }
+
+    return text;
+};
+
 const saveField = (row, field) => {
-    const value = drafts[row.id]?.[field] ?? '';
+    let value = drafts[row.id]?.[field] ?? '';
+
+    if (field === 'target') {
+        value = normalizeMeasure(value, drafts[row.id]?.measure_unit);
+        drafts[row.id].target = value;
+    }
 
     if (value === (row[field] ?? '')) return;
 
@@ -95,7 +144,11 @@ const cellKey = (period, slot) => `${period.id}:${slot}`;
 
 const saveValue = (row, period, slot) => {
     const key = cellKey(period, slot);
-    const value = drafts[row.id]?.values?.[key] ?? '';
+    const value = normalizeMeasure(drafts[row.id]?.values?.[key] ?? '', drafts[row.id]?.measure_unit);
+
+    if (drafts[row.id]) {
+        drafts[row.id].values[key] = value;
+    }
 
     if (value === (row.values?.[key] ?? '')) return;
 
@@ -258,7 +311,7 @@ const removePeriod = (period) => {
                             <th rowspan="2" class="w-[28rem] min-w-[28rem] whitespace-normal text-left">
                                 Үзүүлэлтийн дэлгэрэнгүй мэдээлэл
                             </th>
-                            <th rowspan="2" class="w-28 text-center">Хэмжих нэгж</th>
+                            <th rowspan="2" class="w-32 text-center">Хэмжих нэгж</th>
                             <th rowspan="2" class="w-28 text-center">Хүрэх түвшин</th>
                             <th
                                 v-for="period in periods"
@@ -347,23 +400,40 @@ const removePeriod = (period) => {
                             </td>
 
                             <td class="text-center">
-                                <input
+                                <select
                                     v-if="cellsEditable && drafts[row.id]"
                                     v-model="drafts[row.id].measure_unit"
-                                    class="w-full rounded border-0 bg-transparent px-1 py-0.5 text-center text-sm focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
-                                    @blur="saveField(row, 'measure_unit')"
-                                />
+                                    class="w-full rounded border-0 bg-transparent px-0.5 py-0.5 text-center text-sm focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
+                                    @change="saveField(row, 'measure_unit')"
+                                >
+                                    <option value="">Сонгох</option>
+                                    <option v-for="unit in measureUnits" :key="unit.value" :value="unit.value">
+                                        {{ unit.value }}
+                                    </option>
+                                </select>
                                 <span v-else class="text-sm">{{ row.measure_unit }}</span>
                             </td>
 
                             <td class="text-center">
-                                <input
+                                <span
                                     v-if="cellsEditable && drafts[row.id]"
-                                    v-model="drafts[row.id].target"
-                                    class="w-full rounded border-0 bg-transparent px-1 py-0.5 text-center text-sm font-semibold focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
-                                    @blur="saveField(row, 'target')"
-                                />
-                                <span v-else class="text-sm font-semibold">{{ row.target }}</span>
+                                    class="inline-flex w-full items-center justify-center gap-0.5"
+                                >
+                                    <input
+                                        v-model="drafts[row.id].target"
+                                        :disabled="! drafts[row.id].measure_unit"
+                                        :inputmode="unitOf(drafts[row.id].measure_unit)?.kind === 'integer' ? 'numeric' : 'decimal'"
+                                        class="w-full min-w-0 rounded border-0 bg-transparent px-1 py-0.5 text-center text-sm font-semibold tabular-nums focus:bg-white focus:ring-1 focus:ring-brand-navy-400 disabled:cursor-not-allowed disabled:text-slate-300"
+                                        :placeholder="drafts[row.id].measure_unit ? unitOf(drafts[row.id].measure_unit)?.suffix : 'нэгж'"
+                                        :title="drafts[row.id].measure_unit ? 'Хүрэх түвшин' : 'Эхлээд хэмжих нэгж сонгоно'"
+                                        @blur="saveField(row, 'target')"
+                                    />
+                                    <span
+                                        v-if="unitOf(drafts[row.id].measure_unit)?.suffix"
+                                        class="shrink-0 text-[11px] text-slate-400"
+                                    >{{ unitOf(drafts[row.id].measure_unit).suffix }}</span>
+                                </span>
+                                <span v-else class="text-sm font-semibold tabular-nums">{{ formatMeasure(row.target, row.measure_unit) }}</span>
                             </td>
 
                             <template v-for="period in periods" :key="'v-' + period.id">
@@ -372,14 +442,25 @@ const removePeriod = (period) => {
                                     :key="row.id + '-' + period.id + '-' + slot"
                                     class="text-center"
                                 >
-                                    <input
+                                    <span
                                         v-if="cellsEditable && drafts[row.id]"
-                                        v-model="drafts[row.id].values[cellKey(period, slot)]"
-                                        class="w-full rounded border-0 bg-transparent px-1 py-0.5 text-center text-sm tabular-nums focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
-                                        @blur="saveValue(row, period, slot)"
-                                    />
+                                        class="inline-flex w-full items-center justify-center gap-0.5"
+                                    >
+                                        <input
+                                            v-model="drafts[row.id].values[cellKey(period, slot)]"
+                                            :disabled="! drafts[row.id].measure_unit"
+                                            :inputmode="unitOf(drafts[row.id].measure_unit)?.kind === 'integer' ? 'numeric' : 'decimal'"
+                                            class="w-full min-w-0 rounded border-0 bg-transparent px-1 py-0.5 text-center text-sm tabular-nums focus:bg-white focus:ring-1 focus:ring-brand-navy-400 disabled:cursor-not-allowed disabled:text-slate-300"
+                                            :title="drafts[row.id].measure_unit ? '' : 'Эхлээд хэмжих нэгж сонгоно'"
+                                            @blur="saveValue(row, period, slot)"
+                                        />
+                                        <span
+                                            v-if="drafts[row.id].values[cellKey(period, slot)] && unitOf(drafts[row.id].measure_unit)?.suffix"
+                                            class="shrink-0 text-[11px] text-slate-400"
+                                        >{{ unitOf(drafts[row.id].measure_unit).suffix }}</span>
+                                    </span>
                                     <span v-else class="text-sm tabular-nums">
-                                        {{ row.values[cellKey(period, slot)] }}
+                                        {{ formatMeasure(row.values[cellKey(period, slot)], row.measure_unit) }}
                                     </span>
                                 </td>
                             </template>

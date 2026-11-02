@@ -6,6 +6,7 @@ use App\Models\Department;
 use App\Models\IndicatorPeriod;
 use App\Models\SectorIndicator;
 use App\Models\User;
+use App\Support\IndicatorMeasure;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -180,6 +181,49 @@ class SectorIndicatorTest extends TestCase
 
         $this->assertSame('2028', $period->fresh()->label);
         $this->assertSame(2028, $period->fresh()->year);
+    }
+
+    public function test_measure_unit_is_chosen_and_shapes_the_numbers(): void
+    {
+        $unit = $this->department('Хэвлэл мэдээллийн алба');
+        $user = $this->staff($unit, 'edit');
+        $period = $this->period('2025');
+        $row = SectorIndicator::create(['department_id' => $unit->id, 'title' => 'ERP систем']);
+
+        $this->actingAs($user)
+            ->patch(route('indicators.update', $row), ['measure_unit' => 'дурын'])
+            ->assertSessionHasErrors('measure_unit');
+
+        $this->actingAs($user)
+            ->patch(route('indicators.update', $row), ['measure_unit' => 'хувь'])
+            ->assertRedirect();
+
+        $this->actingAs($user)
+            ->patch(route('indicators.update', $row), ['target' => '45,5%'])
+            ->assertRedirect();
+
+        $this->assertSame('хувь', $row->fresh()->measure_unit);
+        $this->assertSame('45.5', $row->fresh()->target);
+
+        $this->actingAs($user)
+            ->patch(route('indicators.update', $row), ['measure_unit' => 'тоо'])
+            ->assertRedirect();
+
+        $this->actingAs($user)
+            ->patch(route('indicators.value', $row), [
+                'period_id' => $period->id,
+                'slot' => 'year',
+                'value' => '1 200 ширхэг',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('sector_indicator_values', [
+            'sector_indicator_id' => $row->id,
+            'value' => '1200',
+        ]);
+
+        $this->assertSame('1200', IndicatorMeasure::normalize('тоо', '1 200'));
+        $this->assertSame('80', IndicatorMeasure::normalize('төгрөг', '80.4₮'));
     }
 
     public function test_a_user_without_access_cannot_open_it(): void
