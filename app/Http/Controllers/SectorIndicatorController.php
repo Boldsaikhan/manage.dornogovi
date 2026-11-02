@@ -223,6 +223,7 @@ class SectorIndicatorController extends Controller
 
         $data = $request->validate([
             'label' => ['sometimes', 'required', 'string', 'max:40'],
+            'year' => ['sometimes', 'nullable', 'integer', 'min:1900', 'max:2200'],
             'split' => ['sometimes', 'boolean'],
             'sort_order' => ['sometimes', 'integer', 'min:0'],
         ]);
