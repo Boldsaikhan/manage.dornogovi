@@ -69,42 +69,42 @@ const assignments = computed(() => props.dashboard.official_assignments ?? []);
 </script>
 
 <template>
-    <div class="space-y-4">
-        <div class="flex flex-wrap items-end justify-between gap-3">
+    <div class="flex h-full min-h-0 flex-col gap-2">
+        <div class="flex shrink-0 flex-wrap items-end justify-between gap-2">
             <div>
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Нэгдсэн үзүүлэлт</p>
-                <p v-if="dashboard.period" class="mt-0.5 text-sm text-slate-600">{{ dashboard.period }}</p>
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Нэгдсэн үзүүлэлт</p>
+                <p v-if="dashboard.period" class="text-xs text-slate-600">{{ dashboard.period }}</p>
             </div>
-            <p v-if="dashboard.as_of" class="text-xs text-slate-500">
+            <p v-if="dashboard.as_of" class="text-[11px] text-slate-500">
                 Тойм: {{ dashboard.as_of }} · {{ dashboard.report_count }} тайлан · {{ dashboard.source_count }} эх файл
             </p>
         </div>
 
-        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div class="grid shrink-0 gap-2 sm:grid-cols-2 xl:grid-cols-4">
             <div
                 v-for="kpi in kpiDisplay"
                 :key="kpi.key"
-                class="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/80 p-4"
+                class="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/80 px-3 py-2"
             >
-                <p class="text-xs font-medium text-slate-500">{{ kpi.label }}</p>
-                <p class="mt-1 text-2xl font-bold text-brand-navy-900">
-                    {{ kpi.value }}<span v-if="kpi.unit" class="ml-1 text-base font-semibold text-slate-500">{{ kpi.unit }}</span>
+                <p class="truncate text-[11px] font-medium text-slate-500">{{ kpi.label }}</p>
+                <p class="text-xl font-bold leading-tight text-brand-navy-900">
+                    {{ kpi.value }}<span v-if="kpi.unit" class="ml-1 text-sm font-semibold text-slate-500">{{ kpi.unit }}</span>
                 </p>
-                <p v-if="kpi.hint" class="mt-1 text-xs text-slate-500">{{ kpi.hint }}</p>
+                <p v-if="kpi.hint" class="truncate text-[11px] text-slate-500">{{ kpi.hint }}</p>
             </div>
         </div>
 
-        <section class="rounded-2xl border border-slate-200 p-4">
-            <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Хэсгээр</p>
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <section class="shrink-0 rounded-xl border border-slate-200 px-3 py-2">
+            <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Хэсгээр</p>
+            <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 <Link
                     v-for="section in sections"
                     :key="section.key"
                     :href="sectionLink(section.key)"
-                    class="flex items-center gap-3 rounded-xl border border-slate-200 p-3 transition hover:border-brand-navy-400 hover:shadow-soft"
+                    class="flex min-w-0 items-center gap-2 rounded-lg border border-slate-200 px-2 py-1.5 transition hover:border-brand-navy-400 hover:shadow-soft"
                 >
-                    <div class="relative h-14 w-14 shrink-0">
-                        <svg viewBox="0 0 130 130" class="h-14 w-14 -rotate-90">
+                    <div class="relative h-10 w-10 shrink-0">
+                        <svg viewBox="0 0 130 130" class="h-10 w-10 -rotate-90">
                             <circle cx="65" cy="65" r="52" fill="none" stroke="#e2e8f0" stroke-width="18" />
                             <circle
                                 v-if="section.progress != null"
@@ -119,44 +119,44 @@ const assignments = computed(() => props.dashboard.official_assignments ?? []);
                             />
                         </svg>
                         <span
-                            class="absolute inset-0 flex items-center justify-center text-xs font-bold"
+                            class="absolute inset-0 flex items-center justify-center text-[10px] font-bold"
                             :class="section.progress != null ? progressTextClass(section.progress) : 'text-slate-400'"
                         >
                             {{ section.progress != null ? `${section.progress}%` : '—' }}
                         </span>
                     </div>
                     <div class="min-w-0">
-                        <p class="text-sm font-semibold text-slate-800">
+                        <p class="truncate text-xs font-semibold text-slate-800">
                             <span class="mr-1 text-slate-400">{{ section.number }}.</span>
                             {{ section.label }}
                         </p>
-                        <p v-if="section.note" class="mt-0.5 line-clamp-2 text-xs text-slate-500">{{ section.note }}</p>
+                        <p v-if="section.note" class="truncate text-[11px] text-slate-500">{{ section.note }}</p>
                     </div>
                 </Link>
             </div>
         </section>
 
-        <div class="grid gap-4 lg:grid-cols-2">
-            <section class="rounded-2xl border border-slate-200 p-4">
-                <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Албан даалгавар (2.7)</p>
-                <div class="space-y-2">
+        <div class="grid min-h-0 flex-1 gap-2 lg:grid-cols-2">
+            <section class="flex min-h-0 flex-col rounded-xl border border-slate-200 px-3 py-2">
+                <p class="mb-1.5 shrink-0 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Албан даалгавар (2.7)</p>
+                <div class="grid min-h-0 flex-1 content-start gap-1">
                     <Link
                         v-for="item in assignments"
                         :key="item.key"
                         :href="route('reports.show', item.key)"
-                        class="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2.5 transition hover:border-brand-navy-300 hover:bg-white"
+                        class="flex items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50/70 px-2 py-1 transition hover:border-brand-navy-300 hover:bg-white"
                     >
                         <div class="min-w-0">
-                            <p class="text-sm font-medium text-slate-800">
-                                <span class="mr-1.5 rounded bg-brand-navy-100 px-1.5 py-0.5 text-[10px] font-bold text-brand-navy-700">{{ item.number }}</span>
+                            <p class="truncate text-xs font-medium text-slate-800">
+                                <span class="mr-1 rounded bg-brand-navy-100 px-1 py-0.5 text-[10px] font-bold text-brand-navy-700">{{ item.number }}</span>
                                 {{ item.label }}
                             </p>
-                            <p class="mt-0.5 text-xs text-slate-500">
+                            <p class="truncate text-[11px] text-slate-500">
                                 {{ item.department }} · {{ item.measures }} арга хэмжээ
                             </p>
                         </div>
                         <span
-                            class="shrink-0 text-sm font-bold tabular-nums"
+                            class="shrink-0 text-xs font-bold tabular-nums"
                             :class="item.progress != null ? progressTextClass(item.progress) : 'text-slate-400'"
                         >
                             {{ item.progress != null ? `${item.progress}%` : '—' }}
@@ -165,18 +165,20 @@ const assignments = computed(() => props.dashboard.official_assignments ?? []);
                 </div>
             </section>
 
-            <section class="rounded-2xl border border-slate-200 p-4">
-                <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Хэлтэсээр</p>
-                <p class="mb-3 text-xs text-slate-500">АЖХТ — хэрэгжилтийн дундаж</p>
-                <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <section class="flex min-h-0 flex-col rounded-xl border border-slate-200 px-3 py-2">
+                <p class="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                    Хэлтэсээр
+                    <span class="ml-1 font-medium normal-case tracking-normal text-slate-500">АЖХТ — хэрэгжилтийн дундаж</span>
+                </p>
+                <div class="mt-1.5 grid min-h-0 flex-1 grid-cols-3 content-start gap-1.5">
                     <div
                         v-for="dept in departments"
                         :key="dept.code"
-                        class="rounded-xl border border-slate-100 bg-slate-50/70 px-2.5 py-2 text-center"
+                        class="rounded-lg border border-slate-100 bg-slate-50/70 px-2 py-1.5 text-center"
                     >
-                        <p class="text-xs font-semibold text-slate-700">{{ dept.label }}</p>
+                        <p class="text-[11px] font-semibold text-slate-700">{{ dept.label }}</p>
                         <p
-                            class="mt-1 text-lg font-bold tabular-nums"
+                            class="text-base font-bold leading-tight tabular-nums"
                             :class="dept.progress != null ? progressTextClass(dept.progress) : 'text-slate-400'"
                         >
                             {{ dept.progress != null ? `${dept.progress}%` : '—' }}
