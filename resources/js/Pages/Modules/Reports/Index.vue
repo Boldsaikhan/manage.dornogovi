@@ -30,9 +30,8 @@ const sectionNavItems = computed(() => {
     <Head :title="title" />
 
     <AuthenticatedLayout :title="title">
-        <div class="ui-page">
-
-            <div class="mb-4">
+        <div class="ui-page ui-page--reports-table">
+            <div>
                 <ReportSectionTabs
                     :sections="navigation"
                     :active-section-key="activeSectionKey"
@@ -40,8 +39,8 @@ const sectionNavItems = computed(() => {
                 />
             </div>
 
-            <div class="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
-                <aside class="ui-card max-h-[calc(100dvh-12rem)] overflow-y-auto p-3 lg:sticky lg:top-24 lg:self-start">
+            <div class="grid min-h-0 flex-1 gap-2 lg:grid-cols-[16rem_minmax(0,1fr)]">
+                <aside class="ui-card min-h-0 overflow-y-auto p-3">
                     <p class="mb-2 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
                         Дэд тайлан
                     </p>
@@ -49,26 +48,20 @@ const sectionNavItems = computed(() => {
                         <ReportNavTree :items="sectionNavItems" />
                     </nav>
                     <p v-else class="px-2 py-4 text-sm text-slate-400">Тайлан байхгүй</p>
+
+                    <p class="mb-1 mt-4 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                        Эх сурвалж
+                    </p>
+                    <ul class="space-y-1 px-2">
+                        <li v-for="(source, index) in sources" :key="index">
+                            <p class="truncate text-[11px] font-medium text-slate-700" :title="source.file">{{ source.file }}</p>
+                            <p class="truncate text-[10px] text-slate-400">{{ source.role }}</p>
+                        </li>
+                    </ul>
                 </aside>
 
-                <section class="space-y-4">
-                    <div class="ui-card-pad">
-                        <ReportsDashboard :dashboard="dashboard" />
-                    </div>
-
-                    <div class="ui-card-pad">
-                        <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Эх сурвалж файл</p>
-                        <div class="grid gap-2 sm:grid-cols-2">
-                            <div
-                                v-for="(source, index) in sources"
-                                :key="index"
-                                class="rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5"
-                            >
-                                <p class="text-sm font-medium text-slate-800">{{ source.file }}</p>
-                                <p class="mt-0.5 text-xs text-slate-500">{{ source.role }}</p>
-                            </div>
-                        </div>
-                    </div>
+                <section class="ui-card flex min-h-0 flex-col overflow-hidden p-3">
+                    <ReportsDashboard class="min-h-0 flex-1" />
                 </section>
             </div>
         </div>
