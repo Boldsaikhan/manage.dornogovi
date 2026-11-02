@@ -228,6 +228,17 @@ class ReportCatalogTest extends TestCase
         $this->assertSame('Туршилтын баримт', $rows[0]['document']);
         $this->assertSame('4', $rows[0]['count']);
 
+        $this->actingAs($user)
+            ->patch(route('reports.rows.update', ['report' => 'contracts.ministry_gbxn', 'index' => 2]), [
+                'column' => '_span',
+                'value' => '0',
+            ])
+            ->assertRedirect();
+
+        $unmerged = ReportRows::merged('contracts.ministry_gbxn');
+        $this->assertSame('3.1.2', $unmerged[2]['no']);
+        $this->assertFalse($unmerged[2]['_span']);
+
         $viewer = User::factory()->create();
         UserModulePermission::create([
             'user_id' => $viewer->id,
@@ -252,6 +263,16 @@ class ReportCatalogTest extends TestCase
         $gbxn = ReportRows::merged('contracts.ministry_gbxn');
         $this->assertGreaterThan(20, count($gbxn));
         $this->assertStringContainsString('Гэр бүлийн', $gbxn[0]['document']);
+        $this->assertTrue($gbxn[0]['_span']);
+
+        $section = collect($gbxn)->first(fn (array $row) => ($row['no'] ?? '') === '3.1.2');
+        $this->assertNotNull($section);
+        $this->assertTrue($section['_span']);
+        $this->assertStringContainsString('хүчирхийлэлтэй тэмцэх талаар', $section['_span_text']);
+
+        $detail = collect($gbxn)->first(fn (array $row) => str_contains((string) ($row['no'] ?? ''), '1.2.1'));
+        $this->assertNotNull($detail);
+        $this->assertFalse($detail['_span']);
 
         foreach ([
             'contracts.ministry_zgheg',

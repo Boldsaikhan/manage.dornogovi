@@ -47,7 +47,7 @@ class ReportRows
             $row['_index'] = $index;
             $row['department_id'] = null;
 
-            $out[] = array_merge($row, $byRow[$index] ?? []);
+            $out[] = ReportSpan::apply(array_merge($row, $byRow[$index] ?? []));
         }
 
         return $out;
