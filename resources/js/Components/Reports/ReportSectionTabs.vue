@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
-import { openReportSubnav } from '@/composables/useReportSubnav';
+import { openReportSubnav, toggleReportSubnav } from '@/composables/useReportSubnav';
 import { firstReportKeyInSection } from '@/utils/reportsNavigation';
 
 const props = defineProps({
@@ -26,6 +26,17 @@ const tabHref = (sectionKey) => {
 };
 
 const tabs = computed(() => props.sections.filter((section) => section.key && section.label));
+
+const onTabClick = (event, sectionKey) => {
+    if (sectionKey === props.activeSectionKey) {
+        event.preventDefault();
+        toggleReportSubnav();
+
+        return;
+    }
+
+    openReportSubnav();
+};
 </script>
 
 <template>
@@ -39,7 +50,7 @@ const tabs = computed(() => props.sections.filter((section) => section.key && se
             :key="section.key"
             :href="tabHref(section.key)"
             role="tab"
-            @click="openReportSubnav()"
+            @click="onTabClick($event, section.key)"
             :aria-selected="activeSectionKey === section.key"
             class="shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm font-semibold transition sm:px-4"
             :class="activeSectionKey === section.key
