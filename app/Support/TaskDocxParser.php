@@ -177,6 +177,14 @@ class TaskDocxParser
                 $values[$key] = $index === null ? null : ($cells[$index] ?? null);
             }
 
+            // № багана «Үүрэг чиглэл»-д, жинхэнэ текст «Хугацаа»-д орсон тохиолдол.
+            $rawText = trim((string) ($values[TaskSource::COLUMN_TEXT] ?? ''));
+            $rawPeriod = trim((string) ($values[TaskSource::COLUMN_PERIOD] ?? ''));
+            if (preg_match('/^\d+[.)]?$/u', $rawText) && mb_strlen($rawPeriod) > 20) {
+                $values[TaskSource::COLUMN_TEXT] = $rawPeriod;
+                $values[TaskSource::COLUMN_PERIOD] = null;
+            }
+
             $row = $this->row($values);
 
             // Нийлүүлсэн ганц нүдтэй мөр — бүлгийн гарчиг. «text»-д хадгална.
