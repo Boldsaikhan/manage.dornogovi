@@ -84,55 +84,6 @@ $itkhCols = [
     $col('department', 'Тайлагнах хэлтэс'),
 ];
 
-$memorandumMatrixCols = [
-    $col('no', '№', '3rem'),
-    $col('country', 'Улс / ААНБ'),
-    $col('count', 'Тоо', '3rem'),
-    $col('education', 'Боловсрол', '3rem'),
-    $col('health', 'Эрүүл мэнд', '3rem'),
-    $col('tourism', 'Аялал жуулчлал', '3rem'),
-    $col('economy', 'Эдийн засаг', '3rem'),
-    $col('energy', 'Эрчим хүч', '3rem'),
-    $col('livestock', 'Мал аж ахуй', '3rem'),
-    $col('sport', 'Спорт', '3rem'),
-    $col('it', 'МТ', '3rem'),
-    $col('construction', 'Барилга', '3rem'),
-    $col('foreign', 'Гадаад харилцаа', '3rem'),
-];
-
-$memorandumRegisterCols = [
-    $col('no', '№', '3rem'),
-    $col('partner', 'Хамтрагч'),
-    $col('date', 'Огноо'),
-    $col('type', 'Төрөл'),
-    $col('direction', 'Чиглэл'),
-    $col('progress', 'Хэрэгжилт'),
-    $col('note', 'Тайлбар'),
-];
-
-$investmentMatrixCols = [
-    $col('no', '№', '3rem'),
-    $col('soum', 'Сумын нэр'),
-    $col('count', 'Тоо', '3rem'),
-    $col('education', 'Боловсрол', '3rem'),
-    $col('health', 'Эрүүл мэнд', '3rem'),
-    $col('tourism', 'Аялал жуулчлал', '3rem'),
-    $col('economy', 'Эдийн засаг, дэд бүтэц', '4rem'),
-    $col('it', 'МТ', '3rem'),
-    $col('construction', 'Барилга', '3rem'),
-];
-
-$investmentRegisterCols = [
-    $col('no', '№', '3rem'),
-    $col('project', 'Төсөл'),
-    $col('company', 'ААНБ'),
-    $col('soum', 'Сум'),
-    $col('direction', 'Чиглэл'),
-    $col('amount', 'Хэмжээ'),
-    $col('progress', 'Хэрэгжилт'),
-    $col('note', 'Тайлбар'),
-];
-
 $policy = static fn (
     string $key,
     string $number,
@@ -197,22 +148,6 @@ return [
             'label' => 'ИТХ-ын тогтоол — хэрэгжилт',
             'columns' => $itkhCols,
         ],
-        'memorandum_matrix' => [
-            'label' => 'Санамж бичиг — тойм хүснэгт',
-            'columns' => $memorandumMatrixCols,
-        ],
-        'memorandum_register' => [
-            'label' => 'Санамж бичиг — бүртгэл',
-            'columns' => $memorandumRegisterCols,
-        ],
-        'investment_matrix' => [
-            'label' => 'Хөрөнгө оруулалт — тойм хүснэгт',
-            'columns' => $investmentMatrixCols,
-        ],
-        'investment_register' => [
-            'label' => 'Хөрөнгө оруулалт — бүртгэл',
-            'columns' => $investmentRegisterCols,
-        ],
     ],
 
     'dashboard' => [
@@ -221,16 +156,12 @@ return [
             ['key' => 'law_progress', 'label' => 'Хууль тогтоомж', 'value' => 83, 'unit' => '%', 'hint' => '201 арга хэмжээ'],
             ['key' => 'itkh_progress', 'label' => 'ИТХ-ын тогтоол', 'value' => 62.5, 'unit' => '%', 'hint' => '16 шийдвэр'],
             ['key' => 'assignments', 'label' => 'Албан даалгавар', 'value' => 93, 'unit' => 'арга хэмжээ', 'hint' => '5 албан даалгавар'],
-            ['key' => 'memorandum', 'label' => 'Санамж бичиг', 'value' => 18, 'unit' => 'төрөл', 'hint' => '12 улс, ААНБ'],
-            ['key' => 'investment', 'label' => 'Хөрөнгө оруулалт', 'value' => 39, 'unit' => 'төсөл', 'hint' => '36 ААНБ'],
         ],
         'sections' => [
             ['key' => 'state_policy', 'label' => 'Төрийн бодлого', 'number' => '1', 'total' => 44, 'progress' => null, 'note' => 'Тогтоол 22, тэмдэглэл 17, захирамж 1, албан даалгавар 4'],
             ['key' => 'local_policy', 'label' => 'Орон нутгийн бодлого', 'number' => '2', 'total' => null, 'progress' => 46.1, 'note' => 'АЖХТ 46,1%'],
             ['key' => 'contracts', 'label' => 'Гэрээ', 'number' => '3', 'total' => null, 'progress' => 56, 'note' => 'Сайдуудтай хамтран ажиллах гэрээ'],
             ['key' => 'target_programs', 'label' => 'Зорилтот хөтөлбөр', 'number' => '4', 'total' => 5, 'progress' => 53.5, 'note' => '4.1–4.2 ~53%; бусад ирүүлээгүй'],
-            ['key' => 'memorandum', 'label' => 'Санамж бичиг', 'number' => '5', 'total' => 18, 'progress' => null, 'note' => '12 улс, ААНБ'],
-            ['key' => 'investment', 'label' => 'Хөрөнгө оруулалт', 'number' => '6', 'total' => 39, 'progress' => null, 'note' => '36 ААНБ'],
         ],
         'departments' => [
             ['code' => 'tzux', 'label' => 'ТЗУХ', 'progress' => 99, 'tasks' => 18],
@@ -391,86 +322,6 @@ return [
                 $policy('target_programs.partnership', '4.3', 'Түншлэл ба хөгжил', 'БОНХО'),
                 $policy('target_programs.billion_trees', '4.4', 'Тэрбум мод'),
                 $policy('target_programs.digital_dornogovi', '4.5', 'Цахим Дорноговь', 'ТЗУХ', pdf: 'target_programs.digital_dornogovi.pdf'),
-            ],
-        ],
-        [
-            'key' => 'memorandum',
-            'number' => '5',
-            'label' => 'Санамж бичиг',
-            'reports' => [
-                [
-                    'key' => 'memorandum.summary',
-                    'number' => '5',
-                    'label' => 'Улс, ААНБ-тай байгуулсан санамж бичгийн тойм',
-                    'template' => 'memorandum_matrix',
-                    'description' => '12 улс, ААНБ-тай 18 төрлийн санамж бичиг.',
-                ],
-                [
-                    'key' => 'memorandum.register',
-                    'number' => '5.x',
-                    'label' => 'Хамтын ажиллагааны санамж бичиг — дэлгэрэнгүй',
-                    'template' => 'memorandum_register',
-                    'children' => array_map(
-                        static fn (array $row) => array_merge($row, ['template' => 'memorandum_register']),
-                        [
-                            ['key' => 'memorandum.register.5_1', 'number' => '5.1', 'label' => 'БНХАУ — Бугат хот'],
-                            ['key' => 'memorandum.register.5_2', 'number' => '5.2', 'label' => 'БНХАУ — Ах дүү хотын хэлэлцээр (2026.07)'],
-                            ['key' => 'memorandum.register.5_3', 'number' => '5.3', 'label' => 'БНХАУ — Эрээн хот'],
-                            ['key' => 'memorandum.register.5_4', 'number' => '5.4', 'label' => 'БНХАУ — Улаанцав хот'],
-                            ['key' => 'memorandum.register.5_5', 'number' => '5.5', 'label' => 'БНХАУ — Шилийн гол аймаг'],
-                            ['key' => 'memorandum.register.5_6', 'number' => '5.6', 'label' => 'Япон — Шизуока муж'],
-                            ['key' => 'memorandum.register.5_7', 'number' => '5.7', 'label' => 'Япон — Шизуока муж, ЖАЙКА'],
-                            ['key' => 'memorandum.register.5_8', 'number' => '5.8', 'label' => 'Япон — Бохир усны төсөл (2026.06)'],
-                            ['key' => 'memorandum.register.5_9', 'number' => '5.9', 'label' => 'ОХУ — Эрхүү муж'],
-                            ['key' => 'memorandum.register.5_10', 'number' => '5.10', 'label' => 'ОХУ — Худалдаа, эдийн засгийн хэлэлцээр (2026.10)'],
-                            ['key' => 'memorandum.register.5_11', 'number' => '5.11', 'label' => 'БНСУ — Сайншанд-Ёндун'],
-                            ['key' => 'memorandum.register.5_12', 'number' => '5.12', 'label' => 'БНСУ — Улирлын ажилтны солилцоо (2026.02)'],
-                            ['key' => 'memorandum.register.5_13', 'number' => '5.13', 'label' => '«Ньюком» ХХК — сэргээгдэх эрчим хүч'],
-                            ['key' => 'memorandum.register.5_14', 'number' => '5.14', 'label' => '«Дашваанжил» ХХК — хийн халаалт'],
-                            ['key' => 'memorandum.register.5_15', 'number' => '5.15', 'label' => '«Орхон хонь» ХХК — эрчимжсэн хонин'],
-                            ['key' => 'memorandum.register.5_16', 'number' => '5.16', 'label' => 'Монголын Хөл Бөмбөгийн Холбоо'],
-                            ['key' => 'memorandum.register.5_17', 'number' => '5.17', 'label' => '«Байнари системс» ХХК — Сайншанд сум'],
-                            ['key' => 'memorandum.register.5_18', 'number' => '5.18', 'label' => '«Засаг чандмань Майнз» ХХК — Дэлгэрэх сум'],
-                            ['key' => 'memorandum.register.5_19', 'number' => '5.19', 'label' => '«Жы Хэ» майнинг — Их говийн хөгжлийн гарц'],
-                            ['key' => 'memorandum.register.5_20', 'number' => '5.20', 'label' => '«Мөнх алтан гэгээвч» ХХК — Шинэ сумын төв'],
-                        ],
-                    ),
-                ],
-            ],
-        ],
-        [
-            'key' => 'investment',
-            'number' => '6',
-            'label' => 'Хөрөнгө оруулалтын гэрээ',
-            'reports' => [
-                [
-                    'key' => 'investment.summary',
-                    'number' => '6',
-                    'label' => 'Хэрэгжүүлэх төсөл — тойм (39 төсөл, 36 ААНБ)',
-                    'template' => 'investment_matrix',
-                ],
-                [
-                    'key' => 'investment.register',
-                    'number' => '6.x',
-                    'label' => 'Хөрөнгө оруулалтын гэрээ — дэлгэрэнгүй',
-                    'template' => 'investment_register',
-                    'children' => array_map(
-                        static fn (array $row) => array_merge($row, ['template' => 'investment_register']),
-                        [
-                            ['key' => 'investment.register.airag', 'number' => '6.1', 'label' => 'Айраг сум'],
-                            ['key' => 'investment.register.altanshiree', 'number' => '6.2', 'label' => 'Алтанширээ сум'],
-                            ['key' => 'investment.register.dalanjargalan', 'number' => '6.3', 'label' => 'Даланжаргалан сум'],
-                            ['key' => 'investment.register.delgerekh', 'number' => '6.4', 'label' => 'Дэлгэрэх сум'],
-                            ['key' => 'investment.register.ikheht', 'number' => '6.5', 'label' => 'Иххэт сум'],
-                            ['key' => 'investment.register.zamyn_uud', 'number' => '6.6', 'label' => 'Замын-Үүд сум'],
-                            ['key' => 'investment.register.urgun', 'number' => '6.7', 'label' => 'Өргөн сум'],
-                            ['key' => 'investment.register.mandakh', 'number' => '6.8', 'label' => 'Мандах сум'],
-                            ['key' => 'investment.register.sainshand_ulaanbadrah', 'number' => '6.9', 'label' => 'Сайншанд, Улаанбадрах сум'],
-                            ['key' => 'investment.register.khatanbulag', 'number' => '6.10', 'label' => 'Хатанбулаг сум'],
-                            ['key' => 'investment.register.khovsgol', 'number' => '6.11', 'label' => 'Хөвсгөл сум'],
-                        ],
-                    ),
-                ],
             ],
         ],
     ],

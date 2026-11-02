@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ReportNavTree from '@/Components/Reports/ReportNavTree.vue';
 import ReportSectionTabs from '@/Components/Reports/ReportSectionTabs.vue';
@@ -176,7 +176,18 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                     :active-section-key="activeSectionKey"
                     mode="show"
                 >
-                    <template #leading>
+                    <template #trailing>
+                        <Link
+                            :href="route('reports.index')"
+                            class="ui-icon-btn"
+                            title="Бүх үзүүлэлт"
+                            aria-label="Бүх үзүүлэлт"
+                        >
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 19V5M4 19h16" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16v-4M12 16V8M16 16v-6" />
+                            </svg>
+                        </Link>
                         <a
                             v-if="report.pdf_url"
                             :href="report.pdf_url"

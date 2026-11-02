@@ -24,10 +24,14 @@ class ReportCatalogTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Modules/Reports/Index')
-                ->has('navigation', 6)
+                ->has('navigation', 4)
+                ->where('navigation.0.label', 'Төрийн бодлого')
+                ->where('navigation.1.label', 'Орон нутгийн бодлого')
+                ->where('navigation.2.label', 'Гэрээ')
+                ->where('navigation.3.label', 'Зорилтот хөтөлбөр')
                 ->where('activeSection', 'state_policy')
-                ->has('dashboard.kpis', 6)
-                ->has('dashboard.sections', 6)
+                ->has('dashboard.kpis', 4)
+                ->has('dashboard.sections', 4)
                 ->has('sources', 10)
                 ->where('title', 'Тайлан мэдээлэл'));
 
@@ -125,6 +129,14 @@ class ReportCatalogTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('reports.show', 'missing.report'))
+            ->assertNotFound();
+
+        $this->actingAs($user)
+            ->get(route('reports.show', 'memorandum.summary'))
+            ->assertNotFound();
+
+        $this->actingAs($user)
+            ->get(route('reports.show', 'investment.summary'))
             ->assertNotFound();
     }
 

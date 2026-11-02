@@ -33,9 +33,6 @@ const tabs = computed(() => props.sections.filter((section) => section.key && se
         role="tablist"
         aria-label="Тайлангийн хэсэг"
     >
-        <div v-if="$slots.leading" class="flex shrink-0 items-center gap-1">
-            <slot name="leading" />
-        </div>
         <Link
             v-for="section in tabs"
             :key="section.key"
@@ -50,5 +47,8 @@ const tabs = computed(() => props.sections.filter((section) => section.key && se
             <span v-if="section.number" class="mr-1.5 tabular-nums opacity-80">{{ section.number }}.</span>
             {{ section.label }}
         </Link>
+        <div v-if="$slots.trailing" class="ml-auto flex shrink-0 items-center gap-1">
+            <slot name="trailing" />
+        </div>
     </div>
 </template>
