@@ -208,7 +208,7 @@ class ReportCatalogTest extends TestCase
         );
 
         $preview = $this->actingAs($user)
-            ->post(route('reports.import.preview', 'contracts.ministry_gbxn'), ['file' => $file]);
+            ->post(route('reports.import.preview', 'contracts.agency_directors'), ['file' => $file]);
 
         $preview->assertOk();
         $preview->assertJsonPath('mapping.document', 1);
@@ -217,13 +217,13 @@ class ReportCatalogTest extends TestCase
         $preview->assertJsonPath('entries.0.document', 'Туршилтын баримт');
 
         $this->actingAs($user)
-            ->post(route('reports.import.store', 'contracts.ministry_gbxn'), [
+            ->post(route('reports.import.store', 'contracts.agency_directors'), [
                 'entries' => $preview->json('entries'),
             ])
             ->assertRedirect()
             ->assertSessionHas('success', '1 мөр нэмэгдлээ.');
 
-        $rows = ReportRows::merged('contracts.ministry_gbxn');
+        $rows = ReportRows::merged('contracts.agency_directors');
         $this->assertCount(1, $rows);
         $this->assertSame('Туршилтын баримт', $rows[0]['document']);
         $this->assertSame('4', $rows[0]['count']);
@@ -236,10 +236,44 @@ class ReportCatalogTest extends TestCase
         ]);
 
         $this->actingAs($viewer)
-            ->post(route('reports.import.preview', 'contracts.ministry_gbxn'), ['file' => $file])
+            ->post(route('reports.import.preview', 'contracts.agency_directors'), ['file' => $file])
             ->assertForbidden();
 
         @unlink($path);
+    }
+
+    public function test_contract_docx_rows_are_in_the_catalog(): void
+    {
+        $health = ReportRows::merged('contracts.ministry_health');
+        $this->assertGreaterThan(100, count($health));
+        $this->assertSame('1', $health[0]['no']);
+        $this->assertStringContainsString('Артерийн', $health[0]['goal']);
+
+        $gbxn = ReportRows::merged('contracts.ministry_gbxn');
+        $this->assertGreaterThan(20, count($gbxn));
+        $this->assertStringContainsString('Гэр бүлийн', $gbxn[0]['document']);
+
+        foreach ([
+            'contracts.ministry_zgheg',
+            'contracts.deputy_dorjhand',
+            'contracts.deputy_gankhuyag',
+            'contracts.ministry_digital',
+            'contracts.ministry_foreign',
+            'contracts.ministry_finance',
+            'contracts.ministry_defense',
+            'contracts.ministry_legal',
+            'contracts.ministry_economy',
+            'contracts.ministry_environment',
+            'contracts.ministry_mram',
+            'contracts.ministry_urban',
+            'contracts.ministry_food',
+            'contracts.ministry_energy',
+            'contracts.ministry_road',
+            'contracts.ministry_education',
+            'contracts.ministry_culture',
+        ] as $key) {
+            $this->assertGreaterThan(0, count(ReportRows::merged($key)), $key);
+        }
     }
 
     public function test_report_word_export_404_for_unknown_key(): void
