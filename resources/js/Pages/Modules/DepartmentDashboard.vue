@@ -13,6 +13,7 @@ const props = defineProps({
     workGroups: Array,
     recentTasks: { type: Array, default: () => [] },
     indicatorDashboard: { type: Object, default: () => ({ rows: [], units: [], periods: [] }) },
+    lawDashboard: { type: Object, default: () => ({ scopes: [], total: 0, max: 1 }) },
 });
 
 const selectedKey = ref(null);
@@ -170,6 +171,40 @@ function switchIndicatorUnit(id) {
                     </div>
                 </button>
             </div>
+
+            <section class="ui-card-pad">
+                <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <h2 class="ui-title">Салбарын хууль</h2>
+                        <p class="ui-subtitle">{{ lawDashboard.total || 0 }} бүртгэл</p>
+                    </div>
+                    <Link
+                        v-if="lawDashboard.canOpen"
+                        :href="route('legal-acts.index')"
+                        class="text-xs font-semibold text-brand-navy-600 hover:underline"
+                    >
+                        Хүснэгт
+                    </Link>
+                </div>
+
+                <div v-if="lawDashboard.scopes?.length" class="space-y-2.5">
+                    <div
+                        v-for="scope in lawDashboard.scopes"
+                        :key="scope.key"
+                        class="grid grid-cols-[9rem_1fr_2rem] items-center gap-2"
+                    >
+                        <span class="truncate text-xs font-medium text-slate-600">{{ scope.label }}</span>
+                        <div class="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                            <div
+                                class="h-full rounded-full bg-brand-navy-600"
+                                :style="{ width: `${Math.max(scope.count ? 4 : 0, (scope.count / lawDashboard.max) * 100)}%` }"
+                            />
+                        </div>
+                        <span class="text-right text-sm font-bold tabular-nums text-brand-navy-900">{{ scope.count }}</span>
+                    </div>
+                </div>
+                <p v-else class="text-sm text-slate-400">Салбарын хууль бүртгэгдээгүй.</p>
+            </section>
 
             <section class="ui-card-pad">
                 <div class="mb-4 flex flex-wrap items-end justify-between gap-3">

@@ -221,7 +221,7 @@ return [
     ],
     'legal_acts' => [
         'model' => App\Models\LegalAct::class,
-        'title' => 'Эрх зүйн акт, тогтоол',
+        'title' => 'Салбарын хууль',
         'description' => 'Салбартаа хамаарах хууль, тогтоол, журмыг legalinfo.mn болон бусад эх сурвалжаас нэгтгэн бүртгэнэ.',
         'scope_column' => 'scope',
         'scope_label' => 'Актын төрөл',
@@ -233,25 +233,6 @@ return [
             'said' => 'Сайдын тушаал',
             'oron_nutag' => 'Орон нутгийн',
             'busad' => 'Бусад',
-        ],
-        // Табуудыг бүлэглэж харуулна.
-        'scope_groups' => [
-            'huuli_togtoomj' => [
-                'label' => 'Салбарын хууль',
-                'scopes' => ['huuli', 'uih', 'zasgiin_gazar', 'said', 'oron_nutag', 'busad'],
-            ],
-            'uzuulelt' => [
-                'label' => '',
-                'scopes' => [],
-            ],
-        ],
-        // Өөр хуудас руу очих таб.
-        'scope_links' => [
-            [
-                'label' => 'Салбарын үзүүлэлт',
-                'route' => 'indicators.index',
-                'group' => 'uzuulelt',
-            ],
         ],
         'row_number' => '№',
         'columns' => [
