@@ -8,6 +8,7 @@ import ReportSectionTabs from '@/Components/Reports/ReportSectionTabs.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import SheetCell from '@/Components/SheetCell.vue';
 import { findReportSection } from '@/utils/reportsNavigation';
+import { useReportSubnav } from '@/composables/useReportSubnav';
 
 const props = defineProps({
     title: String,
@@ -134,6 +135,7 @@ const cellClass = (key) => ({
 });
 
 const tableExpanded = ref(false);
+const subnavOpen = useReportSubnav();
 const editMode = ref(false);
 const downloadOpen = ref(false);
 const pdfOpen = ref(false);
@@ -318,6 +320,20 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                     mode="show"
                 >
                     <template #trailing>
+                        <button
+                            type="button"
+                            class="ui-icon-btn"
+                            :class="subnavOpen ? 'bg-brand-navy-600 text-white' : ''"
+                            :title="subnavOpen ? 'Дэд тайланг хураах' : 'Дэд тайлан'"
+                            :aria-label="subnavOpen ? 'Дэд тайланг хураах' : 'Дэд тайлан'"
+                            :aria-pressed="subnavOpen"
+                            @click="subnavOpen = ! subnavOpen"
+                        >
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 5h16M4 12h10M4 19h16" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 9l3 3-3 3" />
+                            </svg>
+                        </button>
                         <Link
                             :href="route('reports.index')"
                             class="ui-icon-btn"
@@ -433,8 +449,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                 </ReportSectionTabs>
             </div>
 
-            <div class="ui-reports-table-shell grid min-h-0 grid-rows-[minmax(0,11rem)_minmax(0,1fr)] gap-4 lg:grid-cols-[18rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
-                <aside class="ui-card min-h-0 overflow-y-auto p-3">
+            <div
+                class="ui-reports-table-shell grid min-h-0 gap-4"
+                :class="subnavOpen
+                    ? 'grid-rows-[minmax(0,11rem)_minmax(0,1fr)] lg:grid-cols-[18rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]'
+                    : 'grid-rows-[minmax(0,1fr)]'"
+            >
+                <aside v-if="subnavOpen" class="ui-card min-h-0 overflow-y-auto p-3">
                     <p class="mb-2 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
                         Дэд тайлан
                     </p>
