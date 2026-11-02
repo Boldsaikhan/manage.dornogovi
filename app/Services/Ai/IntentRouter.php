@@ -131,6 +131,19 @@ class IntentRouter
             ]]]];
         }
 
+        if ($this->matches($q, ['шалга', 'зөв үү', 'алдаа']) && $this->matches($q, ['албан бичиг', 'тушаал', 'захирамж', 'стандарт', 'төсөл', 'тэмдэглэл', 'гэрээ', 'тайлан'])) {
+            return ['intent' => 'doc_standard_check', 'tools' => [['name' => 'check_document_draft', 'args' => [
+                'text' => $message,
+                'kind' => $this->standardKind($q),
+            ]]]];
+        }
+
+        if ($this->matches($q, ['бичиг хэргийн стандарт'])) {
+            return ['intent' => 'doc_standards', 'tools' => [['name' => 'list_document_standards', 'args' => [
+                'status' => $this->matches($q, ['хүчингүй', 'хуучин']) ? 'repealed' : 'current',
+            ]]]];
+        }
+
         if ($this->matches($q, ['журам', 'стандарт'])) {
             return ['intent' => 'documents', 'tools' => [['name' => 'search_documents', 'args' => [
                 'q' => $this->extractSearchPhrase($q, ['журам', 'стандарт', 'харуул', 'хай']),
@@ -206,6 +219,24 @@ class IntentRouter
         ];
 
         return $this->matches($q, $patterns);
+    }
+
+    private function standardKind(string $q): string
+    {
+        if ($this->matches($q, ['тушаал', 'захирамж'])) {
+            return 'order';
+        }
+        if ($this->matches($q, ['тэмдэглэл', 'хурал'])) {
+            return 'minutes';
+        }
+        if ($this->matches($q, ['гэрээ'])) {
+            return 'contract';
+        }
+        if ($this->matches($q, ['тайлан'])) {
+            return 'report';
+        }
+
+        return 'letter';
     }
 
     /**

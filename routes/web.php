@@ -190,9 +190,13 @@ Route::middleware('auth')->group(function () {
         ->name('indicators.periods.destroy');
     Route::get('/modules/archives', [ModuleResourceController::class, 'index'])->name('archives.index');
     Route::get('/modules/doc_standards', [DocumentStandardController::class, 'index'])->name('doc-standards.index');
+    Route::post('/modules/doc_standards/check', [DocumentStandardController::class, 'check'])->name('doc-standards.check');
+    Route::get('/modules/doc_standards/{standard:slug}', [DocumentStandardController::class, 'show'])->name('doc-standards.show');
     Route::patch('/document-formats/{format}', [DocumentStandardController::class, 'updateFormat'])->name('document-formats.update');
     Route::post('/document-formats/{format}/default', [DocumentStandardController::class, 'setDefaultFormat'])->name('document-formats.default');
     Route::post('/document-standards', [DocumentStandardController::class, 'storeStandard'])->name('document-standards.store');
+    Route::patch('/document-standards/{standard}', [DocumentStandardController::class, 'updateStandard'])->name('document-standards.update');
+    Route::post('/document-standards/{standard}/archive', [DocumentStandardController::class, 'archiveStandard'])->name('document-standards.archive');
     Route::delete('/document-standards/{standard}', [DocumentStandardController::class, 'destroyStandard'])->name('document-standards.destroy');
     Route::get('/modules/plans', [ModuleResourceController::class, 'index'])->name('plans.index');
     Route::get('/modules/foreign-trips', [ModuleResourceController::class, 'index'])->name('foreign-trips.index');
