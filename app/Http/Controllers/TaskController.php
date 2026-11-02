@@ -518,6 +518,7 @@ class TaskController extends Controller
         }
 
         $data = $this->filterTaskUpdateFields($request->user(), $data);
+        $data = $this->normalizeTaskPayload($data);
 
         if ($data === []) {
             abort(403);
@@ -572,6 +573,7 @@ class TaskController extends Controller
         }
 
         $fields = $this->filterTaskUpdateFields($request->user(), $fields);
+        $fields = $this->normalizeTaskPayload($fields);
 
         if ($fields === []) {
             abort(403);
@@ -1244,6 +1246,26 @@ class TaskController extends Controller
         }
 
         return array_intersect_key($data, array_flip(['note', 'progress']));
+    }
+
+    /**
+     * «Үүрэг чиглэл» багана хоосон байж болно. Хоосон утга null болж
+     * ирвэл NOT NULL багана 500 өгдөг тул хоосон мөрөөр хадгална.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function normalizeTaskPayload(array $data): array
+    {
+        if (array_key_exists('text', $data) && $data['text'] === null) {
+            $data['text'] = '';
+        }
+
+        if (array_key_exists('progress', $data) && $data['progress'] === null) {
+            $data['progress'] = 0;
+        }
+
+        return $data;
     }
 
     private function kindRule(): \Illuminate\Validation\Rules\Exists
