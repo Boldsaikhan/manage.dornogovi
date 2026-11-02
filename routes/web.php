@@ -17,6 +17,7 @@ use App\Http\Controllers\DocumentStandardController;
 use App\Http\Controllers\LaunchController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\LeaveSlipController;
+use App\Http\Controllers\LegalStructureController;
 use App\Http\Controllers\ModuleResourceController;
 use App\Http\Controllers\ReportCatalogController;
 use App\Http\Controllers\NotificationController;
@@ -167,6 +168,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/modules/decrees/{decree}', [DecreeController::class, 'destroy'])->name('decrees.destroy');
     Route::get('/modules/contracts', [ModuleResourceController::class, 'index'])->name('contracts.index');
     Route::get('/modules/legal_acts', [ModuleResourceController::class, 'index'])->name('legal-acts.index');
+    Route::get('/legal-structure', [LegalStructureController::class, 'index'])->name('legal-structure.index');
+    Route::patch('/legal-structure/{user}', [LegalStructureController::class, 'update'])->name('legal-structure.update');
 
     // Салбарын үзүүлэлт — нэгж бүрийн суурь тоон мэдээлэл.
     Route::get('/modules/legal_acts/indicators', [SectorIndicatorController::class, 'index'])

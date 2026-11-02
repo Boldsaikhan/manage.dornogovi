@@ -28,6 +28,14 @@ class ModuleAccess
     public const LEVEL_CLOSED = 'closed';
 
     /**
+     * Эрх зүйн акт, тогтоол бүлгийн цэсүүд.
+     * Эдгээрийг «Бүтэц, хандах эрх» цэснээс хүн бүрээр нь нээж, хаана.
+     *
+     * @var list<string>
+     */
+    public const LEGAL_GROUP_KEYS = ['reports', 'legal_acts', 'sector_indicators'];
+
+    /**
      * Модуль доторх дэд хэсгүүд — эрхийг тус тусад нь тохируулна.
      *
      * Түлхүүр нь «модуль:дэд» хэлбэртэй (жнь decrees:zahiramj_a). Дэд хэсэгт
@@ -233,11 +241,12 @@ class ModuleAccess
             return null;
         }
 
-        // Системийн роль: загварт байхгүй модуль хаалттай хэвээр.
-        // Загварт байгаа модулийн түвшинг Хандах эрх дээрх хэрэглэгчийн тохиргоо дарж болно
-        // (жнь: «хамааралтай» ↔ «бүгд»).
         $roleKey = self::systemRoleKey($user);
-        if ($roleKey) {
+        $personal = in_array($moduleKey, self::LEGAL_GROUP_KEYS, true);
+
+        // Системийн роль: загварт байхгүй модуль хаалттай хэвээр.
+        // Эрх зүйн акт, тогтоол бүлгийг хүн бүрээр нь нээж болно.
+        if ($roleKey && ! $personal) {
             $roleLevel = RolePermission::map()[$roleKey][$moduleKey] ?? null;
             $roleLevel = in_array($roleLevel, self::LEVELS, true) ? $roleLevel : null;
 
@@ -248,7 +257,18 @@ class ModuleAccess
             return $userLevel ?? $roleLevel;
         }
 
-        return $userLevel;
+        if ($userLevel !== null) {
+            return $userLevel;
+        }
+
+        if (! $roleKey) {
+            return null;
+        }
+
+        $roleLevel = RolePermission::map()[$roleKey][$moduleKey] ?? null;
+        $roleLevel = in_array($roleLevel, self::LEVELS, true) ? $roleLevel : null;
+
+        return ($roleLevel === null || $roleLevel === self::LEVEL_CLOSED) ? null : $roleLevel;
     }
 
     /**
