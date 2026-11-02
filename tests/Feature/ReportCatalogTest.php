@@ -159,6 +159,29 @@ class ReportCatalogTest extends TestCase
         );
     }
 
+    public function test_report_export_downloads_excel_and_pdf(): void
+    {
+        $user = User::factory()->create(['is_admin' => true]);
+
+        $excel = $this->actingAs($user)
+            ->get(route('reports.export', ['report' => 'contracts.agency_directors', 'format' => 'xlsx']));
+        $excel->assertOk();
+        $this->assertSame('PK', substr($excel->getContent(), 0, 2));
+        $this->assertStringContainsString(
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            (string) $excel->headers->get('content-type'),
+        );
+
+        $pdf = $this->actingAs($user)
+            ->get(route('reports.export', ['report' => 'contracts.agency_directors', 'format' => 'pdf']));
+        $pdf->assertOk();
+        $this->assertStringStartsWith('%PDF', $pdf->getContent());
+
+        $this->actingAs($user)
+            ->get(route('reports.export', ['report' => 'contracts.agency_directors', 'format' => 'csv']))
+            ->assertNotFound();
+    }
+
     public function test_report_word_export_404_for_unknown_key(): void
     {
         $user = User::factory()->create(['is_admin' => true]);

@@ -6,9 +6,11 @@ use App\Models\Department;
 use App\Models\ReportRowEdit;
 use App\Support\DocxTableWriter;
 use App\Support\ModuleAccess;
+use App\Support\PdfTableWriter;
 use App\Support\ReportRows;
 use App\Support\ReportsCatalog;
 use App\Support\ReportsData;
+use App\Support\XlsxTableWriter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -93,9 +95,17 @@ class ReportCatalogController extends Controller
         ]);
     }
 
-    public function export(Request $request, string $report, DocxTableWriter $docx): HttpResponse
-    {
+    public function export(
+        Request $request,
+        string $report,
+        DocxTableWriter $docx,
+        XlsxTableWriter $xlsx,
+        PdfTableWriter $pdf,
+    ): HttpResponse {
         $this->authorizeReports($request);
+
+        $format = strtolower((string) $request->query('format', 'docx'));
+        abort_unless(in_array($format, ['docx', 'xlsx', 'pdf'], true), 404);
 
         $item = ReportsCatalog::find($report);
         if (! $item) {
@@ -113,27 +123,41 @@ class ReportCatalogController extends Controller
         $tmp = tempnam(sys_get_temp_dir(), 'report_export_');
 
         try {
-            $path = $tmp.'.docx';
-            $docx->write(
-                $path,
-                $payload['title'],
-                $payload['headings'],
-                $payload['widths'],
-                $payload['docx_rows'],
-                $payload['center'],
-                $payload['landscape'],
-            );
+            if ($format === 'xlsx') {
+                $path = $tmp.'.xlsx';
+                $xlsx->write($path, $payload['title'], $payload['headings'], $payload['sheet_rows']);
+                $mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                $ascii = 'report.xlsx';
+            } elseif ($format === 'pdf') {
+                $path = $tmp.'.pdf';
+                $pdf->write($path, $payload['title'], $payload['headings'], $payload['sheet_rows'], $payload['landscape']);
+                $mime = 'application/pdf';
+                $ascii = 'report.pdf';
+            } else {
+                $path = $tmp.'.docx';
+                $docx->write(
+                    $path,
+                    $payload['title'],
+                    $payload['headings'],
+                    $payload['widths'],
+                    $payload['docx_rows'],
+                    $payload['center'],
+                    $payload['landscape'],
+                );
+                $mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                $ascii = 'report.docx';
+            }
             $content = (string) file_get_contents($path);
             @unlink($path);
         } finally {
             @unlink($tmp);
         }
 
-        $fileName = $title.' '.now()->format('Y-m-d').'.docx';
+        $fileName = $title.' '.now()->format('Y-m-d').'.'.$format;
 
         return response($content, 200, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'Content-Disposition' => "attachment; filename=\"report.docx\"; filename*=UTF-8''".rawurlencode($fileName),
+            'Content-Type' => $mime,
+            'Content-Disposition' => "attachment; filename=\"{$ascii}\"; filename*=UTF-8''".rawurlencode($fileName),
             'Content-Length' => (string) strlen($content),
         ]);
     }
@@ -166,7 +190,8 @@ class ReportCatalogController extends Controller
      *     widths: list<int>,
      *     center: list<int>,
      *     landscape: bool,
-     *     docx_rows: list<array{type: string, cells: list<string>}>
+     *     docx_rows: list<array{type: string, cells: list<string>}>,
+     *     sheet_rows: list<list<string>>
      * }
      */
     /**
@@ -247,6 +272,7 @@ class ReportCatalogController extends Controller
             'center' => $center,
             'landscape' => count($columns) > 6,
             'docx_rows' => $docxRows,
+            'sheet_rows' => array_map(fn (array $row) => $row['cells'], $docxRows),
         ];
     }
 

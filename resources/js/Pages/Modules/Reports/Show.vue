@@ -148,8 +148,21 @@ const cellClass = (key) => ({
 });
 
 const tableExpanded = ref(false);
+const editMode = ref(false);
+const downloadOpen = ref(false);
 
-const wordExportUrl = computed(() => route('reports.export', props.report.key));
+const tableEditing = computed(() => props.canEdit && editMode.value);
+
+const downloadFormats = [
+    { format: 'xlsx', label: 'Excel (.xlsx)' },
+    { format: 'docx', label: 'Word (.docx)' },
+    { format: 'pdf', label: 'PDF' },
+];
+
+const download = (format) => {
+    downloadOpen.value = false;
+    window.location.href = route('reports.export', { report: props.report.key, format });
+};
 
 const closeExpanded = () => {
     tableExpanded.value = false;
@@ -202,17 +215,55 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M14 3v5h5M8 13h8M8 17h6" />
                             </svg>
                         </a>
-                        <a
-                            v-if="hasColumns"
-                            :href="wordExportUrl"
+                        <button
+                            v-if="canEdit && hasColumns"
+                            type="button"
                             class="ui-icon-btn"
-                            title="Word татах"
-                            aria-label="Word татах"
+                            :class="editMode ? 'bg-brand-navy-600 text-white' : ''"
+                            :title="editMode ? 'Засварыг дуусгах' : 'Хүснэгтийг засах'"
+                            :aria-label="editMode ? 'Засварыг дуусгах' : 'Засах'"
+                            :aria-pressed="editMode"
+                            @click="editMode = ! editMode"
                         >
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M5 19h14" />
+                            <svg v-if="editMode" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
-                        </a>
+                            <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 20h4l10-10a2.1 2.1 0 1 0-3-3L5 17v3z" />
+                            </svg>
+                        </button>
+                        <div v-if="hasColumns" class="relative">
+                            <button
+                                type="button"
+                                class="ui-icon-btn"
+                                title="Excel, Word, PDF-ээр татах"
+                                aria-label="Татах"
+                                :aria-expanded="downloadOpen"
+                                @click="downloadOpen = ! downloadOpen"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0-4-4m4 4 4-4M4 18v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1" />
+                                </svg>
+                            </button>
+                            <div v-if="downloadOpen" class="fixed inset-0 z-40" @click="downloadOpen = false" />
+                            <div
+                                v-if="downloadOpen"
+                                class="absolute right-0 z-50 mt-1 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                            >
+                                <p class="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                                    Татах
+                                </p>
+                                <button
+                                    v-for="option in downloadFormats"
+                                    :key="option.format"
+                                    type="button"
+                                    class="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                    @click="download(option.format)"
+                                >
+                                    {{ option.label }}
+                                </button>
+                            </div>
+                        </div>
                         <button
                             v-if="hasColumns"
                             type="button"
@@ -330,7 +381,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                         >
                                             <!-- Хэлтэс — жинхэнэ хэлтсээс сонгоно (харагдах хүрээг тогтооно) -->
                                             <select
-                                                v-if="canEdit && isDepartmentColumn(col.key)"
+                                                v-if="tableEditing && isDepartmentColumn(col.key)"
                                                 class="w-full rounded-md border-slate-200 bg-white py-0.5 text-[11px] text-slate-700"
                                                 :value="row.department_id ?? ''"
                                                 :disabled="savingCell === cellKey(row, col.key)"
@@ -343,7 +394,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                             </select>
 
                                             <SheetCell
-                                                v-else-if="canEdit"
+                                                v-else-if="tableEditing"
                                                 :model-value="row[col.key] ?? ''"
                                                 multiline
                                                 :clamp="false"
