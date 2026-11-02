@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 const props = defineProps({
@@ -12,6 +12,7 @@ const props = defineProps({
     recentPlans: Array,
     workGroups: Array,
     recentTasks: { type: Array, default: () => [] },
+    indicatorDashboard: { type: Object, default: () => ({ rows: [], units: [], periods: [] }) },
 });
 
 const selectedKey = ref(null);
@@ -108,6 +109,31 @@ function selectCard(card) {
 
     selectedKey.value = selectedKey.value === card.key ? null : card.key;
 }
+
+const indicators = computed(() => props.indicatorDashboard?.rows ?? []);
+
+function barHeight(point, row) {
+    if (point.value == null || ! row.scale) {
+        return '0%';
+    }
+
+    return `${Math.max(4, (point.value / row.scale) * 100)}%`;
+}
+
+function targetLine(row) {
+    if (row.target == null || ! row.scale) {
+        return null;
+    }
+
+    return `${Math.min(100, (row.target / row.scale) * 100)}%`;
+}
+
+function switchIndicatorUnit(id) {
+    router.get(route('dept.dashboard'), { unit: id }, {
+        preserveScroll: true,
+        preserveState: false,
+    });
+}
 </script>
 
 <template>
@@ -144,6 +170,93 @@ function selectCard(card) {
                     </div>
                 </button>
             </div>
+
+            <section class="ui-card-pad">
+                <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <h2 class="ui-title">Суурь мэдээлэл</h2>
+                        <p v-if="indicatorDashboard.unitName" class="ui-subtitle">
+                            {{ indicatorDashboard.unitName }}
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <select
+                            v-if="indicatorDashboard.units?.length"
+                            class="ui-input !w-auto !py-1.5 text-sm"
+                            :value="indicatorDashboard.unitId"
+                            @change="switchIndicatorUnit($event.target.value)"
+                        >
+                            <option v-for="unit in indicatorDashboard.units" :key="unit.id" :value="unit.id">
+                                {{ unit.name }}
+                            </option>
+                        </select>
+                        <Link
+                            v-if="indicatorDashboard.canOpen"
+                            :href="route('indicators.index', indicatorDashboard.unitId ? { unit: indicatorDashboard.unitId } : {})"
+                            class="text-xs font-semibold text-brand-navy-600 hover:underline"
+                        >
+                            Хүснэгт
+                        </Link>
+                    </div>
+                </div>
+
+                <div v-if="indicators.length" class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <article
+                        v-for="row in indicators"
+                        :key="row.id"
+                        class="flex flex-col rounded-xl border border-slate-200 bg-slate-50/60 p-3"
+                    >
+                        <p class="text-sm font-semibold leading-snug text-slate-800">{{ row.title }}</p>
+                        <p class="mt-1 text-[11px] text-slate-500">
+                            <span v-if="row.measure_unit">{{ row.measure_unit }}</span>
+                            <span v-if="row.target_display"> · хүрэх {{ row.target_display }}</span>
+                        </p>
+
+                        <div class="mt-3 flex items-end justify-between gap-3">
+                            <p class="text-2xl font-bold tabular-nums tracking-tight text-brand-navy-900">
+                                {{ row.latest_display || '—' }}
+                            </p>
+                            <p
+                                v-if="row.progress != null"
+                                class="text-sm font-bold tabular-nums"
+                                :class="row.progress >= 80 ? 'text-emerald-600' : row.progress >= 50 ? 'text-brand-navy-700' : 'text-brand-orange-600'"
+                            >
+                                {{ row.progress }}%
+                            </p>
+                        </div>
+
+                        <div class="relative mt-3 flex h-24 items-end gap-1 border-b border-slate-200">
+                            <div
+                                v-if="targetLine(row)"
+                                class="pointer-events-none absolute inset-x-0 border-t border-dashed border-brand-orange-500"
+                                :style="{ bottom: targetLine(row) }"
+                            />
+                            <div
+                                v-for="(point, index) in row.points"
+                                :key="row.id + '-' + index"
+                                class="flex h-full min-w-0 flex-1 flex-col justify-end"
+                                :title="point.display ? `${point.label}: ${point.display}` : point.label"
+                            >
+                                <div
+                                    class="w-full rounded-t bg-brand-navy-600"
+                                    :style="{ height: barHeight(point, row) }"
+                                />
+                            </div>
+                        </div>
+                        <div class="mt-1 flex gap-1">
+                            <span
+                                v-for="(point, index) in row.points"
+                                :key="'l-' + row.id + '-' + index"
+                                class="min-w-0 flex-1 truncate text-center text-[10px] text-slate-400"
+                            >
+                                {{ point.label }}
+                            </span>
+                        </div>
+                    </article>
+                </div>
+
+                <p v-else class="text-sm text-slate-400">Энэ нэгжид суурь үзүүлэлт алга.</p>
+            </section>
 
             <div
                 v-if="activeCard"

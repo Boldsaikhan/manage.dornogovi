@@ -57,6 +57,42 @@ class IndicatorMeasure
         return $options;
     }
 
+    /** График дээр ашиглах тоо. Тоо биш бол null. */
+    public static function numeric(?string $unit, mixed $raw): ?float
+    {
+        $normalized = self::normalize($unit, $raw);
+
+        if ($normalized === '' || ! is_numeric($normalized)) {
+            return null;
+        }
+
+        return (float) $normalized;
+    }
+
+    /** Хүснэгт, самбар дээр харагдах хэлбэр. */
+    public static function display(?string $unit, mixed $raw): string
+    {
+        $raw = trim((string) $raw);
+
+        if ($raw === '') {
+            return '';
+        }
+
+        $kind = self::units()[$unit] ?? null;
+        $number = self::numeric($unit, $raw);
+
+        if ($kind === null || $number === null) {
+            return $raw;
+        }
+
+        return match ($kind) {
+            'percent' => self::trimNumber($number, 1).'%',
+            'money' => number_format($number, 0, '.', ' ').' ₮',
+            'integer' => number_format($number, 0, '.', ' '),
+            default => self::trimNumber($number, 2),
+        };
+    }
+
     /** Сонгосон нэгжид тааруулж тоон утгыг цэвэрлэнэ. */
     public static function normalize(?string $unit, mixed $raw): string
     {
