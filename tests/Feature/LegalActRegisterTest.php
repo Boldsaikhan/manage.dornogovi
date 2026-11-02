@@ -76,11 +76,11 @@ class LegalActRegisterTest extends TestCase
 
                 $this->assertSame('Эрх зүйн акт, тогтоол', $group['label'] ?? null);
                 $this->assertSame(
-                    ['Салбарын хууль', 'Салбарын үзүүлэлт'],
+                    ['Тайлан мэдээлэл', 'Салбарын хууль', 'Салбарын үзүүлэлт', 'Бүтэц, хандах эрх'],
                     collect($group['items'] ?? [])->pluck('label')->all(),
                 );
                 $this->assertSame(
-                    ['legal-acts.index', 'indicators.index'],
+                    ['reports.index', 'legal-acts.index', 'indicators.index', 'legal-structure.index'],
                     collect($group['items'] ?? [])->pluck('route')->all(),
                 );
             });

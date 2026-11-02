@@ -23,7 +23,7 @@ use Inertia\Response;
  */
 class SectorIndicatorController extends Controller
 {
-    private const MODULE = 'legal_acts';
+    private const MODULE = 'sector_indicators';
 
     public function index(Request $request): Response
     {

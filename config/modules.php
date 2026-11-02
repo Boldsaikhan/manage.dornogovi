@@ -64,7 +64,7 @@ return [
             'key' => 'reports',
             'label' => 'Тайлан мэдээлэл',
             'route' => 'reports.index',
-            'group' => 'work',
+            'group' => 'legal',
             'icon' => 'chart',
             'own_scope' => 'created_by',
         ],
@@ -107,9 +107,13 @@ return [
             'route' => 'indicators.index',
             'group' => 'legal',
             'icon' => 'chart',
-            // Эрх нь салбарын хуультай нэг. Цэсэнд л тусад нь гарна.
-            'access' => 'legal_acts',
-            'menu_only' => true,
+        ],
+        [
+            'key' => 'legal_structure',
+            'label' => 'Бүтэц, хандах эрх',
+            'route' => 'legal-structure.index',
+            'group' => 'legal',
+            'icon' => 'settings',
         ],
         [
             'key' => 'archives',

@@ -172,7 +172,7 @@ function switchIndicatorUnit(id) {
                 </button>
             </div>
 
-            <section class="ui-card-pad">
+            <section v-if="lawDashboard.visible" class="ui-card-pad">
                 <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
                     <div>
                         <h2 class="ui-title">Салбарын хууль</h2>
@@ -206,7 +206,7 @@ function switchIndicatorUnit(id) {
                 <p v-else class="text-sm text-slate-400">Салбарын хууль бүртгэгдээгүй.</p>
             </section>
 
-            <section class="ui-card-pad">
+            <section v-if="indicatorDashboard.visible" class="ui-card-pad">
                 <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
                     <div>
                         <h2 class="ui-title">Салбарын үзүүлэлт</h2>

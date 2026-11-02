@@ -104,6 +104,16 @@ class DepartmentDashboardController extends Controller
      */
     private function lawDashboard($user): array
     {
+        if (! ModuleAccess::canView($user, 'legal_acts')) {
+            return [
+                'visible' => false,
+                'total' => 0,
+                'max' => 1,
+                'canOpen' => false,
+                'scopes' => [],
+            ];
+        }
+
         $scopes = config('module_resources.legal_acts.scopes', []);
         $counts = LegalAct::query()
             ->selectRaw('scope, count(*) as aggregate')
@@ -127,9 +137,10 @@ class DepartmentDashboardController extends Controller
         }
 
         return [
+            'visible' => true,
             'total' => (int) $counts->sum(),
             'max' => max(1, $highest),
-            'canOpen' => ModuleAccess::canView($user, 'legal_acts'),
+            'canOpen' => true,
             'scopes' => $items,
         ];
     }
@@ -141,7 +152,19 @@ class DepartmentDashboardController extends Controller
      */
     private function indicatorDashboard(Request $request, $user): array
     {
-        $isManager = $user->is_admin || ModuleAccess::canManage($user, 'legal_acts');
+        if (! ModuleAccess::canView($user, 'sector_indicators')) {
+            return [
+                'visible' => false,
+                'unitId' => null,
+                'unitName' => null,
+                'canOpen' => false,
+                'units' => [],
+                'periods' => [],
+                'rows' => [],
+            ];
+        }
+
+        $isManager = $user->is_admin || ModuleAccess::canManage($user, 'sector_indicators');
 
         $units = Department::query()
             ->orderBy('sort_order')->orderBy('name')
@@ -163,7 +186,8 @@ class DepartmentDashboardController extends Controller
         return [
             'unitId' => $unitId,
             'unitName' => $department?->name,
-            'canOpen' => ModuleAccess::canView($user, 'legal_acts'),
+            'visible' => true,
+            'canOpen' => true,
             'units' => $isManager
                 ? $units->map(fn (Department $d) => ['id' => $d->id, 'name' => $d->name])->values()
                 : [],

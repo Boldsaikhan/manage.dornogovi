@@ -33,7 +33,7 @@ class SectorIndicatorTest extends TestCase
     private function staff(Department $department, string $level = 'manage'): User
     {
         $user = User::factory()->create(['department_id' => $department->id]);
-        $this->grantModule($user, 'legal_acts', $level);
+        $this->grantModule($user, 'sector_indicators', $level);
 
         return $user->fresh();
     }
