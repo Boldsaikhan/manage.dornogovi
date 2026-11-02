@@ -1,7 +1,8 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Modal from '@/Components/Modal.vue';
 import ReportNavTree from '@/Components/Reports/ReportNavTree.vue';
 import ReportSectionTabs from '@/Components/Reports/ReportSectionTabs.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
@@ -154,6 +155,7 @@ const pdfOpen = ref(false);
 
 watch(() => props.report.key, () => {
     pdfOpen.value = false;
+    closeImport();
 });
 
 const togglePdf = () => {
@@ -175,6 +177,91 @@ const downloadFormats = [
 const download = (format) => {
     downloadOpen.value = false;
     window.location.href = route('reports.export', { report: props.report.key, format });
+};
+
+const page = usePage();
+const flashSuccess = computed(() => page.props.flash?.success ?? null);
+
+const importInput = ref(null);
+const importBusy = ref(false);
+const importData = ref(null);
+
+const pickImportFile = () => importInput.value?.click();
+
+const onImportFile = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (! file) return;
+
+    importBusy.value = true;
+
+    try {
+        const form = new FormData();
+        form.append('file', file);
+
+        const { data } = await window.axios.post(
+            route('reports.import.preview', props.report.key),
+            form,
+        );
+
+        importData.value = { ...data, file_name: file.name };
+        remapImport();
+    } catch (err) {
+        alert(
+            err?.response?.data?.errors?.file?.[0]
+            || err?.response?.data?.message
+            || 'Файлыг уншиж чадсангүй.',
+        );
+    } finally {
+        importBusy.value = false;
+    }
+};
+
+const remapImport = () => {
+    if (! importData.value) return;
+
+    const fields = Object.keys(importData.value.fields ?? {});
+
+    importData.value.entries = (importData.value.rows ?? [])
+        .map((row) => {
+            const entry = {};
+
+            fields.forEach((field) => {
+                const index = importData.value.mapping[field];
+                const raw = index === null || index === undefined || index === ''
+                    ? ''
+                    : (row[index] ?? '');
+                entry[field] = String(raw).trim() === '' ? null : String(raw);
+            });
+
+            return entry;
+        })
+        .filter((entry) => fields.some((field) => String(entry[field] ?? '').trim() !== ''));
+
+    importData.value.total = importData.value.entries.length;
+};
+
+const importSample = computed(() => (importData.value?.entries ?? []).slice(0, 8));
+
+const closeImport = () => {
+    importData.value = null;
+};
+
+const confirmImport = () => {
+    if (! importData.value || importBusy.value || ! importData.value.total) return;
+
+    importBusy.value = true;
+
+    router.post(route('reports.import.store', props.report.key), {
+        entries: importData.value.entries,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => closeImport(),
+        onFinish: () => {
+            importBusy.value = false;
+        },
+    });
 };
 
 const closeExpanded = () => {
@@ -232,6 +319,19 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z" />
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M14 3v5h5M8 13h8M8 17h6" />
+                            </svg>
+                        </button>
+                        <button
+                            v-if="canEdit && hasColumns"
+                            type="button"
+                            class="ui-icon-btn"
+                            :disabled="importBusy"
+                            title="Excel, Word, PDF файлаас оруулах"
+                            aria-label="Файлаас оруулах"
+                            @click="pickImportFile"
+                        >
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L8 8m4-4 4 4M4 18v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1" />
                             </svg>
                         </button>
                         <button
@@ -324,6 +424,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                     class="flex min-h-0 flex-col overflow-hidden"
                     :class="tableExpanded ? 'ui-reports-table-overlay' : 'ui-card'"
                 >
+                    <p v-if="flashSuccess && ! tableExpanded" class="shrink-0 border-b border-emerald-100 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
+                        {{ flashSuccess }}
+                    </p>
                     <iframe
                         v-if="report.pdf_url && pdfOpen && ! tableExpanded"
                         :src="report.pdf_url"
@@ -435,5 +538,97 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                 </section>
             </div>
         </div>
+
+        <input
+            ref="importInput"
+            type="file"
+            accept=".xlsx,.xlsm,.docx,.docm,.pdf"
+            class="hidden"
+            @change="onImportFile"
+        />
+
+        <Modal :show="!! importData" max-width="7xl" @close="closeImport">
+            <div v-if="importData" class="p-5">
+                <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-semibold text-brand-navy-900">Файлаас оруулах</h3>
+                        <p class="mt-0.5 text-sm text-slate-500">
+                            <b>{{ importData.file_name }}</b> — {{ importData.total }} мөр.
+                            Хүснэгтийн толгойг энэ тайлангийн баганатай тааруулаад оруулна.
+                            Одоо байгаа мөр хэвээр, шинэ мөр араас нь нэмэгдэнэ.
+                        </p>
+                    </div>
+                    <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" @click="closeImport">✕</button>
+                </div>
+
+                <div class="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div v-for="(label, field) in importData.fields" :key="'map-' + field">
+                        <label class="ui-label">{{ label }}</label>
+                        <select
+                            v-model="importData.mapping[field]"
+                            class="ui-input !py-1.5 text-sm"
+                            @change="remapImport"
+                        >
+                            <option :value="null">— оруулахгүй —</option>
+                            <option
+                                v-for="(header, index) in importData.headers"
+                                :key="'h-' + field + '-' + index"
+                                :value="index"
+                            >
+                                {{ index + 1 }}. {{ header || '(нэргүй багана)' }}
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto rounded-xl border border-slate-200">
+                    <table class="w-full min-w-[720px] text-left text-xs">
+                        <thead class="bg-slate-50 text-slate-500">
+                            <tr>
+                                <th
+                                    v-for="(label, field) in importData.fields"
+                                    :key="'ph-' + field"
+                                    class="px-2 py-1.5 font-semibold"
+                                >
+                                    {{ label }}
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(entry, i) in importSample" :key="'pr-' + i" class="border-t border-slate-100">
+                                <td
+                                    v-for="(label, field) in importData.fields"
+                                    :key="'pc-' + field + i"
+                                    class="px-2 py-1.5 text-slate-700"
+                                >
+                                    {{ entry[field] ?? '' }}
+                                </td>
+                            </tr>
+                            <tr v-if="! importSample.length">
+                                <td :colspan="Object.keys(importData.fields).length || 1" class="px-2 py-6 text-center text-slate-400">
+                                    Тааруулсан мөр алга
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p class="mt-2 text-xs text-slate-500">
+                    Эхний {{ importSample.length }} мөрийг үзүүлэв. Нэг удаад хамгийн ихдээ 400 мөр орно.
+                </p>
+
+                <div class="mt-5 flex justify-end gap-2 border-t border-slate-100 pt-4">
+                    <button type="button" class="ui-btn-ghost" @click="closeImport">Болих</button>
+                    <button
+                        type="button"
+                        class="ui-btn-primary"
+                        :disabled="importBusy || ! importData.total"
+                        @click="confirmImport"
+                    >
+                        {{ importBusy ? 'Оруулж байна…' : `Оруулах (${importData.total})` }}
+                    </button>
+                </div>
+            </div>
+        </Modal>
     </AuthenticatedLayout>
 </template>
