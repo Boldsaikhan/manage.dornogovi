@@ -7,6 +7,7 @@
 return [
     'groups' => [
         'documents' => 'Бичиг хэрэг',
+        'legal' => 'Эрх зүйн акт, тогтоол',
         'hr' => 'Хүний нөөц',
         'work' => 'Ажлын удирдлага',
         'knowledge' => 'Мэдээлэл, сургалт',
@@ -93,12 +94,22 @@ return [
         ],
         [
             'key' => 'legal_acts',
-            'label' => 'Эрх зүйн акт, тогтоол',
+            'label' => 'Салбарын хууль',
             'route' => 'legal-acts.index',
-            'group' => 'documents',
+            'group' => 'legal',
             'icon' => 'book',
             // Бүгд хардаг, өөрийн оруулсныг нь л засдаг.
             'own_scope' => 'public_read_own_write',
+        ],
+        [
+            'key' => 'sector_indicators',
+            'label' => 'Салбарын үзүүлэлт',
+            'route' => 'indicators.index',
+            'group' => 'legal',
+            'icon' => 'chart',
+            // Эрх нь салбарын хуультай нэг. Цэсэнд л тусад нь гарна.
+            'access' => 'legal_acts',
+            'menu_only' => true,
         ],
         [
             'key' => 'archives',

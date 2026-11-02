@@ -246,7 +246,7 @@ class AiSettings
 
         foreach (ModuleAccess::definitions() as $item) {
             $key = $item['key'] ?? null;
-            if (! is_string($key) || $key === 'ai' || $key === 'systems') {
+            if (! is_string($key) || $key === 'ai' || $key === 'systems' || ! empty($item['menu_only'])) {
                 continue;
             }
             if (! $this->userMayRead($user, $key)) {

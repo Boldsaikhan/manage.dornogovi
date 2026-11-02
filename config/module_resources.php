@@ -237,7 +237,7 @@ return [
         // Табуудыг бүлэглэж харуулна.
         'scope_groups' => [
             'huuli_togtoomj' => [
-                'label' => 'Хууль тогтоомж',
+                'label' => 'Салбарын хууль',
                 'scopes' => ['huuli', 'uih', 'zasgiin_gazar', 'said', 'oron_nutag', 'busad'],
             ],
             'uzuulelt' => [
