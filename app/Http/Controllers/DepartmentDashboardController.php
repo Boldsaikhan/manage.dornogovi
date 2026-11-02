@@ -164,13 +164,13 @@ class DepartmentDashboardController extends Controller
             ];
         }
 
-        $isManager = $user->is_admin || ModuleAccess::canManage($user, 'sector_indicators');
+        $canPickUnit = ModuleAccess::unrestrictedScope($user, 'sector_indicators');
 
         $units = Department::query()
             ->orderBy('sort_order')->orderBy('name')
             ->get(['id', 'name']);
 
-        $unitId = $this->indicatorUnit($request, $user, $isManager, $units->pluck('id')->all());
+        $unitId = $this->indicatorUnit($request, $user, $canPickUnit, $units->pluck('id')->all());
 
         $periods = IndicatorPeriod::ordered()->get();
 
@@ -188,7 +188,7 @@ class DepartmentDashboardController extends Controller
             'unitName' => $department?->name,
             'visible' => true,
             'canOpen' => true,
-            'units' => $isManager
+            'units' => $canPickUnit
                 ? $units->map(fn (Department $d) => ['id' => $d->id, 'name' => $d->name])->values()
                 : [],
             'periods' => $periods->map(fn (IndicatorPeriod $p) => [
@@ -238,9 +238,9 @@ class DepartmentDashboardController extends Controller
     }
 
     /** Аль нэгжийн салбарын үзүүлэлтийг самбарт гаргах вэ. */
-    private function indicatorUnit(Request $request, $user, bool $isManager, array $allowed): ?int
+    private function indicatorUnit(Request $request, $user, bool $canPickUnit, array $allowed): ?int
     {
-        if (! $isManager) {
+        if (! $canPickUnit) {
             $own = $user->department_id ? (int) $user->department_id : null;
 
             return $own && in_array($own, $allowed, true) ? $own : null;

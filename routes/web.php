@@ -182,6 +182,12 @@ Route::middleware('auth')->group(function () {
         ->name('indicators.value');
     Route::delete('/modules/legal_acts/indicators/{indicator}', [SectorIndicatorController::class, 'destroy'])
         ->name('indicators.destroy');
+    Route::post('/modules/legal_acts/indicator-categories', [SectorIndicatorController::class, 'storeCategory'])
+        ->name('indicators.categories.store');
+    Route::patch('/modules/legal_acts/indicator-categories/{category}', [SectorIndicatorController::class, 'updateCategory'])
+        ->name('indicators.categories.update');
+    Route::delete('/modules/legal_acts/indicator-categories/{category}', [SectorIndicatorController::class, 'destroyCategory'])
+        ->name('indicators.categories.destroy');
     Route::post('/modules/legal_acts/indicator-periods', [SectorIndicatorController::class, 'storePeriod'])
         ->name('indicators.periods.store');
     Route::patch('/modules/legal_acts/indicator-periods/{period}', [SectorIndicatorController::class, 'updatePeriod'])

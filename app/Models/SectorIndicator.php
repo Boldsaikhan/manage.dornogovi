@@ -13,6 +13,7 @@ class SectorIndicator extends Model
 {
     protected $fillable = [
         'department_id',
+        'category_id',
         'unit_name',
         'title',
         'measure_unit',
@@ -25,6 +26,11 @@ class SectorIndicator extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(SectorIndicatorCategory::class, 'category_id');
     }
 
     public function values(): HasMany

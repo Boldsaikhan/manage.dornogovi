@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Department;
 use App\Models\IndicatorPeriod;
 use App\Models\SectorIndicator;
+use App\Models\SectorIndicatorCategory;
 use App\Models\SectorIndicatorValue;
 use App\Models\User;
 use App\Support\IndicatorMeasure;
@@ -88,21 +89,34 @@ class SectorIndicatorTest extends TestCase
         $this->assertSame('Архивын тасаг', $row->unit_name);
     }
 
-    public function test_only_the_own_units_rows_are_shown(): void
+    public function test_visibility_follows_the_configured_scope(): void
     {
         $mine = $this->department('Архивын тасаг');
         $other = $this->department('Цэргийн штаб');
 
-        $user = $this->staff($mine, 'edit');
-
         SectorIndicator::create(['department_id' => $mine->id, 'title' => 'Минийх']);
         SectorIndicator::create(['department_id' => $other->id, 'title' => 'Бусдынх']);
 
-        $this->actingAs($user)
-            ->get(route('indicators.index'))
+        $unitLead = $this->staff($mine, 'manage_unit');
+
+        $this->actingAs($unitLead)
+            ->get(route('indicators.index', ['unit' => $other->id]))
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->has('rows', 1)
-                ->where('rows.0.title', 'Минийх'));
+                ->where('rows.0.title', 'Минийх')
+                ->where('canPickUnit', false)
+                ->where('units', []));
+
+        $editor = $this->staff($mine, 'edit');
+
+        $this->actingAs($editor)
+            ->get(route('indicators.index', ['unit' => $other->id]))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('rows', 1)
+                ->where('rows.0.title', 'Бусдынх')
+                ->where('unitId', $other->id)
+                ->where('canPickUnit', true)
+                ->where('units', fn ($units) => collect($units)->contains('id', $other->id)));
     }
 
     public function test_a_cell_value_is_stored_and_cleared(): void
@@ -149,14 +163,22 @@ class SectorIndicatorTest extends TestCase
         $mine = $this->department('Архивын тасаг');
         $other = $this->department('Цэргийн штаб');
 
-        $user = $this->staff($mine, 'edit');
+        $lead = $this->staff($mine, 'manage_unit');
         $row = SectorIndicator::create(['department_id' => $other->id, 'title' => 'Бусдынх']);
 
-        $this->actingAs($user)
+        $this->actingAs($lead)
             ->patch(route('indicators.update', $row), ['title' => 'Өөрчилсөн'])
             ->assertForbidden();
 
         $this->assertSame('Бусдынх', $row->fresh()->title);
+
+        $editor = $this->staff($mine, 'edit');
+
+        $this->actingAs($editor)
+            ->patch(route('indicators.update', $row), ['title' => 'Өөрчилсөн'])
+            ->assertRedirect();
+
+        $this->assertSame('Өөрчилсөн', $row->fresh()->title);
     }
 
     public function test_only_a_manager_can_add_a_year_column(): void
@@ -264,6 +286,23 @@ class SectorIndicatorTest extends TestCase
                 ->where('indicatorDashboard.rows.0.title', 'ERP систем')
                 ->where('indicatorDashboard.rows.0.points.0.value', 150)
                 ->where('indicatorDashboard.rows.0.progress', 75)
+                ->where('indicatorDashboard.units', fn ($units) => collect($units)->contains('id', $other->id)));
+
+        $this->actingAs($user)
+            ->get(route('dept.dashboard', ['unit' => $other->id]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('indicatorDashboard.unitId', $other->id)
+                ->where('indicatorDashboard.rows.0.title', 'Нууц'));
+
+        $lead = $this->staff($mine, 'manage_unit');
+
+        $this->actingAs($lead)
+            ->get(route('dept.dashboard', ['unit' => $other->id]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('indicatorDashboard.unitId', $mine->id)
+                ->where('indicatorDashboard.rows.0.title', 'ERP систем')
                 ->where('indicatorDashboard.units', []));
 
         $admin = User::factory()->create([
@@ -340,6 +379,51 @@ class SectorIndicatorTest extends TestCase
             'slot' => 'year',
             'value' => '92.7',
         ]);
+    }
+
+    public function test_a_category_groups_rows_and_stays_inside_the_unit(): void
+    {
+        $mine = $this->department('Архивын тасаг');
+        $other = $this->department('Цэргийн штаб');
+        $editor = $this->staff($mine, 'edit');
+        $lead = $this->staff($other, 'manage_unit');
+
+        $this->actingAs($editor)
+            ->post(route('indicators.categories.store'), ['name' => 'Цахимжилт'])
+            ->assertRedirect();
+
+        $category = SectorIndicatorCategory::query()->firstOrFail();
+        $this->assertSame($mine->id, $category->department_id);
+
+        $this->actingAs($editor)
+            ->post(route('indicators.store'), ['category_id' => $category->id])
+            ->assertRedirect();
+
+        $row = SectorIndicator::query()->firstOrFail();
+        $this->assertSame($category->id, $row->category_id);
+
+        $this->actingAs($editor)
+            ->get(route('indicators.index'))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('categories', 1)
+                ->where('categories.0.name', 'Цахимжилт')
+                ->where('rows.0.category_id', $category->id));
+
+        $this->actingAs($lead)
+            ->get(route('indicators.index'))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('categories', 0)
+                ->has('rows', 0));
+
+        $this->actingAs($lead)
+            ->delete(route('indicators.categories.destroy', $category))
+            ->assertForbidden();
+
+        $this->actingAs($editor)
+            ->delete(route('indicators.categories.destroy', $category))
+            ->assertRedirect();
+
+        $this->assertNull($row->fresh()->category_id);
     }
 
     public function test_a_user_without_access_cannot_open_it(): void

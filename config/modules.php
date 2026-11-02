@@ -107,6 +107,8 @@ return [
             'route' => 'indicators.index',
             'group' => 'legal',
             'icon' => 'chart',
+            // «Удирдах (хэлтсийн)» — зөвхөн өөрийн нэгжийн үзүүлэлт.
+            'unit_scope' => true,
         ],
         [
             'key' => 'legal_structure',
