@@ -8,6 +8,7 @@ use App\Models\SectorIndicator;
 use App\Models\SectorIndicatorValue;
 use App\Models\User;
 use App\Support\IndicatorMeasure;
+use App\Support\SectorIndicatorCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -277,6 +278,68 @@ class SectorIndicatorTest extends TestCase
                 ->where('indicatorDashboard.unitId', $other->id)
                 ->where('indicatorDashboard.rows.0.title', 'Нууц')
                 ->has('indicatorDashboard.units'));
+    }
+
+    public function test_the_administration_catalog_fills_the_unit_once(): void
+    {
+        $unit = $this->department(SectorIndicatorCatalog::UNIT);
+        $other = $this->department('Санхүү, төсвийн хэлтэс');
+        $short = SectorIndicator::create([
+            'department_id' => $unit->id,
+            'unit_name' => $unit->name,
+            'title' => 'ERP системд бүртгэсэн',
+            'sort_order' => 50,
+        ]);
+
+        SectorIndicatorCatalog::import();
+        SectorIndicatorCatalog::import();
+
+        $this->assertSame(25, SectorIndicator::query()->where('department_id', $unit->id)->count());
+        $this->assertSame(0, SectorIndicator::query()->where('department_id', $other->id)->count());
+
+        $short->refresh();
+        $this->assertSame('ERP системд бүртгэсэн байгууллагын тоо', $short->title);
+        $this->assertSame('тоо', $short->measure_unit);
+        $this->assertSame('180', $short->target);
+        $this->assertSame(1, $short->sort_order);
+
+        $year2021 = IndicatorPeriod::query()->where('year', 2021)->first();
+        $year2024 = IndicatorPeriod::query()->where('year', 2024)->first();
+        $year2025 = IndicatorPeriod::query()->where('year', 2025)->first();
+        $this->assertNotNull($year2021);
+        $this->assertFalse($year2021->split);
+        $this->assertTrue($year2024->split);
+
+        $this->assertDatabaseHas('sector_indicator_values', [
+            'sector_indicator_id' => $short->id,
+            'indicator_period_id' => $year2021->id,
+            'slot' => 'year',
+            'value' => '55',
+        ]);
+
+        $percent = SectorIndicator::query()->where('title', 'shilen.gov.mn сайтын үнэлгээний хувь')->first();
+        $this->assertSame('хувь', $percent->measure_unit);
+        $this->assertDatabaseHas('sector_indicator_values', [
+            'sector_indicator_id' => $percent->id,
+            'indicator_period_id' => $year2024->id,
+            'slot' => 'year',
+            'value' => '80',
+        ]);
+        $this->assertDatabaseHas('sector_indicator_values', [
+            'sector_indicator_id' => $percent->id,
+            'indicator_period_id' => $year2025->id,
+            'slot' => 'half',
+            'value' => '100',
+        ]);
+
+        $contract = SectorIndicator::query()->where('title', 'ЦХНХХС-н гэрээний хэрэгжилт')->first();
+        $this->assertSame('100', $contract->target);
+        $this->assertDatabaseHas('sector_indicator_values', [
+            'sector_indicator_id' => $contract->id,
+            'indicator_period_id' => IndicatorPeriod::query()->where('year', 2022)->value('id'),
+            'slot' => 'year',
+            'value' => '92.7',
+        ]);
     }
 
     public function test_a_user_without_access_cannot_open_it(): void
