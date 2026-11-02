@@ -293,6 +293,7 @@
     }
 
     .ui-table--pin-no tbody td.ui-pin-no {
+        z-index: 2;
         background-clip: padding-box;
         @apply bg-white dark:bg-slate-900;
     }
@@ -308,6 +309,21 @@
     .ui-table--pin-no tbody tr:focus-within td.ui-pin-no,
     .ui-table--pin-no tbody tr:focus-within:hover td.ui-pin-no {
         @apply bg-sky-50 dark:bg-sky-950/50;
+    }
+
+    /* Харах үед текст хөрш багана руу халихгүй. */
+    .ui-table--pin-no tbody td:not(.ui-pin-no) {
+        overflow: hidden;
+    }
+
+    /*
+     * Засах талбар баганыхаа өргөнөөс өргөн, өндрөөс өндөр болж
+     * бүтэн текстээ харуулна. overflow:hidden үүнийг тасдаж байсан.
+     */
+    .ui-table--pin-no tbody td:has(.ui-sheet-cell.is-editing) {
+        overflow: visible;
+        position: relative;
+        z-index: 40;
     }
 
     /* Сонголтын товчнууд нэг мөрөнд — багтахгүй бол хажуу тийш гүйнэ */

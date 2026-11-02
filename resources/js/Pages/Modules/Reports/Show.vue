@@ -577,8 +577,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                             :class="[
                                                 cellClass(col.key),
                                                 isPinnedColumn(col.key)
-                                                    ? 'ui-pin-no sticky left-0 z-[2] font-semibold text-slate-500 shadow-[2px_0_6px_-2px_rgba(15,23,42,0.12)]'
-                                                    : 'overflow-hidden',
+                                                    ? 'ui-pin-no sticky left-0 font-semibold text-slate-500 shadow-[2px_0_6px_-2px_rgba(15,23,42,0.12)]'
+                                                    : '',
                                             ]"
                                         >
                                             <button

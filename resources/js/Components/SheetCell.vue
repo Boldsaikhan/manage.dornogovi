@@ -275,7 +275,21 @@ const positionEditor = () => {
     }
 
     const rect = el.getBoundingClientRect();
-    const room = window.innerWidth - rect.left - 12;
+    let room = window.innerWidth - rect.left - 12;
+    let node = el.parentElement;
+
+    while (node && node !== document.body) {
+        const style = window.getComputedStyle(node);
+        const clipsX = style.overflowX === 'auto' || style.overflowX === 'scroll' || style.overflowX === 'hidden';
+        const clipsY = style.overflowY === 'auto' || style.overflowY === 'scroll' || style.overflowY === 'hidden';
+
+        if (clipsX || clipsY) {
+            room = Math.min(room, node.getBoundingClientRect().right - rect.left - 8);
+            break;
+        }
+
+        node = node.parentElement;
+    }
 
     editorAnchorRight.value = room < EDITOR_MIN_PX;
 };
@@ -303,6 +317,7 @@ const startEdit = async () => {
     positionEditor();
     updateMenuPosition();
     window.addEventListener('scroll', updateMenuPosition, true);
+    window.addEventListener('scroll', positionEditor, true);
     window.addEventListener('resize', updateMenuPosition);
     window.addEventListener('resize', positionEditor);
     if (hasOptions.value) {
@@ -315,8 +330,12 @@ const startEdit = async () => {
     }
     el.focus();
     if (props.multiline) {
-        el.style.height = 'auto';
-        el.style.height = `${Math.max(40, el.scrollHeight)}px`;
+        const fit = () => {
+            el.style.height = 'auto';
+            el.style.height = `${Math.max(40, el.scrollHeight)}px`;
+        };
+        fit();
+        requestAnimationFrame(fit);
     } else if (typeof el.select === 'function' && ! hasOptions.value) {
         el.select();
     }
@@ -324,6 +343,7 @@ const startEdit = async () => {
 
 const stopListeners = () => {
     window.removeEventListener('scroll', updateMenuPosition, true);
+    window.removeEventListener('scroll', positionEditor, true);
     window.removeEventListener('resize', updateMenuPosition);
     window.removeEventListener('resize', positionEditor);
     document.removeEventListener('pointerdown', onPointerDownOutside, true);
