@@ -27,7 +27,6 @@ const syncDrafts = () => {
             title: row.title ?? '',
             measure_unit: row.measure_unit ?? '',
             target: row.target ?? '',
-            note: row.note ?? '',
             values: { ...row.values },
         };
     });
@@ -59,11 +58,27 @@ const rowEditing = (row) => props.canEdit && editingId.value === row.id;
 const structureEditable = computed(() => structureEditing.value && props.canManage);
 
 const totalColumns = computed(() => (
-    5
+    4
     + valueColumnCount.value
     + (structureEditable.value ? 1 : 0)
     + (props.canEdit ? 1 : 0)
 ));
+
+/** Багануудын өргөн нийлээд 100% — хүснэгт дэлгэцээс халина. */
+const columnWidths = computed(() => {
+    const fixed = 4 + 12 + 9
+        + (structureEditable.value ? 8 : 0)
+        + (props.canEdit ? 7 : 0);
+    const pool = Math.max(0, 100 - fixed);
+    const count = valueColumnCount.value;
+    const titleShare = count ? Math.max(26, pool * 0.4) : pool;
+    const valueShare = count ? (pool - titleShare) / count : 0;
+
+    return {
+        title: `${titleShare}%`,
+        value: `${valueShare}%`,
+    };
+});
 
 const toggleRow = (row) => {
     editingId.value = editingId.value === row.id ? null : row.id;
@@ -327,15 +342,28 @@ const removePeriod = (period) => {
             </div>
 
             <TableScrollViewport v-else>
-                <table class="ui-table ui-register__table !w-max min-w-full !table-auto">
+                <table class="ui-table ui-register__table w-full">
+                    <colgroup>
+                        <col style="width: 4%" />
+                        <col :style="{ width: columnWidths.title }" />
+                        <col style="width: 12%" />
+                        <col style="width: 9%" />
+                        <col
+                            v-for="index in valueColumnCount"
+                            :key="'col-' + index"
+                            :style="{ width: columnWidths.value }"
+                        />
+                        <col v-if="structureEditable" style="width: 8%" />
+                        <col v-if="canEdit" style="width: 7%" />
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th rowspan="2" class="w-12 text-center">№</th>
-                            <th rowspan="2" class="w-[28rem] min-w-[28rem] whitespace-normal text-left">
+                            <th rowspan="2" class="text-center">№</th>
+                            <th rowspan="2" class="whitespace-normal text-left">
                                 Үзүүлэлтийн дэлгэрэнгүй мэдээлэл
                             </th>
-                            <th rowspan="2" class="w-32 text-center">Хэмжих нэгж</th>
-                            <th rowspan="2" class="w-28 text-center">Хүрэх түвшин</th>
+                            <th rowspan="2" class="whitespace-normal text-center">Хэмжих нэгж</th>
+                            <th rowspan="2" class="whitespace-normal text-center">Хүрэх түвшин</th>
                             <th
                                 v-for="period in periods"
                                 :key="'p-' + period.id"
@@ -388,15 +416,14 @@ const removePeriod = (period) => {
                                     Жил нэмэх
                                 </button>
                             </th>
-                            <th rowspan="2" class="min-w-[12rem] text-left">Тэмдэглэл</th>
-                            <th v-if="canEdit" rowspan="2" class="w-20" />
+                            <th v-if="canEdit" rowspan="2" />
                         </tr>
                         <tr>
                             <template v-for="period in periods" :key="'s-' + period.id">
                                 <th
                                     v-for="slot in period.slots"
                                     :key="period.id + '-' + slot"
-                                    class="w-24 text-center !text-[10px] !font-semibold !normal-case"
+                                    class="whitespace-normal text-center !text-[10px] !font-semibold !normal-case !leading-tight"
                                 >
                                     {{ period.split ? SLOT_LABELS[slot] : '&nbsp;' }}
                                 </th>
@@ -414,12 +441,12 @@ const removePeriod = (period) => {
                                     :ref="fitTitle"
                                     v-model="drafts[row.id].title"
                                     rows="1"
-                                    class="block w-[28rem] max-w-[28rem] resize-none overflow-hidden whitespace-pre-wrap break-words rounded border-0 bg-transparent px-1 py-0.5 text-left text-sm leading-snug focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
+                                    class="block w-full resize-none overflow-hidden whitespace-pre-wrap break-words rounded border-0 bg-transparent px-1 py-0.5 text-left text-sm leading-snug focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
                                     placeholder="Үзүүлэлтийн нэр…"
                                     @input="fitTitle"
                                     @blur="saveField(row, 'title')"
                                 />
-                                <span v-else class="block w-[28rem] max-w-[28rem] whitespace-pre-wrap break-words text-left text-sm leading-snug">{{ row.title }}</span>
+                                <span v-else class="block whitespace-pre-wrap break-words text-left text-sm leading-snug">{{ row.title }}</span>
                             </td>
 
                             <td class="text-center">
@@ -489,16 +516,6 @@ const removePeriod = (period) => {
                             </template>
 
                             <td v-if="structureEditable" />
-
-                            <td>
-                                <input
-                                    v-if="rowEditing(row) && drafts[row.id]"
-                                    v-model="drafts[row.id].note"
-                                    class="w-full rounded border-0 bg-transparent px-1 py-0.5 text-sm focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
-                                    @blur="saveField(row, 'note')"
-                                />
-                                <span v-else class="text-sm">{{ row.note }}</span>
-                            </td>
 
                             <td v-if="canEdit" class="text-center">
                                 <div class="flex items-center justify-center gap-1">
