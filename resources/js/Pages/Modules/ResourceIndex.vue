@@ -713,7 +713,7 @@ const destroyRow = (id) => {
                 <template v-for="(tab, index) in scopeTabs" :key="tab.value">
                     <!-- Бүлгийн нэр — шинэ бүлэг эхлэх бүрд -->
                     <span
-                        v-if="tab.group_label && tab.group !== scopeTabs[index - 1]?.group"
+                        v-if="tab.group && tab.group !== scopeTabs[index - 1]?.group && (tab.group_label || index > 0)"
                         class="flex shrink-0 items-center gap-1.5 pl-1 text-[11px] font-bold uppercase tracking-wide text-slate-400"
                     >
                         <span v-if="index > 0" class="mr-1 h-5 w-px bg-slate-200" />

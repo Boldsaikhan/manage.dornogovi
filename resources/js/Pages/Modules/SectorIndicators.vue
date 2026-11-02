@@ -272,11 +272,8 @@ const removePeriod = (period) => {
 
                 <span class="mx-1 h-5 w-px bg-slate-200" />
 
-                <span class="text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                    Салбарын үзүүлэлт
-                </span>
                 <span class="shrink-0 rounded-xl bg-brand-navy-600 px-3.5 py-2 text-sm font-semibold text-white shadow-md shadow-brand-navy-600/20">
-                    Суурь мэдээлэл
+                    Салбарын үзүүлэлт
                     <span class="ml-1 text-xs opacity-70">{{ rows.length }}</span>
                 </span>
 

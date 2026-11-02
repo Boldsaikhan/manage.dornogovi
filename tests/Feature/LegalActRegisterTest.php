@@ -30,14 +30,14 @@ class LegalActRegisterTest extends TestCase
                 $this->assertSame(
                     [
                         'Нийт', 'Хууль', 'УИХ-ын тогтоол', 'Засгийн газрын тогтоол',
-                        'Сайдын тушаал', 'Орон нутгийн', 'Бусад', 'Суурь мэдээлэл',
+                        'Сайдын тушаал', 'Орон нутгийн', 'Бусад', 'Салбарын үзүүлэлт',
                     ],
                     collect($props['scopeTabs'])->pluck('label')->all(),
                 );
 
                 // Табууд хоёр бүлэгт хуваагдана.
                 $this->assertSame(
-                    ['Хууль тогтоомж', 'Салбарын үзүүлэлт'],
+                    ['Хууль тогтоомж', ''],
                     collect($props['scopeTabs'])->pluck('group_label')->unique()->values()->all(),
                 );
 
