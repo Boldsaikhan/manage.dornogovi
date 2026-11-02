@@ -213,6 +213,25 @@ class ReportCatalogTest extends TestCase
         $this->assertGreaterThan(1000, (int) $response->headers->get('content-length'));
     }
 
+    public function test_digital_dornogovi_program_pdf_is_attached(): void
+    {
+        $path = base_path('database/data/reports/pdfs/target_programs.digital_dornogovi.pdf');
+        $this->assertFileExists($path);
+        $this->assertLessThanOrEqual(5 * 1024 * 1024, filesize($path));
+        $this->assertSame('%PDF', file_get_contents($path, false, null, 0, 4));
+
+        $user = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($user)
+            ->get(route('reports.show', 'target_programs.digital_dornogovi'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('report.key', 'target_programs.digital_dornogovi')
+                ->where('report.number', '4.5')
+                ->where('report.label', 'Цахим Дорноговь')
+                ->where('report.pdf_url', route('reports.file', 'target_programs.digital_dornogovi')));
+    }
+
     public function test_report_without_pdf_file_is_not_found(): void
     {
         $user = User::factory()->create(['is_admin' => true]);

@@ -390,7 +390,7 @@ return [
                 $policy('target_programs.civil_service', '4.2', 'Төрийн захиргааны албан хаагчдын ажиллах нөхцөлийг сайжруулах'),
                 $policy('target_programs.partnership', '4.3', 'Түншлэл ба хөгжил', 'БОНХО'),
                 $policy('target_programs.billion_trees', '4.4', 'Тэрбум мод'),
-                $policy('target_programs.digital_dornogovi', '4.5', 'Цахим Дорноговь', 'ТЗУХ'),
+                $policy('target_programs.digital_dornogovi', '4.5', 'Цахим Дорноговь', 'ТЗУХ', pdf: 'target_programs.digital_dornogovi.pdf'),
             ],
         ],
         [

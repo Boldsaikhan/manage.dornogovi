@@ -66,7 +66,7 @@ class ReportsCatalog
     }
 
     /**
-     * Гэрээний PDF. Нэр нь зөвхөн файл байх ёстой — зам оруулахгүй.
+     * Тайлангийн PDF. Нэр нь зөвхөн файл байх ёстой — зам оруулахгүй.
      */
     public static function pdfPath(?string $name): ?string
     {
@@ -74,9 +74,15 @@ class ReportsCatalog
             return null;
         }
 
-        $path = base_path('database/data/reports/contracts/'.$name);
+        foreach (['pdfs', 'contracts'] as $directory) {
+            $path = base_path('database/data/reports/'.$directory.'/'.$name);
 
-        return is_file($path) ? $path : null;
+            if (is_file($path)) {
+                return $path;
+            }
+        }
+
+        return null;
     }
 
     /**
