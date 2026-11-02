@@ -40,6 +40,17 @@ const valueColumnCount = computed(
     () => props.periods.reduce((sum, p) => sum + p.slots.length, 0),
 );
 
+function fitTitle(el) {
+    const node = el?.target ?? el;
+
+    if (! node || node.nodeType !== 1) {
+        return;
+    }
+
+    node.style.height = 'auto';
+    node.style.height = `${node.scrollHeight}px`;
+}
+
 const editing = ref(false);
 const cellsEditable = computed(() => editing.value && props.canEdit);
 const structureEditable = computed(() => editing.value && props.canManage);
@@ -240,11 +251,11 @@ const removePeriod = (period) => {
             </div>
 
             <TableScrollViewport v-else>
-                <table class="ui-table ui-register__table">
+                <table class="ui-table ui-register__table !w-max min-w-full !table-auto">
                     <thead>
                         <tr>
                             <th rowspan="2" class="w-12 text-center">№</th>
-                            <th rowspan="2" class="min-w-[22rem] text-left">
+                            <th rowspan="2" class="w-[28rem] min-w-[28rem] whitespace-normal text-left">
                                 Үзүүлэлтийн дэлгэрэнгүй мэдээлэл
                             </th>
                             <th rowspan="2" class="w-28 text-center">Хэмжих нэгж</th>
@@ -321,16 +332,18 @@ const removePeriod = (period) => {
                         <tr v-for="row in rows" :key="row.id">
                             <td class="ui-register__cell--no text-center">{{ row.no }}</td>
 
-                            <td>
+                            <td class="align-top whitespace-normal text-left">
                                 <textarea
                                     v-if="cellsEditable && drafts[row.id]"
+                                    :ref="fitTitle"
                                     v-model="drafts[row.id].title"
                                     rows="1"
-                                    class="w-full resize-y rounded border-0 bg-transparent px-1 py-0.5 text-sm focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
+                                    class="block w-[28rem] max-w-[28rem] resize-none overflow-hidden whitespace-pre-wrap break-words rounded border-0 bg-transparent px-1 py-0.5 text-left text-sm leading-snug focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
                                     placeholder="Үзүүлэлтийн нэр…"
+                                    @input="fitTitle"
                                     @blur="saveField(row, 'title')"
                                 />
-                                <span v-else class="text-sm">{{ row.title }}</span>
+                                <span v-else class="block w-[28rem] max-w-[28rem] whitespace-pre-wrap break-words text-left text-sm leading-snug">{{ row.title }}</span>
                             </td>
 
                             <td class="text-center">
