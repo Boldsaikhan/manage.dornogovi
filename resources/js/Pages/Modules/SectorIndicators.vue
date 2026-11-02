@@ -52,17 +52,46 @@ function fitTitle(el) {
     node.style.height = `${node.scrollHeight}px`;
 }
 
-const editing = ref(false);
-const cellsEditable = computed(() => editing.value && props.canEdit);
-const structureEditable = computed(() => editing.value && props.canManage);
-const canToggleEdit = computed(() => props.canEdit || props.canManage);
+/** Нэг мөрийг тусад нь засна. */
+const editingId = ref(null);
+const structureEditing = ref(false);
+const rowEditing = (row) => props.canEdit && editingId.value === row.id;
+const structureEditable = computed(() => structureEditing.value && props.canManage);
 
 const totalColumns = computed(() => (
     5
     + valueColumnCount.value
     + (structureEditable.value ? 1 : 0)
-    + (cellsEditable.value ? 1 : 0)
+    + (props.canEdit ? 1 : 0)
 ));
+
+const toggleRow = (row) => {
+    editingId.value = editingId.value === row.id ? null : row.id;
+};
+
+const seenRowIds = new Set();
+let rowsPrimed = false;
+
+watch(() => props.rows.map((row) => row.id).join(','), () => {
+    const ids = props.rows.map((row) => row.id);
+
+    if (! rowsPrimed) {
+        ids.forEach((id) => seenRowIds.add(id));
+        rowsPrimed = true;
+
+        return;
+    }
+
+    const fresh = ids.find((id) => ! seenRowIds.has(id));
+
+    ids.forEach((id) => seenRowIds.add(id));
+
+    if (fresh != null) {
+        editingId.value = fresh;
+    } else if (editingId.value != null && ! ids.includes(editingId.value)) {
+        editingId.value = null;
+    }
+});
 
 const switchUnit = (id) => {
     router.get(route('indicators.index'), { unit: id }, {
@@ -264,25 +293,22 @@ const removePeriod = (period) => {
                     </select>
 
                     <button
-                        v-if="canToggleEdit"
+                        v-if="canManage"
                         type="button"
                         class="ui-icon-btn"
-                        :class="editing ? 'bg-brand-navy-600 text-white' : ''"
-                        :title="editing ? 'Засварыг дуусгах' : 'Хүснэгтийг засах'"
-                        :aria-label="editing ? 'Засварыг дуусгах' : 'Хүснэгтийг засах'"
-                        :aria-pressed="editing"
-                        @click="editing = ! editing"
+                        :class="structureEditing ? 'bg-brand-navy-600 text-white' : ''"
+                        :title="structureEditing ? 'Жилийн баганын засварыг дуусгах' : 'Жилийн багана засах'"
+                        :aria-label="structureEditing ? 'Жилийн баганын засварыг дуусгах' : 'Жилийн багана засах'"
+                        :aria-pressed="structureEditing"
+                        @click="structureEditing = ! structureEditing"
                     >
-                        <svg v-if="editing" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                        <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 20h4l10-10a2.1 2.1 0 1 0-3-3L5 17v3z" />
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10" />
                         </svg>
                     </button>
 
                     <button
-                        v-if="cellsEditable"
+                        v-if="canEdit"
                         type="button"
                         class="ui-icon-btn border-transparent bg-brand-orange-500 text-white hover:bg-brand-orange-600 hover:text-white"
                         title="Үзүүлэлт нэмэх"
@@ -366,7 +392,7 @@ const removePeriod = (period) => {
                                 </button>
                             </th>
                             <th rowspan="2" class="min-w-[12rem] text-left">Тэмдэглэл</th>
-                            <th v-if="cellsEditable" rowspan="2" class="w-12" />
+                            <th v-if="canEdit" rowspan="2" class="w-20" />
                         </tr>
                         <tr>
                             <template v-for="period in periods" :key="'s-' + period.id">
@@ -382,12 +408,12 @@ const removePeriod = (period) => {
                     </thead>
 
                     <tbody>
-                        <tr v-for="row in rows" :key="row.id">
+                        <tr v-for="row in rows" :key="row.id" :class="rowEditing(row) ? 'bg-sky-50/80' : ''">
                             <td class="ui-register__cell--no text-center">{{ row.no }}</td>
 
                             <td class="align-top whitespace-normal text-left">
                                 <textarea
-                                    v-if="cellsEditable && drafts[row.id]"
+                                    v-if="rowEditing(row) && drafts[row.id]"
                                     :ref="fitTitle"
                                     v-model="drafts[row.id].title"
                                     rows="1"
@@ -401,7 +427,7 @@ const removePeriod = (period) => {
 
                             <td class="text-center">
                                 <select
-                                    v-if="cellsEditable && drafts[row.id]"
+                                    v-if="rowEditing(row) && drafts[row.id]"
                                     v-model="drafts[row.id].measure_unit"
                                     class="w-full rounded border-0 bg-transparent px-0.5 py-0.5 text-center text-sm focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
                                     @change="saveField(row, 'measure_unit')"
@@ -416,7 +442,7 @@ const removePeriod = (period) => {
 
                             <td class="text-center">
                                 <span
-                                    v-if="cellsEditable && drafts[row.id]"
+                                    v-if="rowEditing(row) && drafts[row.id]"
                                     class="inline-flex w-full items-center justify-center gap-0.5"
                                 >
                                     <input
@@ -443,7 +469,7 @@ const removePeriod = (period) => {
                                     class="text-center"
                                 >
                                     <span
-                                        v-if="cellsEditable && drafts[row.id]"
+                                        v-if="rowEditing(row) && drafts[row.id]"
                                         class="inline-flex w-full items-center justify-center gap-0.5"
                                     >
                                         <input
@@ -469,7 +495,7 @@ const removePeriod = (period) => {
 
                             <td>
                                 <input
-                                    v-if="cellsEditable && drafts[row.id]"
+                                    v-if="rowEditing(row) && drafts[row.id]"
                                     v-model="drafts[row.id].note"
                                     class="w-full rounded border-0 bg-transparent px-1 py-0.5 text-sm focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
                                     @blur="saveField(row, 'note')"
@@ -477,18 +503,37 @@ const removePeriod = (period) => {
                                 <span v-else class="text-sm">{{ row.note }}</span>
                             </td>
 
-                            <td v-if="cellsEditable" class="text-center">
-                                <button
-                                    type="button"
-                                    class="ui-icon-btn ui-icon-btn--danger"
-                                    title="Мөрийг устгах"
-                                    aria-label="Устгах"
-                                    @click="removeRow(row)"
-                                >
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13" />
-                                    </svg>
-                                </button>
+                            <td v-if="canEdit" class="text-center">
+                                <div class="flex items-center justify-center gap-1">
+                                    <button
+                                        type="button"
+                                        class="ui-icon-btn"
+                                        :class="rowEditing(row) ? 'bg-brand-navy-600 text-white' : ''"
+                                        :title="rowEditing(row) ? 'Засварыг дуусгах' : 'Мөрийг засах'"
+                                        :aria-label="rowEditing(row) ? 'Засварыг дуусгах' : 'Мөрийг засах'"
+                                        :aria-pressed="rowEditing(row)"
+                                        @click="toggleRow(row)"
+                                    >
+                                        <svg v-if="rowEditing(row)" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                        <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 20h4l10-10a2.1 2.1 0 1 0-3-3L5 17v3z" />
+                                        </svg>
+                                    </button>
+                                    <button
+                                        v-if="rowEditing(row)"
+                                        type="button"
+                                        class="ui-icon-btn ui-icon-btn--danger"
+                                        title="Мөрийг устгах"
+                                        aria-label="Устгах"
+                                        @click="removeRow(row)"
+                                    >
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
 
