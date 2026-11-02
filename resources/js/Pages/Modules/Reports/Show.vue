@@ -319,7 +319,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 
     <AuthenticatedLayout :title="title">
         <div class="ui-page ui-page--reports-table">
-            <div>
+            <div :class="tableExpanded ? 'ui-reports-table-overlay' : 'contents'">
+            <div
+                v-if="downloadOpen"
+                class="z-40"
+                :class="tableExpanded ? 'absolute inset-0' : 'fixed inset-0'"
+                @click="downloadOpen = false"
+            />
+            <div class="relative z-50 shrink-0">
                 <ReportSectionTabs
                     :sections="navigation"
                     :active-section-key="activeSectionKey"
@@ -409,7 +416,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0-4-4m4 4 4-4M4 18v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1" />
                                 </svg>
                             </button>
-                            <div v-if="downloadOpen" class="fixed inset-0 z-40" @click="downloadOpen = false" />
                             <div
                                 v-if="downloadOpen"
                                 class="absolute right-0 z-50 mt-1 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
@@ -470,10 +476,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                     </nav>
                 </aside>
 
-                <section
-                    class="flex min-h-0 flex-col overflow-hidden"
-                    :class="tableExpanded ? 'ui-reports-table-overlay' : 'ui-card'"
-                >
+                <section class="ui-card flex min-h-0 flex-col overflow-hidden">
                     <p v-if="flashSuccess && ! tableExpanded" class="shrink-0 border-b border-emerald-100 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
                         {{ flashSuccess }}
                     </p>
@@ -629,6 +632,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                         Template тохируулаагүй байна.
                     </div>
                 </section>
+            </div>
             </div>
         </div>
 
