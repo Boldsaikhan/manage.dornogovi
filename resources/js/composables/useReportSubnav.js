@@ -32,3 +32,8 @@ export function openReportSubnav() {
     boot();
     open.value = true;
 }
+
+export function toggleReportSubnav() {
+    boot();
+    open.value = ! open.value;
+}
