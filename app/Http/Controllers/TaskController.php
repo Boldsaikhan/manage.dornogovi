@@ -36,6 +36,10 @@ class TaskController extends Controller
         $kinds = $this->kindTabs($user);
         $requested = $request->string('kind')->toString();
 
+        if ($requested === TaskSource::KEY_LEADERSHIP_ALL) {
+            return $this->renderLeadershipAll($request, $user, $kinds);
+        }
+
         if (! $user->is_admin) {
             $allowed = collect($kinds)->pluck('key');
 
@@ -140,23 +144,37 @@ class TaskController extends Controller
         abort_unless(ModuleAccess::canView($request->user(), 'tasks'), 403);
         abort_unless(ModuleAccess::canView($request->user(), 'tasks:export'), 403);
 
-        $source = $this->resolveSource($request->string('kind')->toString());
-        $kind = $source->key;
-
-        $this->authorizeKind($request->user(), $kind);
-
+        $requested = $request->string('kind')->toString();
         $format = strtolower((string) $request->query('format', 'docx'));
         abort_unless(in_array($format, ['docx', 'xlsx', 'pdf'], true), 404);
 
-        $tasksQuery = $source->tasks();
-        $this->applyTaskListScope($tasksQuery, $request->user(), $source);
-        $tasks = $tasksQuery
-            ->get([
-                'id', 'text', 'measure', 'period', 'responsible', 'collaborator', 'sector', 'note', 'progress', 'sort_order',
-            ])
-            ->values();
+        if ($requested === TaskSource::KEY_LEADERSHIP_ALL) {
+            $sources = $this->visibleLeadershipSources($this->kindTabs($request->user()));
+            abort_if($sources->isEmpty(), 404);
 
-        $payload = $this->exportTable($source, $tasks);
+            $tasks = $this->leadershipTasks($request->user(), $sources);
+            $sample = $sources->first()->replicate();
+            $sample->name = 'Нийт';
+            $columns = array_merge([
+                ['key' => 'source_label', 'label' => 'Чиглэл өгсөн', 'field' => 'source_label'],
+            ], $sample->resolvedColumns());
+            $payload = $this->exportTable($sample, $tasks, $columns);
+        } else {
+            $source = $this->resolveSource($requested);
+
+            $this->authorizeKind($request->user(), $source->key);
+
+            $tasksQuery = $source->tasks();
+            $this->applyTaskListScope($tasksQuery, $request->user(), $source);
+            $tasks = $tasksQuery
+                ->get([
+                    'id', 'text', 'measure', 'period', 'responsible', 'collaborator', 'sector', 'note', 'progress', 'sort_order',
+                ])
+                ->values();
+
+            $payload = $this->exportTable($source, $tasks);
+        }
+
         $title = $payload['title'];
         $tmp = tempnam(sys_get_temp_dir(), 'task_export_');
 
@@ -213,7 +231,7 @@ class TaskController extends Controller
      *     sheet_rows: array<int, array<int, string>>
      * }
      */
-    private function exportTable(TaskSource $source, $tasks): array
+    private function exportTable(TaskSource $source, $tasks, ?array $columns = null): array
     {
         $title = $source->name !== '' ? $source->name : (
             $source->isPrepLayout()
@@ -221,7 +239,7 @@ class TaskController extends Controller
                 : 'Үүрэг чиглэл'
         );
 
-        $columns = $source->resolvedColumns();
+        $columns = $columns ?? $source->resolvedColumns();
         $headings = array_merge(['№'], array_column($columns, 'label'), ['Биелэлтийн хувь']);
         $widthFor = [
             'sector' => 1800,
@@ -993,6 +1011,109 @@ class TaskController extends Controller
         return redirect()
             ->route('tasks.index')
             ->with('success', sprintf('«%s» үүрэг даалгавар устгагдлаа.', $name));
+    }
+
+    /**
+     * «Нийт» — гурван удирдлагын үүрэг даалгаврыг нэг хүснэгтэд.
+     */
+    private function renderLeadershipAll(Request $request, \App\Models\User $user, array $kinds): Response
+    {
+        $sources = $this->visibleLeadershipSources($kinds);
+        abort_if($sources->isEmpty(), 404);
+
+        $sample = $sources->first();
+        $tasks = $this->leadershipTaskModels($user, $sources)
+            ->values()
+            ->map(fn (Task $task, int $i) => [
+                'id' => $task->id,
+                'no' => $i + 1,
+                'text' => $task->text,
+                'measure' => $task->measure,
+                'period' => $task->period,
+                'responsible' => PersonName::shortList($task->responsible),
+                'collaborator' => PersonName::shortList($task->collaborator),
+                'sector' => $task->sector,
+                'note' => $task->note,
+                'progress' => (int) $task->progress,
+                'sort_order' => $task->sort_order,
+                'source_label' => (string) $task->getAttribute('source_label'),
+            ]);
+
+        return Inertia::render('Uureg/Index', [
+            'kind' => TaskSource::KEY_LEADERSHIP_ALL,
+            'kinds' => $kinds,
+            'source' => [
+                'id' => null,
+                'key' => TaskSource::KEY_LEADERSHIP_ALL,
+                'name' => 'Нийт',
+                'layout' => $sample->layout ?: TaskSource::KEY_DIRECTIVE,
+                'is_system' => false,
+                'is_locked' => true,
+                'columns' => $sample->resolvedColumns(),
+            ],
+            'columnChoices' => TaskSource::columnCatalog(),
+            'tasks' => $tasks,
+            'documents' => [],
+            'people' => $this->phoneDirectoryPeople(),
+            ...ModuleAccess::taskPagePermissions($user),
+            'undoCount' => EditUndo::query()->where('user_id', $user->id)
+                ->where('kind', EditUndo::UNDO)->count(),
+            'redoCount' => EditUndo::query()->where('user_id', $user->id)
+                ->where('kind', EditUndo::REDO)->count(),
+        ]);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $kinds
+     */
+    private function visibleLeadershipSources(array $kinds): \Illuminate\Support\Collection
+    {
+        $keys = collect($kinds)
+            ->filter(fn (array $tab) => ! empty($tab['is_leadership']))
+            ->pluck('key');
+
+        return TaskSource::query()
+            ->whereIn('key', $keys)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, TaskSource>  $sources
+     * @return \Illuminate\Support\Collection<int, Task>
+     */
+    private function leadershipTasks(\App\Models\User $user, \Illuminate\Support\Collection $sources): \Illuminate\Support\Collection
+    {
+        return $this->leadershipTaskModels($user, $sources);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, TaskSource>  $sources
+     * @return \Illuminate\Support\Collection<int, Task>
+     */
+    private function leadershipTaskModels(\App\Models\User $user, \Illuminate\Support\Collection $sources): \Illuminate\Support\Collection
+    {
+        $rank = array_flip(array_keys(TaskSource::LEADERSHIP));
+        $byId = $sources->keyBy('id');
+
+        $query = Task::query()->whereIn('task_source_id', $sources->pluck('id'));
+        ModuleOwnScope::apply($query, $user, 'tasks');
+
+        return $query
+            ->get([
+                'id', 'task_source_id', 'text', 'measure', 'period', 'responsible',
+                'collaborator', 'sector', 'note', 'progress', 'sort_order',
+            ])
+            ->each(function (Task $task) use ($byId): void {
+                $task->setAttribute('source_label', (string) ($byId->get($task->task_source_id)?->name ?? ''));
+            })
+            ->sortBy(function (Task $task) use ($rank, $byId): string {
+                $key = $byId->get($task->task_source_id)?->key;
+
+                return sprintf('%02d-%06d-%010d', $rank[$key] ?? 99, (int) $task->sort_order, $task->id);
+            })
+            ->values();
     }
 
     private function resolveSource(string $kind): TaskSource
