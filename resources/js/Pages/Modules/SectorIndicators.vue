@@ -40,8 +40,16 @@ const valueColumnCount = computed(
     () => props.periods.reduce((sum, p) => sum + p.slots.length, 0),
 );
 
+const editing = ref(false);
+const cellsEditable = computed(() => editing.value && props.canEdit);
+const structureEditable = computed(() => editing.value && props.canManage);
+const canToggleEdit = computed(() => props.canEdit || props.canManage);
+
 const totalColumns = computed(() => (
-    5 + valueColumnCount.value + (props.canManage ? 1 : 0) + (props.canEdit ? 1 : 0)
+    5
+    + valueColumnCount.value
+    + (structureEditable.value ? 1 : 0)
+    + (cellsEditable.value ? 1 : 0)
 ));
 
 const switchUnit = (id) => {
@@ -192,7 +200,25 @@ const removePeriod = (period) => {
                     </select>
 
                     <button
-                        v-if="canEdit"
+                        v-if="canToggleEdit"
+                        type="button"
+                        class="ui-icon-btn"
+                        :class="editing ? 'bg-brand-navy-600 text-white' : ''"
+                        :title="editing ? 'Засварыг дуусгах' : 'Хүснэгтийг засах'"
+                        :aria-label="editing ? 'Засварыг дуусгах' : 'Хүснэгтийг засах'"
+                        :aria-pressed="editing"
+                        @click="editing = ! editing"
+                    >
+                        <svg v-if="editing" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 20h4l10-10a2.1 2.1 0 1 0-3-3L5 17v3z" />
+                        </svg>
+                    </button>
+
+                    <button
+                        v-if="cellsEditable"
                         type="button"
                         class="ui-icon-btn border-transparent bg-brand-orange-500 text-white hover:bg-brand-orange-600 hover:text-white"
                         title="Үзүүлэлт нэмэх"
@@ -206,7 +232,7 @@ const removePeriod = (period) => {
                 </div>
             </div>
 
-            <div v-if="! periods.length && ! canManage" class="ui-card-pad text-center">
+            <div v-if="! periods.length && ! structureEditable" class="ui-card-pad text-center">
                 <p class="text-sm font-semibold text-slate-700">Жилийн багана алга.</p>
                 <p class="mt-1 text-xs text-slate-500">
                     Админ жилийн баганыг тохируулсны дараа мэдээлэл оруулна.
@@ -230,14 +256,14 @@ const removePeriod = (period) => {
                                 class="text-center align-bottom"
                             >
                                 <input
-                                    v-if="canManage"
+                                    v-if="structureEditable"
                                     v-model="periodLabels[period.id]"
                                     class="w-full rounded border-0 bg-transparent px-1 py-0.5 text-center text-sm font-semibold focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
                                     @blur="savePeriodLabel(period)"
                                     @keyup.enter="$event.target.blur()"
                                 />
                                 <span v-else>{{ period.label }}</span>
-                                <div v-if="canManage" class="mt-0.5 flex items-center justify-center gap-1">
+                                <div v-if="structureEditable" class="mt-0.5 flex items-center justify-center gap-1">
                                     <button
                                         type="button"
                                         class="rounded px-1.5 py-0.5 text-[10px] font-semibold"
@@ -259,7 +285,7 @@ const removePeriod = (period) => {
                                     </button>
                                 </div>
                             </th>
-                            <th v-if="canManage" rowspan="2" class="w-28 align-bottom">
+                            <th v-if="structureEditable" rowspan="2" class="w-28 align-bottom">
                                 <input
                                     v-model="newYear"
                                     class="w-full rounded border border-dashed border-slate-300 bg-white px-1 py-0.5 text-center text-sm focus:border-brand-navy-400 focus:ring-1 focus:ring-brand-navy-400"
@@ -276,7 +302,7 @@ const removePeriod = (period) => {
                                 </button>
                             </th>
                             <th rowspan="2" class="min-w-[12rem] text-left">Тэмдэглэл</th>
-                            <th v-if="canEdit" rowspan="2" class="w-12" />
+                            <th v-if="cellsEditable" rowspan="2" class="w-12" />
                         </tr>
                         <tr>
                             <template v-for="period in periods" :key="'s-' + period.id">
@@ -297,7 +323,7 @@ const removePeriod = (period) => {
 
                             <td>
                                 <textarea
-                                    v-if="canEdit && drafts[row.id]"
+                                    v-if="cellsEditable && drafts[row.id]"
                                     v-model="drafts[row.id].title"
                                     rows="1"
                                     class="w-full resize-y rounded border-0 bg-transparent px-1 py-0.5 text-sm focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
@@ -309,7 +335,7 @@ const removePeriod = (period) => {
 
                             <td class="text-center">
                                 <input
-                                    v-if="canEdit && drafts[row.id]"
+                                    v-if="cellsEditable && drafts[row.id]"
                                     v-model="drafts[row.id].measure_unit"
                                     class="w-full rounded border-0 bg-transparent px-1 py-0.5 text-center text-sm focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
                                     @blur="saveField(row, 'measure_unit')"
@@ -319,7 +345,7 @@ const removePeriod = (period) => {
 
                             <td class="text-center">
                                 <input
-                                    v-if="canEdit && drafts[row.id]"
+                                    v-if="cellsEditable && drafts[row.id]"
                                     v-model="drafts[row.id].target"
                                     class="w-full rounded border-0 bg-transparent px-1 py-0.5 text-center text-sm font-semibold focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
                                     @blur="saveField(row, 'target')"
@@ -334,7 +360,7 @@ const removePeriod = (period) => {
                                     class="text-center"
                                 >
                                     <input
-                                        v-if="canEdit && drafts[row.id]"
+                                        v-if="cellsEditable && drafts[row.id]"
                                         v-model="drafts[row.id].values[cellKey(period, slot)]"
                                         class="w-full rounded border-0 bg-transparent px-1 py-0.5 text-center text-sm tabular-nums focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
                                         @blur="saveValue(row, period, slot)"
@@ -345,11 +371,11 @@ const removePeriod = (period) => {
                                 </td>
                             </template>
 
-                            <td v-if="canManage" />
+                            <td v-if="structureEditable" />
 
                             <td>
                                 <input
-                                    v-if="canEdit && drafts[row.id]"
+                                    v-if="cellsEditable && drafts[row.id]"
                                     v-model="drafts[row.id].note"
                                     class="w-full rounded border-0 bg-transparent px-1 py-0.5 text-sm focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
                                     @blur="saveField(row, 'note')"
@@ -357,7 +383,7 @@ const removePeriod = (period) => {
                                 <span v-else class="text-sm">{{ row.note }}</span>
                             </td>
 
-                            <td v-if="canEdit" class="text-center">
+                            <td v-if="cellsEditable" class="text-center">
                                 <button
                                     type="button"
                                     class="ui-icon-btn ui-icon-btn--danger"
