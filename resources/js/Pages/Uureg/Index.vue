@@ -192,7 +192,11 @@ const downloadFormats = [
     { format: 'pdf', label: 'PDF (.pdf)' },
 ];
 
-const exportUrl = (format) => route('tasks.export', { kind: props.kind, format });
+const exportUrl = (format) => route('tasks.export', {
+    kind: props.kind,
+    format,
+    ...(selectedIds.value.length ? { ids: selectedIds.value.join(',') } : {}),
+});
 
 const toggleDownload = () => {
     downloadOpen.value = ! downloadOpen.value;
@@ -1116,6 +1120,12 @@ const bulkApply = reactive({
 
 const selectedCount = computed(() => selectedIds.value.length);
 
+const selectedAverage = computed(() => {
+    const rows = props.tasks.filter((task) => selectedIds.value.includes(task.id));
+
+    return rows.length ? average(rows) : null;
+});
+
 const allVisibleSelected = computed(() => (
     visibleTasks.value.length > 0
     && visibleTasks.value.every((t) => selectedIds.value.includes(t.id))
@@ -1687,9 +1697,12 @@ const cellEditable = (col) => {
                             </svg>
                         </button>
 
-                        <span class="ml-auto text-lg font-bold" :class="progressTextClass(overall.progress)">
-                            {{ overall.progress }}%
-                        </span>
+                        <div class="ml-auto text-right leading-tight">
+                            <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Нийт дундаж</p>
+                            <p class="text-lg font-bold tabular-nums" :class="progressTextClass(overall.progress)">
+                                {{ overall.progress }}%
+                            </p>
+                        </div>
                     </div>
 
                     <!-- Хэрэгжилт — дээд талын icon-ы доор -->
@@ -1855,7 +1868,16 @@ const cellEditable = (col) => {
                             </button>
                         </template>
 
-                        <div class="ml-auto flex flex-wrap items-center gap-1">
+                        <div class="ml-auto flex flex-wrap items-center gap-2">
+                            <div class="text-right leading-tight">
+                                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Нийт дундаж</p>
+                                <p class="text-base font-bold tabular-nums" :class="progressTextClass(overall.progress)">
+                                    {{ overall.progress }}%
+                                </p>
+                                <p v-if="selectedAverage != null" class="text-[10px] font-medium text-slate-500">
+                                    Сонгосон {{ selectedAverage }}%
+                                </p>
+                            </div>
 
                         <!-- Үйлдлүүд — зөвхөн хүснэгтэд, бүгд icon-оор -->
                         <template v-if="viewMode === 'table'">
@@ -1954,7 +1976,7 @@ const cellEditable = (col) => {
                                     type="button"
                                     class="ui-icon-btn"
                                     :aria-expanded="downloadOpen"
-                                    title="Хүснэгтийг Word, Excel, PDF-ээр татах"
+                                    :title="selectedCount ? selectedCount + ' сонгосон мөрийг татах' : 'Хүснэгтийг Word, Excel, PDF-ээр татах'"
                                     aria-label="Татах"
                                     @click.stop="toggleDownload"
                                 >
@@ -1966,6 +1988,9 @@ const cellEditable = (col) => {
                                     v-if="downloadOpen"
                                     class="absolute right-0 z-30 mt-1.5 min-w-[11rem] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
                                 >
+                                    <p class="px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                                        {{ selectedCount ? selectedCount + ' сонгосон мөр' : 'Бүх мөр' }}
+                                    </p>
                                     <a
                                         v-for="item in downloadFormats"
                                         :key="item.format"

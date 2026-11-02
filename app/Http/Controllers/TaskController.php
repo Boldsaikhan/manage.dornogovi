@@ -148,11 +148,16 @@ class TaskController extends Controller
         $format = strtolower((string) $request->query('format', 'docx'));
         abort_unless(in_array($format, ['docx', 'xlsx', 'pdf'], true), 404);
 
+        $ids = $this->selectedTaskIds($request);
+
         if ($requested === TaskSource::KEY_LEADERSHIP_ALL) {
             $sources = $this->visibleLeadershipSources($this->kindTabs($request->user()));
             abort_if($sources->isEmpty(), 404);
 
             $tasks = $this->leadershipTasks($request->user(), $sources);
+            if ($ids !== []) {
+                $tasks = $tasks->whereIn('id', $ids)->values();
+            }
             $sample = $sources->first()->replicate();
             $sample->name = 'Нийт';
             $columns = array_merge([
@@ -166,6 +171,9 @@ class TaskController extends Controller
 
             $tasksQuery = $source->tasks();
             $this->applyTaskListScope($tasksQuery, $request->user(), $source);
+            if ($ids !== []) {
+                $tasksQuery->whereIn('id', $ids);
+            }
             $tasks = $tasksQuery
                 ->get([
                     'id', 'text', 'measure', 'period', 'responsible', 'collaborator', 'sector', 'note', 'progress', 'sort_order',
@@ -217,6 +225,27 @@ class TaskController extends Controller
             'Content-Disposition' => "attachment; filename=\"{$ascii}\"; filename*=UTF-8''".rawurlencode($fileName),
             'Content-Length' => (string) strlen($content),
         ]);
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function selectedTaskIds(Request $request): array
+    {
+        $raw = $request->query('ids', []);
+        $parts = is_array($raw)
+            ? $raw
+            : preg_split('/\s*,\s*/', (string) $raw, -1, PREG_SPLIT_NO_EMPTY);
+
+        $ids = [];
+        foreach ($parts ?: [] as $part) {
+            $id = (int) $part;
+            if ($id > 0) {
+                $ids[$id] = $id;
+            }
+        }
+
+        return array_values($ids);
     }
 
     /**
