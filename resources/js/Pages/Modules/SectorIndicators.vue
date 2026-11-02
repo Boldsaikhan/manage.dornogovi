@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { computed, reactive, ref, watch } from 'vue';
 
 const props = defineProps({
@@ -269,27 +269,12 @@ const removePeriod = (period) => {
 </script>
 
 <template>
-    <Head title="Эрх зүйн акт, тогтоол" />
+    <Head title="Салбарын үзүүлэлт" />
 
-    <AuthenticatedLayout title="Эрх зүйн акт, тогтоол">
+    <AuthenticatedLayout title="Салбарын үзүүлэлт">
         <div class="ui-page ui-page--tight">
-            <!-- Табууд — эрх зүйн актын хуудастай нэг эгнээнд -->
-            <div class="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
-                <Link
-                    :href="route('legal-acts.index')"
-                    class="shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-                >
-                    Салбарын хууль
-                </Link>
-
-                <span class="mx-1 h-5 w-px bg-slate-200" />
-
-                <span class="shrink-0 rounded-xl bg-brand-navy-600 px-3.5 py-2 text-sm font-semibold text-white shadow-md shadow-brand-navy-600/20">
-                    Салбарын үзүүлэлт
-                    <span class="ml-1 text-xs opacity-70">{{ rows.length }}</span>
-                </span>
-
-                <div class="ml-auto flex items-center gap-1.5">
+            <div class="flex flex-wrap items-center justify-end gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
+                <div class="flex items-center gap-1.5">
                     <select
                         v-if="canManage && units.length"
                         class="ui-input !w-auto !py-1.5 text-sm"

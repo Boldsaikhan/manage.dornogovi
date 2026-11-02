@@ -30,20 +30,37 @@ class LegalActRegisterTest extends TestCase
                 $this->assertSame(
                     [
                         'Нийт', 'Хууль', 'УИХ-ын тогтоол', 'Засгийн газрын тогтоол',
-                        'Сайдын тушаал', 'Орон нутгийн', 'Бусад', 'Салбарын үзүүлэлт',
+                        'Сайдын тушаал', 'Орон нутгийн', 'Бусад',
                     ],
                     collect($props['scopeTabs'])->pluck('label')->all(),
                 );
 
-                // Табууд хоёр бүлэгт хуваагдана.
-                $this->assertSame(
-                    ['Салбарын хууль', ''],
-                    collect($props['scopeTabs'])->pluck('group_label')->unique()->values()->all(),
+                $this->assertFalse(
+                    collect($props['scopeTabs'])->contains(fn ($tab) => ($tab['href'] ?? null) !== null),
                 );
 
                 // legalinfo.mn руу шууд очих холбоос.
                 $this->assertSame('https://legalinfo.mn/mn', $props['externalLink']['url']);
             });
+    }
+
+    public function test_the_employee_dashboard_charts_sector_laws(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        LegalAct::create(['scope' => 'huuli', 'title' => 'Газрын тухай']);
+        LegalAct::create(['scope' => 'uih', 'title' => 'Тогтоол']);
+
+        $this->actingAs($admin)
+            ->get(route('dept.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('lawDashboard.total', 2)
+                ->where('lawDashboard.scopes.0.label', 'Хууль')
+                ->where('lawDashboard.scopes.0.count', 1)
+                ->where('lawDashboard.scopes.1.label', 'УИХ-ын тогтоол')
+                ->where('lawDashboard.scopes.1.count', 1)
+                ->has('indicatorDashboard'));
     }
 
     public function test_the_sidebar_lists_law_and_indicators_under_one_heading(): void

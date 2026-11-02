@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Department;
 use App\Models\IndicatorPeriod;
 use App\Models\Leave;
+use App\Models\LegalAct;
 use App\Models\Plan;
 use App\Models\SectorIndicator;
 use App\Models\Task;
@@ -91,8 +92,46 @@ class DepartmentDashboardController extends Controller
                 'tasks' => $g->tasks->count(),
             ]),
             'recentTasks' => $recentTasks,
+            'lawDashboard' => $this->lawDashboard($user),
             'indicatorDashboard' => $this->indicatorDashboard($request, $user),
         ]);
+    }
+
+    /**
+     * Салбарын хууль — төрлөөр нь тоолсон самбар.
+     *
+     * @return array<string, mixed>
+     */
+    private function lawDashboard($user): array
+    {
+        $scopes = config('module_resources.legal_acts.scopes', []);
+        $counts = LegalAct::query()
+            ->selectRaw('scope, count(*) as aggregate')
+            ->groupBy('scope')
+            ->pluck('aggregate', 'scope');
+
+        $items = [];
+
+        foreach ($scopes as $key => $label) {
+            $items[] = [
+                'key' => $key,
+                'label' => $label,
+                'count' => (int) ($counts[$key] ?? 0),
+            ];
+        }
+
+        $highest = 0;
+
+        foreach ($items as $item) {
+            $highest = max($highest, $item['count']);
+        }
+
+        return [
+            'total' => (int) $counts->sum(),
+            'max' => max(1, $highest),
+            'canOpen' => ModuleAccess::canView($user, 'legal_acts'),
+            'scopes' => $items,
+        ];
     }
 
     /**
