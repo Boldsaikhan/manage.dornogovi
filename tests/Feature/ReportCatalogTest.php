@@ -3,7 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\UserModulePermission;
+use App\Support\ReportRows;
+use App\Support\XlsxTableWriter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class ReportCatalogTest extends TestCase
@@ -180,6 +184,62 @@ class ReportCatalogTest extends TestCase
         $this->actingAs($user)
             ->get(route('reports.export', ['report' => 'contracts.agency_directors', 'format' => 'csv']))
             ->assertNotFound();
+    }
+
+    public function test_report_import_maps_headers_then_appends_rows(): void
+    {
+        $user = User::factory()->create(['is_admin' => true]);
+        $path = storage_path('framework/testing/report-import.xlsx');
+
+        if (! is_dir(dirname($path))) {
+            mkdir(dirname($path), 0777, true);
+        }
+
+        app(XlsxTableWriter::class)->write($path, 'гэрээ', ['№', 'Бодлогын баримт бичиг', 'Тоо хэмжээ'], [
+            ['1', 'Туршилтын баримт', '4'],
+        ]);
+
+        $file = new UploadedFile(
+            $path,
+            'geree.xlsx',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            null,
+            true,
+        );
+
+        $preview = $this->actingAs($user)
+            ->post(route('reports.import.preview', 'contracts.ministry_gbxn'), ['file' => $file]);
+
+        $preview->assertOk();
+        $preview->assertJsonPath('mapping.document', 1);
+        $preview->assertJsonPath('mapping.count', 2);
+        $preview->assertJsonPath('total', 1);
+        $preview->assertJsonPath('entries.0.document', 'Туршилтын баримт');
+
+        $this->actingAs($user)
+            ->post(route('reports.import.store', 'contracts.ministry_gbxn'), [
+                'entries' => $preview->json('entries'),
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', '1 мөр нэмэгдлээ.');
+
+        $rows = ReportRows::merged('contracts.ministry_gbxn');
+        $this->assertCount(1, $rows);
+        $this->assertSame('Туршилтын баримт', $rows[0]['document']);
+        $this->assertSame('4', $rows[0]['count']);
+
+        $viewer = User::factory()->create();
+        UserModulePermission::create([
+            'user_id' => $viewer->id,
+            'module_key' => 'reports',
+            'level' => 'view',
+        ]);
+
+        $this->actingAs($viewer)
+            ->post(route('reports.import.preview', 'contracts.ministry_gbxn'), ['file' => $file])
+            ->assertForbidden();
+
+        @unlink($path);
     }
 
     public function test_report_word_export_404_for_unknown_key(): void

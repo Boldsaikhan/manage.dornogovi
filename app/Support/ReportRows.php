@@ -37,10 +37,13 @@ class ReportRows
             }
         }
 
+        $base = array_values($rows);
+        $maxEdit = $edits->max('row_index');
+        $length = max(count($base), $maxEdit === null ? 0 : ((int) $maxEdit) + 1);
         $out = [];
 
-        foreach (array_values($rows) as $index => $row) {
-            $row = is_array($row) ? $row : [];
+        for ($index = 0; $index < $length; $index++) {
+            $row = is_array($base[$index] ?? null) ? $base[$index] : [];
             $row['_index'] = $index;
             $row['department_id'] = null;
 
@@ -48,6 +51,18 @@ class ReportRows
         }
 
         return $out;
+    }
+
+    /**
+     * JSON эх мөр болон файлаар нэмсэн мөрийн нийт тоо.
+     * Дараагийн шинэ мөр энэ индекст эхэлнэ.
+     */
+    public static function length(string $reportKey): int
+    {
+        $base = count(ReportsData::rows($reportKey));
+        $maxEdit = ReportRowEdit::query()->where('report_key', $reportKey)->max('row_index');
+
+        return max($base, $maxEdit === null ? 0 : ((int) $maxEdit) + 1);
     }
 
     /**

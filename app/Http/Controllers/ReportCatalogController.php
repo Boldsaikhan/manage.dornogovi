@@ -8,9 +8,12 @@ use App\Support\DocxTableWriter;
 use App\Support\ModuleAccess;
 use App\Support\PdfTableWriter;
 use App\Support\ReportRows;
+use App\Support\ReportTableImporter;
 use App\Support\ReportsCatalog;
 use App\Support\ReportsData;
+use App\Support\TabularFileReader;
 use App\Support\XlsxTableWriter;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -195,6 +198,67 @@ class ReportCatalogController extends Controller
      * }
      */
     /**
+     * Excel, Word, PDF-ээс уншиж, баганыг тааруулахын өмнө харуулна.
+     */
+    public function importPreview(
+        Request $request,
+        string $report,
+        TabularFileReader $reader,
+        ReportTableImporter $importer,
+    ): JsonResponse {
+        $this->authorizeReports($request);
+        abort_unless(ModuleAccess::canEdit($request->user(), 'reports'), 403);
+
+        $item = ReportsCatalog::find($report);
+
+        if (! $item) {
+            throw new NotFoundHttpException();
+        }
+
+        $columns = $item['columns'] ?? [];
+        abort_if($columns === [], 404, 'Хүснэгтийн бүтэц тохируулаагүй байна.');
+
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:'.implode(',', TabularFileReader::EXTENSIONS), 'max:20480'],
+        ], [], ['file' => 'файл']);
+
+        $file = $request->file('file');
+        $rows = $reader->rows($file->getRealPath(), (string) $file->getClientOriginalExtension());
+
+        return response()->json($importer->preview($rows, $columns));
+    }
+
+    /**
+     * Тааруулсан мөрүүдийг одоогийн хүснэгтийн ард нэмнэ.
+     */
+    public function importStore(Request $request, string $report, ReportTableImporter $importer): RedirectResponse
+    {
+        $this->authorizeReports($request);
+        abort_unless(ModuleAccess::canEdit($request->user(), 'reports'), 403);
+
+        $item = ReportsCatalog::find($report);
+
+        if (! $item) {
+            throw new NotFoundHttpException();
+        }
+
+        $columns = $item['columns'] ?? [];
+        abort_if($columns === [], 404, 'Хүснэгтийн бүтэц тохируулаагүй байна.');
+
+        $data = $request->validate([
+            'entries' => ['required', 'array', 'min:1', 'max:400'],
+            'entries.*' => ['array'],
+        ]);
+
+        $created = $importer->store($report, $data['entries'], $columns, $request->user()->id);
+
+        return back()->with(
+            'success',
+            $created > 0 ? $created.' мөр нэмэгдлээ.' : 'Оруулах мөр олдсонгүй.',
+        );
+    }
+
+    /**
      * Мөрийн нэг нүдийг засна.
      */
     public function updateRow(Request $request, string $report, int $index): RedirectResponse
@@ -217,7 +281,7 @@ class ReportCatalogController extends Controller
             'department_id' => ['nullable', 'integer', 'exists:departments,id'],
         ]);
 
-        abort_if($index < 0 || $index >= count(ReportsData::rows($report)), 404);
+        abort_if($index < 0 || $index >= ReportRows::length($report), 404);
 
         $isDepartment = $data['column'] === ReportRowEdit::DEPARTMENT_COLUMN;
 
