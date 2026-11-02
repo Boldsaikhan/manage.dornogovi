@@ -22,8 +22,16 @@ class ModuleOrder
     {
         $default = array_keys(config('modules.groups', []));
         $saved = self::loadJson(self::GROUPS_KEY);
+        $keys = self::mergeOrder($saved, $default);
 
-        return self::mergeOrder($saved, $default);
+        // Хадгалсан дараалалд шинэ бүлэг байхгүй бол бичиг хэргийн араас гаргана.
+        if (! in_array('legal', $saved, true) && in_array('documents', $keys, true) && in_array('legal', $keys, true)) {
+            $keys = array_values(array_filter($keys, fn ($key) => $key !== 'legal'));
+            $after = array_search('documents', $keys, true);
+            array_splice($keys, $after + 1, 0, ['legal']);
+        }
+
+        return $keys;
     }
 
     /**

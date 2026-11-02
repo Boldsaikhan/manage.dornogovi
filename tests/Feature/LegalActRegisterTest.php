@@ -37,12 +37,35 @@ class LegalActRegisterTest extends TestCase
 
                 // Табууд хоёр бүлэгт хуваагдана.
                 $this->assertSame(
-                    ['Хууль тогтоомж', ''],
+                    ['Салбарын хууль', ''],
                     collect($props['scopeTabs'])->pluck('group_label')->unique()->values()->all(),
                 );
 
                 // legalinfo.mn руу шууд очих холбоос.
                 $this->assertSame('https://legalinfo.mn/mn', $props['externalLink']['url']);
+            });
+    }
+
+    public function test_the_sidebar_lists_law_and_indicators_under_one_heading(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->get(route('legal-acts.index'))
+            ->assertOk()
+            ->assertInertia(function (AssertableInertia $page): void {
+                $nav = collect($page->toArray()['props']['moduleNav']);
+                $group = $nav->firstWhere('key', 'legal');
+
+                $this->assertSame('Эрх зүйн акт, тогтоол', $group['label'] ?? null);
+                $this->assertSame(
+                    ['Салбарын хууль', 'Салбарын үзүүлэлт'],
+                    collect($group['items'] ?? [])->pluck('label')->all(),
+                );
+                $this->assertSame(
+                    ['legal-acts.index', 'indicators.index'],
+                    collect($group['items'] ?? [])->pluck('route')->all(),
+                );
             });
     }
 

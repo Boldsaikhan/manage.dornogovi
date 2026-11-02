@@ -29,7 +29,7 @@ class UserAccessController extends Controller
         $subModules = collect(ModuleAccess::subDefinitions())->groupBy('parent');
 
         $modules = ModuleAccess::definitions()
-            ->reject(fn ($m) => $m['key'] === 'systems')
+            ->reject(fn ($m) => $m['key'] === 'systems' || ! empty($m['menu_only']))
             ->flatMap(fn (array $m) => array_merge(
                 [[
                     'key' => $m['key'],

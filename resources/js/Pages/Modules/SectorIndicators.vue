@@ -269,20 +269,17 @@ const removePeriod = (period) => {
 </script>
 
 <template>
-    <Head title="Салбарын үзүүлэлт" />
+    <Head title="Эрх зүйн акт, тогтоол" />
 
-    <AuthenticatedLayout title="Салбарын үзүүлэлт">
+    <AuthenticatedLayout title="Эрх зүйн акт, тогтоол">
         <div class="ui-page ui-page--tight">
             <!-- Табууд — эрх зүйн актын хуудастай нэг эгнээнд -->
             <div class="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
-                <span class="pl-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                    Хууль тогтоомж
-                </span>
                 <Link
                     :href="route('legal-acts.index')"
                     class="shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
                 >
-                    Эрх зүйн акт, тогтоол
+                    Салбарын хууль
                 </Link>
 
                 <span class="mx-1 h-5 w-px bg-slate-200" />

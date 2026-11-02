@@ -496,7 +496,13 @@ class ModuleAccess
                     continue;
                 }
 
-                if (! self::canView($user, $itemKey)) {
+                if (! ModuleVisibility::isEnabled($itemKey)) {
+                    continue;
+                }
+
+                $accessKey = $definition['access'] ?? $itemKey;
+
+                if (! self::canView($user, $accessKey)) {
                     continue;
                 }
 
