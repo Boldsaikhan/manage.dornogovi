@@ -171,8 +171,15 @@ const tabs = [];
 let activeId = null;
 let nextId = 1;
 
+/** HTML Fullscreen API идэвхтэй таб — табын мөрийг нууж бүтэн цонх өгнө. */
+let htmlFullscreenTabId = null;
+
 const contentArea = () => {
     const { width, height } = win.getContentBounds();
+
+    if (htmlFullscreenTabId != null) {
+        return { x: 0, y: 0, width, height };
+    }
 
     return {
         x: 0,
@@ -187,13 +194,23 @@ const layout = () => {
         return;
     }
 
-    const { width } = win.getContentBounds();
+    const { width, height } = win.getContentBounds();
+    const fullscreen = htmlFullscreenTabId != null;
 
-    tabBar.setBounds({ x: 0, y: 0, width, height: TAB_BAR_HEIGHT });
+    if (tabBar && ! tabBar.webContents.isDestroyed()) {
+        tabBar.setVisible(! fullscreen);
+        tabBar.setBounds(fullscreen
+            ? { x: 0, y: 0, width: 0, height: 0 }
+            : { x: 0, y: 0, width, height: TAB_BAR_HEIGHT });
+    }
 
     const area = contentArea();
 
     for (const tab of tabs) {
+        if (fullscreen && tab.id !== htmlFullscreenTabId) {
+            continue;
+        }
+
         tab.view.setBounds(area);
     }
 };
@@ -267,6 +284,11 @@ const closeTab = (id) => {
     }
 
     const [tab] = tabs.splice(index, 1);
+
+    if (htmlFullscreenTabId === id) {
+        htmlFullscreenTabId = null;
+        layout();
+    }
 
     win.contentView.removeChildView(tab.view);
     tab.view.webContents.close();
@@ -349,6 +371,23 @@ const wire = (tab) => {
 
     webContents.on('did-navigate', sendState);
     webContents.on('did-navigate-in-page', sendState);
+
+    /*
+     * Сайтын «дэлгэц дүүрэн» товч (requestFullscreen) — WebContentsView
+     * дотор табын мөр харагдаж үлддэг тул энд бүтэн цонх өгнө.
+     */
+    webContents.on('enter-html-full-screen', () => {
+        htmlFullscreenTabId = tab.id;
+        layout();
+    });
+
+    webContents.on('leave-html-full-screen', () => {
+        if (htmlFullscreenTabId === tab.id) {
+            htmlFullscreenTabId = null;
+        }
+
+        layout();
+    });
 
     // Шинэ цонх нээх оролдлогыг таб болгоно.
     webContents.setWindowOpenHandler(({ url }) => {
@@ -540,15 +579,26 @@ if (! app.requestSingleInstanceLock()) {
          * системийн өөрийн хуудсанд clipboard-ыг зөвшөөрнө.
          */
         session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+            // Дэлгэц дүүрэн — холбосон системүүдийн товч ажиллах ёстой.
+            if (permission === 'fullscreen') {
+                callback(true);
+
+                return;
+            }
+
             const fromSite = isSiteUrl(webContents.getURL());
 
             callback(fromSite && ['clipboard-read', 'clipboard-sanitized-write'].includes(permission));
         });
 
-        session.defaultSession.setPermissionCheckHandler((webContents, permission) => (
-            isSiteUrl(webContents?.getURL() ?? '')
-            && ['clipboard-read', 'clipboard-sanitized-write'].includes(permission)
-        ));
+        session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
+            if (permission === 'fullscreen') {
+                return true;
+            }
+
+            return isSiteUrl(webContents?.getURL() ?? '')
+                && ['clipboard-read', 'clipboard-sanitized-write'].includes(permission);
+        });
 
         /*
          * Бүх хуудсанд нэг мөр хамгаалалт: webview хавсаргахыг хаана,
