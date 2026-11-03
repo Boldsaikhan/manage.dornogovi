@@ -335,7 +335,7 @@ const hasPerson = (rowId) => String(drafts[rowId]?.person_name ?? '').trim() !==
 // Тухайн бүлгийн нүд засварлаж болох эсэх:
 // нэр сонгосон, өөр бүлэг бөглөгдөөгүй байх ёстой.
 const groupEditable = (rowId, group) => {
-    if (! canManage.value || ! hasPerson(rowId)) return false;
+    if (! rowEditable(rowId) || ! hasPerson(rowId)) return false;
 
     const active = activeGroup(rowId);
 
@@ -454,22 +454,46 @@ const addRow = () => {
 };
 
 /**
- * «Засварлах» горим — толгойн товчоор асаана.
+ * Мөр бүрийг тусад нь засна — мөрийн харандаа товчоор асаана.
  *
- * Унтраалттай үед хүснэгт зөвхөн харагдана: нүдэн дээр санамсаргүй дарж утга
- * өөрчлөгдөхгүй. Асаалттай үед бүх нүд идэвхжиж, мөр устгах товч гарна.
+ * Бусад мөрүүд уншигдана; нүдэн дээр санамсаргүй дарж утга өөрчлөгдөхгүй.
  */
-const editMode = ref(false);
+const editingId = ref(null);
 
-const rowEditable = () => canManage.value && editMode.value;
+const rowEditable = (rowId) => canManage.value && editingId.value === rowId;
 
-const toggleEditMode = () => {
-    editMode.value = ! editMode.value;
+const toggleRowEdit = (rowId) => {
+    editingId.value = editingId.value === rowId ? null : rowId;
 };
 
 // Таб солигдоход засварын горим хаагдана.
 watch(() => props.tab, () => {
-    editMode.value = false;
+    editingId.value = null;
+});
+
+/** Шинэ нэмсэн мөрийг шууд засах горимд нээнэ. */
+const seenRowIds = new Set();
+let rowsPrimed = false;
+
+watch(() => props.rows.map((row) => row.id).join(','), () => {
+    const ids = props.rows.map((row) => row.id);
+
+    if (! rowsPrimed) {
+        ids.forEach((id) => seenRowIds.add(id));
+        rowsPrimed = true;
+
+        return;
+    }
+
+    const fresh = ids.find((id) => ! seenRowIds.has(id));
+
+    ids.forEach((id) => seenRowIds.add(id));
+
+    if (fresh != null) {
+        editingId.value = fresh;
+    } else if (editingId.value != null && ! ids.includes(editingId.value)) {
+        editingId.value = null;
+    }
 });
 
 const saveField = (id, field, value) => {
@@ -837,25 +861,6 @@ const docColumnCount = computed(() => {
                     </button>
 
                     <button
-                        v-if="canManage"
-                        type="button"
-                        class="ui-icon-btn"
-                        :class="editMode ? 'bg-brand-navy-600 text-white' : ''"
-                        :title="editMode
-                            ? 'Засварыг дуусгаад хүснэгтийг түгжинэ'
-                            : 'Нүд засварлах, PDF оруулах / устгах боломжтой болгоно'"
-                        :aria-label="editMode ? 'Засварыг дуусгах' : 'Засварлах'"
-                        @click="toggleEditMode"
-                    >
-                        <svg v-if="editMode" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                        <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 20h4l10-10a2.1 2.1 0 1 0-3-3L5 17v3z" />
-                        </svg>
-                    </button>
-
-                    <button
                         v-if="canAddRow"
                         type="button"
                         class="ui-icon-btn bg-brand-orange-500 text-white hover:bg-brand-orange-600"
@@ -886,7 +891,7 @@ const docColumnCount = computed(() => {
                         <col v-for="n in 8" :key="`q-${n}`" style="width: 3.5rem" />
                         <col v-for="n in 4" :key="`n-${n}`" style="width: 5rem" />
                         <col style="width: 7.5rem" />
-                        <col v-if="canManage" style="width: 3.5rem" />
+                        <col v-if="canManage" style="width: 5.5rem" />
                     </colgroup>
                     <thead>
                         <tr>
@@ -958,13 +963,14 @@ const docColumnCount = computed(() => {
                         <tr
                             v-for="row in renderedRows"
                             :key="row.id"
+                            :class="rowEditable(row.id) ? 'bg-sky-50/80' : ''"
                         >
                             <td class="ui-register__cell--no">{{ row.no }}</td>
                             <td :class="cellClass">
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].person_name"
-                                    :editable="rowEditable()"
+                                    :editable="rowEditable(row.id)"
                                     :options="people"
                                     empty-label=""
                                     placeholder="Нэр сонгох…"
@@ -977,7 +983,7 @@ const docColumnCount = computed(() => {
                                     v-model="drafts[row.id].issued_on"
                                     type="date"
                                     align="center"
-                                    :editable="rowEditable()"
+                                    :editable="rowEditable(row.id)"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'issued_on', v)"
                                 />
@@ -1075,7 +1081,7 @@ const docColumnCount = computed(() => {
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].num_zahiramj"
                                     align="center"
-                                    :editable="rowEditable()"
+                                    :editable="rowEditable(row.id)"
                                     empty-label=""
                                     placeholder="авто"
                                     @commit="(v) => saveField(row.id, 'num_zahiramj', v)"
@@ -1086,7 +1092,7 @@ const docColumnCount = computed(() => {
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].num_tushaal"
                                     align="center"
-                                    :editable="rowEditable()"
+                                    :editable="rowEditable(row.id)"
                                     empty-label=""
                                     placeholder="авто"
                                     @commit="(v) => saveField(row.id, 'num_tushaal', v)"
@@ -1097,7 +1103,7 @@ const docColumnCount = computed(() => {
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].void_zahiramj"
                                     align="center"
-                                    :editable="rowEditable()"
+                                    :editable="rowEditable(row.id)"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'void_zahiramj', v)"
                                 />
@@ -1107,7 +1113,7 @@ const docColumnCount = computed(() => {
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].void_tushaal"
                                     align="center"
-                                    :editable="rowEditable()"
+                                    :editable="rowEditable(row.id)"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'void_tushaal', v)"
                                 />
@@ -1116,24 +1122,42 @@ const docColumnCount = computed(() => {
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].body"
-                                    :editable="rowEditable()"
+                                    :editable="rowEditable(row.id)"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'body', v)"
                                 />
                             </td>
                             <td v-if="canManage" class="px-1 py-1 text-center">
-                                <button
-                                    v-if="editMode"
-                                    type="button"
-                                    class="ui-icon-btn mx-auto"
-                                    title="Устгах"
-                                    aria-label="Устгах"
-                                    @click="destroyRow(row.id)"
-                                >
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 7h12M10 11v6M14 11v6M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 7l1 14h12l1-14" />
-                                    </svg>
-                                </button>
+                                <div class="flex items-center justify-center gap-0.5">
+                                    <button
+                                        type="button"
+                                        class="ui-icon-btn"
+                                        :class="rowEditable(row.id) ? 'bg-brand-navy-600 text-white' : ''"
+                                        :title="rowEditable(row.id) ? 'Засварыг дуусгах' : 'Мөрийг засах'"
+                                        :aria-label="rowEditable(row.id) ? 'Засварыг дуусгах' : 'Мөрийг засах'"
+                                        :aria-pressed="rowEditable(row.id)"
+                                        @click="toggleRowEdit(row.id)"
+                                    >
+                                        <svg v-if="rowEditable(row.id)" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                        <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 20h4l10-10a2.1 2.1 0 1 0-3-3L5 17v3z" />
+                                        </svg>
+                                    </button>
+                                    <button
+                                        v-if="rowEditable(row.id)"
+                                        type="button"
+                                        class="ui-icon-btn ui-icon-btn--danger"
+                                        title="Устгах"
+                                        aria-label="Устгах"
+                                        @click="destroyRow(row.id)"
+                                    >
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 7h12M10 11v6M14 11v6M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 7l1 14h12l1-14" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         <tr v-if="!rows.length">
@@ -1187,7 +1211,7 @@ const docColumnCount = computed(() => {
                         <col style="width: 6rem" />
                         <col style="width: 8rem" />
                         <col v-if="isNiit" style="width: 6.5rem" />
-                        <col style="width: 6.5rem" />
+                        <col style="width: 9rem" />
                     </colgroup>
                     <thead>
                         <tr>
@@ -1267,6 +1291,7 @@ const docColumnCount = computed(() => {
                         <tr
                             v-for="row in renderedRows"
                             :key="row.id"
+                            :class="rowEditable(row.id) ? 'bg-sky-50/80' : ''"
                         >
                             <td class="ui-register__cell--no">{{ row.no }}</td>
                             <td :class="cellClass">
@@ -1275,7 +1300,7 @@ const docColumnCount = computed(() => {
                                     v-model="drafts[row.id].issued_on"
                                     type="date"
                                     align="center"
-                                    :editable="rowEditable()"
+                                    :editable="rowEditable(row.id)"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'issued_on', v)"
                                 />
@@ -1296,7 +1321,7 @@ const docColumnCount = computed(() => {
                                         :class="row.number_prefix
                                             ? 'w-10 shrink-0 [&_.ui-sheet-display]:px-0'
                                             : 'min-w-0 flex-1'"
-                                        :editable="rowEditable()"
+                                        :editable="rowEditable(row.id)"
                                         empty-label=""
                                         placeholder="01"
                                         @commit="(v) => saveField(row.id, 'number', v)"
@@ -1308,7 +1333,7 @@ const docColumnCount = computed(() => {
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].title"
                                     multiline
-                                    :editable="rowEditable()"
+                                    :editable="rowEditable(row.id)"
                                     empty-label=""
                                     placeholder="Гарчиг…"
                                     @commit="(v) => saveField(row.id, 'title', v)"
@@ -1320,7 +1345,7 @@ const docColumnCount = computed(() => {
                                     v-model="drafts[row.id].page_count"
                                     type="number"
                                     align="center"
-                                    :editable="rowEditable()"
+                                    :editable="rowEditable(row.id)"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'page_count', v)"
                                 />
@@ -1331,7 +1356,7 @@ const docColumnCount = computed(() => {
                                     v-model="drafts[row.id].effective_on"
                                     type="date"
                                     align="center"
-                                    :editable="rowEditable()"
+                                    :editable="rowEditable(row.id)"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'effective_on', v)"
                                 />
@@ -1340,7 +1365,7 @@ const docColumnCount = computed(() => {
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].attachment_name"
-                                    :editable="rowEditable()"
+                                    :editable="rowEditable(row.id)"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'attachment_name', v)"
                                 />
@@ -1351,7 +1376,7 @@ const docColumnCount = computed(() => {
                                     v-model="drafts[row.id].attachment_pages"
                                     type="number"
                                     align="center"
-                                    :editable="rowEditable()"
+                                    :editable="rowEditable(row.id)"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'attachment_pages', v)"
                                 />
@@ -1360,7 +1385,7 @@ const docColumnCount = computed(() => {
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].original_form"
-                                    :editable="rowEditable()"
+                                    :editable="rowEditable(row.id)"
                                     empty-label=""
                                     placeholder="Эх хувь…"
                                     @commit="(v) => saveField(row.id, 'original_form', v)"
@@ -1371,7 +1396,7 @@ const docColumnCount = computed(() => {
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].file_index"
                                     align="center"
-                                    :editable="rowEditable()"
+                                    :editable="rowEditable(row.id)"
                                     empty-label=""
                                     placeholder="Индекс…"
                                     @commit="(v) => saveField(row.id, 'file_index', v)"
@@ -1381,7 +1406,7 @@ const docColumnCount = computed(() => {
                                 <SheetCell
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].person_name"
-                                    :editable="rowEditable()"
+                                    :editable="rowEditable(row.id)"
                                     :options="officialOptions"
                                     align="center"
                                     empty-label=""
@@ -1391,7 +1416,7 @@ const docColumnCount = computed(() => {
                             </td>
                             <td v-if="isNiit" class="px-2 py-1.5 text-xs text-slate-600">
                                 <select
-                                    v-if="canManage && drafts[row.id]"
+                                    v-if="rowEditable(row.id) && drafts[row.id]"
                                     v-model="drafts[row.id].kind"
                                     class="w-full border-0 bg-transparent py-1 text-center text-[11px] outline-none focus:bg-sky-50"
                                     @change="saveField(row.id, 'kind', drafts[row.id].kind)"
@@ -1405,7 +1430,24 @@ const docColumnCount = computed(() => {
                             <td class="px-1 py-1">
                                 <div class="flex items-center justify-center gap-0.5">
                                     <button
-                                        v-if="canManage && editMode"
+                                        v-if="canManage"
+                                        type="button"
+                                        class="ui-icon-btn"
+                                        :class="rowEditable(row.id) ? 'bg-brand-navy-600 text-white' : ''"
+                                        :title="rowEditable(row.id) ? 'Засварыг дуусгах' : 'Мөрийг засах'"
+                                        :aria-label="rowEditable(row.id) ? 'Засварыг дуусгах' : 'Мөрийг засах'"
+                                        :aria-pressed="rowEditable(row.id)"
+                                        @click="toggleRowEdit(row.id)"
+                                    >
+                                        <svg v-if="rowEditable(row.id)" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                        <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 20h4l10-10a2.1 2.1 0 1 0-3-3L5 17v3z" />
+                                        </svg>
+                                    </button>
+                                    <button
+                                        v-if="rowEditable(row.id)"
                                         type="button"
                                         class="inline-flex h-7 w-7 items-center justify-center rounded text-slate-500 transition hover:bg-brand-navy-50 hover:text-brand-navy-700"
                                         :title="compressingId === row.id ? 'Шахаж байна…' : 'PDF эсвэл зураг оруулах (зургийг PDF болгоно)'"
@@ -1435,7 +1477,7 @@ const docColumnCount = computed(() => {
                                         </svg>
                                     </button>
                                     <button
-                                        v-if="canManage && editMode && row.has_image"
+                                        v-if="rowEditable(row.id) && row.has_image"
                                         type="button"
                                         class="inline-flex h-7 w-7 items-center justify-center rounded text-slate-400 transition hover:bg-amber-50 hover:text-amber-700"
                                         title="Хавсаргасан файлыг устгах"
@@ -1447,9 +1489,9 @@ const docColumnCount = computed(() => {
                                         </svg>
                                     </button>
                                     <button
-                                        v-if="canManage && editMode"
+                                        v-if="rowEditable(row.id)"
                                         type="button"
-                                        class="ui-icon-btn"
+                                        class="ui-icon-btn ui-icon-btn--danger"
                                         title="Мөр устгах"
                                         aria-label="Мөр устгах"
                                         @click="destroyRow(row.id)"
