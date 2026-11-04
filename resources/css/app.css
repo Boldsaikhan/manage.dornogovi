@@ -196,31 +196,15 @@
 
     .ui-table--pin-actions .ui-sticky-progress {
         right: var(--pin-actions-width);
-        box-shadow: -6px 0 8px -6px rgba(15, 23, 42, 0.1);
-        @apply border-l border-brand-navy-200 dark:border-slate-700;
+        /* Самбарын зүүн ирмэг — хүснэгтээс тодорхой тусгаарлана. */
+        box-shadow:
+            inset 1px 0 0 theme('colors.brand-navy.300'),
+            -10px 0 12px -8px rgba(15, 23, 42, 0.18);
+        @apply border-l-0;
     }
 
     .ui-table--pin-actions .ui-sticky-actions {
         right: 0;
-    }
-
-    /*
-     * Наалдсан багана бүрэн дүүрэн дэвсгэртэй байх ёстой — эс бөгөөс
-     * доогуур нь гүйж өнгөрөх бичвэр нэвт харагдана.
-     */
-    .ui-table--pin-actions tbody td.ui-sticky-progress,
-    .ui-table--pin-actions tbody td.ui-sticky-actions {
-        @apply bg-white dark:bg-slate-900;
-    }
-
-    .ui-table--pin-actions tbody tr:nth-child(even) td.ui-sticky-progress,
-    .ui-table--pin-actions tbody tr:nth-child(even) td.ui-sticky-actions {
-        @apply bg-slate-50 dark:bg-slate-800;
-    }
-
-    .ui-table--pin-actions tbody tr:hover td.ui-sticky-progress,
-    .ui-table--pin-actions tbody tr:hover td.ui-sticky-actions {
-        @apply bg-brand-navy-50 dark:bg-slate-700;
     }
 
     /*
@@ -238,16 +222,18 @@
         z-index: 16;
     }
 
+    /*
+     * ⚠️ Дэвсгэр нь ХАГАС ТУНГАЛАГ байж болохгүй — доогуур нь гүйж
+     * өнгөрөх хөрш баганын бичвэр нэвт харагддаг болно.
+     *
+     * Мөрийн ээлжилсэн өнгийг энд давтахгүй: баруун тал нь нэг жигд
+     * өнгөтэй байвал тусдаа самбар мэт тод ялгарна.
+     */
     .ui-table--pin-actions tbody td.ui-sticky-progress,
     .ui-table--pin-actions tbody td.ui-sticky-actions {
-        @apply bg-brand-navy-50/60 dark:bg-slate-800;
+        @apply bg-brand-navy-50 dark:bg-slate-800;
         z-index: 5;
         isolation: isolate;
-    }
-
-    .ui-table--pin-actions tbody tr:nth-child(even) td.ui-sticky-progress,
-    .ui-table--pin-actions tbody tr:nth-child(even) td.ui-sticky-actions {
-        @apply bg-brand-navy-50 dark:bg-slate-800/80;
     }
 
     .ui-table--pin-actions tbody tr:hover td.ui-sticky-progress,
