@@ -254,7 +254,7 @@ class UserAccessController extends Controller
     {
         $data = $request->validate([
             'login' => ['nullable', 'string', 'max:20'],
-            'password' => ['nullable', 'string', 'min:6', 'max:255'],
+            'password' => ['nullable', 'string', 'min:8', 'max:255'],
         ]);
 
         $login = $data['login'] ?? null;

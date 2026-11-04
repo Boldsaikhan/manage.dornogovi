@@ -3,7 +3,6 @@ import { Head, Link } from '@inertiajs/vue3';
 
 defineProps({
     canLogin: Boolean,
-    canRegister: Boolean,
     systems: {
         type: Array,
         default: () => [],
@@ -72,13 +71,6 @@ const features = [
                         class="rounded-md bg-brand-orange-500 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-brand-orange-600"
                     >
                         Нэвтрэх
-                    </Link>
-                    <Link
-                        v-if="canRegister"
-                        :href="route('register')"
-                        class="rounded-md border border-brand-navy-200 px-4 py-1.5 text-sm font-medium text-brand-navy-700 transition hover:bg-brand-navy-50"
-                    >
-                        Бүртгүүлэх
                     </Link>
                 </nav>
             </div>

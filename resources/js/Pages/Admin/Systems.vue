@@ -559,9 +559,9 @@ const openEdit = (system) => {
 
 const submit = () => {
     if (editing.value) {
-        form.patch(route('admin.systems.update', editing.value.id), {
-            preserveScroll: true,
-            onSuccess: () => (modal.value = false),
+    form.patch(route('admin.systems.update', editing.value.id), {
+        preserveScroll: true,
+        onSuccess: () => (modal.value = false),
         });
 
         return;
@@ -1288,9 +1288,9 @@ const saveAi = () => {
                             <th class="w-1/3">Үг</th>
                             <th>Харьяалахын хэлбэр</th>
                             <th class="w-24" />
-                        </tr>
-                    </thead>
-                    <tbody>
+                    </tr>
+                </thead>
+                <tbody>
                         <tr v-for="(row, index) in visibleGenitiveWords" :key="index">
                             <td>
                                 <input
@@ -1314,7 +1314,7 @@ const saveAi = () => {
                                     Устгах
                                 </button>
                                 <span v-else class="text-[11px] text-slate-400">үндсэн</span>
-                            </td>
+                        </td>
                         </tr>
                         <tr v-if="!visibleGenitiveWords.length">
                             <td colspan="3" class="!py-10 text-center text-slate-400">
@@ -1404,13 +1404,13 @@ const saveAi = () => {
                                     <div class="font-semibold text-brand-navy-800">{{ system.name }}</div>
                                     <div class="truncate text-xs text-slate-400">{{ system.login_url || system.url }}</div>
                                 </div>
-                                <span
-                                    v-if="system.can_auto_submit"
+                            <span
+                                v-if="system.can_auto_submit"
                                     class="hidden shrink-0 rounded-full bg-brand-orange-100 px-2 py-0.5 text-[11px] text-brand-orange-700 sm:inline"
-                                >
-                                    Шууд илгээх
-                                </span>
-                                <span
+                            >
+                                Шууд илгээх
+                            </span>
+                            <span
                                     class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium"
                                     :class="(system.viewer_ids?.length ?? 0) > 0
                                         ? 'bg-brand-orange-100 text-brand-orange-700'
@@ -1419,7 +1419,7 @@ const saveAi = () => {
                                     {{ (system.viewer_ids?.length ?? 0) > 0
                                         ? `${system.viewer_ids.length} албан хаагч`
                                         : 'Сонгоогүй' }}
-                                </span>
+                            </span>
                                 <svg
                                     class="h-4 w-4 shrink-0 text-slate-400 transition"
                                     :class="selectedSystemId === system.id ? 'rotate-180' : ''"
@@ -1582,17 +1582,17 @@ const saveAi = () => {
 
                     <template v-if="form.login_method === 'form_post'">
                         <div class="space-y-3 rounded-lg border border-brand-navy-100 bg-brand-navy-50 p-3">
-                            <div>
+                                <div>
                                 <label class="mb-1 block text-xs font-medium text-brand-navy-700">Маягтын хаяг</label>
                                 <input v-model="form.login_form_action" type="url" class="w-full rounded-md border border-brand-navy-200 px-3 py-2 text-sm" />
-                            </div>
-                            <div class="grid gap-3 sm:grid-cols-2">
-                                <div>
-                                    <label class="mb-1 block text-xs font-medium text-brand-navy-700">Нэрийн талбар</label>
-                                    <input v-model="form.login_username_field" type="text" class="w-full rounded-md border border-brand-navy-200 px-3 py-2 text-sm" />
                                 </div>
-                                <div>
-                                    <label class="mb-1 block text-xs font-medium text-brand-navy-700">Нууц үгийн талбар</label>
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <div>
+                                        <label class="mb-1 block text-xs font-medium text-brand-navy-700">Нэрийн талбар</label>
+                                    <input v-model="form.login_username_field" type="text" class="w-full rounded-md border border-brand-navy-200 px-3 py-2 text-sm" />
+                                    </div>
+                                    <div>
+                                        <label class="mb-1 block text-xs font-medium text-brand-navy-700">Нууц үгийн талбар</label>
                                     <input v-model="form.login_password_field" type="text" class="w-full rounded-md border border-brand-navy-200 px-3 py-2 text-sm" />
                                 </div>
                             </div>
@@ -1610,7 +1610,7 @@ const saveAi = () => {
                         </p>
                         <div v-if="form.supports_dan" class="mt-3">
                             <label class="ui-label">ДАН-ы нэвтрэх хаяг (заавал биш)</label>
-                            <input
+                        <input
                                 v-model="form.dan_login_url"
                                 type="url"
                                 class="ui-input"
