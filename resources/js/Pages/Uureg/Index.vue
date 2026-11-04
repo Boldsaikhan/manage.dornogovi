@@ -482,7 +482,7 @@ watch(
 watch(
     () => props.tasks,
     (list) => {
-        list.forEach((t) => {
+    list.forEach((t) => {
             drafts[t.id] = {
                 text: t.text ?? '',
                 measure: t.measure ?? '',
@@ -1207,7 +1207,7 @@ const applyBulk = () => {
         route('tasks.bulk'),
         { ids: [...selectedIds.value], fields },
         {
-            preserveScroll: true,
+        preserveScroll: true,
             onFinish: () => {
                 bulkSaving.value = false;
             },
@@ -1329,7 +1329,7 @@ const closeWordPreview = ({ discard = false } = {}) => {
     if (discard && wasNew && docId) {
         router.delete(route('tasks.documents.destroy', docId), {
             data: { discarded: true },
-            preserveScroll: true,
+        preserveScroll: true,
             preserveState: true,
         });
     }
@@ -1595,7 +1595,7 @@ const cellEditable = (col) => {
                                         title="Баруун тийш зөөх"
                                         @click="moveNewKindColumn(col.key, 1)"
                                     >›</button>
-                                </span>
+                    </span>
                             </div>
                         </div>
                     </fieldset>
@@ -1621,14 +1621,14 @@ const cellEditable = (col) => {
                         :key="doc.id"
                         class="flex flex-wrap items-center justify-between gap-3 py-2 first:pt-0 last:pb-0"
                     >
-                        <div class="min-w-0">
+                    <div class="min-w-0">
                             <p class="truncate text-sm font-medium text-slate-800">{{ doc.original_name }}</p>
                             <p class="text-xs text-slate-500">
                                 {{ formatSize(doc.size) }}
                                 <span v-if="doc.uploader"> · {{ doc.uploader }}</span>
                                 <span v-if="doc.uploaded_at"> · {{ doc.uploaded_at }}</span>
                             </p>
-                        </div>
+                    </div>
                         <div class="flex shrink-0 items-center gap-2">
                             <button
                                 v-if="canManage"
@@ -1658,7 +1658,7 @@ const cellEditable = (col) => {
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6" />
                                 </svg>
                             </button>
-                        </div>
+                </div>
                     </li>
                 </ul>
             </div>
@@ -1672,7 +1672,7 @@ const cellEditable = (col) => {
                 <aside class="ui-card flex min-h-0 max-h-full flex-col self-start p-2.5 lg:sticky lg:top-3 lg:max-h-[calc(100vh-6rem)]">
                     <!-- Дээд талын үйлдлүүд — icon-оор -->
                     <div class="mb-2 flex items-center gap-2 border-b border-slate-200 pb-2">
-                        <button
+                <button
                             v-if="canManage"
                             type="button"
                             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-dashed border-brand-navy-300 text-brand-navy-600 transition hover:bg-brand-navy-50"
@@ -1683,9 +1683,9 @@ const cellEditable = (col) => {
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
                             </svg>
-                        </button>
+                </button>
 
-                        <button
+                <button
                             type="button"
                             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-brand-navy-700 transition hover:bg-brand-navy-50"
                             title="Хэрэгжилт — дэлгэрэнгүй"
@@ -1695,7 +1695,7 @@ const cellEditable = (col) => {
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                 <path d="M4 20V10M10 20V4M16 20v-6M22 20H2" stroke-linecap="round" />
                             </svg>
-                        </button>
+                </button>
 
                         <div class="ml-auto text-right leading-tight">
                             <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Нийт дундаж</p>
@@ -1703,7 +1703,7 @@ const cellEditable = (col) => {
                                 {{ overall.progress }}%
                             </p>
                         </div>
-                    </div>
+            </div>
 
                     <!-- Хэрэгжилт — дээд талын icon-ы доор -->
                     <div class="mb-2 flex flex-col gap-1">
@@ -1881,7 +1881,7 @@ const cellEditable = (col) => {
 
                         <!-- Үйлдлүүд — зөвхөн хүснэгтэд, бүгд icon-оор -->
                         <template v-if="viewMode === 'table'">
-                            <input
+                <input
                                 ref="fileInput"
                                 type="file"
                                 accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -1889,7 +1889,7 @@ const cellEditable = (col) => {
                                 @change="onFileChange"
                             />
 
-                            <button
+                    <button
                                 v-if="canEdit || canEditProgress"
                                 type="button"
                                 class="ui-icon-btn relative"
@@ -1901,9 +1901,9 @@ const cellEditable = (col) => {
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                     <path d="M9 14L4 9l5-5" stroke-linecap="round" stroke-linejoin="round" />
                                     <path d="M4 9h10a6 6 0 010 12h-3" stroke-linecap="round" stroke-linejoin="round" />
-                                </svg>
+                        </svg>
                                 <span v-if="undoCount" class="ui-icon-badge">{{ undoCount }}</span>
-                            </button>
+                    </button>
 
                             <button
                                 v-if="canEdit || canEditProgress"
@@ -2001,7 +2001,7 @@ const cellEditable = (col) => {
                                         {{ item.label }}
                                     </a>
                                 </div>
-                            </div>
+                </div>
 
                             <a
                                 v-if="latestDocument"
@@ -2046,7 +2046,7 @@ const cellEditable = (col) => {
                         </template>
 
                         </div>
-                    </div>
+            </div>
 
                     <!-- Цаглалт / төлөвлөгөө -->
                     <TaskCalendar
@@ -2089,7 +2089,7 @@ const cellEditable = (col) => {
                     </p>
                     <button type="button" class="text-xs text-slate-500 hover:text-slate-800" @click="clearSelection">
                         Сонголт цуцлах
-                    </button>
+                </button>
                 </div>
                 <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
                     <label v-if="hasColumn('period')" class="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-2">
@@ -2181,7 +2181,7 @@ const cellEditable = (col) => {
                         @click="applyBulk"
                     >
                         {{ bulkSaving ? 'Хадгалж байна…' : 'Сонгосон мөрүүдэд хэрэглэх' }}
-                    </button>
+                </button>
                     <span class="text-xs text-slate-500">Зөвхөн идэвхжүүлсэн талбарууд шинэчлэгдэнэ.</span>
                 </div>
             </div>
@@ -2293,13 +2293,13 @@ const cellEditable = (col) => {
                                     :aria-label="col.label + ' хайх'"
                                 />
                             </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
                             v-for="task in tableTasks"
                             :id="'task-row-' + task.id"
-                            :key="task.id"
+                                :key="task.id"
                             :class="isSelected(task.id) || highlightedTaskId === task.id ? 'bg-brand-navy-50/70' : ''"
                         >
                             <td v-if="canEdit" class="text-center align-middle">
@@ -2309,7 +2309,7 @@ const cellEditable = (col) => {
                                     :checked="isSelected(task.id)"
                                     @change="toggleSelect(task.id)"
                                 />
-                            </td>
+                                </td>
                             <td class="text-center font-semibold text-slate-500">{{ task.no }}</td>
                             <td
                                 v-for="col in tableColumns"
@@ -2346,12 +2346,12 @@ const cellEditable = (col) => {
                                     :placeholder="col.key === 'note' ? 'Хэрэгжилт…' : ''"
                                     @commit="(v) => saveField(task.id, col.field, v)"
                                 />
-                            </td>
+                                </td>
                             <td class="ui-sheet-td ui-sticky-progress text-center">
                                 <SheetCell
                                     v-if="drafts[task.id]"
                                     v-model="drafts[task.id].progress"
-                                    type="number"
+                                            type="number"
                                     align="center"
                                     :editable="canEditProgress"
                                     @commit="() => saveProgress(task.id)"
@@ -2363,7 +2363,7 @@ const cellEditable = (col) => {
                                         {{ drafts[task.id].progress ?? 0 }}%
                                     </span>
                                 </SheetCell>
-                            </td>
+                                </td>
                             <td v-if="canEdit" class="ui-sticky-actions text-center align-middle">
                                 <button
                                     type="button"
@@ -2376,8 +2376,8 @@ const cellEditable = (col) => {
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6" />
                                     </svg>
                                 </button>
-                            </td>
-                        </tr>
+                                </td>
+                            </tr>
                         <tr v-if="!visibleTasks.length">
                             <td :colspan="tableColspan" class="!py-14 text-center text-slate-400">
                                 {{ emptyTasksMessage }}
@@ -2387,16 +2387,16 @@ const cellEditable = (col) => {
                             <td :colspan="tableColspan" class="!py-3 text-center text-xs text-slate-400">
                                 Дараах {{ visibleTasks.length - renderLimit }} мөр — доош гүйлгэнэ үү
                             </td>
-                        </tr>
-                    </tbody>
-                </table>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </TableScrollViewport>
             </div>
                     </template>
                 </section>
+                </div>
             </div>
-        </div>
 
         <!-- Дэлгэц дүүрэн график дашбоард -->
         <div v-if="showDashboard" class="fixed inset-0 z-50 overflow-y-auto bg-slate-100">
@@ -2410,7 +2410,7 @@ const cellEditable = (col) => {
                         </p>
                     </div>
                     <button type="button" class="ui-btn-ghost" @click="showDashboard = false">Хаах</button>
-                </div>
+                    </div>
 
                 <div class="grid gap-4 lg:grid-cols-3">
                     <section class="ui-card-pad flex items-center gap-5">
@@ -2465,13 +2465,13 @@ const cellEditable = (col) => {
                                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                         <path d="M12 3.2L2.5 19.5A1.2 1.2 0 003.55 21.2h16.9a1.2 1.2 0 001.05-1.7L12 3.2zm0 5.3c.55 0 1 .4 1 .95v4.6c0 .55-.45 1-1 1s-1-.45-1-1v-4.6c0-.55.45-.95 1-.95zm0 8.5a1.15 1.15 0 110-2.3 1.15 1.15 0 010 2.3z" />
                                     </svg>
-                                </span>
+                            </span>
                                 <span v-else class="h-3 w-3 rounded-sm" :style="{ background: segment.color }" />
                                 <span class="text-slate-600">{{ segment.label }}</span>
                                 <b class="text-slate-800">{{ segment.value }}</b>
                                 <span class="text-xs text-slate-400">({{ segment.percent }}%)</span>
                             </span>
-                        </div>
+                    </div>
                     </section>
                 </div>
 
@@ -2641,8 +2641,8 @@ const cellEditable = (col) => {
                         </table>
                     </div>
                 </section>
+                </div>
             </div>
-        </div>
 
         <!-- Word урьдчилсан харах -->
         <!-- Өөрчлөлтийн түүх -->
@@ -2656,7 +2656,7 @@ const cellEditable = (col) => {
                         </p>
                     </div>
                     <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" @click="showLogs = false">✕</button>
-                </div>
+                    </div>
 
                 <p v-if="logsBusy" class="py-8 text-center text-sm text-slate-400">Уншиж байна…</p>
                 <p v-else-if="! logRows.length" class="py-8 text-center text-sm text-slate-400">
@@ -2710,7 +2710,7 @@ const cellEditable = (col) => {
                         <span class="font-medium text-slate-700">{{ wordPreview?.original_name }}</span>
                         · {{ wordPreview?.count ?? 0 }} мөр · хүснэгтэд оруулахаасаа өмнө шалгана уу
                     </p>
-                </div>
+                    </div>
 
                 <div class="min-h-0 flex-1 overflow-auto px-3 py-3 sm:px-5">
                     <p class="mb-2 text-xs text-slate-500">
@@ -2733,7 +2733,7 @@ const cellEditable = (col) => {
                                     >
                                         <span class="block text-[11px] font-semibold uppercase tracking-wide text-brand-navy-800">
                                             {{ col.label }}
-                                        </span>
+                            </span>
                                         <select
                                             class="mt-1.5 w-full rounded-lg border-slate-300 py-1.5 text-xs"
                                             :class="wordMapping[col.key] == null ? 'text-slate-400' : 'text-slate-700'"
@@ -2770,7 +2770,7 @@ const cellEditable = (col) => {
                                 </tr>
                             </tbody>
                         </table>
-                    </div>
+                </div>
 
                     <div class="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
                         <p class="text-slate-500">
@@ -2782,8 +2782,8 @@ const cellEditable = (col) => {
                         <p v-if="! mappedColumnCount" class="font-medium text-red-600">
                             Дор хаяж нэг багана тааруулна уу.
                         </p>
+                        </div>
                     </div>
-                </div>
 
                 <div class="flex flex-col gap-2 border-t border-slate-100 px-5 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-6">
                     <p class="text-xs text-slate-500">
@@ -2814,9 +2814,9 @@ const cellEditable = (col) => {
                         >
                             {{ wordConfirming ? 'Оруулж байна…' : 'Хүснэгтэд нэмэх' }}
                         </button>
-                    </div>
                 </div>
             </div>
+        </div>
         </Modal>
     </AuthenticatedLayout>
 </template>

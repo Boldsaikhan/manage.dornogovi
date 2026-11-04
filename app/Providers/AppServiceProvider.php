@@ -7,6 +7,7 @@ use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Vite;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -25,6 +26,14 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
+
+        /*
+         * Нууц үгийн доод шаардлага — өөрөө солих, сэргээх үед.
+         *
+         * Урьд нь Laravel-ийн анхны утга (зөвхөн 8 тэмдэгт) байсан тул
+         * «12345678» мэт нууц үг тавих боломжтой байв.
+         */
+        Password::defaults(fn () => Password::min(10)->letters()->numbers());
 
         // Нэг нэвтэрсэн бол «Гарах» дартал нэвтэрсэн хэвээр байна. Сесс богино
         // байвал гар утсан дээр байн байн нэвтрэх шаардлагатай болдог тул доод

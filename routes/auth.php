@@ -9,16 +9,18 @@ use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\PhonePasswordResetController;
 use App\Http\Controllers\Auth\QrLoginController;
-use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Auth\WebAuthnController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
-    Route::get('register', [RegisteredUserController::class, 'create'])
-        ->name('register');
-
-    Route::post('register', [RegisteredUserController::class, 'store']);
+    /*
+     * ⚠️ Өөрөө бүртгүүлэх боломжийг ХААСАН.
+     *
+     * Энэ бол дотоод систем — бүртгэлийг зөвхөн админ «Хандах эрх»
+     * хэсгээс үүсгэнэ. Breeze-ийн анхны register маршрут нээлттэй
+     * байсан тул интернэтээс хэн ч өөртөө эрх үүсгэх боломжтой байв.
+     */
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');

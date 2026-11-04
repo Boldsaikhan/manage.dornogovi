@@ -21,6 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ForceNonWww::class,
         ]);
 
+        // Бүх хариултад хамгаалалтын толгой нэмнэ.
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+
         $middleware->web(append: [
             \App\Http\Middleware\EnsurePwaBiometricLock::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
@@ -30,6 +33,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // verify.mn webhook — гадны сервер тул CSRF token байхгүй.
         $middleware->validateCsrfTokens(except: [
             'webhooks/verify-mn/*',
+            // Хөтөч CSP зөрчлийг token-гүй илгээдэг.
+            'csp-report',
         ]);
 
         $middleware->alias([

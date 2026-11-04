@@ -59,6 +59,11 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
 
+// CSP зөрчлийн мэдэгдэл — хөтөч өөрөө илгээнэ (нэвтрэх шаардлагагүй).
+Route::post('/csp-report', [\App\Http\Controllers\CspReportController::class, 'store'])
+    ->middleware('throttle:60,1')
+    ->name('csp.report');
+
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dept-dashboard', [DepartmentDashboardController::class, 'index'])->name('dept.dashboard');

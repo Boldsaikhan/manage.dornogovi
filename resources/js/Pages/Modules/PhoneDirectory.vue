@@ -1026,12 +1026,12 @@ const closeDirectoryForm = () => {
                     <p class="mt-1 text-xs text-slate-400">
                         Өөрчилвөл утасны жагсаалтын дугаар нь ч зэрэг шинэчлэгдэнэ.
                     </p>
-                </div>
+            </div>
 
                 <div class="mt-4">
                     <label class="ui-label">Шинэ нууц үг</label>
                     <div class="flex gap-2">
-                        <input
+                    <input
                             v-model="accountForm.password"
                             :type="accountShowPassword ? 'text' : 'password'"
                             class="ui-input flex-1"
@@ -1102,12 +1102,12 @@ const closeDirectoryForm = () => {
                     <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" @click="closeDirectoryForm">✕</button>
                 </div>
                 <div class="grid gap-4 md:grid-cols-2">
-                    <div>
-                        <label class="ui-label">Байгууллага / хэлтэс</label>
-                        <input v-model="form.org_name" list="phone-org-names" class="ui-input" required />
-                        <datalist id="phone-org-names">
-                            <option v-for="name in orgNames" :key="name" :value="name" />
-                        </datalist>
+                <div>
+                    <label class="ui-label">Байгууллага / хэлтэс</label>
+                    <input v-model="form.org_name" list="phone-org-names" class="ui-input" required />
+                    <datalist id="phone-org-names">
+                        <option v-for="name in orgNames" :key="name" :value="name" />
+                    </datalist>
                         <InputError :message="form.errors.org_name" class="mt-1" />
                     </div>
                     <div>
@@ -1119,24 +1119,24 @@ const closeDirectoryForm = () => {
                             </option>
                         </select>
                         <InputError :message="form.errors.category" class="mt-1" />
-                    </div>
-                    <div>
-                        <label class="ui-label">Овог нэр</label>
-                        <input v-model="form.person_name" class="ui-input" required />
+                </div>
+                <div>
+                    <label class="ui-label">Овог нэр</label>
+                    <input v-model="form.person_name" class="ui-input" required />
                         <InputError :message="form.errors.person_name" class="mt-1" />
-                    </div>
-                    <div>
-                        <label class="ui-label">Албан тушаал</label>
-                        <input v-model="form.position" class="ui-input" />
-                    </div>
-                    <div>
-                        <label class="ui-label">Ажлын өрөөний утас</label>
-                        <input v-model="form.office_phone" class="ui-input" />
-                    </div>
-                    <div>
-                        <label class="ui-label">Гар утас</label>
-                        <input v-model="form.mobile_phone" class="ui-input" />
-                    </div>
+                </div>
+                <div>
+                    <label class="ui-label">Албан тушаал</label>
+                    <input v-model="form.position" class="ui-input" />
+                </div>
+                <div>
+                    <label class="ui-label">Ажлын өрөөний утас</label>
+                    <input v-model="form.office_phone" class="ui-input" />
+                </div>
+                <div>
+                    <label class="ui-label">Гар утас</label>
+                    <input v-model="form.mobile_phone" class="ui-input" />
+                </div>
                 </div>
                 <div class="mt-6 flex justify-end gap-2 border-t border-slate-100 pt-4">
                     <button type="button" class="ui-btn-ghost" @click="closeDirectoryForm">Болих</button>
