@@ -60,9 +60,26 @@ class DesktopRelease
     public static function manifest(): array
     {
         $status = DesktopAppController::status();
+        $release = self::all();
+
+        /*
+         * Хувилбарын дугаарыг гараар бичдэг тул байршуулсан суулгацтайгаа
+         * зөрөх эрсдэлтэй — тэгвэл програм шинэчлэлт татаад хуучин
+         * хувилбараа л дахин суулгаад төгсгөлгүй давтана.
+         *
+         * Кодтой хамт ирсэн суулгацыг түгээж байгаа бол хувилбарыг нь
+         * build-ийн бичсэн version.json-оос шууд авна.
+         */
+        if (DesktopAppController::servingBundled()) {
+            $bundled = DesktopAppController::bundledVersion();
+
+            if ($bundled !== '') {
+                $release['version'] = $bundled;
+            }
+        }
 
         return [
-            ...self::all(),
+            ...$release,
             'url' => route('desktop.download'),
             'size' => $status['size'],
             'available' => $status['available'],

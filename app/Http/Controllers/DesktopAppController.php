@@ -51,16 +51,55 @@ class DesktopAppController extends Controller
         return base_path('resources/desktop/'.self::FILE);
     }
 
-    /** Түгээх суулгацын зам — байхгүй бол null. */
+    /**
+     * Түгээх суулгацын зам — байхгүй бол null.
+     *
+     * Хоёул байвал ШИНЭЭР өөрчлөгдсөнийг нь сонгоно. Урьд нь админы
+     * байршуулсан нь үргэлж дээр байсан тул кодтой хамт шинэ хувилбар
+     * ирсэн ч хуучин файл түгээгдсээр байв.
+     */
     public static function servedPath(): ?string
     {
-        foreach ([self::path(), self::bundledPath()] as $candidate) {
-            if (is_file($candidate)) {
-                return $candidate;
-            }
+        $uploaded = self::path();
+        $bundled = self::bundledPath();
+
+        $hasUploaded = is_file($uploaded);
+        $hasBundled = is_file($bundled);
+
+        if ($hasUploaded && $hasBundled) {
+            return filemtime($bundled) > filemtime($uploaded) ? $bundled : $uploaded;
         }
 
-        return null;
+        if ($hasUploaded) {
+            return $uploaded;
+        }
+
+        return $hasBundled ? $bundled : null;
+    }
+
+    /** Одоо түгээж байгаа суулгац нь кодтой хамт ирсэн эсэх. */
+    public static function servingBundled(): bool
+    {
+        return self::servedPath() === self::bundledPath();
+    }
+
+    /**
+     * Кодтой хамт ирсэн суулгацын хувилбар.
+     *
+     * Build хийхэд `resources/desktop/version.json` бичигддэг тул
+     * суулгац болон хувилбарын дугаар хэзээ ч зөрөхгүй.
+     */
+    public static function bundledVersion(): string
+    {
+        $file = base_path('resources/desktop/version.json');
+
+        if (! is_file($file)) {
+            return '';
+        }
+
+        $data = json_decode((string) file_get_contents($file), true);
+
+        return is_array($data) ? trim((string) ($data['version'] ?? '')) : '';
     }
 
     /**

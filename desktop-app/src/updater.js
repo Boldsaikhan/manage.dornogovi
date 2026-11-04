@@ -77,7 +77,15 @@ const downloadTo = (url, target, onProgress) => new Promise((resolve, reject) =>
             onProgress(done, total);
         });
 
-        response.on('end', () => file.end(() => resolve(target)));
+        response.on('end', () => file.end(() => {
+            if (total && done !== total) {
+                reject(new Error('Татаж дуусаагүй байна. Дахин оролдоно уу.'));
+
+                return;
+            }
+
+            resolve(target);
+        }));
         response.on('error', reject);
     });
 
@@ -86,22 +94,37 @@ const downloadTo = (url, target, onProgress) => new Promise((resolve, reject) =>
 });
 
 /**
- * Суулгацыг програмаа хаасны ДАРАА ажиллуулна.
+ * Суулгацыг програм ҮНЭХЭЭР хаагдсаны дараа ажиллуулна.
  *
- * Шууд ажиллуулбал хуучин програм ажилласан хэвээр байх тул суулгагч
- * «Another program is currently using this file» гэж зогсдог.
+ * Хуучин програм ажиллаж байхад суулгагч файлуудыг солиж чаддаггүй
+ * («Another program is currently using this file») тул хуучин
+ * хувилбар хэвээр үлддэг.
+ *
+ * ⚠️ Урьд нь `timeout /t 3` гэж хүлээдэг байв. Гэтэл энэ процессыг
+ *    stdio: 'ignore'-оор асаадаг тул `timeout` нь «Input redirection
+ *    is not supported» гээд 0.04 секундэд шууд гардаг — хүлээлт
+ *    огт болдоггүй байсан. Иймд цагаар бус, програмын PID алга
+ *    болохыг хүлээнэ.
  */
 const launchInstallerAfterExit = (installer) => {
-    const shellExe = process.env.COMSPEC || 'cmd.exe';
+    // PowerShell-ийн мөрөнд ' нь '' болж орно.
+    const quote = (value) => `'${String(value).replace(/'/g, "''")}'`;
 
-    /*
-     * /S-гүйгээр ажиллуулна — нэг даралтын суулгац өөрийн явцын цонхоо
-     * харуулж, дарж суулгах шаардлагагүй, дуусмагц програмыг нээдэг.
-     * (/S үед юу ч харагдахгүй тул хэрэглэгч гацсан мэт боддог.)
-     */
+    const script = [
+        // Өөрийн процесс хаагдахыг хүлээнэ (аль хэдийн хаагдсан бол алдаа өгнө).
+        `try { Wait-Process -Id ${process.pid} -Timeout 60 -ErrorAction Stop } catch { }`,
+        // Файлын бариул бүрэн сулартал бага зэрэг зай өгнө.
+        'Start-Sleep -Milliseconds 1200',
+        /*
+         * /S-гүйгээр ажиллуулна — нэг даралтын суулгац өөрийн явцын
+         * цонхоо харуулж, дуусмагц програмыг дахин нээнэ.
+         */
+        `Start-Process -FilePath ${quote(installer)} -ArgumentList '--force-run'`,
+    ].join('; ');
+
     spawn(
-        shellExe,
-        ['/c', `timeout /t 3 /nobreak >nul & start "" "${installer}" --force-run`],
+        'powershell.exe',
+        ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', script],
         { detached: true, stdio: 'ignore', windowsHide: true },
     ).unref();
 };
@@ -150,6 +173,28 @@ const startDownload = async () => {
                 total,
             });
         });
+    } catch (error) {
+        send({ kind: 'error', message: error.message });
+
+        return;
+    }
+
+    // Суулгац бүтэн эсэхийг шалгана — тасарсан файл чимээгүй унадаг.
+    try {
+        const { size } = fs.statSync(target);
+        const head = Buffer.alloc(2);
+        const fd = fs.openSync(target, 'r');
+
+        fs.readSync(fd, head, 0, 2, 0);
+        fs.closeSync(fd);
+
+        if (head.toString('latin1') !== 'MZ' || size < 1024 * 1024) {
+            throw new Error('Татсан файл суулгац биш байна.');
+        }
+
+        if (pending.size && size !== pending.size) {
+            throw new Error('Татсан файлын хэмжээ таарахгүй байна.');
+        }
     } catch (error) {
         send({ kind: 'error', message: error.message });
 
@@ -283,6 +328,7 @@ async function checkForUpdates(siteUrl, { silent = true, parent = null, notify =
         notes: String(manifest.notes || ''),
         force: Boolean(manifest.force),
         url: new URL(manifest.url, siteUrl).toString(),
+        size: Number(manifest.size) || 0,
         file: null,
     };
 
