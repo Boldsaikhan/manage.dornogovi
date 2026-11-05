@@ -215,7 +215,7 @@ const flexColumnKey = computed(() => {
 
 const tableMinWidth = computed(() => props.report.columns.reduce(
     (sum, col) => sum + remToPx(columnWidth(col)),
-    0,
+    hasRowActions.value ? rowActionsWidth : 0,
 ));
 
 const isPinnedColumn = (key) => key === 'no';
@@ -250,6 +250,27 @@ const togglePdf = () => {
 };
 
 const tableEditing = computed(() => props.canEdit && editMode.value);
+
+/* ---------- Мөр тус бүрийн засвар ---------- */
+
+const openRows = ref([]);
+
+watch(() => props.report.key, () => { openRows.value = []; });
+
+/** Энэ мөр засвартай байна уу (бүтэн засварын горим эсвэл мөрөөр нээсэн). */
+const rowEditing = (row) => tableEditing.value || openRows.value.includes(row._index);
+
+const toggleRowEditing = (row) => {
+    openRows.value = openRows.value.includes(row._index)
+        ? openRows.value.filter((index) => index !== row._index)
+        : [...openRows.value, row._index];
+};
+
+/** Баруун талын үйлдлийн багана — засах, баталгаажуулах. */
+const hasRowActions = computed(() => props.canEdit
+    || Boolean(props.workflow.approval && props.workflow.can_approve));
+
+const rowActionsWidth = 72;
 
 const downloadFormats = [
     { format: 'xlsx', label: 'Excel (.xlsx)' },
@@ -557,7 +578,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                     ? 'grid-rows-[minmax(0,11rem)_minmax(0,1fr)] lg:grid-cols-[18rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]'
                     : 'grid-rows-[minmax(0,1fr)]'"
             >
-                <aside v-if="subnavOpen" class="ui-card min-h-0 overflow-y-auto p-3">
+                <aside v-if="subnavOpen" class="ui-card relative z-20 min-h-0 min-w-0 overflow-y-auto p-3">
                     <p class="mb-2 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
                         Дэд тайлан
                     </p>
@@ -566,7 +587,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                     </nav>
                 </aside>
 
-                <section class="ui-card flex min-h-0 flex-col overflow-hidden">
+                <section class="ui-card relative z-0 flex min-h-0 min-w-0 flex-col overflow-hidden">
                     <p v-if="flashSuccess && ! tableExpanded" class="shrink-0 border-b border-emerald-100 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
                         {{ flashSuccess }}
                     </p>
@@ -664,6 +685,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                         :key="`col-${col.key}`"
                                         :style="col.key === flexColumnKey ? undefined : { width: columnWidth(col) }"
                                     />
+                                    <col v-if="hasRowActions" :style="{ width: `${rowActionsWidth}px` }" />
                                 </colgroup>
                                 <thead>
                                     <tr>
@@ -680,11 +702,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                         >
                                             {{ col.label }}
                                         </th>
+                                        <th
+                                            v-if="hasRowActions"
+                                            class="sticky top-0 z-10 bg-brand-navy-50 px-2 py-2 text-center text-[11px] leading-tight normal-case tracking-normal"
+                                        >
+                                            Үйлдэл
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr v-if="!hasRows">
-                                        <td :colspan="report.columns.length || 1" class="!py-10 text-center text-sm text-slate-400">
+                                        <td :colspan="(report.columns.length || 1) + (hasRowActions ? 1 : 0)" class="!py-10 text-center text-sm text-slate-400">
                                             Мэдээлэл оруулаагүй — хүснэгтийн бүтэц бэлэн
                                         </td>
                                     </tr>
@@ -699,21 +727,21 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                                 class="bg-brand-navy-50 px-2 py-1.5 text-xs font-semibold leading-snug text-brand-navy-900"
                                                 :title="cellTitle(row._span_text)"
                                             >
-                                                <div class="flex items-start gap-2">
-                                                    <button
-                                                        v-if="tableEditing"
-                                                        type="button"
-                                                        class="ui-icon-btn mt-0.5"
-                                                        title="Нэгтгэлийг салгах"
-                                                        aria-label="Нэгтгэлийг салгах"
-                                                        @click="toggleSpan(row)"
-                                                    >
-                                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" d="M4 8h16M4 16h16M12 4v16" />
-                                                        </svg>
-                                                    </button>
-                                                    <span class="min-w-0 flex-1 whitespace-pre-line">{{ row._span_text }}</span>
-                                                </div>
+                                                <span class="block whitespace-pre-line">{{ row._span_text }}</span>
+                                            </td>
+                                            <td v-if="hasRowActions" class="px-1 py-1.5 text-center">
+                                                <button
+                                                    v-if="canEdit"
+                                                    type="button"
+                                                    class="ui-icon-btn"
+                                                    title="Нэгтгэлийг салгах"
+                                                    aria-label="Нэгтгэлийг салгах"
+                                                    @click="toggleSpan(row)"
+                                                >
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" d="M4 8h16M4 16h16M12 4v16" />
+                                                    </svg>
+                                                </button>
                                             </td>
                                         </template>
                                         <template v-else>
@@ -721,7 +749,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                             v-for="col in report.columns"
                                             :key="col.key"
                                             class="px-2 py-1.5 text-slate-700"
-                                            :title="tableEditing ? undefined : cellTitle(row[col.key])"
+                                            :title="rowEditing(row) ? undefined : cellTitle(row[col.key])"
                                             :class="[
                                                 cellClass(col.key),
                                                 isPinnedColumn(col.key)
@@ -729,42 +757,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                                     : '',
                                             ]"
                                         >
-                                            <button
-                                                v-if="tableEditing && col.key === 'no'"
-                                                type="button"
-                                                class="ui-icon-btn mb-1"
-                                                title="Мөр нэгтгэх"
-                                                aria-label="Мөр нэгтгэх"
-                                                @click="toggleSpan(row)"
-                                            >
-                                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" />
-                                                </svg>
-                                            </button>
-
-                                            <!-- Хэлтсийн даргын баталгаа -->
-                                            <button
-                                                v-if="workflow.approval && col.key === 'no' && workflow.can_approve"
-                                                type="button"
-                                                class="mt-1 flex h-5 w-5 items-center justify-center rounded-full border text-[10px] transition"
-                                                :class="isApproved(row)
-                                                    ? 'border-emerald-500 bg-emerald-500 text-white'
-                                                    : 'border-slate-300 text-slate-400 hover:border-emerald-400 hover:text-emerald-600'"
-                                                :disabled="approving === row._index"
-                                                :title="isApproved(row)
-                                                    ? ('Баталгаажсан: ' + (approvalOf(row).by || '') + ' ' + (approvalOf(row).at || '') + ' — буцаахын тулд дарна')
-                                                    : 'Баталгаажуулж хяналт-шинжилгээнд илгээх'"
-                                                @click="toggleApproval(row)"
-                                            >
-                                                ✓
-                                            </button>
-                                            <span
-                                                v-else-if="workflow.approval && col.key === 'no' && isApproved(row)"
-                                                class="mt-1 block text-[10px] text-emerald-600"
-                                                :title="'Баталгаажсан: ' + (approvalOf(row).by || '')"
-                                            >
-                                                ✓
-                                            </span>
                                             <!-- Хэлтэс — жинхэнэ хэлтсээс сонгоно (харагдах хүрээг тогтооно) -->
                                             <select
                                                 v-if="canEdit && isDepartmentColumn(col.key)"
@@ -843,7 +835,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                             />
 
                                             <SheetCell
-                                                v-else-if="tableEditing"
+                                                v-else-if="rowEditing(row)"
                                                 :model-value="row[col.key] ?? ''"
                                                 multiline
                                                 :clamp="false"
@@ -852,6 +844,64 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                             />
 
                                             <template v-else>{{ row[col.key] ?? '' }}</template>
+                                        </td>
+
+                                        <!-- Баруун талын үйлдэл: засах, нэгтгэх, баталгаажуулах -->
+                                        <td v-if="hasRowActions" class="px-1 py-1.5 align-top">
+                                            <div class="flex items-center justify-center gap-1">
+                                                <button
+                                                    v-if="canEdit"
+                                                    type="button"
+                                                    class="ui-icon-btn"
+                                                    :class="openRows.includes(row._index) ? 'text-brand-orange-600' : ''"
+                                                    :title="rowEditing(row) ? 'Засварыг хаах' : 'Энэ мөрийг засах'"
+                                                    :aria-label="rowEditing(row) ? 'Засварыг хаах' : 'Энэ мөрийг засах'"
+                                                    @click="toggleRowEditing(row)"
+                                                >
+                                                    <svg v-if="openRows.includes(row._index)" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                    <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
+                                                    </svg>
+                                                </button>
+
+                                                <button
+                                                    v-if="rowEditing(row)"
+                                                    type="button"
+                                                    class="ui-icon-btn"
+                                                    title="Мөр нэгтгэх"
+                                                    aria-label="Мөр нэгтгэх"
+                                                    @click="toggleSpan(row)"
+                                                >
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" />
+                                                    </svg>
+                                                </button>
+
+                                                <button
+                                                    v-if="workflow.approval && workflow.can_approve"
+                                                    type="button"
+                                                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] transition"
+                                                    :class="isApproved(row)
+                                                        ? 'border-emerald-500 bg-emerald-500 text-white'
+                                                        : 'border-slate-300 text-slate-400 hover:border-emerald-400 hover:text-emerald-600'"
+                                                    :disabled="approving === row._index"
+                                                    :title="isApproved(row)
+                                                        ? ('Баталгаажсан: ' + (approvalOf(row).by || '') + ' ' + (approvalOf(row).at || '') + ' — буцаахын тулд дарна')
+                                                        : 'Баталгаажуулж хяналт-шинжилгээнд илгээх'"
+                                                    @click="toggleApproval(row)"
+                                                >
+                                                    ✓
+                                                </button>
+                                                <span
+                                                    v-else-if="workflow.approval && isApproved(row)"
+                                                    class="text-[12px] text-emerald-600"
+                                                    :title="'Баталгаажсан: ' + (approvalOf(row).by || '')"
+                                                >
+                                                    ✓
+                                                </span>
+                                            </div>
                                         </td>
                                         </template>
                                     </tr>
