@@ -124,23 +124,93 @@ const toggleSpan = (row) => {
     saveCell(row, '_span', row._span ? '0' : '1');
 };
 
-const saveCell = (row, column, value) => {
-    if (! props.canEdit || row?._index == null) return;
+/** Нүдний одоогийн утга — буцаахад хэрэгтэй. */
+const cellValueOf = (row, column) => {
+    if (column === '_span') {
+        return row?._span ? '1' : '0';
+    }
 
-    const key = cellKey(row, column);
+    if (isDepartmentColumn(column)) {
+        return row?.department_id == null ? '' : String(row.department_id);
+    }
+
+    return row?.[column] ?? '';
+};
+
+/** Нэг нүдийг сервер лүү явуулна. */
+const patchCell = (index, column, value, onSaved) => {
+    const key = `${index}:${column}`;
     savingCell.value = key;
 
     const payload = isDepartmentColumn(column)
         ? { column, department_id: value === '' || value == null ? null : Number(value) }
         : { column, value: value ?? '' };
 
-    router.patch(route('reports.rows.update', [props.report.key, row._index]), payload, {
+    router.patch(route('reports.rows.update', [props.report.key, index]), payload, {
         preserveScroll: true,
         preserveState: true,
+        onSuccess: () => onSaved?.(),
         onFinish: () => {
             if (savingCell.value === key) savingCell.value = null;
         },
     });
+};
+
+const saveCell = (row, column, value) => {
+    if (! props.canEdit || row?._index == null) return;
+
+    const before = cellValueOf(row, column);
+    const after = value ?? '';
+
+    patchCell(row._index, column, after, () => {
+        if (String(before) === String(after)) {
+            return;
+        }
+
+        // Сүүлийн 50 үйлдлийг санана.
+        undoStack.value = [...undoStack.value, { index: row._index, column, before, after }].slice(-50);
+        redoStack.value = [];
+    });
+};
+
+/* ---------- Үйлдэл буцаах / дахин хийх ---------- */
+
+const undoStack = ref([]);
+const redoStack = ref([]);
+const stepping = ref(false);
+
+watch(() => props.report.key, () => {
+    undoStack.value = [];
+    redoStack.value = [];
+});
+
+const canUndo = computed(() => props.canEdit && undoStack.value.length > 0);
+const canRedo = computed(() => props.canEdit && redoStack.value.length > 0);
+
+const undo = () => {
+    const entry = undoStack.value.at(-1);
+
+    if (! entry || stepping.value) return;
+
+    stepping.value = true;
+    patchCell(entry.index, entry.column, entry.before, () => {
+        undoStack.value = undoStack.value.slice(0, -1);
+        redoStack.value = [...redoStack.value, entry];
+    });
+    setTimeout(() => { stepping.value = false; }, 300);
+};
+
+const redo = () => {
+    const entry = redoStack.value.at(-1);
+
+    if (! entry || stepping.value) return;
+
+    stepping.value = true;
+    patchCell(entry.index, entry.column, entry.after, () => {
+        redoStack.value = redoStack.value.slice(0, -1);
+        undoStack.value = [...undoStack.value, entry];
+    });
+    setTimeout(() => { stepping.value = false; }, 300);
 };
 
 const hasColumns = computed(() => (props.report.columns?.length ?? 0) > 0);
@@ -410,7 +480,29 @@ const closeExpanded = () => {
     tableExpanded.value = false;
 };
 
+/** Нүд засаж байх үед Ctrl+Z нь тухайн талбарынхаа үйлдэл байна. */
+const typingInField = (target) => target instanceof HTMLElement
+    && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+
 const onKeydown = (event) => {
+    if ((event.ctrlKey || event.metaKey) && ! typingInField(event.target)) {
+        const key = event.key.toLowerCase();
+
+        if (key === 'z' && ! event.shiftKey) {
+            event.preventDefault();
+            undo();
+
+            return;
+        }
+
+        if (key === 'y' || (key === 'z' && event.shiftKey)) {
+            event.preventDefault();
+            redo();
+
+            return;
+        }
+    }
+
     if (event.key !== 'Escape') return;
     if (pdfOpen.value) {
         pdfOpen.value = false;
@@ -495,6 +587,35 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                         >
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L8 8m4-4 4 4M4 18v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1" />
+                            </svg>
+                        </button>
+                        <!-- Үйлдэл буцаах / дахин хийх -->
+                        <button
+                            v-if="canEdit && hasColumns"
+                            type="button"
+                            class="ui-icon-btn"
+                            :disabled="! canUndo"
+                            :title="canUndo ? 'Сүүлийн үйлдлийг буцаах (Ctrl+Z)' : 'Буцаах үйлдэл алга'"
+                            aria-label="Буцаах"
+                            @click="undo"
+                        >
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 14 4 9l5-5" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 9h9a6 6 0 0 1 0 12h-3" />
+                            </svg>
+                        </button>
+                        <button
+                            v-if="canEdit && hasColumns"
+                            type="button"
+                            class="ui-icon-btn"
+                            :disabled="! canRedo"
+                            :title="canRedo ? 'Буцаасан үйлдлийг дахин хийх (Ctrl+Y)' : 'Дахин хийх үйлдэл алга'"
+                            aria-label="Дахин хийх"
+                            @click="redo"
+                        >
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m15 14 5-5-5-5" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M20 9h-9a6 6 0 0 0 0 12h3" />
                             </svg>
                         </button>
                         <button
