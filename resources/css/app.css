@@ -297,8 +297,42 @@
         @apply bg-sky-50 dark:bg-sky-950/50;
     }
 
+    /*
+     * Баруун талын «Үйлдэл» багана — хэвтээ гүйлгээнд үргэлж харагдана.
+     * Доогуураа нэвт харагдахгүйн тулд дэвсгэрээ бүрэн өгнө.
+     */
+    .ui-table--pin-no .ui-pin-end {
+        position: sticky;
+        right: 0;
+        background-clip: padding-box;
+        box-shadow: -2px 0 6px -2px rgb(15 23 42 / 0.18);
+    }
+
+    .ui-table--pin-no thead th.ui-pin-end {
+        z-index: 30;
+        @apply bg-brand-navy-50 dark:bg-slate-800;
+    }
+
+    .ui-table--pin-no tbody td.ui-pin-end {
+        z-index: 3;
+        @apply bg-white dark:bg-slate-900;
+    }
+
+    .ui-table--pin-no tbody tr:nth-child(even) td.ui-pin-end {
+        @apply bg-slate-50 dark:bg-slate-800;
+    }
+
+    .ui-table--pin-no tbody tr:hover td.ui-pin-end {
+        @apply bg-brand-navy-50 dark:bg-slate-700;
+    }
+
+    .ui-table--pin-no tbody tr:focus-within td.ui-pin-end,
+    .ui-table--pin-no tbody tr:focus-within:hover td.ui-pin-end {
+        @apply bg-sky-50 dark:bg-sky-950/50;
+    }
+
     /* Харах үед текст хөрш багана руу халихгүй. */
-    .ui-table--pin-no tbody td:not(.ui-pin-no) {
+    .ui-table--pin-no tbody td:not(.ui-pin-no):not(.ui-pin-end) {
         overflow: hidden;
     }
 

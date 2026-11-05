@@ -825,7 +825,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                         </th>
                                         <th
                                             v-if="hasRowActions"
-                                            class="sticky top-0 z-10 bg-brand-navy-50 px-2 py-2 text-center text-[11px] leading-tight normal-case tracking-normal"
+                                            class="ui-pin-end sticky top-0 bg-brand-navy-50 px-2 py-2 text-center text-[11px] leading-tight normal-case tracking-normal"
                                         >
                                             Үйлдэл
                                         </th>
@@ -850,7 +850,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                             >
                                                 <span class="block whitespace-pre-line">{{ row._span_text }}</span>
                                             </td>
-                                            <td v-if="hasRowActions" class="px-1 py-1.5 text-center">
+                                            <td v-if="hasRowActions" class="ui-pin-end px-1 py-1.5 text-center">
                                                 <button
                                                     v-if="canEdit"
                                                     type="button"
@@ -968,7 +968,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                         </td>
 
                                         <!-- Баруун талын үйлдэл: засах, нэгтгэх, баталгаажуулах -->
-                                        <td v-if="hasRowActions" class="px-1 py-1.5 align-top">
+                                        <td v-if="hasRowActions" class="ui-pin-end px-1 py-1.5 align-top">
                                             <div class="flex items-center justify-center gap-1">
                                                 <button
                                                     v-if="canEdit"
