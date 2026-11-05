@@ -44,7 +44,6 @@ $contractCols = [
     $col('report', 'Тайлан'),
     $col('dept_evaluation', 'Хэлтсийн үнэлгээ', '8rem'),
     $col('monitor_evaluation', 'Хяналтын үнэлгээ', '8rem'),
-    $col('note', 'Тайлбар'),
 ];
 
 $officialCols = [
