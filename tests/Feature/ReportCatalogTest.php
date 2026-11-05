@@ -127,8 +127,44 @@ class ReportCatalogTest extends TestCase
                 ->where('report.number', '2.1')
                 ->where('report.source_file', 'АЗДҮАХ-2024-2028-2026-оны-хагас-жил-ТАЙЛАН-хуваарилалт.xlsx')
                 ->where('report.template', 'governor_program')
-                ->has('report.columns', 15)
+                ->has('report.columns', 16)
                 ->has('report.rows', 324));
+    }
+
+    public function test_the_governor_program_percent_follows_the_baseline_formula(): void
+    {
+        $this->assertSame(
+            50.0,
+            \App\Support\ReportFormula::percent(\App\Support\ReportFormula::OVER_BASELINE, 5, 9, 1),
+        );
+
+        // Суурь нь зорилттой тэнцүү бол ахиц хэмжихгүй.
+        $this->assertNull(
+            \App\Support\ReportFormula::percent(\App\Support\ReportFormula::OVER_BASELINE, 5, 3, 3),
+        );
+
+        $user = User::factory()->create(['is_admin' => true]);
+
+        foreach ([['formula', \App\Support\ReportFormula::OVER_BASELINE], ['baseline', '1'], ['target', '9'], ['progress', '5']] as [$column, $value]) {
+            $this->actingAs($user)
+                ->patch(route('reports.rows.update', ['local_policy.governor_program', 0]), [
+                    'column' => $column,
+                    'value' => $value,
+                ])
+                ->assertRedirect();
+        }
+
+        $this->assertSame('50%', \App\Support\ReportRows::merged('local_policy.governor_program')[0]['percent']);
+    }
+
+    public function test_the_governor_program_puts_the_percent_before_the_progress(): void
+    {
+        $keys = collect(\App\Support\ReportsCatalog::find('local_policy.governor_program')['columns'])
+            ->pluck('key')
+            ->all();
+
+        $this->assertLessThan(array_search('percent', $keys, true), array_search('formula', $keys, true));
+        $this->assertLessThan(array_search('progress', $keys, true), array_search('percent', $keys, true));
     }
 
     public function test_reports_show_loads_annual_plan_rows(): void
