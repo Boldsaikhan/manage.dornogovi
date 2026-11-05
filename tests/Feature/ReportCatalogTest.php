@@ -59,9 +59,45 @@ class ReportCatalogTest extends TestCase
                 ->where('report.number', '2.7.4')
                 ->where('report.source_file', '04-АЛБАН ДААЛГАВАР.docx')
                 ->where('report.progress', 38)
+                // «Хариуцах албан хаагч» нь зөвхөн хэлтсийн хүрээний хүнд.
+                ->has('report.columns', 5)
+                ->where('report.columns.4.key', 'department'));
+    }
+
+    /* ── Хэлтэс, хариуцах албан хаагчийн багана эрхээрээ ────────── */
+
+    public function test_a_unit_scoped_user_also_gets_the_officer_column(): void
+    {
+        $department = \App\Models\Department::create([
+            'name' => 'Хууль, эрх зүйн хэлтэс',
+            'is_active' => true,
+        ]);
+
+        $user = User::factory()->create(['department_id' => $department->id]);
+        $this->grantModule($user, 'reports', 'manage_own');
+
+        $this->actingAs($user->fresh())
+            ->get(route('reports.show', 'local_policy.governor_assignments.budget'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
                 ->has('report.columns', 6)
+                ->where('report.columns.5.key', 'assignee')
+                ->where('unitScope', true)
+                ->where('ownDepartment', 'Хууль, эрх зүйн хэлтэс'));
+    }
+
+    public function test_a_full_manager_only_assigns_departments(): void
+    {
+        $user = User::factory()->create();
+        $this->grantModule($user, 'reports', 'manage');
+
+        $this->actingAs($user->fresh())
+            ->get(route('reports.show', 'local_policy.governor_assignments.budget'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('report.columns', 5)
                 ->where('report.columns.4.key', 'department')
-                ->where('report.columns.5.key', 'assignee'));
+                ->where('unitScope', false));
     }
 
     public function test_reports_show_loads_excel_linked_report(): void
@@ -75,7 +111,7 @@ class ReportCatalogTest extends TestCase
                 ->component('Modules/Reports/Show')
                 ->where('report.template', 'law_implementation')
                 ->where('report.source_file', '1. Хууль тогтоомж 2026 оны эхний хагас жил.xlsx')
-                ->has('report.columns', 10));
+                ->has('report.columns', 9));
     }
 
     public function test_reports_show_loads_governor_program_rows(): void
@@ -91,7 +127,7 @@ class ReportCatalogTest extends TestCase
                 ->where('report.number', '2.1')
                 ->where('report.source_file', 'АЗДҮАХ-2024-2028-2026-оны-хагас-жил-ТАЙЛАН-хуваарилалт.xlsx')
                 ->where('report.template', 'governor_program')
-                ->has('report.columns', 16)
+                ->has('report.columns', 15)
                 ->has('report.rows', 324));
     }
 
@@ -108,7 +144,7 @@ class ReportCatalogTest extends TestCase
                 ->where('report.number', '2.2')
                 ->where('report.source_file', 'АЖХТ-2026-ЭЦЭС.xlsx')
                 ->where('report.template', 'annual_plan')
-                ->has('report.columns', 13)
+                ->has('report.columns', 12)
                 ->has('report.rows', 196));
     }
 
@@ -125,7 +161,7 @@ class ReportCatalogTest extends TestCase
                 ->where('report.number', '2.3')
                 ->where('report.source_file', 'ИТХТ-ын хэрэгжилт_2026_.xlsx')
                 ->where('report.template', 'itkh_decision')
-                ->has('report.columns', 9)
+                ->has('report.columns', 8)
                 ->has('report.rows', 33));
     }
 
