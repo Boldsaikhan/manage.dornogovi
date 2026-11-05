@@ -21,6 +21,32 @@ $policyCols = [
     $col('note', 'Тайлбар'),
 ];
 
+/*
+ * Гэрээ — бодлогын хүснэгт дээр хэрэгжилт, үнэлгээний багана нэмэгдэнэ.
+ *
+ * Хэрэгжилтийн хувийг томъёогоор боддог: зорилт, гүйцэтгэл хоёрыг
+ * бичихэд сервер өөрөө тооцоолно.
+ */
+$contractCols = [
+    // Хуучин баганууд хэвээр — одоо байгаа өгөгдөл алдагдахгүй.
+    $col('no', '№', '3rem'),
+    $col('document', 'Бодлогын баримт бичиг'),
+    $col('count', 'Тоо хэмжээ', '5rem'),
+    $col('goal', 'Бодлогын зорилт'),
+    $col('measure', 'Арга хэмжээ'),
+    $col('clause', 'Заалт', '4rem'),
+    $col('progress', 'Явцын хяналт /эхний хагас жил/', '6rem'),
+    // Гэрээний ард нэмэгдсэн хэрэгжилт, үнэлгээ.
+    $col('formula', 'Томъёо', '9rem'),
+    $col('target', 'Зорилтот түвшин', '6rem'),
+    $col('actual', 'Хүрсэн түвшин', '6rem'),
+    $col('percent', 'Хэрэгжилтийн хувь', '5rem'),
+    $col('report', 'Тайлан'),
+    $col('dept_evaluation', 'Хэлтсийн үнэлгээ', '8rem'),
+    $col('monitor_evaluation', 'Хяналтын үнэлгээ', '8rem'),
+    $col('note', 'Тайлбар'),
+];
+
 $officialCols = [
     $col('no', 'Д/Д', '3.5rem'),
     $col('measure', 'Арга хэмжээ'),
@@ -127,6 +153,23 @@ return [
         'policy_tracking' => [
             'label' => 'Бодлогын баримт — хяналтын хүснэгт',
             'columns' => $policyCols,
+        ],
+        'contract_tracking' => [
+            'label' => 'Гэрээ — хэрэгжилт, үнэлгээ',
+            'columns' => $contractCols,
+            // Хэлтсийн дарга мөр бүрийг баталгаажуулж байж хяналт руу очно.
+            'approval' => true,
+            // Гэрээ ирүүлэх хугацаа тавина.
+            'schedule' => true,
+            // Томъёогоор боддог багана.
+            'formula' => [
+                'column' => 'formula',
+                'target' => 'target',
+                'actual' => 'actual',
+                'percent' => 'percent',
+            ],
+            // Зөвхөн хяналт-шинжилгээний эрхтэй хүн бөглөнө.
+            'monitor_columns' => ['monitor_evaluation'],
         ],
         'official_assignment' => [
             'label' => 'Албан даалгавар — арга хэмжээ',
@@ -288,6 +331,8 @@ return [
             'key' => 'contracts',
             'number' => '3',
             'label' => 'Гэрээ',
+            // Энэ хэсгийн бүх тайлан гэрээний загвараар харагдана.
+            'template' => 'contract_tracking',
             'reports' => [
                 $policy('contracts.ministry_gbxn', '3.1', 'ГБХНХЯам — сайдуудтай хамтран ажиллах гэрээ', 'НБХ', pdf: 'contracts.ministry_gbxn.pdf'),
                 $policy('contracts.ministry_culture', '3.2', 'Соёлын сайд', pdf: 'contracts.ministry_culture.pdf'),

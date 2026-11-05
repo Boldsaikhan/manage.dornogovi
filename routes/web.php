@@ -220,6 +220,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/modules/reports/{report}/import', [ReportCatalogController::class, 'importStore'])->name('reports.import.store');
     Route::get('/modules/reports/{report}', [ReportCatalogController::class, 'show'])->name('reports.show');
     Route::patch('/modules/reports/{report}/rows/{index}', [ReportCatalogController::class, 'updateRow'])->name('reports.rows.update');
+    Route::patch('/modules/reports/{report}/rows/{index}/approve', [ReportCatalogController::class, 'approveRow'])
+        ->name('reports.rows.approve');
+    Route::patch('/modules/reports/{report}/schedule', [ReportCatalogController::class, 'updateSchedule'])
+        ->name('reports.schedule');
     Route::get('/modules/onboarding', [ModuleResourceController::class, 'index'])->name('onboarding.index');
 
     Route::get('/modules/{module}/logs', [ModuleResourceController::class, 'logs'])
