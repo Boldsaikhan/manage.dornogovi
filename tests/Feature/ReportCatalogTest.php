@@ -91,7 +91,7 @@ class ReportCatalogTest extends TestCase
                 ->where('report.number', '2.1')
                 ->where('report.source_file', 'АЗДҮАХ-2024-2028-2026-оны-хагас-жил-ТАЙЛАН-хуваарилалт.xlsx')
                 ->where('report.template', 'governor_program')
-                ->has('report.columns', 17)
+                ->has('report.columns', 16)
                 ->has('report.rows', 324));
     }
 

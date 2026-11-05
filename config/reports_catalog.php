@@ -78,7 +78,6 @@ $planCols = [
     $col('progress', 'Хэрэгжилт (өссөн дүнгээр)', '5rem'),
     $col('percent', 'Хэрэгжилтийн хувь', '4rem'),
     $col('frequency', 'Мэдээлэл цуглуулах давтамж', '4rem'),
-    $col('report_to', 'Тайлагнах'),
     $col('department', 'Хэлтэс', '9rem'),
     $col('agency', 'Агентлаг'),
 ];
