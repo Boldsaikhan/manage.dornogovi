@@ -174,8 +174,10 @@ watch(() => props.fill, () => nextTick(measure));
         >
             <slot />
         </div>
+        <!-- pinStart үед биеийн өөрийнх нь хэвтээ зурвас ажиллана —
+             тусдаа зурвас нэмбэл 2 scroll болно. -->
         <div
-            v-show="showHBar"
+            v-show="showHBar && ! pinStart"
             ref="hBarRef"
             class="ui-table-hscroll shrink-0 border-t border-slate-100 bg-white"
             aria-label="Хэвтээ гүйлгэх"
