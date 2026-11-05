@@ -340,7 +340,8 @@ const toggleRowEditing = (row) => {
 const hasRowActions = computed(() => props.canEdit
     || Boolean(props.workflow.approval && props.workflow.can_approve));
 
-const rowActionsWidth = 72;
+// 3 icon (32px) + зай + нүдний дотоод зай.
+const rowActionsWidth = 116;
 
 const downloadFormats = [
     { format: 'xlsx', label: 'Excel (.xlsx)' },
@@ -969,7 +970,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 
                                         <!-- Баруун талын үйлдэл: засах, нэгтгэх, баталгаажуулах -->
                                         <td v-if="hasRowActions" class="ui-pin-end px-1 py-1.5 align-top">
-                                            <div class="flex items-center justify-center gap-1">
+                                            <div class="flex items-center justify-center gap-0.5">
                                                 <button
                                                     v-if="canEdit"
                                                     type="button"
