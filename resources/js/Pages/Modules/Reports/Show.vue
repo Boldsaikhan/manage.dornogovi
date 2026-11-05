@@ -275,8 +275,7 @@ const defaultColumnWidths = {
     progress: '4rem',
     percent: '3.25rem',
     frequency: '4.5rem',
-    report_to: '5rem',
-    department: '4rem',
+    department: '13rem',
     agency: '7rem',
     decision_no: '3.5rem',
     clause_no: '3.5rem',
@@ -294,7 +293,12 @@ const remToPx = (value) => {
 };
 
 const columnWidth = (col) => {
-    if (col.key === 'department' || col.key === 'assignee') {
+    // Хэлтсийн нэр бүтнээрээ багтах өргөн.
+    if (col.key === 'department') {
+        return '13rem';
+    }
+
+    if (col.key === 'assignee') {
         return '9rem';
     }
 
@@ -922,7 +926,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 
                                             <select
                                                 v-else-if="canEdit && isDepartmentColumn(col.key)"
-                                                class="w-full rounded-md border-slate-200 bg-white py-0.5 text-[11px] text-slate-700"
+                                                class="ui-cell-select"
+                                                :title="row[col.key] || 'Хэлтэс сонгох'"
                                                 :value="departmentSelectValue(row)"
                                                 :disabled="savingCell === cellKey(row, col.key)"
                                                 @change="onDepartmentChange(row, $event.target.value)"
@@ -942,7 +947,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                             <!-- Томъёо — сонгоно -->
                                             <select
                                                 v-else-if="canEdit && isFormulaColumn(col.key)"
-                                                class="w-full rounded-md border-slate-200 bg-white py-0.5 text-[11px] text-slate-700"
+                                                class="ui-cell-select"
                                                 :value="row[col.key] ?? ''"
                                                 :disabled="savingCell === cellKey(row, col.key)"
                                                 @change="saveCell(row, col.key, $event.target.value)"
