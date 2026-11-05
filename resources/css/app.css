@@ -298,6 +298,23 @@
     }
 
     /*
+     * Нүдийг засварт оруулахад хүснэгтийн харагдах байдал өөрчлөгдөхгүй
+     * байх ёстой: үсгийн хэмжээ, мөр хоорондын зай, зай авалт нь
+     * харах горимынхтой яг таарна.
+     */
+    .ui-table--pin-no .ui-sheet-cell {
+        @apply min-h-[1.6rem];
+    }
+
+    .ui-table--pin-no .ui-sheet-display {
+        @apply px-0 py-0 text-xs leading-snug;
+    }
+
+    .ui-table--pin-no .ui-sheet-editor {
+        @apply min-h-[1.6rem] px-1 py-0.5 text-xs leading-snug;
+    }
+
+    /*
      * Баруун талын «Үйлдэл» багана — хэвтээ гүйлгээнд үргэлж харагдана.
      * Доогуураа нэвт харагдахгүйн тулд дэвсгэрээ бүрэн өгнө.
      */
@@ -311,6 +328,11 @@
     .ui-table--pin-no thead th.ui-pin-end {
         z-index: 30;
         @apply bg-brand-navy-50 dark:bg-slate-800;
+    }
+
+    .ui-table--pin-no .ui-pin-end {
+        overflow: visible;
+        white-space: nowrap;
     }
 
     .ui-table--pin-no tbody td.ui-pin-end {
