@@ -363,19 +363,32 @@ class ReportCatalogController extends Controller
     ): void {
         $map = ReportWorkflow::formulaMap($template);
 
-        if (! $map || ! in_array($changed, [$map['column'], $map['target'], $map['actual']], true)) {
+        if (! $map) {
+            return;
+        }
+
+        $inputs = array_filter([
+            $map['column'],
+            $map['target'],
+            $map['actual'],
+            $map['baseline'] ?? null,
+        ]);
+
+        if (! in_array($changed, $inputs, true)) {
             return;
         }
 
         $row = ReportRows::merged($report)[$index] ?? [];
+        $formula = (string) ($row[$map['column']] ?? '');
         $percent = ReportFormula::percent(
-            (string) ($row[$map['column']] ?? ''),
+            $formula,
             $row[$map['actual']] ?? null,
             $row[$map['target']] ?? null,
+            isset($map['baseline']) ? ($row[$map['baseline']] ?? null) : null,
         );
 
         // Томъёогүй бол гараар бичсэн утгыг хэвээр үлдээнэ.
-        if ($percent === null && (string) ($row[$map['column']] ?? '') !== ReportFormula::GROWTH) {
+        if ($percent === null && $formula === ReportFormula::MANUAL) {
             return;
         }
 

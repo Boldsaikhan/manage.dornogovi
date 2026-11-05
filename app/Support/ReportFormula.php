@@ -12,6 +12,12 @@ class ReportFormula
     /** Өсөх үзүүлэлт: гүйцэтгэл зорилтод хэдэн хувь хүрсэн бэ. */
     public const GROWTH = 'actual_over_target';
 
+    /**
+     * Суурь түвшнээс хэдийг ахисан бэ:
+     * (гүйцэтгэл − суурь) ÷ (зорилт − суурь) × 100.
+     */
+    public const OVER_BASELINE = 'over_baseline';
+
     /** Гараар бичнэ — тоогоор хэмжигдэхгүй арга хэмжээ. */
     public const MANUAL = '';
 
@@ -33,6 +39,11 @@ class ReportFormula
                 'label' => 'Гүйцэтгэл ÷ Зорилт × 100',
                 'hint' => 'Өсөх үзүүлэлт. 100%-иас дээшхийг 100 болгож таслана.',
             ],
+            [
+                'value' => self::OVER_BASELINE,
+                'label' => '(Гүйцэтгэл − Суурь) ÷ (Зорилт − Суурь) × 100',
+                'hint' => 'Суурь түвшнээс эхлэн хэмжинэ. Суурь нь зорилттой тэнцүү бол бодохгүй.',
+            ],
         ];
     }
 
@@ -44,22 +55,46 @@ class ReportFormula
     /**
      * Хувийг бодно. Бодох боломжгүй бол null.
      */
-    public static function percent(?string $formula, mixed $actual, mixed $target): ?float
-    {
-        if ((string) $formula !== self::GROWTH) {
-            return null;
-        }
-
+    public static function percent(
+        ?string $formula,
+        mixed $actual,
+        mixed $target,
+        mixed $baseline = null,
+    ): ?float {
+        $formula = (string) $formula;
         $actual = self::number($actual);
         $target = self::number($target);
 
-        if ($actual === null || $target === null || $target == 0.0) {
+        if ($actual === null || $target === null) {
             return null;
         }
 
-        $percent = ($actual / $target) * 100;
+        if ($formula === self::GROWTH) {
+            if ($target == 0.0) {
+                return null;
+            }
 
-        // 0–100 хооронд барина — 150% гэж тайлагнахаас сэргийлнэ.
+            return self::clamp(($actual / $target) * 100);
+        }
+
+        if ($formula === self::OVER_BASELINE) {
+            $baseline = self::number($baseline) ?? 0.0;
+            $span = $target - $baseline;
+
+            // Суурь нь зорилттойгоо тэнцүү бол ахиц хэмжих боломжгүй.
+            if ($span == 0.0) {
+                return null;
+            }
+
+            return self::clamp((($actual - $baseline) / $span) * 100);
+        }
+
+        return null;
+    }
+
+    /** 0–100 хооронд барина — 150% гэж тайлагнахаас сэргийлнэ. */
+    private static function clamp(float $percent): float
+    {
         return round(max(0, min(100, $percent)), 1);
     }
 

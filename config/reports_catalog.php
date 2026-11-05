@@ -75,8 +75,10 @@ $planCols = [
     $col('unit', 'Хэмжих нэгж', '4rem'),
     $col('baseline', 'Суурь түвшин', '4rem'),
     $col('target', 'Зорилтот түвшин', '5rem'),
-    $col('progress', 'Хэрэгжилт (өссөн дүнгээр)', '5rem'),
+    // Томъёо → хувь → хэрэгжилт. Хувь нь суурь, зорилтыг харьцуулж бодогдоно.
+    $col('formula', 'Томъёо', '9rem'),
     $col('percent', 'Хэрэгжилтийн хувь', '4rem'),
+    $col('progress', 'Хэрэгжилт (өссөн дүнгээр)', '5rem'),
     $col('frequency', 'Мэдээлэл цуглуулах давтамж', '4rem'),
     $col('department', 'Хэлтэс', '9rem'),
     $col('agency', 'Агентлаг'),
@@ -180,6 +182,14 @@ return [
         'governor_program' => [
             'label' => 'ЗДҮАХ — хагас жилийн тайлан',
             'columns' => $planCols,
+            // Хувь нь суурь, зорилтот түвшин, гүйцэтгэлээс бодогдоно.
+            'formula' => [
+                'column' => 'formula',
+                'baseline' => 'baseline',
+                'target' => 'target',
+                'actual' => 'progress',
+                'percent' => 'percent',
+            ],
         ],
         'annual_plan' => [
             'label' => 'АЖХТ — жилийн төлөвлөгөө',
