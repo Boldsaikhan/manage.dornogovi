@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch, reactive } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
@@ -20,9 +20,64 @@ const props = defineProps({
     departments: { type: Array, default: () => [] },
     departmentColumn: { type: String, default: 'department' },
     people: { type: Array, default: () => [] },
+    workflow: { type: Object, default: () => ({}) },
 });
 
 const assigneeColumn = 'assignee';
+
+/* ---------- Гэрээний урсгал: томъёо, баталгаа, хугацаа ---------- */
+
+const formulaMap = computed(() => props.workflow.formula ?? null);
+const monitorColumns = computed(() => props.workflow.monitor_columns ?? []);
+
+const isFormulaColumn = (key) => formulaMap.value?.column === key;
+const isPercentColumn = (key) => formulaMap.value?.percent === key;
+const isMonitorColumn = (key) => monitorColumns.value.includes(key);
+
+/** Мөр баталгаажсан эсэх. */
+const approvalOf = (row) => (props.workflow.approvals ?? {})[row._index] ?? null;
+const isApproved = (row) => Boolean(approvalOf(row));
+
+/** Хяналтын үнэлгээг зөвхөн баталгаажсан мөрөнд, зөвхөн ХШҮ бөглөнө. */
+const canFillMonitor = (row) => Boolean(props.workflow.can_monitor) && isApproved(row);
+
+const approving = ref(null);
+
+const toggleApproval = (row) => {
+    if (! props.workflow.can_approve || approving.value !== null) {
+        return;
+    }
+
+    approving.value = row._index;
+
+    router.patch(
+        route('reports.rows.approve', [props.report.key, row._index]),
+        { approved: ! isApproved(row) },
+        {
+            preserveScroll: true,
+            onFinish: () => { approving.value = null; },
+        },
+    );
+};
+
+/* ---------- Гэрээ ирүүлэх хугацаа ---------- */
+
+const showSchedule = ref(false);
+const scheduleForm = reactive({
+    due_on: props.workflow.due?.due_on ?? '',
+    note: props.workflow.due?.note ?? '',
+});
+
+const saveSchedule = () => {
+    router.patch(
+        route('reports.schedule', props.report.key),
+        { due_on: scheduleForm.due_on || null, note: scheduleForm.note || null },
+        {
+            preserveScroll: true,
+            onSuccess: () => { showSchedule.value = false; },
+        },
+    );
+};
 
 /* ---------- Мөрийн засвар ---------- */
 
@@ -515,6 +570,61 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                     <p v-if="flashSuccess && ! tableExpanded" class="shrink-0 border-b border-emerald-100 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
                         {{ flashSuccess }}
                     </p>
+
+                    <!-- Гэрээ ирүүлэх хугацаа -->
+                    <div
+                        v-if="workflow.schedule && ! tableExpanded"
+                        class="flex shrink-0 flex-wrap items-center gap-2 border-b border-slate-100 px-4 py-2 text-xs"
+                    >
+                        <span class="font-bold uppercase tracking-wide text-slate-400">
+                            Гэрээ ирүүлэх хугацаа
+                        </span>
+
+                        <template v-if="! showSchedule">
+                            <span
+                                v-if="workflow.due?.due_on"
+                                class="rounded-full px-2 py-0.5 font-semibold"
+                                :class="workflow.due.overdue
+                                    ? 'bg-red-50 text-red-700'
+                                    : 'bg-brand-navy-50 text-brand-navy-700'"
+                            >
+                                {{ workflow.due.due_on }}
+                                <template v-if="workflow.due.overdue">· хугацаа хэтэрсэн</template>
+                                <template v-else-if="workflow.due.days_left !== null">
+                                    · {{ workflow.due.days_left }} хоног үлдсэн
+                                </template>
+                            </span>
+                            <span v-else class="text-slate-400">тавиагүй</span>
+
+                            <span v-if="workflow.due?.note" class="text-slate-500">
+                                {{ workflow.due.note }}
+                            </span>
+
+                            <button
+                                v-if="canManage"
+                                type="button"
+                                class="ml-auto text-brand-navy-600 hover:underline"
+                                @click="showSchedule = true"
+                            >
+                                {{ workflow.due?.due_on ? 'Засах' : 'Хугацаа тавих' }}
+                            </button>
+                        </template>
+
+                        <template v-else>
+                            <input v-model="scheduleForm.due_on" type="date" class="ui-input !w-auto !py-1 text-xs" />
+                            <input
+                                v-model="scheduleForm.note"
+                                class="ui-input !w-56 !py-1 text-xs"
+                                placeholder="Тэмдэглэл (сонголтоор)"
+                            />
+                            <button type="button" class="ui-btn-primary !py-1 text-xs" @click="saveSchedule">
+                                Хадгалах
+                            </button>
+                            <button type="button" class="ui-btn-ghost !py-1 text-xs" @click="showSchedule = false">
+                                Болих
+                            </button>
+                        </template>
+                    </div>
                     <iframe
                         v-if="report.pdf_url && pdfOpen && ! tableExpanded"
                         :src="report.pdf_url"
@@ -631,6 +741,30 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                                     <path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" />
                                                 </svg>
                                             </button>
+
+                                            <!-- Хэлтсийн даргын баталгаа -->
+                                            <button
+                                                v-if="workflow.approval && col.key === 'no' && workflow.can_approve"
+                                                type="button"
+                                                class="mt-1 flex h-5 w-5 items-center justify-center rounded-full border text-[10px] transition"
+                                                :class="isApproved(row)
+                                                    ? 'border-emerald-500 bg-emerald-500 text-white'
+                                                    : 'border-slate-300 text-slate-400 hover:border-emerald-400 hover:text-emerald-600'"
+                                                :disabled="approving === row._index"
+                                                :title="isApproved(row)
+                                                    ? ('Баталгаажсан: ' + (approvalOf(row).by || '') + ' ' + (approvalOf(row).at || '') + ' — буцаахын тулд дарна')
+                                                    : 'Баталгаажуулж хяналт-шинжилгээнд илгээх'"
+                                                @click="toggleApproval(row)"
+                                            >
+                                                ✓
+                                            </button>
+                                            <span
+                                                v-else-if="workflow.approval && col.key === 'no' && isApproved(row)"
+                                                class="mt-1 block text-[10px] text-emerald-600"
+                                                :title="'Баталгаажсан: ' + (approvalOf(row).by || '')"
+                                            >
+                                                ✓
+                                            </span>
                                             <!-- Хэлтэс — жинхэнэ хэлтсээс сонгоно (харагдах хүрээг тогтооно) -->
                                             <select
                                                 v-if="canEdit && isDepartmentColumn(col.key)"
@@ -650,6 +784,54 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                                     {{ dept.name }}
                                                 </option>
                                             </select>
+
+                                            <!-- Томъёо — сонгоно -->
+                                            <select
+                                                v-else-if="canEdit && isFormulaColumn(col.key)"
+                                                class="w-full rounded-md border-slate-200 bg-white py-0.5 text-[11px] text-slate-700"
+                                                :value="row[col.key] ?? ''"
+                                                :disabled="savingCell === cellKey(row, col.key)"
+                                                @change="saveCell(row, col.key, $event.target.value)"
+                                            >
+                                                <option
+                                                    v-for="option in (workflow.formula_options ?? [])"
+                                                    :key="option.value"
+                                                    :value="option.value"
+                                                    :title="option.hint"
+                                                >
+                                                    {{ option.label }}
+                                                </option>
+                                            </select>
+
+                                            <!-- Хэрэгжилтийн хувь — томъёотой бол сервер бодно -->
+                                            <span
+                                                v-else-if="isPercentColumn(col.key) && row[formulaMap.column]"
+                                                class="block text-center text-[12px] font-bold tabular-nums text-brand-navy-700"
+                                                title="Томъёогоор бодогдсон — гараар засахгүй"
+                                            >
+                                                {{ row[col.key] || '—' }}
+                                            </span>
+
+                                            <!-- Хяналтын үнэлгээ — зөвхөн баталгаажсан мөрөнд -->
+                                            <template v-else-if="isMonitorColumn(col.key)">
+                                                <SheetCell
+                                                    v-if="canFillMonitor(row)"
+                                                    :model-value="row[col.key] ?? ''"
+                                                    multiline
+                                                    :clamp="false"
+                                                    :editable="true"
+                                                    @commit="(v) => saveCell(row, col.key, v)"
+                                                />
+                                                <span
+                                                    v-else
+                                                    class="block text-[11px] text-slate-400"
+                                                    :title="isApproved(row)
+                                                        ? 'Зөвхөн хяналт-шинжилгээний эрхтэй хүн бөглөнө.'
+                                                        : 'Хэлтсийн дарга баталгаажуулаагүй байна.'"
+                                                >
+                                                    {{ row[col.key] || (isApproved(row) ? '—' : '🔒') }}
+                                                </span>
+                                            </template>
 
                                             <SheetCell
                                                 v-else-if="canEdit && isAssigneeColumn(col.key)"

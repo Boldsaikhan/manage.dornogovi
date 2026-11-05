@@ -48,11 +48,18 @@ class ReportsCatalog
         $flat = [];
 
         foreach (self::sections() as $section) {
-            self::walkReports($section['reports'] ?? [], $flat, [
+            $inherited = [
                 'section_key' => $section['key'] ?? '',
                 'section_label' => $section['label'] ?? '',
                 'section_number' => $section['number'] ?? null,
-            ]);
+            ];
+
+            // Хэсэгт загвар зааж өгсөн бол доторх бүх тайланд хэрэглэнэ.
+            if (! empty($section['template'])) {
+                $inherited['section_template'] = $section['template'];
+            }
+
+            self::walkReports($section['reports'] ?? [], $flat, $inherited);
         }
 
         return $flat;
@@ -152,7 +159,10 @@ class ReportsCatalog
      */
     public static function enrichReport(array $report): array
     {
-        $templateKey = $report['template'] ?? 'policy_tracking';
+        // Хэсгийн загвар нь тайлангийнхаас давамгайлна.
+        $templateKey = $report['section_template']
+            ?? $report['template']
+            ?? 'policy_tracking';
         $template = self::template($templateKey);
 
         $report['template'] = $templateKey;

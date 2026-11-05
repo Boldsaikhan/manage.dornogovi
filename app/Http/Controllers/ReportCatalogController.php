@@ -4,11 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Department;
 use App\Models\PhoneDirectoryEntry;
+use App\Models\ReportRowApproval;
 use App\Models\ReportRowEdit;
+use App\Models\ReportSchedule;
 use App\Support\DocxTableWriter;
 use App\Support\ModuleAccess;
 use App\Support\PdfTableWriter;
+use App\Support\ReportFormula;
 use App\Support\ReportRows;
+use App\Support\ReportWorkflow;
 use App\Support\ReportSpan;
 use App\Support\ReportTableImporter;
 use App\Support\ReportsCatalog;
@@ -59,6 +63,7 @@ class ReportCatalogController extends Controller
         }
 
         $config = ReportsCatalog::config();
+        $template = ReportsCatalog::template($item['template'] ?? 'policy_tracking');
         $rows = ReportRows::visibleTo(ReportRows::merged($report), $request->user());
         $dataMeta = ReportsData::meta($report);
 
@@ -98,6 +103,17 @@ class ReportCatalogController extends Controller
                 ->get(['id', 'name']),
             'departmentColumn' => ReportRowEdit::DEPARTMENT_COLUMN,
             'people' => PhoneDirectoryEntry::peopleOptions(),
+            'workflow' => [
+                'approval' => ReportWorkflow::needsApproval($template),
+                'schedule' => ReportWorkflow::hasSchedule($template),
+                'monitor_columns' => ReportWorkflow::monitorColumns($template),
+                'formula' => ReportWorkflow::formulaMap($template),
+                'formula_options' => ReportFormula::options(),
+                'can_approve' => ReportWorkflow::canApprove($request->user()),
+                'can_monitor' => ReportWorkflow::canMonitor($request->user()),
+                'approvals' => ReportWorkflow::approvals($report),
+                'due' => ReportWorkflow::schedule($report),
+            ],
         ]);
     }
 
@@ -291,6 +307,23 @@ class ReportCatalogController extends Controller
 
         abort_if($index < 0 || $index >= ReportRows::length($report), 404);
 
+        $template = ReportsCatalog::template($item['template'] ?? 'policy_tracking');
+
+        // Хяналтын үнэлгээг зөвхөн хяналт-шинжилгээний хүн бөглөнө.
+        if (in_array($data['column'], ReportWorkflow::monitorColumns($template), true)) {
+            abort_unless(ReportWorkflow::canMonitor($request->user()), 403);
+
+            // Баталгаажаагүй мөр хяналт-шинжилгээнд очоогүй байна.
+            abort_unless(
+                ReportRowApproval::query()
+                    ->where('report_key', $report)
+                    ->where('row_index', $index)
+                    ->exists(),
+                422,
+                'Хэлтсийн дарга баталгаажуулаагүй байна.',
+            );
+        }
+
         $isDepartment = $data['column'] === ReportRowEdit::DEPARTMENT_COLUMN;
 
         ReportRowEdit::updateOrCreate(
@@ -306,7 +339,122 @@ class ReportCatalogController extends Controller
             ],
         );
 
+        $this->recalculatePercent($request, $report, $index, $template, $data['column']);
+
         return back(303);
+    }
+
+    /**
+     * Зорилт, гүйцэтгэл, томъёоны аль нэг нь өөрчлөгдвөл хувийг дахин бодно.
+     *
+     * @param  array<string, mixed>|null  $template
+     */
+    private function recalculatePercent(
+        Request $request,
+        string $report,
+        int $index,
+        ?array $template,
+        string $changed,
+    ): void {
+        $map = ReportWorkflow::formulaMap($template);
+
+        if (! $map || ! in_array($changed, [$map['column'], $map['target'], $map['actual']], true)) {
+            return;
+        }
+
+        $row = ReportRows::merged($report)[$index] ?? [];
+        $percent = ReportFormula::percent(
+            (string) ($row[$map['column']] ?? ''),
+            $row[$map['actual']] ?? null,
+            $row[$map['target']] ?? null,
+        );
+
+        // Томъёогүй бол гараар бичсэн утгыг хэвээр үлдээнэ.
+        if ($percent === null && (string) ($row[$map['column']] ?? '') !== ReportFormula::GROWTH) {
+            return;
+        }
+
+        ReportRowEdit::updateOrCreate(
+            [
+                'report_key' => $report,
+                'row_index' => $index,
+                'column_key' => $map['percent'],
+            ],
+            [
+                'value' => $percent === null ? null : rtrim(rtrim(number_format($percent, 1, '.', ''), '0'), '.').'%',
+                'department_id' => null,
+                'updated_by' => $request->user()->id,
+            ],
+        );
+    }
+
+    /** Мөрийг хэлтсийн дарга баталгаажуулна / буцаана. */
+    public function approveRow(Request $request, string $report, int $index): RedirectResponse
+    {
+        $this->authorizeReports($request);
+
+        $item = ReportsCatalog::find($report);
+
+        if (! $item) {
+            throw new NotFoundHttpException();
+        }
+
+        $template = ReportsCatalog::template($item['template'] ?? 'policy_tracking');
+
+        abort_unless(ReportWorkflow::needsApproval($template), 404);
+        abort_unless(ReportWorkflow::canApprove($request->user()), 403);
+        abort_if($index < 0 || $index >= ReportRows::length($report), 404);
+
+        $approved = $request->boolean('approved', true);
+
+        if (! $approved) {
+            ReportRowApproval::query()
+                ->where('report_key', $report)
+                ->where('row_index', $index)
+                ->delete();
+
+            return back(303)->with('success', 'Баталгаажуулалтыг буцаалаа.');
+        }
+
+        ReportRowApproval::updateOrCreate(
+            ['report_key' => $report, 'row_index' => $index],
+            ['approved_by' => $request->user()->id, 'approved_at' => now()],
+        );
+
+        return back(303)->with('success', 'Мөрийг баталгаажууллаа.');
+    }
+
+    /** Гэрээ ирүүлэх хугацаа. */
+    public function updateSchedule(Request $request, string $report): RedirectResponse
+    {
+        $this->authorizeReports($request);
+
+        $item = ReportsCatalog::find($report);
+
+        if (! $item) {
+            throw new NotFoundHttpException();
+        }
+
+        $template = ReportsCatalog::template($item['template'] ?? 'policy_tracking');
+
+        abort_unless(ReportWorkflow::hasSchedule($template), 404);
+        abort_unless(ModuleAccess::canManage($request->user(), 'reports'), 403);
+
+        $data = $request->validate([
+            'due_on' => ['nullable', 'date'],
+            'note' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        ReportSchedule::updateOrCreate(
+            ['report_key' => $report],
+            [
+                'due_on' => $data['due_on'] ?? null,
+                'note' => $data['note'] ?? null,
+                'updated_by' => $request->user()->id,
+            ],
+        );
+
+        return back(303)->with('success', 'Гэрээ ирүүлэх хугацааг хадгаллаа.');
     }
 
     private function exportTable(string $title, array $columns, array $rows): array
