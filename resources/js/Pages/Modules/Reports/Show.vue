@@ -21,6 +21,9 @@ const props = defineProps({
     departmentColumn: { type: String, default: 'department' },
     people: { type: Array, default: () => [] },
     workflow: { type: Object, default: () => ({}) },
+    /** Зөвхөн өөрийн хэлтсийн хүрээнд ажиллах эрхтэй эсэх. */
+    unitScope: { type: Boolean, default: false },
+    ownDepartment: { type: String, default: '' },
 });
 
 const assigneeColumn = 'assignee';
@@ -94,6 +97,35 @@ const cellTitle = (value) => {
 const isDepartmentColumn = (key) => key === props.departmentColumn;
 
 const isAssigneeColumn = (key) => key === assigneeColumn;
+
+/** Жиших үед том жижиг үсэг, зай, цэг таслалыг үл тооно. */
+const normalizeOrg = (value) => String(value ?? '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, '');
+
+/**
+ * Мөрийн хэлтсийн албан хаагчид. Хэлтэс тодорхойгүй бол өөрийнх нь
+ * хэлтсээр, тэр ч олдохгүй бол бүх жагсаалтыг өгнө — хоосон үлдээхгүй.
+ */
+const peopleForRow = (row) => {
+    if (! props.unitScope) {
+        return props.people;
+    }
+
+    const target = normalizeOrg(row?.department || props.ownDepartment);
+
+    if (! target) {
+        return props.people;
+    }
+
+    const matched = props.people.filter((person) => {
+        const org = normalizeOrg(person.org);
+
+        return org !== '' && (org === target || org.includes(target) || target.includes(org));
+    });
+
+    return matched.length ? matched : props.people;
+};
 
 /** Хэлтэс сонгогдоогүй ч өмнөх текст үлдсэн бол түүнийг алдагдуулахгүй. */
 const departmentSelectValue = (row) => {
@@ -880,8 +912,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                             ]"
                                         >
                                             <!-- Хэлтэс — жинхэнэ хэлтсээс сонгоно (харагдах хүрээг тогтооно) -->
+                                            <!-- Хэлтсийн хүрээний хүн хэлтсээ сольдоггүй — зөвхөн харна. -->
+                                            <span
+                                                v-if="unitScope && isDepartmentColumn(col.key)"
+                                                class="block text-xs leading-snug text-slate-600"
+                                            >
+                                                {{ row[col.key] || '—' }}
+                                            </span>
+
                                             <select
-                                                v-if="canEdit && isDepartmentColumn(col.key)"
+                                                v-else-if="canEdit && isDepartmentColumn(col.key)"
                                                 class="w-full rounded-md border-slate-200 bg-white py-0.5 text-[11px] text-slate-700"
                                                 :value="departmentSelectValue(row)"
                                                 :disabled="savingCell === cellKey(row, col.key)"
@@ -950,7 +990,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                             <SheetCell
                                                 v-else-if="canEdit && isAssigneeColumn(col.key)"
                                                 :model-value="row[col.key] ?? ''"
-                                                :options="people"
+                                                :options="peopleForRow(row)"
                                                 :editable="true"
                                                 placeholder="Албан хаагч сонгох"
                                                 @commit="(v) => saveCell(row, col.key, v)"

@@ -7,6 +7,7 @@ use App\Models\PhoneDirectoryEntry;
 use App\Models\ReportRowApproval;
 use App\Models\ReportRowEdit;
 use App\Models\ReportSchedule;
+use App\Models\User;
 use App\Support\DocxTableWriter;
 use App\Support\ModuleAccess;
 use App\Support\PdfTableWriter;
@@ -77,7 +78,7 @@ class ReportCatalogController extends Controller
             'section_key' => $item['section_key'] ?? null,
             'section_label' => $item['section_label'] ?? null,
             'section_number' => $item['section_number'] ?? null,
-            'columns' => $item['columns'] ?? [],
+            'columns' => self::visibleColumns($item['columns'] ?? [], $request->user()),
             'description' => $item['description'] ?? null,
             'source_file' => $item['source_file'] ?? null,
             'pdf_url' => ReportsCatalog::pdfPath($item['pdf'] ?? null)
@@ -103,6 +104,10 @@ class ReportCatalogController extends Controller
                 ->get(['id', 'name']),
             'departmentColumn' => ReportRowEdit::DEPARTMENT_COLUMN,
             'people' => PhoneDirectoryEntry::peopleOptions(),
+            // «Удирдах (хамааралтай / хэлтсийн)» эрхтэй хүн өөрийн хэлтсийн
+            // албан хаагчийг мөр бүрт хуваарилна.
+            'unitScope' => self::unitScoped($request->user()),
+            'ownDepartment' => $request->user()?->department?->name,
             'workflow' => [
                 'approval' => ReportWorkflow::needsApproval($template),
                 'schedule' => ReportWorkflow::hasSchedule($template),
@@ -537,5 +542,39 @@ class ReportCatalogController extends Controller
     private function authorizeReports(Request $request): void
     {
         abort_unless(ModuleAccess::canView($request->user(), 'reports'), 403);
+    }
+
+    /**
+     * Зөвхөн өөрийн хэлтсийн хүрээнд ажиллах эрх эсэх.
+     *
+     * «Удирдах (хэлтсийн)», «Удирдах (хамааралтай)» хоёр нь хэлтсийнхээ
+     * мөрийг удирдана — албан хаагчаа тэд өөрсдөө хуваарилна.
+     */
+    private static function unitScoped(?User $user): bool
+    {
+        if (! $user || $user->is_admin) {
+            return false;
+        }
+
+        return in_array(ModuleAccess::level($user, 'reports'), ['manage_unit', 'manage_own'], true);
+    }
+
+    /**
+     * «Хариуцах албан хаагч» баганыг зөвхөн хэлтсийн хүрээний хүнд
+     * харуулна — бусдад нь хэлтэс хуваарилах нь хангалттай.
+     *
+     * @param  list<array<string, mixed>>  $columns
+     * @return list<array<string, mixed>>
+     */
+    private static function visibleColumns(array $columns, ?User $user): array
+    {
+        if (self::unitScoped($user)) {
+            return $columns;
+        }
+
+        return array_values(array_filter(
+            $columns,
+            static fn (array $column) => ($column['key'] ?? '') !== 'assignee',
+        ));
     }
 }
