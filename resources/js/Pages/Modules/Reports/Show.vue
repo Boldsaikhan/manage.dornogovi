@@ -340,8 +340,8 @@ const toggleRowEditing = (row) => {
 const hasRowActions = computed(() => props.canEdit
     || Boolean(props.workflow.approval && props.workflow.can_approve));
 
-// 3 icon (32px) + зай + нүдний дотоод зай.
-const rowActionsWidth = 116;
+// 3 icon × 32px — хажуугийн зайгүй.
+const rowActionsWidth = 96;
 
 const downloadFormats = [
     { format: 'xlsx', label: 'Excel (.xlsx)' },
@@ -826,7 +826,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                         </th>
                                         <th
                                             v-if="hasRowActions"
-                                            class="ui-pin-end sticky top-0 bg-brand-navy-50 px-2 py-2 text-center text-[11px] leading-tight normal-case tracking-normal"
+                                            class="ui-pin-end sticky top-0 bg-brand-navy-50 !px-0 py-2 text-center text-[11px] leading-tight normal-case tracking-normal"
                                         >
                                             Үйлдэл
                                         </th>
@@ -851,7 +851,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                             >
                                                 <span class="block whitespace-pre-line">{{ row._span_text }}</span>
                                             </td>
-                                            <td v-if="hasRowActions" class="ui-pin-end px-1 py-1.5 text-center">
+                                            <td v-if="hasRowActions" class="ui-pin-end !px-0 py-1.5 text-center">
                                                 <button
                                                     v-if="canEdit"
                                                     type="button"
@@ -969,8 +969,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                         </td>
 
                                         <!-- Баруун талын үйлдэл: засах, нэгтгэх, баталгаажуулах -->
-                                        <td v-if="hasRowActions" class="ui-pin-end px-1 py-1.5 align-top">
-                                            <div class="flex items-center justify-center gap-0.5">
+                                        <td v-if="hasRowActions" class="ui-pin-end !px-0 py-1.5 align-top">
+                                            <div class="flex items-center justify-center">
                                                 <button
                                                     v-if="canEdit"
                                                     type="button"
@@ -1004,24 +1004,29 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                                 <button
                                                     v-if="workflow.approval && workflow.can_approve"
                                                     type="button"
-                                                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] transition"
-                                                    :class="isApproved(row)
-                                                        ? 'border-emerald-500 bg-emerald-500 text-white'
-                                                        : 'border-slate-300 text-slate-400 hover:border-emerald-400 hover:text-emerald-600'"
+                                                    class="ui-icon-btn"
+                                                    :class="isApproved(row) ? 'text-emerald-600' : ''"
                                                     :disabled="approving === row._index"
                                                     :title="isApproved(row)
                                                         ? ('Баталгаажсан: ' + (approvalOf(row).by || '') + ' ' + (approvalOf(row).at || '') + ' — буцаахын тулд дарна')
                                                         : 'Баталгаажуулж хяналт-шинжилгээнд илгээх'"
+                                                    :aria-label="isApproved(row) ? 'Баталгаажуулалтыг буцаах' : 'Баталгаажуулах'"
                                                     @click="toggleApproval(row)"
                                                 >
-                                                    ✓
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3.5l2.2 1.6 2.7-.2.9 2.6 2.2 1.6-1 2.6 1 2.6-2.2 1.6-.9 2.6-2.7-.2L12 20.5l-2.2-1.6-2.7.2-.9-2.6-2.2-1.6 1-2.6-1-2.6 2.2-1.6.9-2.6 2.7.2L12 3.5z" />
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="m9 12 2 2 4-4" />
+                                                    </svg>
                                                 </button>
                                                 <span
                                                     v-else-if="workflow.approval && isApproved(row)"
-                                                    class="text-[12px] text-emerald-600"
+                                                    class="ui-icon-btn pointer-events-none text-emerald-600"
                                                     :title="'Баталгаажсан: ' + (approvalOf(row).by || '')"
                                                 >
-                                                    ✓
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3.5l2.2 1.6 2.7-.2.9 2.6 2.2 1.6-1 2.6 1 2.6-2.2 1.6-.9 2.6-2.7-.2L12 20.5l-2.2-1.6-2.7.2-.9-2.6-2.2-1.6 1-2.6-1-2.6 2.2-1.6.9-2.6 2.7.2L12 3.5z" />
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="m9 12 2 2 4-4" />
+                                                    </svg>
                                                 </span>
                                             </div>
                                         </td>
