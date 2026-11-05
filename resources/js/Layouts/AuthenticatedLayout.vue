@@ -338,7 +338,7 @@ const onLinkedSystemClick = (sys, event) => {
     <div class="min-h-screen bg-slate-100 dark:bg-slate-950">
         <Head v-if="title" :title="title" />
         <aside
-            class="fixed inset-y-0 left-0 z-40 flex flex-col border-r border-slate-200/80 bg-white shadow-soft transition-[width,transform] duration-200 ease-out dark:border-slate-800 dark:bg-slate-900 lg:translate-x-0"
+            class="fixed inset-y-0 left-0 z-[60] flex flex-col border-r border-slate-200/80 bg-white shadow-soft transition-[width,transform] duration-200 ease-out dark:border-slate-800 dark:bg-slate-900 lg:translate-x-0"
             :class="[
                 sidebarOpen ? 'translate-x-0' : '-translate-x-full',
                 navCollapsed ? 'w-[17.5rem] lg:w-[4.25rem]' : 'w-[17.5rem]',
@@ -559,7 +559,7 @@ const onLinkedSystemClick = (sys, event) => {
             </div>
         </aside>
 
-        <div v-if="sidebarOpen" class="fixed inset-0 z-30 bg-brand-navy-950/40 backdrop-blur-[2px] lg:hidden" @click="sidebarOpen = false" />
+        <div v-if="sidebarOpen" class="fixed inset-0 z-[55] bg-brand-navy-950/40 backdrop-blur-[2px] lg:hidden" @click="sidebarOpen = false" />
 
         <Teleport to="body">
             <div

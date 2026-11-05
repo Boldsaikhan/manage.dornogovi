@@ -442,6 +442,11 @@
         @apply grid min-h-0 flex-1 basis-0 overflow-hidden;
     }
 
+    /* Хүснэгт дэд цэсийг дарахгүй — багана агуулгаараа тэлэхгүй. */
+    .ui-reports-table-shell > * {
+        min-width: 0;
+    }
+
     /* Хүснэгтийг дэлгэц дүүрэн харах бүрхүүл (тайлан, үүрэг даалгавар). */
     .ui-reports-table-overlay,
     .ui-table-overlay {

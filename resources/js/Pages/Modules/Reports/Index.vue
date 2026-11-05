@@ -63,7 +63,7 @@ const subnavOpen = useReportSubnav();
                 class="ui-reports-table-shell grid min-h-0 gap-2"
                 :class="subnavOpen ? 'lg:grid-cols-[16rem_minmax(0,1fr)]' : ''"
             >
-                <aside v-if="subnavOpen" class="ui-card min-h-0 overflow-y-auto p-3">
+                <aside v-if="subnavOpen" class="ui-card relative z-20 min-h-0 min-w-0 overflow-y-auto p-3">
                     <p class="mb-2 px-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
                         Дэд тайлан
                     </p>
@@ -83,7 +83,7 @@ const subnavOpen = useReportSubnav();
                     </ul>
                 </aside>
 
-                <section class="ui-card flex min-h-0 flex-col overflow-hidden p-3">
+                <section class="ui-card relative z-0 flex min-h-0 min-w-0 flex-col overflow-hidden p-3">
                     <ReportsDashboard class="min-h-0 flex-1" :dashboard="dashboard" />
                 </section>
             </div>
