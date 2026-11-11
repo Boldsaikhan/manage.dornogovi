@@ -22,6 +22,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { checkForUpdates } = require('./updater');
 
+/*
+ * Chromium гуравдагч cookie/storage-ийг хуваадаг тул Keycloak (auth.itc.gov.mn)
+ * → ДАН/OIDC → буцах үед AUTH_SESSION cookie олдохгүй («Cookie олдсонгүй»)
+ * гэсэн алдаа гаргадаг. Идэвхжүүлэхээс ӨМНӨ унтраана.
+ */
+app.commandLine.appendSwitch('disable-features', 'ThirdPartyStoragePartitioning');
+
 /**
  * Богино бүртгэл — нэвтрэлт болоогүй үед шалтгааныг олоход хэрэгтэй.
  *
@@ -41,6 +48,58 @@ const logLine = (message) => {
 
 const SITE_URL = process.env.MD_SITE_URL || 'https://manage.dornogovi.gov.mn';
 const SITE_HOST = new URL(SITE_URL).host;
+
+/**
+ * Нэвтрэлтийн нэгдсэн систем / IdP хостууд.
+ *
+ * Эдгээр дээрх Set-Cookie-г SameSite=None; Secure болгож, IdP-ээс
+ * буцах үед session cookie илгээгдэхгүй байхыг сэргийлнэ.
+ */
+const SSO_HOST_RE = /(^|\.)(auth\.itc\.gov\.mn|itc\.gov\.mn|dan\.gov\.mn|sso\.gov\.mn|login\.gov\.mn|e-mongolia\.mn)$/i;
+
+const isSsoHost = (host) => SSO_HOST_RE.test(String(host || '').toLowerCase());
+
+/** Set-Cookie толгойг OIDC-д аюулгүй байдлаар зөөлрүүлнэ. */
+const softenSsoCookies = (ses) => {
+    ses.webRequest.onHeadersReceived(
+        {
+            urls: [
+                '*://auth.itc.gov.mn/*',
+                '*://*.itc.gov.mn/*',
+                '*://dan.gov.mn/*',
+                '*://*.dan.gov.mn/*',
+                '*://sso.gov.mn/*',
+                '*://*.sso.gov.mn/*',
+                '*://login.gov.mn/*',
+                '*://*.login.gov.mn/*',
+                '*://*.e-mongolia.mn/*',
+            ],
+        },
+        (details, callback) => {
+            const headers = { ...(details.responseHeaders || {}) };
+            const key = Object.keys(headers).find((name) => name.toLowerCase() === 'set-cookie');
+
+            if (! key) {
+                callback({ responseHeaders: headers });
+
+                return;
+            }
+
+            const rewritten = headers[key].map((cookie) => {
+                let next = String(cookie)
+                    .replace(/;\s*SameSite=(Strict|Lax|None)/gi, '')
+                    .replace(/;\s*Secure/gi, '');
+
+                return `${next}; SameSite=None; Secure`;
+            });
+
+            delete headers[key];
+            headers['Set-Cookie'] = rewritten;
+
+            callback({ responseHeaders: headers });
+        },
+    );
+};
 
 /** Табын мөр + хаягийн мөрийн нийт өндөр (px). */
 const TAB_BAR_HEIGHT = 74;
@@ -389,8 +448,37 @@ const wire = (tab) => {
         layout();
     });
 
-    // Шинэ цонх нээх оролдлогыг таб болгоно.
+    /*
+     * Шинэ цонх нээх оролдлого.
+     *
+     * Keycloak/ДАН OIDC нь IdP-ээ window.open-оор нээхэд тусдаа таб руу
+     * шилжүүлбэл AUTH_SESSION cookie болон state салдаг — «Cookie олдсонгүй»
+     * гардаг. Тиймээс SSO хост руу ижил таб дээр үргэлжлүүлнэ.
+     */
     webContents.setWindowOpenHandler(({ url }) => {
+        if (! isWebUrl(url)) {
+            return { action: 'deny' };
+        }
+
+        try {
+            const targetHost = new URL(url).host;
+            let currentHost = '';
+
+            try {
+                currentHost = new URL(webContents.getURL()).host;
+            } catch {
+                // Хуудас ачаалаагүй байж болно.
+            }
+
+            if (isSsoHost(targetHost) || isSsoHost(currentHost) || targetHost === currentHost) {
+                webContents.loadURL(url);
+
+                return { action: 'deny' };
+            }
+        } catch {
+            return { action: 'deny' };
+        }
+
         openInTab(url);
 
         return { action: 'deny' };
@@ -572,6 +660,9 @@ if (! app.requestSingleInstanceLock()) {
 
         // Хөтчийн цэс хэрэггүй — табын мөр нь хангалттай.
         Menu.setApplicationMenu(null);
+
+        // Keycloak/ДАН session cookie IdP-ээс буцахад алдагдахаас сэргийлнэ.
+        softenSsoCookies(session.defaultSession);
 
         // Сайтын өөрийн preload-оос бусдад хандах эрх өгөхгүй.
         /*
