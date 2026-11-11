@@ -54,6 +54,19 @@ class LeaveSignerOptionsTest extends TestCase
         $this->assertArrayHasKey('Н.Мөнхцэцэг', Leave::signerOptions());
     }
 
+    public function test_the_military_staff_head_is_offered(): void
+    {
+        $this->entry([
+            'org_name' => 'Цэргийн штаб',
+            'category' => 'heltes',
+            'org_order' => 3,
+            'person_name' => 'Б.Батбаяр',
+            'position' => 'Цэргийн штабын дарга',
+        ]);
+
+        $this->assertArrayHasKey('Б.Батбаяр', Leave::signerOptions());
+    }
+
     public function test_assistants_are_not_offered(): void
     {
         $this->entry(['person_name' => 'Н.Мэндсайхан', 'position' => 'Засаг даргын туслах']);

@@ -98,8 +98,13 @@ class PhoneDirectoryEntry extends Model
             return true;
         }
 
-        // АЗДТГ-ын хэлтсийн дарга (албан үүргийг түр орлон гүйцэтгэгч ч мөн).
-        return str_contains($position, 'хэлтс') && str_contains($position, 'дарг');
+        // АЗДТГ-ын хэлтсийн болон Цэргийн штабын дарга — албан үүргийг
+        // түр орлон гүйцэтгэгч ч мөн адил гарна.
+        if (! str_contains($position, 'дарг')) {
+            return false;
+        }
+
+        return str_contains($position, 'хэлтс') || str_contains($position, 'штаб');
     }
 
     /**
