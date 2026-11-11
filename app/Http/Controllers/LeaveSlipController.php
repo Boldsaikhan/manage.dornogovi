@@ -25,12 +25,17 @@ class LeaveSlipController extends Controller
     {
         abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
 
-        $copies = (int) $request->query('copies', 2);
-        $copies = in_array($copies, [1, 2, 4, 6], true) ? $copies : 2;
+        /*
+         * Анхны төлөв — A5, хөндлөн, нэг хуудсанд нэг хувь. Чөлөөний
+         * хуудсыг ийм хэлбэрээр хэвлэдэг тул юу ч сонгохгүйгээр шууд
+         * хэвлэж болно. Хаягийн мөрөөр өөрчилж болно.
+         */
+        $copies = (int) $request->query('copies', 1);
+        $copies = in_array($copies, [1, 2, 4, 6], true) ? $copies : 1;
 
         // Цаасны хэмжээ, чиглэл — хэвлэхийн өмнө сонгоно.
-        $paper = $request->query('paper') === 'a5' ? 'a5' : 'a4';
-        $landscape = $request->query('orient') === 'landscape';
+        $paper = $request->query('paper') === 'a4' ? 'a4' : 'a5';
+        $landscape = $request->query('orient') !== 'portrait';
 
         [$width, $height] = $paper === 'a5' ? [148, 210] : [210, 297];
 

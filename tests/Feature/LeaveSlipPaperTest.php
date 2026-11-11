@@ -24,12 +24,22 @@ class LeaveSlipPaperTest extends TestCase
         ]);
     }
 
-    public function test_the_slip_defaults_to_a4_portrait(): void
+    public function test_the_slip_defaults_to_a5_landscape(): void
     {
         $user = User::factory()->create(['is_admin' => true]);
 
         $this->actingAs($user)
             ->get(route('leaves.slip', $this->leave($user)))
+            ->assertOk()
+            ->assertSee('size: 210mm 148mm', false);
+    }
+
+    public function test_a4_portrait_is_honoured(): void
+    {
+        $user = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($user)
+            ->get(route('leaves.slip', $this->leave($user)).'?paper=a4&orient=portrait')
             ->assertOk()
             ->assertSee('size: 210mm 297mm', false);
     }
