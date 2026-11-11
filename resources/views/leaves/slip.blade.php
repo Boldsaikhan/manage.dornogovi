@@ -154,12 +154,15 @@
             padding: 0 0.8mm;
         }
 
-        /* Бөглөгдсөн утга — доогуураа зураасгүй, энгийн бичвэр. */
+        /*
+         * Бөглөгдсөн утга — доогуураа зураасгүй, энгийн урсгал бичвэр.
+         * inline-block + min-width байхад мөр дунд өргөн хоосон зай үүсч,
+         * догол мэт харагддаг байсан тул min-width-ийг хүчингүй болгоно.
+         */
         .filled {
-            display: inline-block;
-            vertical-align: bottom;
-            padding: 0 0.8mm;
-            text-align: center;
+            display: inline;
+            min-width: 0 !important;
+            padding: 0;
         }
 
         u { text-underline-offset: 2px; }
@@ -180,10 +183,20 @@
             max-width: 58%;
         }
 
+        /* Гарын үсэг зурах зай — ташуу зураасын хооронд. */
         .sign .line { white-space: nowrap; }
+        .sign .gap { display: inline-block; min-width: 32mm; }
+
+        /* Засварын горим — хэвлэхэд ул мөр үлдэхгүй. */
+        [contenteditable]:focus { outline: none; }
+
+        .slip:hover { background: #f8fafc; }
+
+        .toolbar .hint { color: #64748b; }
 
         @media print {
             body { background: #fff; }
+            .slip:hover { background: transparent; }
             .toolbar { display: none !important; }
             .sheet {
                 margin: 0;
@@ -209,6 +222,8 @@
                class="{{ ($landscape ? 'landscape' : 'portrait') === $value ? 'active' : '' }}">{{ $label }}</a>
         @endforeach
 
+        <span class="hint">Бичвэр дээр дарж засна — засвар нь зөвхөн энэ хэвлэлтэд үйлчилнэ.</span>
+
         <span class="sep">Нэг хуудсанд:</span>
         @foreach ([1, 2, 4, 6] as $option)
             <a href="{{ request()->fullUrlWithQuery(['copies' => $option]) }}"
@@ -218,7 +233,7 @@
 
     <div class="sheet">
         @for ($i = 0; $i < $copies; $i++)
-            <div class="slip">
+            <div class="slip" contenteditable="true" spellcheck="false">
                 <div>
                     <h1>ЧӨЛӨӨНИЙ ХУУДАС</h1>
                     <div class="no">№ {!! $fill($slipNumber, 16) !!}</div>
@@ -238,11 +253,43 @@
                     @if ($signerName !== '')
                         <span class="line">{{ $signerName }}</span>
                     @else
-                        <span class="line">/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /</span>
+                        <span class="line">/<span class="gap"></span>/</span>
                     @endif
                 </div>
             </div>
         @endfor
     </div>
+
+    <script>
+        /*
+         * Нэг хуудсанд хэд ч хувь байсан нэгийг нь засахад бусад нь
+         * дагана — хоёр хувь өөр өөр бичвэртэй гарахаас сэргийлнэ.
+         */
+        (function () {
+            var slips = Array.prototype.slice.call(document.querySelectorAll('.slip'));
+
+            if (slips.length < 2) {
+                return;
+            }
+
+            var syncing = false;
+
+            slips.forEach(function (slip) {
+                slip.addEventListener('input', function () {
+                    if (syncing) {
+                        return;
+                    }
+
+                    syncing = true;
+                    slips.forEach(function (other) {
+                        if (other !== slip) {
+                            other.innerHTML = slip.innerHTML;
+                        }
+                    });
+                    syncing = false;
+                });
+            });
+        })();
+    </script>
 </body>
 </html>
