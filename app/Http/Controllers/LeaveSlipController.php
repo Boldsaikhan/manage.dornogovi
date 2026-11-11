@@ -61,7 +61,8 @@ class LeaveSlipController extends Controller
             'org' => $this->genitive($leave->org_name ?: $leave->department?->name),
             'unit' => $this->genitive($leave->getAttribute('unit_name')),
             'position' => $this->positionOf($leave),
-            'person' => $leave->person_name ?: ($leave->user?->name ?? ''),
+            // «О.Баяртуяад … чөлөө олгов» — өгөх оршихын тийн ялгал.
+            'person' => MongolianCase::dative($leave->person_name ?: ($leave->user?->name ?? '')),
             'slipNumber' => $slipNumber,
             'year' => $start?->format('Y'),
             'month' => $start?->format('n'),

@@ -296,6 +296,30 @@ class LeaveSlipPrintTest extends TestCase
             ->assertViewHas('reason', 'ЗДТГ-ын удирдлагын шийдвэрээр');
     }
 
+    public function test_the_person_is_named_in_the_dative(): void
+    {
+        $leave = $this->leave();
+        $leave->forceFill(['person_name' => 'О.Баяртуяа'])->save();
+
+        $this->actingAs($this->admin())
+            ->get(route('leaves.slip', $leave))
+            ->assertOk()
+            ->assertViewHas('person', 'О.Баяртуяад');
+    }
+
+    public function test_the_reason_is_wrapped_in_slashes(): void
+    {
+        $leave = $this->leave();
+        $leave->forceFill(['reason' => 'Хүүхдийн төрсөн өдөр'])->save();
+
+        $this->actingAs($this->admin())
+            ->get(route('leaves.slip', $leave))
+            ->assertOk()
+            ->assertSee('/<span class="filled"', false)
+            ->assertSee('хүүхдийн төрсөн өдөр', false)
+            ->assertDontSee('үндэслэлээр');
+    }
+
     /* ── Баталсан албан хаагч ────────────────────────────────── */
 
     public function test_the_slip_shows_who_approved_it(): void

@@ -260,8 +260,8 @@
                         {{-- Байгууллага → хэлтэс → албан тушаал → нэр. --}}
                         {!! $fill($org, 28) !!}
                         @if (trim((string) $unit) !== ''){!! $fill($unit, 28) !!}@endif
-                        {!! $fill($position, 24) !!} {!! $fill($person, 42) !!} нь
-                        {!! $fill($reason, 48) !!} үндэслэлээр
+                        {!! $fill($position, 24) !!} {!! $fill($person, 42) !!}
+                        /{!! $fill($reason, 48) !!}/
                         {{ $year ?: '____' }} оны {!! $fill($month ? (string) $month : null, 8) !!} {{ $monthOrdinal }} сарын
                         {!! $fill($day ? (string) $day : null, 8) !!}-{{ $daySuffix }} өдрөөс
                         ажлын {!! $fill($days ? (string) $days : null, 10) !!} өдрийн

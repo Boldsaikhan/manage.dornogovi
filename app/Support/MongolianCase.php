@@ -343,6 +343,66 @@ class MongolianCase
     }
 
     /**
+     * Өгөх оршихын тийн ялгал — «О.Баяртуяа» → «О.Баяртуяад».
+     *
+     * Хүний нэрэнд зориулсан энгийн дүрэм:
+     *  • эгшиг, й, ь, л, м, н → -д
+     *  • б, д, т → холбоос эгшиг + д («Бат» → «Батад»)
+     *  • бусад гийгүүлэгч → -т («Батзориг» → «Батзоригт»)
+     *
+     * Хуудсан дээр гараар засч болдог тул ховор тохиолдлыг
+     * хэрэглэгч өөрөө залруулна.
+     */
+    public static function dative(string $name): string
+    {
+        $name = trim($name);
+
+        if ($name === '') {
+            return '';
+        }
+
+        $last = mb_strtolower(mb_substr($name, -1));
+
+        if (in_array($last, self::VOWELS, true) || in_array($last, ['й', 'ь', 'л', 'м', 'н'], true)) {
+            return $name.'д';
+        }
+
+        if (in_array($last, ['б', 'д', 'т'], true)) {
+            return $name.self::linkingVowel($name).'д';
+        }
+
+        return $name.'т';
+    }
+
+    /** Холбоос эгшиг — эгшгийн зохицол, уяман дагана. */
+    private static function linkingVowel(string $word): string
+    {
+        $letters = preg_split('//u', mb_strtolower($word), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        for ($i = count($letters) - 1; $i >= 0; $i--) {
+            $letter = $letters[$i];
+
+            if (in_array($letter, ['о', 'ё'], true)) {
+                return 'о';
+            }
+
+            if (in_array($letter, ['ө', 'ү'], true)) {
+                return 'ө';
+            }
+
+            if (in_array($letter, ['а', 'у', 'я', 'ы'], true)) {
+                return 'а';
+            }
+
+            if (in_array($letter, ['э', 'и', 'е', 'ю'], true)) {
+                return 'э';
+            }
+        }
+
+        return 'а';
+    }
+
+    /**
      * Тоогоор бичсэн дэс дугаарын нөхцөл — «11 дүгээр сар».
      *
      * Эгшгийн зохицлыг сүүлийн оронгийн тоогоор тодорхойлно:
