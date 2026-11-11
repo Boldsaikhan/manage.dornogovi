@@ -652,7 +652,7 @@ const visibleRows = computed(() => {
                             <th rowspan="2">Журам</th>
                             <th colspan="3" class="ui-register__head-group--issued">Чөлөөний хугацаа</th>
                             <th rowspan="2">Үндэслэл</th>
-                            <th rowspan="2">Орлон гарын<br>үсэг зурсан</th>
+                            <th rowspan="2">Баталсан</th>
                             <th rowspan="2" class="ui-sticky-actions" />
                         </tr>
                         <tr>

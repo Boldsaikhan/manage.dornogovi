@@ -21,8 +21,11 @@ class PhoneDirectoryEntry extends Model
     ];
 
     /**
-     * Удирдах албан тушаалтнуудын сонголт — зөвхөн Аймгийн Засаг дарга,
-     * Засаг даргын орлогч, Хэлтсийн дарга нар, Тамгын дарга.
+     * «Баталсан» баганын сонголт — удирдлагууд болон хэлтсийн дарга нар.
+     *
+     * Удирдлагууд гэдэгт утасны жагсаалтын «Удирдлагууд» ангилалд байгаа
+     * бүх хүн (Засаг дарга, орлогч, Тамгын газрын дарга гэх мэт) орно.
+     * Түүнээс гадна албан тушаалаараа хэлтсийн дарга нар нэмэгдэнэ.
      *
      * Гарын үсэг зурах, зөвшөөрөх хүн сонгодог баганад ашиглана (чөлөөний
      * бүртгэл, ээлжийн амралтын бүртгэл).
@@ -34,7 +37,7 @@ class PhoneDirectoryEntry extends Model
         $entries = static::query()
             ->orderBy('org_order')
             ->orderBy('sort_order')
-            ->get(['person_name', 'position']);
+            ->get(['person_name', 'position', 'category']);
 
         $options = [];
 
@@ -45,7 +48,8 @@ class PhoneDirectoryEntry extends Model
                 continue;
             }
 
-            $isLeaderRole = (str_contains($position, 'засаг') && str_contains($position, 'дарг'))
+            $isLeaderRole = $row->category === 'udirdlaga'
+                || (str_contains($position, 'засаг') && str_contains($position, 'дарг'))
                 || (str_contains($position, 'хэлтс') && str_contains($position, 'дарг'))
                 || str_contains($position, 'тамгын');
 
