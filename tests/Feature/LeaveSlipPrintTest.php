@@ -32,15 +32,26 @@ class LeaveSlipPrintTest extends TestCase
         ]);
     }
 
-    public function test_the_slip_defaults_to_two_copies_on_a4(): void
+    public function test_the_slip_defaults_to_one_copy_on_a5_landscape(): void
     {
         $response = $this->actingAs($this->admin())
             ->get(route('leaves.slip', $this->leave()))
             ->assertOk();
 
-        $response->assertViewHas('copies', 2);
+        $response->assertViewHas('copies', 1);
+        $response->assertViewHas('paper', 'a5');
+        $response->assertViewHas('landscape', true);
         $response->assertViewHas('pageWidth', 210);
-        $response->assertViewHas('pageHeight', 297);
+        $response->assertViewHas('pageHeight', 148);
+    }
+
+    public function test_a4_and_portrait_can_still_be_chosen(): void
+    {
+        $this->actingAs($this->admin())
+            ->get(route('leaves.slip', $this->leave()).'?paper=a4&orient=portrait')
+            ->assertOk()
+            ->assertViewHas('pageWidth', 210)
+            ->assertViewHas('pageHeight', 297);
     }
 
     public function test_the_copy_count_can_still_be_overridden(): void
@@ -51,12 +62,12 @@ class LeaveSlipPrintTest extends TestCase
             ->assertViewHas('copies', 6);
     }
 
-    public function test_an_unknown_copy_count_falls_back_to_two(): void
+    public function test_an_unknown_copy_count_falls_back_to_one(): void
     {
         $this->actingAs($this->admin())
             ->get(route('leaves.slip', $this->leave()).'?copies=3')
             ->assertOk()
-            ->assertViewHas('copies', 2);
+            ->assertViewHas('copies', 1);
     }
 
     public function test_a5_and_landscape_can_be_chosen(): void
@@ -64,7 +75,7 @@ class LeaveSlipPrintTest extends TestCase
         $leave = $this->leave();
 
         $this->actingAs($this->admin())
-            ->get(route('leaves.slip', $leave).'?paper=a5')
+            ->get(route('leaves.slip', $leave).'?paper=a5&orient=portrait')
             ->assertOk()
             ->assertViewHas('pageWidth', 148)
             ->assertViewHas('pageHeight', 210);
@@ -93,7 +104,7 @@ class LeaveSlipPrintTest extends TestCase
 
         // Нэг A4-д нэг хувь — бүтэн хэмжээ.
         $full = $this->actingAs($this->admin())
-            ->get(route('leaves.slip', $leave).'?copies=1')
+            ->get(route('leaves.slip', $leave).'?paper=a4&orient=portrait&copies=1')
             ->assertOk();
 
         // A5-д зургаан хувь — багтаахын тулд жижигрэнэ.
@@ -173,10 +184,10 @@ class LeaveSlipPrintTest extends TestCase
 
         foreach ([
             '?copies=1',
-            '?copies=2',
-            '?paper=a5&copies=1',
             '?paper=a5&orient=landscape&copies=1',
-            '?orient=landscape&copies=2',
+            '?paper=a5&orient=portrait&copies=1',
+            '?paper=a4&orient=portrait&copies=1',
+            '?paper=a4&orient=portrait&copies=2',
         ] as $query) {
             $html = $this->actingAs($this->admin())
                 ->get(route('leaves.slip', $leave).$query)
