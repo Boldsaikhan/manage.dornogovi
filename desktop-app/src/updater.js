@@ -132,6 +132,9 @@ const launchInstallerAfterExit = (installer) => {
 /** @type {import('electron').BrowserWindow|null} */
 let updateWin = null;
 
+/** Шинэчлэлтийн цонхыг нээсэн үндсэн цонх. */
+let parentWin = null;
+
 /** Одоо санал болгож буй шинэчлэлт. */
 let pending = null;
 
@@ -148,12 +151,39 @@ const send = (state) => {
 
 const mb = (bytes) => (bytes / 1024 / 1024).toFixed(1);
 
+/**
+ * Үндсэн цонхыг эргүүлж идэвхжүүлнэ.
+ *
+ * ⚠️ Windows дээр modal хүү цонхыг destroy() хийхэд эцэг цонх
+ *    идэвхгүй (disabled) хэвээр үлддэг — дарахад зөвхөн «биб» дуу
+ *    гарч, програм огт хариу өгөхгүй болдог байв. Иймд цонхыг
+ *    modal-гүй нээж, хаах бүрт эцгийг нь шалгаж идэвхжүүлнэ.
+ */
+const releaseParent = () => {
+    if (! parentWin || parentWin.isDestroyed()) {
+        parentWin = null;
+
+        return;
+    }
+
+    try {
+        if (typeof parentWin.setEnabled === 'function') {
+            parentWin.setEnabled(true);
+        }
+
+        parentWin.focus();
+    } catch (error) {
+        // Цонх хаагдаж байх үед алдаа өгч болно — алгасна.
+    }
+};
+
 const closeWindow = () => {
     if (updateWin && ! updateWin.isDestroyed()) {
         updateWin.destroy();
     }
 
     updateWin = null;
+    releaseParent();
 };
 
 const startDownload = async () => {
@@ -246,11 +276,20 @@ const openWindow = (parent) => {
     wire();
     closeWindow();
 
+    parentWin = parent ?? null;
+
+    /*
+     * modal: true БИШ — Windows дээр modal цонх эцэг цонхоо идэвхгүй
+     * болгодог ба хаагдахад нь үргэлж буцааж идэвхжүүлдэггүй. Оронд нь
+     * үргэлж дээр харагдана: хэрэглэгч анзаарахгүй өнгөрөхгүй, гэхдээ
+     * програм хэзээ ч гацахгүй.
+     */
     updateWin = new BrowserWindow({
         width: 460,
         height: 300,
         parent: parent ?? undefined,
-        modal: Boolean(parent),
+        modal: false,
+        alwaysOnTop: true,
         resizable: false,
         minimizable: false,
         maximizable: false,
@@ -280,6 +319,7 @@ const openWindow = (parent) => {
 
     updateWin.on('closed', () => {
         updateWin = null;
+        releaseParent();
     });
 };
 
