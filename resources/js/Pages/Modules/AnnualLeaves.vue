@@ -462,7 +462,7 @@ const visibleRows = computed(() => (
             <!-- Бүртгэлийн хүснэгт — .ui-register стандарт систем -->
             <TableScrollViewport v-else max-height="min(72vh, calc(100dvh - 11rem))">
                 <div ref="sheetEl" class="ui-register">
-                <table class="ui-register__table min-w-[113rem]">
+                <table class="ui-register__table ui-register--pin-actions min-w-[113rem]">
                     <colgroup>
                         <col style="width: 2.5rem" />
                         <col style="width: 3rem" />
@@ -478,7 +478,7 @@ const visibleRows = computed(() => (
                         <col style="width: 10rem" />
                         <col style="width: 10rem" />
                         <col style="width: 7rem" />
-                        <col style="width: 4rem" />
+                        <col style="width: 7rem" />
                     </colgroup>
                     <thead>
                         <tr>
@@ -501,7 +501,7 @@ const visibleRows = computed(() => (
                             <th colspan="2" class="ui-register__head-group--issued">Ээлжийн амралтын</th>
                             <th rowspan="2">Зөвшөөрсөн</th>
                             <th colspan="3" class="ui-register__head-group--numbers">Эзгүй хугацаанд орлох албан тушаалтан</th>
-                            <th rowspan="2" />
+                            <th rowspan="2" class="ui-sticky-actions" />
                         </tr>
                         <tr>
                             <th>Эхлэх огноо</th>
@@ -536,7 +536,7 @@ const visibleRows = computed(() => (
                             <th><input v-model="filters.substitute_position" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.substitute_name" type="search" placeholder="Хайх" /></th>
                             <th><input v-model="filters.substitute_phone" type="search" placeholder="Хайх" /></th>
-                            <th />
+                            <th class="ui-sticky-actions" />
                         </tr>
                     </thead>
                     <tbody>
@@ -643,8 +643,8 @@ const visibleRows = computed(() => (
                                     @commit="(v) => saveField(row.id, 'substitute_phone', v)"
                                 />
                             </td>
-                            <td class="text-center">
-                                <div class="flex items-center justify-center gap-1">
+                            <td class="ui-sticky-actions text-center">
+                                <div class="flex items-center justify-center gap-0.5">
                                     <button
                                         v-if="canManage"
                                         type="button"
