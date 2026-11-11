@@ -167,6 +167,26 @@ class LeaveSlipPrintTest extends TestCase
             ->assertViewHas('slipNumber', 'А-12');
     }
 
+    public function test_the_standard_font_size_holds_in_every_orientation(): void
+    {
+        $leave = $this->leave();
+
+        foreach ([
+            '?copies=1',
+            '?copies=2',
+            '?paper=a5&copies=1',
+            '?paper=a5&orient=landscape&copies=1',
+            '?orient=landscape&copies=2',
+        ] as $query) {
+            $html = $this->actingAs($this->admin())
+                ->get(route('leaves.slip', $leave).$query)
+                ->assertOk()
+                ->getContent();
+
+            $this->assertSame(12.0, $this->bodyFontPt($html), $query);
+        }
+    }
+
     /* ── Баталсан албан хаагч ────────────────────────────────── */
 
     public function test_the_slip_shows_who_approved_it(): void
