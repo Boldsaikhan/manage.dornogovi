@@ -76,7 +76,8 @@ npm run dist
 | Камер, микрофон, байршил | Бүгдийг хаасан; clipboard зөвхөн системийн хуудсанд |
 | Дэлгэц дүүрэн (`fullscreen`) | Зөвшөөрнө — холбосон сайтын Fullscreen товч ажиллана |
 | `<webview>` хавсаргах | `will-attach-webview` таслана |
-| Гуравдагч цонх (popup) | `setWindowOpenHandler` — бүгд таб болж, шалгалтаар дамжина |
+| Гуравдагч цонх (popup) | `setWindowOpenHandler` — SSO/OIDC ижил табд, бусад нь шинэ таб |
+| Keycloak «Cookie олдсонгүй» | SSO cookie-г `SameSite=None; Secure` болгож, ThirdPartyStoragePartitioning унтраана |
 | Бүртгэлд нууц үг унших | Логт зөвхөн хост, үйлдлийн нэр бичигдэнэ |
 
 Шалгах: `npm start` → DevTools консолоос `window.manageDesktop` нь системийн
