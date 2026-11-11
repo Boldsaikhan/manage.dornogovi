@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DocumentFormat;
 use App\Models\Leave;
+use App\Support\LeaveSlipNumber;
 use App\Support\ModuleAccess;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -37,6 +38,9 @@ class LeaveSlipController extends Controller
 
         $start = $leave->start_date;
 
+        // Дугааргүй бол хэвлэх үед автоматаар олгоно.
+        $slipNumber = LeaveSlipNumber::ensure($leave);
+
         return view('leaves.slip', [
             'leave' => $leave,
             'copies' => $copies,
@@ -49,7 +53,7 @@ class LeaveSlipController extends Controller
             'format' => DocumentFormat::defaultFormat(),
             'unit' => $this->unitName($leave->org_name ?: $leave->department?->name),
             'person' => $leave->person_name ?: ($leave->user?->name ?? ''),
-            'slipNumber' => $leave->slip_number,
+            'slipNumber' => $slipNumber,
             'year' => $start?->format('Y'),
             'month' => $start?->format('n'),
             'day' => $start?->format('j'),
