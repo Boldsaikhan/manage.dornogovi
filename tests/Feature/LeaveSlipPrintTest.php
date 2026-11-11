@@ -107,6 +107,67 @@ class LeaveSlipPrintTest extends TestCase
         );
     }
 
+    /* ── Дугаарлалт ──────────────────────────────────────────── */
+
+    public function test_the_slip_number_is_handed_out_on_the_first_print(): void
+    {
+        $leave = $this->leave();
+
+        $this->actingAs($this->admin())
+            ->get(route('leaves.slip', $leave))
+            ->assertOk()
+            ->assertViewHas('slipNumber', '1');
+
+        $this->assertSame('1', $leave->fresh()->slip_number);
+
+        // Дахин хэвлэхэд дугаар нь өсөхгүй.
+        $this->actingAs($this->admin())
+            ->get(route('leaves.slip', $leave))
+            ->assertOk()
+            ->assertViewHas('slipNumber', '1');
+    }
+
+    public function test_each_new_slip_takes_the_next_number(): void
+    {
+        $first = $this->leave();
+        $second = $this->leave();
+
+        $this->actingAs($this->admin())->get(route('leaves.slip', $first))->assertOk();
+        $this->actingAs($this->admin())->get(route('leaves.slip', $second))->assertOk();
+
+        $this->assertSame('1', $first->fresh()->slip_number);
+        $this->assertSame('2', $second->fresh()->slip_number);
+    }
+
+    public function test_the_numbering_starts_over_each_year(): void
+    {
+        $old = $this->leave();
+        $old->forceFill(['start_date' => '2025-03-04', 'end_date' => '2025-03-04'])->save();
+
+        $this->actingAs($this->admin())->get(route('leaves.slip', $old))->assertOk();
+        $this->assertSame('1', $old->fresh()->slip_number);
+
+        $this->actingAs($this->admin())->get(route('leaves.slip', $this->leave()))->assertOk();
+
+        // 2026 он дахин 1-ээс эхэлнэ.
+        $this->assertSame(2, Leave::query()->where('slip_number', '1')->count());
+    }
+
+    public function test_a_hand_written_number_is_left_alone(): void
+    {
+        $leave = $this->leave();
+        $leave->forceFill(['slip_number' => 'А-12'])->save();
+
+        $this->actingAs($this->admin())
+            ->get(route('leaves.slip', $leave))
+            ->assertOk()
+            ->assertViewHas('slipNumber', 'А-12');
+
+        // Тоон бус дугаар дарааллыг эвдэхгүй.
+        $this->actingAs($this->admin())->get(route('leaves.slip', $this->leave()))->assertOk();
+        $this->assertSame('1', Leave::query()->latest('id')->first()->slip_number);
+    }
+
     /** `.slip .body` дотор бичигдсэн фонтын хэмжээ. */
     private function bodyFontPt(string $html): float
     {
