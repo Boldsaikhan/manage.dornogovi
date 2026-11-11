@@ -342,6 +342,27 @@ class MongolianCase
         return $word;
     }
 
+    /**
+     * Тоогоор бичсэн дэс дугаарын нөхцөл — «11 дүгээр сар».
+     *
+     * Эгшгийн зохицлыг сүүлийн оронгийн тоогоор тодорхойлно:
+     * нэг, дөрөв, ес → дүгээр; бусад нь → дугаар.
+     */
+    public static function ordinalSuffix(?int $number): string
+    {
+        return in_array(abs((int) $number) % 10, [1, 4, 9], true) ? 'дүгээр' : 'дугаар';
+    }
+
+    /**
+     * Сарын өдрийн харьяалах нөхцөл — «12-ны», «11-ний».
+     *
+     * Дээрхтэй ижил дүрэм: нэг, дөрөв, ес → -ний; бусад нь → -ны.
+     */
+    public static function daySuffix(?int $day): string
+    {
+        return in_array(abs((int) $day) % 10, [1, 4, 9], true) ? 'ний' : 'ны';
+    }
+
     /** Эх үгийн том/жижиг үсгийн хэлбэрийг хадгална. */
     private static function matchCase(string $original, string $inflected): string
     {
