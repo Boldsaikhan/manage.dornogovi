@@ -64,14 +64,29 @@ const noticeUrl = (row) => route('annual-leaves.notice', row.id);
  */
 const editMode = ref(false);
 
-const rowEditable = computed(() => props.canManage && editMode.value);
+/** Тусад нь засаж байгаа мөрүүд — мөр бүрийн харандаа товчоор. */
+const openRows = ref([]);
+
+const rowEditable = (row) => props.canManage
+    && (editMode.value || openRows.value.includes(row.id));
 
 const toggleEditMode = () => {
     editMode.value = ! editMode.value;
+
+    if (! editMode.value) {
+        openRows.value = [];
+    }
+};
+
+const toggleRowEditing = (row) => {
+    openRows.value = openRows.value.includes(row.id)
+        ? openRows.value.filter((id) => id !== row.id)
+        : [...openRows.value, row.id];
 };
 
 watch(() => props.activeScope, () => {
     editMode.value = false;
+    openRows.value = [];
 });
 
 /** Мөр сонгож, Excel/Word/PDF-ээр татах. */
@@ -549,7 +564,7 @@ const visibleRows = computed(() => (
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].person_name"
                                     :options="peopleOptions"
-                                    :editable="rowEditable"
+                                    :editable="rowEditable(row)"
                                     empty-label=""
                                     placeholder="Овог нэр…"
                                     @commit="(v) => saveField(row.id, 'person_name', v)"
@@ -561,7 +576,7 @@ const visibleRows = computed(() => (
                                     v-model="drafts[row.id].work_years"
                                     type="number"
                                     align="center"
-                                    :editable="rowEditable"
+                                    :editable="rowEditable(row)"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'work_years', v)"
                                 />
@@ -572,7 +587,7 @@ const visibleRows = computed(() => (
                                     v-model="drafts[row.id].entitled_days"
                                     type="number"
                                     align="center"
-                                    :editable="rowEditable"
+                                    :editable="rowEditable(row)"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'entitled_days', v)"
                                 />
@@ -583,7 +598,7 @@ const visibleRows = computed(() => (
                                     v-model="drafts[row.id].start_date"
                                     type="date"
                                     align="center"
-                                    :editable="rowEditable"
+                                    :editable="rowEditable(row)"
                                     empty-label=""
                                     @commit="(v) => saveField(row.id, 'start_date', v)"
                                 />
@@ -593,7 +608,7 @@ const visibleRows = computed(() => (
                             </td>
                             <td class="px-1.5 py-1.5">
                                 <select
-                                    v-if="rowEditable && drafts[row.id]"
+                                    v-if="rowEditable(row) && drafts[row.id]"
                                     v-model="drafts[row.id].signer"
                                     class="w-full border-0 bg-transparent text-[11px] outline-none focus:bg-sky-50"
                                     @change="saveField(row.id, 'signer', drafts[row.id].signer)"
@@ -611,7 +626,7 @@ const visibleRows = computed(() => (
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].substitute_name"
                                     :options="peopleOptions"
-                                    :editable="rowEditable"
+                                    :editable="rowEditable(row)"
                                     empty-label=""
                                     placeholder="Овог нэр…"
                                     @commit="(v) => saveField(row.id, 'substitute_name', v)"
@@ -622,7 +637,7 @@ const visibleRows = computed(() => (
                                     v-if="drafts[row.id]"
                                     v-model="drafts[row.id].substitute_phone"
                                     align="center"
-                                    :editable="rowEditable"
+                                    :editable="rowEditable(row)"
                                     empty-label=""
                                     placeholder="Утас…"
                                     @commit="(v) => saveField(row.id, 'substitute_phone', v)"
@@ -630,6 +645,22 @@ const visibleRows = computed(() => (
                             </td>
                             <td class="text-center">
                                 <div class="flex items-center justify-center gap-1">
+                                    <button
+                                        v-if="canManage"
+                                        type="button"
+                                        class="ui-icon-btn"
+                                        :class="rowEditable(row) ? 'text-brand-orange-600' : ''"
+                                        :title="rowEditable(row) ? 'Засварыг дуусгах' : 'Энэ мөрийг засах'"
+                                        :aria-label="rowEditable(row) ? 'Засварыг дуусгах' : 'Энэ мөрийг засах'"
+                                        @click="toggleRowEditing(row)"
+                                    >
+                                        <svg v-if="rowEditable(row)" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                        <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 20h4l10-10a2.1 2.1 0 1 0-3-3L5 17v3z" />
+                                        </svg>
+                                    </button>
                                     <a
                                         :href="noticeUrl(row)"
                                         target="_blank"
@@ -642,7 +673,7 @@ const visibleRows = computed(() => (
                                         </svg>
                                     </a>
                                     <button
-                                        v-if="rowEditable"
+                                        v-if="rowEditable(row)"
                                         type="button"
                                         class="ui-icon-btn ui-icon-btn--danger"
                                         title="Устгах"
