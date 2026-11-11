@@ -167,9 +167,13 @@
 
         u { text-underline-offset: 2px; }
 
+        /*
+         * Албан тушаал — гарын үсэг — нэр гэж зэрэгцэнэ. Хоёр ирмэг рүү
+         * тараахгүй: хооронд нь зөвхөн гарын үсэг зурах зай үлдэнэ.
+         */
         .sign {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-start;
             align-items: flex-end;
             gap: 4mm;
             /* Өгүүлбэрийн доороос 3 хоосон мөр. */
@@ -178,14 +182,13 @@
             font-size: {{ $signPt }}pt;
         }
 
-        .sign .title {
-            text-transform: uppercase;
-            max-width: 58%;
-        }
+        .sign .title { text-transform: uppercase; }
+
+        .sign .name { white-space: nowrap; }
 
         /* Гарын үсэг зурах зай — ташуу зураасын хооронд. */
         .sign .line { white-space: nowrap; }
-        .sign .gap { display: inline-block; min-width: 32mm; }
+        .sign .gap { display: inline-block; min-width: 26mm; }
 
         /* Засварын горим — хэвлэхэд ул мөр үлдэхгүй. */
         [contenteditable]:focus { outline: none; }
@@ -249,13 +252,10 @@
                     </p>
                 </div>
                 <div class="sign">
-                    {{-- Баталсан албан хаагчийн албан тушаал — сонгоогүй бол гараар бичих зай. --}}
-                    <span class="title">{!! $signerTitle !== '' ? e($signerTitle) : $fill(null, 60) !!}</span>
-                    @if ($signerName !== '')
-                        <span class="line">{{ $signerName }}</span>
-                    @else
-                        <span class="line">/<span class="gap"></span>/</span>
-                    @endif
+                    {{-- Баталсан албан хаагч: албан тушаал — гарын үсгийн зай — нэр. --}}
+                    <span class="title">{!! $signerTitle !== '' ? e($signerTitle) : $fill(null, 45) !!}</span>
+                    <span class="line">/<span class="gap"></span>/</span>
+                    <span class="name">{!! $fill($signerName, 32) !!}</span>
                 </div>
             </div>
         @endfor
