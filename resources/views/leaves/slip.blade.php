@@ -146,14 +146,21 @@
             text-indent: 10mm;
         }
 
-        .blank, .filled {
+        /* Бөглөх зайд зурах мөр — цэггүй, нимгэн зураас. */
+        .blank {
             display: inline-block;
-            border-bottom: 1px dotted #000;
+            border-bottom: 1px solid #000;
             vertical-align: bottom;
             padding: 0 0.8mm;
         }
 
-        .filled { text-align: center; }
+        /* Бөглөгдсөн утга — доогуураа зураасгүй, энгийн бичвэр. */
+        .filled {
+            display: inline-block;
+            vertical-align: bottom;
+            padding: 0 0.8mm;
+            text-align: center;
+        }
 
         u { text-underline-offset: 2px; }
 
@@ -223,7 +230,7 @@
                         {!! $fill($day ? (string) $day : null, 8) !!}-ны өдрөөс
                         ажлын {!! $fill($days ? (string) $days : null, 10) !!} өдрийн
                         чөлөө /{!! $kindMark('tsalintai') !!}, {!! $kindMark('tsalingui') !!}, {!! $kindMark('eeljiin') !!}/
-                        олгов. <em>Доогуур зурах</em>
+                        олгов.
                     </p>
                 </div>
                 <div class="sign">
