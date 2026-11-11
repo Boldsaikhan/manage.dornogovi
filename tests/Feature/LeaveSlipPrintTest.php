@@ -187,6 +187,46 @@ class LeaveSlipPrintTest extends TestCase
         }
     }
 
+    /* ── Байгууллага, хэлтэс, албан тушаал ───────────────────── */
+
+    public function test_the_sentence_names_the_office_then_the_unit_then_the_post(): void
+    {
+        \App\Models\PhoneDirectoryEntry::create([
+            'org_name' => 'Салбарын хяналт, зохицуулалтын хэлтэс',
+            'category' => 'heltes',
+            'person_name' => 'Ц.Энхтунгалаг',
+            'position' => 'Ахлах мэргэжилтэн',
+        ]);
+
+        $leave = $this->leave();
+        $leave->forceFill([
+            'org_name' => 'Аймгийн Засаг даргын Тамгын газар',
+            'unit_name' => 'Салбарын хяналт, зохицуулалтын хэлтэс',
+        ])->save();
+
+        $this->actingAs($this->admin())
+            ->get(route('leaves.slip', $leave))
+            ->assertOk()
+            ->assertViewHas('org', 'Аймгийн Засаг даргын Тамгын газрын')
+            ->assertViewHas('unit', 'Салбарын хяналт, зохицуулалтын хэлтсийн')
+            ->assertViewHas('position', 'Ахлах мэргэжилтэн');
+    }
+
+    public function test_without_a_unit_the_post_follows_the_office(): void
+    {
+        $leave = $this->leave();
+        $leave->forceFill([
+            'org_name' => 'Аймгийн Засаг даргын Тамгын газар',
+            'unit_name' => null,
+        ])->save();
+
+        $this->actingAs($this->admin())
+            ->get(route('leaves.slip', $leave))
+            ->assertOk()
+            ->assertViewHas('unit', '')
+            ->assertDontSee('хэлтсийн мэргэжилтэн');
+    }
+
     /* ── Баталсан албан хаагч ────────────────────────────────── */
 
     public function test_the_slip_shows_who_approved_it(): void
