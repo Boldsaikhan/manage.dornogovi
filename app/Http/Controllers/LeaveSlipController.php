@@ -61,10 +61,38 @@ class LeaveSlipController extends Controller
             'year' => $start?->format('Y'),
             'month' => $start?->format('n'),
             'day' => $start?->format('j'),
+            // «11 дүгээр сарын 12-ны» — эгшгийн зохицол.
+            'monthOrdinal' => MongolianCase::ordinalSuffix((int) $start?->format('n')),
+            'daySuffix' => MongolianCase::daySuffix((int) $start?->format('j')),
             'days' => $leave->days,
-            'reason' => $leave->reason,
+            'reason' => self::lowerFirst($leave->reason),
             'kind' => $leave->type,
         ]);
+    }
+
+    /**
+     * Өгүүлбэрийн дунд орох үгийн эхний үсгийг жижигрүүлнэ.
+     *
+     * «Хувийн ажлаар» гэж бүртгэсэн ч хуудсан дээр өгүүлбэрийн дунд
+     * «хувийн ажлаар» гэж бичигдэнэ. Товчлол (ЗДТГ) бол хөндөхгүй.
+     */
+    private static function lowerFirst(?string $text): string
+    {
+        $text = trim((string) $text);
+
+        if ($text === '') {
+            return '';
+        }
+
+        $first = mb_substr($text, 0, 1);
+        $second = mb_substr($text, 1, 1);
+
+        // Бүтнээрээ том үсгээр эхэлсэн товчлолыг хэвээр нь үлдээнэ.
+        if ($second !== '' && $second === mb_strtoupper($second) && $second !== mb_strtolower($second)) {
+            return $text;
+        }
+
+        return mb_strtolower($first).mb_substr($text, 1);
     }
 
     /** Байгууллага, хэлтсийн нэрийг харьяалахын тийн ялгалд оруулна. */

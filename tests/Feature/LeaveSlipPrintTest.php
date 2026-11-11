@@ -227,6 +227,51 @@ class LeaveSlipPrintTest extends TestCase
             ->assertDontSee('хэлтсийн мэргэжилтэн');
     }
 
+    /* ── Огноо, үндэслэл ─────────────────────────────────────── */
+
+    public function test_the_date_carries_the_mongolian_ordinal(): void
+    {
+        $leave = $this->leave();
+
+        // 2026-10-20 → «10 дугаар сарын 20-ны».
+        $this->actingAs($this->admin())
+            ->get(route('leaves.slip', $leave))
+            ->assertOk()
+            ->assertViewHas('monthOrdinal', 'дугаар')
+            ->assertViewHas('daySuffix', 'ны');
+
+        // 2026-11-24 → «11 дүгээр сарын 24-ний».
+        $leave->forceFill(['start_date' => '2026-11-24', 'end_date' => '2026-11-24'])->save();
+
+        $this->actingAs($this->admin())
+            ->get(route('leaves.slip', $leave))
+            ->assertOk()
+            ->assertViewHas('monthOrdinal', 'дүгээр')
+            ->assertViewHas('daySuffix', 'ний');
+    }
+
+    public function test_the_reason_starts_in_lower_case(): void
+    {
+        $leave = $this->leave();
+        $leave->forceFill(['reason' => 'Хувийн ажлаар'])->save();
+
+        $this->actingAs($this->admin())
+            ->get(route('leaves.slip', $leave))
+            ->assertOk()
+            ->assertViewHas('reason', 'хувийн ажлаар');
+    }
+
+    public function test_an_abbreviation_keeps_its_capitals(): void
+    {
+        $leave = $this->leave();
+        $leave->forceFill(['reason' => 'ЗДТГ-ын удирдлагын шийдвэрээр'])->save();
+
+        $this->actingAs($this->admin())
+            ->get(route('leaves.slip', $leave))
+            ->assertOk()
+            ->assertViewHas('reason', 'ЗДТГ-ын удирдлагын шийдвэрээр');
+    }
+
     /* ── Баталсан албан хаагч ────────────────────────────────── */
 
     public function test_the_slip_shows_who_approved_it(): void
