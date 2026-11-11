@@ -238,6 +238,19 @@ class LeaveSlipPrintTest extends TestCase
             ->assertDontSee('хэлтсийн мэргэжилтэн');
     }
 
+    public function test_the_margins_follow_the_office_standard(): void
+    {
+        $leave = $this->leave();
+
+        foreach (['', '?paper=a4&orient=portrait'] as $query) {
+            $this->actingAs($this->admin())
+                ->get(route('leaves.slip', $leave).$query)
+                ->assertOk()
+                // дээд 30мм, баруун 20мм, доод 20мм, зүүн 20мм
+                ->assertSee('padding: 30mm 20mm 20mm 20mm', false);
+        }
+    }
+
     /* ── Огноо, үндэслэл ─────────────────────────────────────── */
 
     public function test_the_date_carries_the_mongolian_ordinal(): void

@@ -8,11 +8,14 @@
         // Хэмжээ нь контроллероос ирнэ (A4/A5, босоо/хэвтээ).
         $pageWidth = $pageWidth ?? 210;
         $pageHeight = $pageHeight ?? 297;
-        // Албан бичгийн захын зай — агуулгын өндөр / 3 ≈ нэг хуудасны өндөр
-        $marginTop = 12;
-        $marginRight = 12;
-        $marginBottom = 12;
-        $marginLeft = 14;
+        /*
+         * Албан бичгийн захын зай — цаасны хэмжээ, чиглэлээс үл хамаарна.
+         * Дээрээс 30 мм, хажуу талаасаа 20 мм, доороос 20 мм.
+         */
+        $marginTop = 30;
+        $marginRight = 20;
+        $marginBottom = 20;
+        $marginLeft = 20;
         $gapX = 8;
         $gapY = 6;
         $contentH = $pageHeight - $marginTop - $marginBottom;
@@ -31,12 +34,12 @@
          * стандарт хэмжээ хэвээрээ. Зөвхөн 4, 6 хувиар шахаж хэвлэхэд
          * бичвэр таслагдахгүйн тулд пропорциональ жижигрэнэ.
          *
-         * Жишиг талбай — A5 хэвтээ, нэг хувь. Түүнээс дээш талбайд
-         * стандарт хэмжээ хэрэглэнэ.
+         * Жишиг талбай — A5 хэвтээ, нэг хувь (170 × 98 мм). Түүнээс
+         * дээш талбайд стандарт хэмжээ хэрэглэнэ.
          */
         $fontName = $format?->font_name ?: 'Arial';
         $standardPt = (float) ($format?->font_size_pt ?: 12);
-        $baseline = 151;
+        $baseline = 129;
         $scale = min(1, sqrt($slipH * $slipW) / $baseline);
         $fontPt = max(7.5, round($standardPt * $scale, 1));
         $titlePt = $fontPt;
