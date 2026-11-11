@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\DocumentFormat;
 use App\Models\Leave;
+use App\Models\PhoneDirectoryEntry;
 use App\Support\LeaveSlipNumber;
+use App\Support\MongolianCase;
 use App\Support\ModuleAccess;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -51,7 +53,9 @@ class LeaveSlipController extends Controller
             'signerTitle' => $leave->signerTitle(),
             'signerName' => (string) $leave->signer,
             'format' => DocumentFormat::defaultFormat(),
-            'unit' => $this->unitName($leave->org_name ?: $leave->department?->name),
+            'org' => $this->genitive($leave->org_name ?: $leave->department?->name),
+            'unit' => $this->genitive($leave->getAttribute('unit_name')),
+            'position' => $this->positionOf($leave),
             'person' => $leave->person_name ?: ($leave->user?->name ?? ''),
             'slipNumber' => $slipNumber,
             'year' => $start?->format('Y'),
@@ -63,10 +67,24 @@ class LeaveSlipController extends Controller
         ]);
     }
 
-    private function unitName(?string $name): string
+    /** Байгууллага, хэлтсийн нэрийг харьяалахын тийн ялгалд оруулна. */
+    private function genitive(?string $name): string
     {
         $name = trim((string) $name);
 
-        return trim((string) preg_replace('/\s*хэлт(эс|сийн)$/ui', '', $name));
+        return $name === '' ? '' : MongolianCase::genitive($name);
+    }
+
+    /**
+     * Чөлөө авч буй хүний албан тушаал.
+     *
+     * Утасны жагсаалтаас нэрээр нь олно. Олдохгүй бол хоосон буцаана —
+     * хуудсан дээр гараар бичих зай үлдэнэ.
+     */
+    private function positionOf(Leave $leave): string
+    {
+        $name = trim((string) ($leave->person_name ?: ($leave->user?->name ?? '')));
+
+        return trim((string) (PhoneDirectoryEntry::positionFor($name) ?? ''));
     }
 }

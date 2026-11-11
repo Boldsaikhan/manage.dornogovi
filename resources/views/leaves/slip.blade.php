@@ -254,8 +254,10 @@
                     <h1>ЧӨЛӨӨНИЙ ХУУДАС</h1>
                     <div class="no">№ {!! $fill($slipNumber, 16) !!}</div>
                     <p class="body">
-                        Аймгийн ЗДТГ-ын {!! $fill($unit, 28) !!} хэлтсийн
-                        мэргэжилтэн {!! $fill($person, 42) !!} нь
+                        {{-- Байгууллага → хэлтэс → албан тушаал → нэр. --}}
+                        {!! $fill($org, 28) !!}
+                        @if (trim((string) $unit) !== ''){!! $fill($unit, 28) !!}@endif
+                        {!! $fill($position, 24) !!} {!! $fill($person, 42) !!} нь
                         {!! $fill($reason, 48) !!} үндэслэлээр
                         {{ $year ?: '____' }} оны {!! $fill($month ? (string) $month : null, 8) !!} сарын
                         {!! $fill($day ? (string) $day : null, 8) !!}-ны өдрөөс
