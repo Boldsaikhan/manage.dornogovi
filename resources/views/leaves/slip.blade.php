@@ -24,15 +24,23 @@
         $slipW = ($contentW - ($cols - 1) * $gapX) / max(1, $cols);
 
         /*
-         * Бичвэрийг өөрчлөхгүйгээр хуудастаа багтаана.
+         * Бичиг хэргийн стандартын фонт — гарчиг, бичвэр, гарын үсэг
+         * бүгд ижил хэмжээтэй (ихэвчлэн 12pt).
          *
-         * Нэг хувийн талбай багасах тусам фонт жаахан жижигрэнэ — A5
-         * дээр ч, нэг A4-д 6 хувь байрлуулахад ч бичвэр таслагдахгүй.
+         * Нэг хуудсанд 1-2 хувь байрлуулахад (A4, A5, босоо ч, хэвтээ ч)
+         * стандарт хэмжээ хэвээрээ. Зөвхөн 4, 6 хувиар шахаж хэвлэхэд
+         * бичвэр таслагдахгүйн тулд пропорциональ жижигрэнэ.
+         *
+         * Жишиг талбай — A5 хэвтээ, нэг хувь. Түүнээс дээш талбайд
+         * стандарт хэмжээ хэрэглэнэ.
          */
-        $area = $slipH * $slipW;
-        $fontPt = max(7.5, min(10.5, round(sqrt($area) / 7.4, 1)));
-        $titlePt = round($fontPt + 0.5, 1);
-        $signPt = round($fontPt - 1, 1);
+        $fontName = $format?->font_name ?: 'Arial';
+        $standardPt = (float) ($format?->font_size_pt ?: 12);
+        $baseline = 151;
+        $scale = min(1, sqrt($slipH * $slipW) / $baseline);
+        $fontPt = max(7.5, round($standardPt * $scale, 1));
+        $titlePt = $fontPt;
+        $signPt = $fontPt;
         // Нэг «enter» = нэг мөрийн өндөр (line-height 1.5).
         $linePt = round($fontPt * 1.5, 1);
 
@@ -71,8 +79,8 @@
 
         body {
             margin: 0;
-            font-family: Arial, "Times New Roman", sans-serif;
-            font-size: 10.5pt;
+            font-family: "{{ $fontName }}", Arial, sans-serif;
+            font-size: {{ $fontPt }}pt;
             color: #000;
             background: #e2e8f0;
         }
