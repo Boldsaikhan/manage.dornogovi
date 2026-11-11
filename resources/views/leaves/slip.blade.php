@@ -192,9 +192,13 @@
 
         .sign .title { text-transform: uppercase; }
 
-        .sign .name { white-space: nowrap; }
+        /* Баталсан хүний нэр — албан тушаалын адил том үсгээр. */
+        .sign .name {
+            white-space: nowrap;
+            text-transform: uppercase;
+        }
 
-        /* Гарын үсэг зурах зай — ташуу зураасын хооронд. */
+        /* Гарын үсэг зурах хоосон зай — ямар ч тэмдэггүй. */
         .sign .line { white-space: nowrap; }
         .sign .gap { display: inline-block; min-width: 26mm; }
 
@@ -262,7 +266,7 @@
                 <div class="sign">
                     {{-- Баталсан албан хаагч: албан тушаал — гарын үсгийн зай — нэр. --}}
                     <span class="title">{!! $signerTitle !== '' ? e($signerTitle) : $fill(null, 45) !!}</span>
-                    <span class="line">/<span class="gap"></span>/</span>
+                    <span class="line"><span class="gap"></span></span>
                     <span class="name">{!! $fill($signerName, 32) !!}</span>
                 </div>
             </div>
