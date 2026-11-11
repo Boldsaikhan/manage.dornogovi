@@ -167,6 +167,36 @@ class LeaveSlipPrintTest extends TestCase
             ->assertViewHas('slipNumber', 'А-12');
     }
 
+    /* ── Баталсан албан хаагч ────────────────────────────────── */
+
+    public function test_the_slip_shows_who_approved_it(): void
+    {
+        \App\Models\PhoneDirectoryEntry::create([
+            'org_name' => 'Нийгмийн бодлогын хэлтэс',
+            'category' => 'heltes',
+            'person_name' => 'Н.Мөнхцэцэг',
+            'position' => 'Хэлтсийн дарга',
+        ]);
+
+        $leave = $this->leave();
+        $leave->forceFill(['signer' => 'Н.Мөнхцэцэг'])->save();
+
+        $this->actingAs($this->admin())
+            ->get(route('leaves.slip', $leave))
+            ->assertOk()
+            ->assertViewHas('signerTitle', 'ХЭЛТСИЙН ДАРГА')
+            ->assertViewHas('signerName', 'Н.Мөнхцэцэг')
+            ->assertSee('Н.Мөнхцэцэг');
+    }
+
+    public function test_without_an_approver_the_slip_leaves_a_blank_line(): void
+    {
+        $this->actingAs($this->admin())
+            ->get(route('leaves.slip', $this->leave()))
+            ->assertOk()
+            ->assertDontSee('Гарын үсэг зурах албан тушаалтан');
+    }
+
     /** `.slip .body` дотор бичигдсэн фонтын хэмжээ. */
     private function bodyFontPt(string $html): float
     {

@@ -249,7 +249,8 @@
                     </p>
                 </div>
                 <div class="sign">
-                    <span class="title">{{ $signerTitle !== '' ? $signerTitle : 'Гарын үсэг зурах албан тушаалтан' }}</span>
+                    {{-- Баталсан албан хаагчийн албан тушаал — сонгоогүй бол гараар бичих зай. --}}
+                    <span class="title">{!! $signerTitle !== '' ? e($signerTitle) : $fill(null, 60) !!}</span>
                     @if ($signerName !== '')
                         <span class="line">{{ $signerName }}</span>
                     @else
