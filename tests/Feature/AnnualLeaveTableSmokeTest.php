@@ -44,7 +44,7 @@ class AnnualLeaveTableSmokeTest extends TestCase
         $this->assertSame(24, $row->entitled_days);
     }
 
-    public function test_the_signer_is_restricted_to_the_aimag_governor_and_deputy(): void
+    public function test_the_signer_is_restricted_to_the_aimag_leaders(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
 
@@ -60,7 +60,7 @@ class AnnualLeaveTableSmokeTest extends TestCase
             'org_name' => 'Удирдлагууд',
             'category' => 'udirdlaga',
         ]);
-        // ЗДТГ-ын дарга ч «Удирдлагууд» ангилалд байдаг ч сонголтод ороогүй байх ёстой.
+        // АЗДТГ-ын Тамгын газрын дарга ч ээлжийн амралт зөвшөөрдөг.
         PhoneDirectoryEntry::create([
             'person_name' => 'М.Мөнхбат',
             'position' => 'ЗДТГ-ын дарга',
@@ -95,13 +95,15 @@ class AnnualLeaveTableSmokeTest extends TestCase
 
         $this->actingAs($admin)
             ->patch(route('annual-leaves.update', $row), ['signer' => 'М.Мөнхбат'])
-            ->assertSessionHasErrors('signer');
+            ->assertRedirect();
+
+        $this->assertSame('М.Мөнхбат', $row->fresh()->signer);
 
         $this->actingAs($admin)
             ->patch(route('annual-leaves.update', $row), ['signer' => 'Г.Ганбүрэн'])
             ->assertSessionHasErrors('signer');
 
-        $this->assertSame('Г.Март', $row->fresh()->signer);
+        $this->assertSame('М.Мөнхбат', $row->fresh()->signer);
 
         $response = $this->actingAs($admin)
             ->get(route('annual-leaves.index', ['scope' => 'baiguullaga']))
@@ -110,7 +112,7 @@ class AnnualLeaveTableSmokeTest extends TestCase
         $signers = $response->viewData('page')['props']['signers'];
         $this->assertArrayHasKey('О.Батжаргал', $signers);
         $this->assertArrayHasKey('Г.Март', $signers);
-        $this->assertArrayNotHasKey('М.Мөнхбат', $signers);
+        $this->assertArrayHasKey('М.Мөнхбат', $signers);
         $this->assertArrayNotHasKey('Г.Ганбүрэн', $signers);
     }
 

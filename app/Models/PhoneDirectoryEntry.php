@@ -20,15 +20,27 @@ class PhoneDirectoryEntry extends Model
         'office_phone', 'mobile_phone',
     ];
 
+    /** Аймгийн удирдлагын албан тушаал — «Баталсан» баганад гарна. */
+    private const LEADER_TITLES = [
+        'засаг дарга',
+        'аймгийн засаг дарга',
+        'засаг даргын орлогч',
+        'аймгийн засаг даргын орлогч',
+        'засаг даргын үүрэг гүйцэтгэгч',
+        'тамгын газрын дарга',
+        'здтг-ын дарга',
+        'здтг-ийн дарга',
+        'засаг даргын тамгын газрын дарга',
+    ];
+
     /**
-     * «Баталсан» баганын сонголт — удирдлагууд болон хэлтсийн дарга нар.
+     * «Баталсан» баганын сонголт — зөвхөн Аймгийн Засаг дарга, Засаг
+     * даргын орлогч, Тамгын газрын дарга, АЗДТГ-ын хэлтсийн дарга нар.
      *
-     * Удирдлагууд гэдэгт утасны жагсаалтын «Удирдлагууд» ангилалд байгаа
-     * бүх хүн (Засаг дарга, орлогч, Тамгын газрын дарга гэх мэт) орно.
-     * Түүнээс гадна албан тушаалаараа хэлтсийн дарга нар нэмэгдэнэ.
+     * Сум, агентлаг, бусад байгууллагын дарга нар болон туслах,
+     * референт зэрэг албан тушаалтан энд гарахгүй.
      *
-     * Гарын үсэг зурах, зөвшөөрөх хүн сонгодог баганад ашиглана (чөлөөний
-     * бүртгэл, ээлжийн амралтын бүртгэл).
+     * Гарын үсэг зурах, зөвшөөрөх хүн сонгодог баганад ашиглана.
      *
      * @return array<string, string> нэр => «нэр — албан тушаал»
      */
@@ -37,23 +49,14 @@ class PhoneDirectoryEntry extends Model
         $entries = static::query()
             ->orderBy('org_order')
             ->orderBy('sort_order')
-            ->get(['person_name', 'position', 'category']);
+            ->get(['person_name', 'position', 'category', 'org_name']);
 
         $options = [];
 
         foreach ($entries as $row) {
             $position = mb_strtolower(trim((string) $row->position));
 
-            if ($position === '') {
-                continue;
-            }
-
-            $isLeaderRole = $row->category === 'udirdlaga'
-                || (str_contains($position, 'засаг') && str_contains($position, 'дарг'))
-                || (str_contains($position, 'хэлтс') && str_contains($position, 'дарг'))
-                || str_contains($position, 'тамгын');
-
-            if (! $isLeaderRole) {
+            if ($position === '' || ! self::isAimagLeader($row->category, $row->org_name, $position)) {
                 continue;
             }
 
@@ -68,6 +71,35 @@ class PhoneDirectoryEntry extends Model
         }
 
         return $options;
+    }
+
+    /** Аймгийн удирдлага эсвэл АЗДТГ-ын хэлтсийн дарга мөн эсэх. */
+    private static function isAimagLeader(?string $category, ?string $orgName, string $position): bool
+    {
+        // Сум, агентлаг, бусад байгууллагынх бол аймгийн удирдлага биш.
+        if (in_array((string) $category, ['sum', 'agentlag', 'baiguullaga'], true)) {
+            return false;
+        }
+
+        $org = mb_strtolower(trim((string) $orgName));
+
+        foreach (['сум', 'агентлаг'] as $outside) {
+            if (str_contains($position, $outside) || str_contains($org, $outside)) {
+                return false;
+            }
+        }
+
+        // Туслах, референт нар гарын үсэг зурдаггүй.
+        if (str_contains($position, 'туслах') || str_contains($position, 'референт')) {
+            return false;
+        }
+
+        if (in_array($position, self::LEADER_TITLES, true)) {
+            return true;
+        }
+
+        // АЗДТГ-ын хэлтсийн дарга (албан үүргийг түр орлон гүйцэтгэгч ч мөн).
+        return str_contains($position, 'хэлтс') && str_contains($position, 'дарг');
     }
 
     /**
