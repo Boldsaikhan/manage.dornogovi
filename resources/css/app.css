@@ -955,6 +955,17 @@
         overflow: hidden;
     }
 
+    /*
+     * Засаж байгаа нүд — оролтын талбар баганаасаа өргөн болдог тул
+     * нүдний таслалтыг түр болиулна. Үгүй бол бичих талбарын баруун
+     * тал нь таслагдаж харагддаг байв.
+     */
+    .ui-register td:has(.ui-sheet-cell.is-editing) {
+        overflow: visible;
+        position: relative;
+        z-index: 40;
+    }
+
     .ui-register .ui-sheet-cell {
         min-height: 1.75rem;
     }
