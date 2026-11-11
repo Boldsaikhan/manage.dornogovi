@@ -33,6 +33,8 @@
         $fontPt = max(7.5, min(10.5, round(sqrt($area) / 7.4, 1)));
         $titlePt = round($fontPt + 0.5, 1);
         $signPt = round($fontPt - 1, 1);
+        // Нэг «enter» = нэг мөрийн өндөр (line-height 1.5).
+        $linePt = round($fontPt * 1.5, 1);
 
         $fill = function (?string $value, int $width) {
             $text = trim((string) $value);
@@ -119,7 +121,8 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            /* Гарын үсэг нь доод ирмэгт наалдахгүй — өгүүлбэрээ дагана. */
+            justify-content: flex-start;
             padding: 1mm 0;
         }
 
@@ -127,18 +130,20 @@
             font-size: {{ $titlePt }}pt;
             font-weight: 700;
             text-align: center;
-            margin: 0;
+            /* Гарчгийн доор 2 хоосон мөр. */
+            margin: 0 0 {{ round($linePt * 2, 1) }}pt;
             letter-spacing: 0.02em;
         }
 
-        .slip .no { text-align: center; margin: 1mm 0 2mm; font-size: {{ $fontPt }}pt; }
+        .slip .no { text-align: center; margin: 0 0 1mm; font-size: {{ $fontPt }}pt; }
 
         .slip .body {
             margin: 0;
             text-align: justify;
             line-height: 1.5;
             font-size: {{ $fontPt }}pt;
-            flex: 1;
+            /* Эхний мөрийн догол. */
+            text-indent: 10mm;
         }
 
         .blank, .filled {
@@ -157,7 +162,8 @@
             justify-content: space-between;
             align-items: flex-end;
             gap: 4mm;
-            margin-top: 3mm;
+            /* Өгүүлбэрийн доороос 3 хоосон мөр. */
+            margin-top: {{ round($linePt * 3, 1) }}pt;
             line-height: 1.25;
             font-size: {{ $signPt }}pt;
         }
