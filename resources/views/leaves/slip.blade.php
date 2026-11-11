@@ -146,7 +146,12 @@
             letter-spacing: 0.02em;
         }
 
-        .slip .no { text-align: center; margin: 0 0 1mm; font-size: {{ $fontPt }}pt; }
+        /* Дугаарын доор нэг хоосон мөр. */
+        .slip .no {
+            text-align: center;
+            margin: 0 0 {{ $linePt }}pt;
+            font-size: {{ $fontPt }}pt;
+        }
 
         .slip .body {
             margin: 0;
@@ -204,7 +209,7 @@
 
         /* Гарын үсэг зурах хоосон зай — ямар ч тэмдэггүй. */
         .sign .line { white-space: nowrap; }
-        .sign .gap { display: inline-block; min-width: 26mm; }
+        .sign .gap { display: inline-block; min-width: 34mm; }
 
         /* Засварын горим — хэвлэхэд ул мөр үлдэхгүй. */
         [contenteditable]:focus { outline: none; }
