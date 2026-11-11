@@ -38,8 +38,8 @@ class LeaveSlipController extends Controller
 
         $start = $leave->start_date;
 
-        // Дугааргүй бол хэвлэх үед автоматаар олгоно.
-        $slipNumber = LeaveSlipNumber::ensure($leave);
+        // Гараар бичээгүй бол бүртгэлийн хүснэгтийн дэс дугаарыг авна.
+        $slipNumber = LeaveSlipNumber::for($leave);
 
         return view('leaves.slip', [
             'leave' => $leave,

@@ -3,70 +3,39 @@
 namespace App\Support;
 
 use App\Models\Leave;
-use Illuminate\Support\Facades\DB;
 
 /**
- * Чөлөөний хуудасны дугаар — жил бүр 1-ээс эхэлж автоматаар өснө.
+ * Чөлөөний хуудасны дугаар — бүртгэлийн хүснэгтийн дэс дугаар.
  *
- * Дугаарыг хэвлэх үед нь л олгоно: хэвлээгүй мөр дугаар эзлэхгүй.
- * Гараар бичсэн дугаарыг хэзээ ч дарж бичихгүй.
+ * Хүснэгт нь шинэ бүртгэлийг дээр нь тавьж, дэс дугаарыг доороос
+ * дээш тоолдог. Өөрөөр хэлбэл дэс дугаар нь тухайн таб дотор уг
+ * мөрөөс өмнө нэмэгдсэн бүртгэлийн тоо + 1 байна.
+ *
+ * Гараар дугаар бичсэн бол түүнийг нь хүндэтгэнэ.
  */
 class LeaveSlipNumber
 {
-    /**
-     * Дугааргүй бол шинийг олгож, байгаа бол хэвээр нь буцаана.
-     */
-    public static function ensure(Leave $leave): string
+    public static function for(Leave $leave): string
     {
-        $current = trim((string) $leave->slip_number);
+        $manual = trim((string) $leave->slip_number);
 
-        if ($current !== '') {
-            return $current;
+        if ($manual !== '') {
+            return $manual;
         }
 
-        $year = (int) ($leave->start_date?->format('Y') ?: now()->format('Y'));
-
-        return DB::transaction(function () use ($leave, $year) {
-            // Гүйлгээ дотор дахин уншина — зэрэг хэвлэхэд давхцахгүй.
-            $fresh = Leave::query()->lockForUpdate()->find($leave->id);
-            $existing = trim((string) ($fresh?->slip_number ?? ''));
-
-            if ($existing !== '') {
-                $leave->slip_number = $existing;
-
-                return $existing;
-            }
-
-            $number = (string) (self::lastNumber($year) + 1);
-
-            $fresh?->forceFill(['slip_number' => $number])->save();
-            $leave->slip_number = $number;
-
-            return $number;
-        });
+        return (string) self::sequence($leave);
     }
 
-    /**
-     * Тухайн жилийн хамгийн том дугаар. Зөвхөн бүхэл тоон дугаарыг тооцно —
-     * гараар «А-12» мэтээр бичсэн нь дарааллыг эвдэхгүй.
-     */
-    private static function lastNumber(int $year): int
+    /** Хүснэгтэд харагдах дэс дугаар. */
+    public static function sequence(Leave $leave): int
     {
-        $numbers = Leave::query()
-            ->whereNotNull('slip_number')
-            ->whereYear('start_date', $year)
-            ->pluck('slip_number');
-
-        $max = 0;
-
-        foreach ($numbers as $value) {
-            $text = trim((string) $value);
-
-            if ($text !== '' && ctype_digit($text)) {
-                $max = max($max, (int) $text);
-            }
+        if (! $leave->exists) {
+            return 1;
         }
 
-        return $max;
+        return Leave::query()
+            ->where('scope', $leave->scope)
+            ->where('id', '<=', $leave->id)
+            ->count();
     }
 }
