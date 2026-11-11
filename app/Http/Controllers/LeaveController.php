@@ -13,6 +13,7 @@ use App\Support\LeaveSchema;
 use App\Support\ModuleAccess;
 use App\Support\ModuleOwnScope;
 use App\Support\PdfTableWriter;
+use App\Support\WorkDays;
 use App\Support\XlsxTableWriter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -429,7 +430,8 @@ class LeaveController extends Controller
         $scope = $data['scope'] ?? 'baiguullaga';
         $start = Carbon::parse($data['start_date'] ?? now())->startOfDay();
         $days = (int) ($data['days'] ?? 1);
-        $end = $start->copy()->addDays($days - 1);
+        // Амралтын өдөр чөлөөнд тооцогдохгүй — зөвхөн ажлын өдөр.
+        $end = WorkDays::endDate($start, $days);
 
         if (LeaveSchema::hasRules() && filled($data['rule_code'] ?? null)) {
             $data = $this->applyRulePay($data, $scope);
@@ -545,14 +547,12 @@ class LeaveController extends Controller
         }
 
         /*
-         * Дуусах огноо нь эхлэх огноо + хоногоос бодогдоно. Эхлэх өдрөө
-         * оролцуулж тоолно: 1 хоног = эхлэх өдөр өөрөө.
+         * Дуусах огноо нь эхлэх огноо + ажлын хоногоос бодогдоно. Эхлэх
+         * өдрөө оролцуулж тоолох ба долоо хоногийн амралтын өдөр (Бямба,
+         * Ням) чөлөөний хугацаанд тооцогдохгүй.
          */
         $leave->end_date = $leave->start_date
-            ? Carbon::parse($leave->start_date)
-                ->startOfDay()
-                ->addDays(max(1, (int) $leave->days) - 1)
-                ->toDateString()
+            ? WorkDays::endDate($leave->start_date, max(1, (int) $leave->days))->toDateString()
             : null;
 
         $leave->save();
