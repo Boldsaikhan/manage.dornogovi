@@ -66,25 +66,76 @@ class ReportRows
     }
 
     /**
-     * Хамааралтай эрхтэй хэрэглэгчид зөвхөн өөрийн хэлтсийн мөрийг харуулна.
+     * Харах эрхийн дагуу мөрийг шүүнэ.
      *
-     * Хэлтэс сонгоогүй мөр нь бүх хүнд харагдана — эзэнгүй ажил нуугдахгүй.
+     * - Хэлтсийн / хамааралтай удирдлага: өөрийн хэлтсийн мөр
+     *   (хэлтэс сонгоогүйг нь хуваарилахын тулд харна).
+     * - Хамааралтай харах/оруулах албан хаагч: зөвхөн өөрт оноогдсон мөр.
      *
      * @param  array<int, array<string, mixed>>  $rows
      * @return array<int, array<string, mixed>>
      */
     public static function visibleTo(array $rows, ?User $user): array
     {
-        if (! ModuleAccess::scopeOwnOnly($user, 'reports')) {
+        if (! $user || $user->is_admin) {
             return $rows;
         }
 
-        $departmentId = $user?->department_id;
+        // Хэлтсийн болон хамааралтай удирдлага — хэлтсээрээ шүүнэ.
+        if (ModuleAccess::scopeUnitOnly($user, 'reports')
+            || ModuleAccess::manageOwnOnly($user, 'reports')) {
+            $user->loadMissing('department:id,name');
 
-        return array_values(array_filter(
-            $rows,
-            fn (array $row) => $row['department_id'] === null
-                || (int) $row['department_id'] === (int) $departmentId,
-        ));
+            return array_values(array_filter(
+                $rows,
+                static fn (array $row) => self::rowMatchesDepartment($row, $user),
+            ));
+        }
+
+        // Албан хаагч — зөвхөн өөрт хамааралтай (оноогдсон) заалт.
+        if (ModuleAccess::scopeOwnOnly($user, 'reports')) {
+            return array_values(array_filter(
+                $rows,
+                static fn (array $row) => PersonName::matchesUser(
+                    $user,
+                    (string) ($row['assignee'] ?? ''),
+                ),
+            ));
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Мөр хэрэглэгчийн хэлтэст хамаарах эсэх.
+     *
+     * department_id эсвэл хэлтсийн нэрээр тааруулна. Хоёулаа хоосон бол
+     * эзэнгүй мөр — удирдлага хуваарилахын тулд харна.
+     */
+    private static function rowMatchesDepartment(array $row, User $user): bool
+    {
+        $departmentId = $user->department_id;
+
+        if ($departmentId !== null
+            && (int) ($row['department_id'] ?? 0) === (int) $departmentId) {
+            return true;
+        }
+
+        $ownName = mb_strtolower(trim((string) ($user->department?->name ?? '')));
+        $rowName = mb_strtolower(trim((string) ($row['department'] ?? '')));
+
+        if ($ownName !== '' && $rowName !== '') {
+            $ownNorm = preg_replace('/[^\p{L}\p{N}]+/u', '', $ownName) ?? '';
+            $rowNorm = preg_replace('/[^\p{L}\p{N}]+/u', '', $rowName) ?? '';
+
+            if ($ownNorm !== '' && $rowNorm !== ''
+                && ($ownNorm === $rowNorm
+                    || str_contains($rowNorm, $ownNorm)
+                    || str_contains($ownNorm, $rowNorm))) {
+                return true;
+            }
+        }
+
+        return ($row['department_id'] ?? null) === null && $rowName === '';
     }
 }
