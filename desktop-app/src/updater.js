@@ -9,10 +9,27 @@
  * Админ «хүчээр» гэж тохируулсан бол «Дараа» сонголт гарахгүй.
  */
 
-const { app, BrowserWindow, ipcMain, net } = require('electron');
+const { app, BrowserWindow, ipcMain, net, shell } = require('electron');
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+
+/**
+ * Шинэчлэлтийн явцыг файлд тэмдэглэнэ.
+ *
+ * Шинэчлэлт бүтэхгүй бол хэрэглэгчийн машин дээр юу болсныг
+ * харах цорын ганц мөр — %APPDATA%/Manage Dornogovi/update.log.
+ */
+const note = (message) => {
+    try {
+        const line = `${new Date().toISOString()}  ${message}
+`;
+
+        fs.appendFileSync(path.join(app.getPath('userData'), 'update.log'), line);
+    } catch (error) {
+        // Бичиж чадахгүй бол чимээгүй өнгөрнө.
+    }
+};
 
 /** Хувилбарыг тоогоор нь харьцуулна: 1.10.0 > 1.9.3. */
 const compareVersions = (left, right) => {
@@ -57,8 +74,18 @@ const fetchJson = (url) => new Promise((resolve, reject) => {
 
 /** Татах явцыг мэдэгдэж байж суулгацыг хадгална. */
 const downloadTo = (url, target, onProgress) => new Promise((resolve, reject) => {
-    // Сешний cookie-г хамт илгээнэ — татах хаяг нэвтэрсэн хэрэглэгчид зориулагдсан.
-    const request = net.request({ url, method: 'GET', useSessionCookies: true });
+    /*
+     * Сешний cookie-г хамт илгээнэ — татах хаяг нэвтэрсэн хэрэглэгчид
+     * зориулагдсан. Нэвтрэлт дууссан бол сервер /login руу шилжүүлдэг
+     * тул redirect-ийг дагахгүй: эс бөгөөс нэвтрэх хуудсын HTML-ийг
+     * «суулгац» болгон татаж аваад эцэст нь ойлгомжгүй алдаа өгдөг.
+     */
+    const request = net.request({ url, method: 'GET', useSessionCookies: true, redirect: 'error' });
+
+    request.on('redirect', () => {
+        request.abort();
+        reject(new Error('Нэвтрэлт дууссан байна. Системд дахин нэвтэрч орсны дараа оролдоно уу.'));
+    });
 
     request.on('response', (response) => {
         if (response.statusCode !== 200) {
@@ -122,11 +149,16 @@ const launchInstallerAfterExit = (installer) => {
         `Start-Process -FilePath ${quote(installer)} -ArgumentList '--force-run'`,
     ].join('; ');
 
-    spawn(
+    const child = spawn(
         'powershell.exe',
         ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', script],
         { detached: true, stdio: 'ignore', windowsHide: true },
-    ).unref();
+    );
+
+    child.on('error', (error) => note(`суулгагчийг асааж чадсангүй: ${error.message}`));
+    child.unref();
+
+    note(`суулгагч дараалалд оров: ${installer}`);
 };
 
 /** @type {import('electron').BrowserWindow|null} */
@@ -150,6 +182,20 @@ const send = (state) => {
 };
 
 const mb = (bytes) => (bytes / 1024 / 1024).toFixed(1);
+
+/**
+ * Алдааг харуулна.
+ *
+ * Алдаа гарсан үед цонхыг хаах боломжтой болгоно — «хүчээр шинэчлэх»
+ * тохиргоотой үед хэрэглэгч гацаанд ордог байв.
+ */
+const fail = (message) => {
+    if (pending) {
+        pending.force = false;
+    }
+
+    send({ kind: 'error', message });
+};
 
 /**
  * Үндсэн цонхыг эргүүлж идэвхжүүлнэ.
@@ -191,6 +237,8 @@ const startDownload = async () => {
         return;
     }
 
+    note(`татаж эхлэв: ${pending.url}`);
+
     const target = path.join(app.getPath('temp'), `Manage-Dornogovi-Setup-${pending.latest}.exe`);
 
     try {
@@ -204,7 +252,8 @@ const startDownload = async () => {
             });
         });
     } catch (error) {
-        send({ kind: 'error', message: error.message });
+        note(`татахад алдаа: ${error.message}`);
+        fail(error.message);
 
         return;
     }
@@ -226,11 +275,13 @@ const startDownload = async () => {
             throw new Error('Татсан файлын хэмжээ таарахгүй байна.');
         }
     } catch (error) {
-        send({ kind: 'error', message: error.message });
+        note(`шалгалт амжилтгүй: ${error.message}`);
+        fail(error.message);
 
         return;
     }
 
+    note(`татаж дууслаа: ${target}`);
     pending.file = target;
     send({ kind: 'ready' });
 };
@@ -250,6 +301,14 @@ const wire = () => {
 
     ipcMain.on('update:start', startDownload);
     ipcMain.on('update:later', closeWindow);
+
+    // Автомат шинэчлэлт бүтэхгүй бол хөтчөөр татаж, гараар суулгана.
+    ipcMain.on('update:browser', () => {
+        if (pending?.url) {
+            note('хөтчөөр татахаар нээв');
+            shell.openExternal(pending.url);
+        }
+    });
 
     ipcMain.on('update:install', () => {
         if (! pending?.file) {
