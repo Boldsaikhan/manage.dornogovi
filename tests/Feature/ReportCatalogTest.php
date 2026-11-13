@@ -66,7 +66,7 @@ class ReportCatalogTest extends TestCase
 
     /* ── Хэлтэс, хариуцах албан хаагчийн багана эрхээрээ ────────── */
 
-    public function test_a_unit_scoped_user_also_gets_the_officer_column(): void
+    public function test_a_unit_scoped_user_gets_officer_but_not_department_or_agency(): void
     {
         $department = \App\Models\Department::create([
             'name' => 'Хууль, эрх зүйн хэлтэс',
@@ -80,10 +80,14 @@ class ReportCatalogTest extends TestCase
             ->get(route('reports.show', 'local_policy.governor_assignments.budget'))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
-                ->has('report.columns', 6)
-                ->where('report.columns.5.key', 'assignee')
+                ->has('report.columns', 5)
+                ->where('report.columns.4.key', 'assignee')
                 ->where('unitScope', true)
-                ->where('ownDepartment', 'Хууль, эрх зүйн хэлтэс'));
+                ->where('ownDepartment', 'Хууль, эрх зүйн хэлтэс')
+                ->where('report.columns', fn ($columns) => collect($columns)
+                    ->pluck('key')
+                    ->intersect(['department', 'agency'])
+                    ->isEmpty()));
     }
 
     public function test_a_full_manager_only_assigns_departments(): void
@@ -98,6 +102,21 @@ class ReportCatalogTest extends TestCase
                 ->has('report.columns', 5)
                 ->where('report.columns.4.key', 'department')
                 ->where('unitScope', false));
+    }
+
+    public function test_an_assigned_officer_does_not_see_department_or_agency(): void
+    {
+        $user = User::factory()->create();
+        $this->grantModule($user, 'reports', 'edit_own');
+
+        $this->actingAs($user->fresh())
+            ->get(route('reports.show', 'local_policy.governor_program'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('report.columns', fn ($columns) => collect($columns)
+                    ->pluck('key')
+                    ->intersect(['department', 'agency', 'assignee'])
+                    ->isEmpty()));
     }
 
     public function test_reports_show_loads_excel_linked_report(): void
