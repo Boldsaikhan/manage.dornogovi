@@ -136,23 +136,53 @@ const downloadTo = (url, target, onProgress) => new Promise((resolve, reject) =>
 const launchInstallerAfterExit = (installer) => {
     // PowerShell-ийн мөрөнд ' нь '' болж орно.
     const quote = (value) => `'${String(value).replace(/'/g, "''")}'`;
+    const log = path.join(app.getPath('userData'), 'update.log');
 
     const script = [
+        // Суулгагчийн явцыг програм хаагдсаны дараа ч тэмдэглэнэ.
+        `$log = ${quote(log)}`,
+        "function Say($m) { Add-Content -Path $log -Value ((Get-Date).ToString('s') + '  ' + $m) }",
+        'Say "суулгагч: хүлээж эхлэв"',
         // Өөрийн процесс хаагдахыг хүлээнэ (аль хэдийн хаагдсан бол алдаа өгнө).
         `try { Wait-Process -Id ${process.pid} -Timeout 60 -ErrorAction Stop } catch { }`,
         // Файлын бариул бүрэн сулартал бага зэрэг зай өгнө.
-        'Start-Sleep -Milliseconds 1200',
+        'Start-Sleep -Milliseconds 1500',
         /*
          * /S-гүйгээр ажиллуулна — нэг даралтын суулгац өөрийн явцын
          * цонхоо харуулж, дуусмагц програмыг дахин нээнэ.
          */
-        `Start-Process -FilePath ${quote(installer)} -ArgumentList '--force-run'`,
-    ].join('; ');
+        `try { Start-Process -FilePath ${quote(installer)} -ArgumentList '--force-run' -ErrorAction Stop; Say 'суулгагч асав' }`
+            + " catch { Say ('суулгагч асаахад алдаа: ' + $_.Exception.Message) }",
+    ].join('\r\n');
 
+    /*
+     * Скриптийг файлд бичнэ — урт тушаалыг cmd/PowerShell-ийн хашилтаар
+     * дамжуулахад эвдэрдэг.
+     */
+    const scriptFile = path.join(app.getPath('temp'), 'manage-dornogovi-update.ps1');
+
+    try {
+        fs.writeFileSync(scriptFile, '\ufeff'.concat(script), 'utf8');
+    } catch (error) {
+        note(`скрипт бичиж чадсангүй: ${error.message}`);
+
+        return;
+    }
+
+    /*
+     * ⚠️ Урьд нь powershell.exe-г шууд spawn хийдэг байв. Гэтэл эцэг
+     *    процесс нь app.exit()-ээр хүчээр хаагдахад хүү процесс нь
+     *    хамт унтардаг тул суулгагч огт ажиллахгүй, хуучин хувилбар
+     *    хэвээр үлддэг байв. `cmd /c start` нь шинэ процессыг эцгээсээ
+     *    бүрэн салгаж асаана.
+     */
     const child = spawn(
-        'powershell.exe',
-        ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', script],
-        { detached: true, stdio: 'ignore', windowsHide: true },
+        'cmd.exe',
+        [
+            '/d', '/s', '/c',
+            `start "" /b powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "${scriptFile}"`,
+        ],
+        { detached: true, stdio: 'ignore', windowsHide: true, windowsVerbatimArguments: true },
     );
 
     child.on('error', (error) => note(`суулгагчийг асааж чадсангүй: ${error.message}`));
