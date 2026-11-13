@@ -90,18 +90,23 @@ class ReportCatalogTest extends TestCase
                     ->isEmpty()));
     }
 
-    public function test_a_full_manager_only_assigns_departments(): void
+    public function test_a_full_manager_gets_department_column_for_assignment(): void
     {
         $user = User::factory()->create();
         $this->grantModule($user, 'reports', 'manage');
 
+        // Албан хаагч сонголт нь хэлтсийн нүдэнд орсон тул тусдаа
+        // «assignee» багана харагдахгүй.
         $this->actingAs($user->fresh())
             ->get(route('reports.show', 'local_policy.governor_assignments.budget'))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->has('report.columns', 5)
                 ->where('report.columns.4.key', 'department')
-                ->where('unitScope', false));
+                ->where('unitScope', false)
+                ->where('report.columns', fn ($columns) => collect($columns)
+                    ->pluck('key')
+                    ->doesntContain('assignee')));
     }
 
     public function test_an_assigned_officer_does_not_see_department_or_agency(): void
