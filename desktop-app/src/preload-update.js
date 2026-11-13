@@ -13,4 +13,5 @@ contextBridge.exposeInMainWorld('mdUpdate', {
     start: () => ipcRenderer.send('update:start'),
     later: () => ipcRenderer.send('update:later'),
     install: () => ipcRenderer.send('update:install'),
+    browser: () => ipcRenderer.send('update:browser'),
 });
