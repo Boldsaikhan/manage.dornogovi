@@ -104,15 +104,16 @@ const normalizeOrg = (value) => String(value ?? '')
     .replace(/[^\p{L}\p{N}]+/gu, '');
 
 /**
- * Мөрийн хэлтсийн албан хаагчид. Хэлтэс тодорхойгүй бол өөрийнх нь
- * хэлтсээр, тэр ч олдохгүй бол бүх жагсаалтыг өгнө — хоосон үлдээхгүй.
+ * Мөрийн хэлтсийн албан хаагчид.
+ *
+ * Хэлтэс сонгосон бол түүний хүмүүсийг өгнө. Хэлтсийн хүрээний эрхтэй
+ * бөгөөд мөрөнд хэлтэсгүй бол өөрийн хэлтсээр шүүнэ. Олдохгүй бол бүх
+ * жагсаалт — хоосон үлдээхгүй.
  */
 const peopleForRow = (row) => {
-    if (! props.unitScope) {
-        return props.people;
-    }
-
-    const target = normalizeOrg(row?.department || props.ownDepartment);
+    const target = normalizeOrg(
+        row?.department || (props.unitScope ? props.ownDepartment : ''),
+    );
 
     if (! target) {
         return props.people;
@@ -125,6 +126,15 @@ const peopleForRow = (row) => {
     });
 
     return matched.length ? matched : props.people;
+};
+
+/** Хэлтэс баганын гарчиг — удирдлагад албан хаагч сонголттой. */
+const columnLabel = (col) => {
+    if (isDepartmentColumn(col.key) && props.canEdit && ! props.unitScope) {
+        return 'Хэлтэс / албан хаагч';
+    }
+
+    return col.label;
 };
 
 /** Хэлтэс сонгогдоогүй ч өмнөх текст үлдсэн бол түүнийг алдагдуулахгүй. */
@@ -293,9 +303,9 @@ const remToPx = (value) => {
 };
 
 const columnWidth = (col) => {
-    // Хэлтсийн нэр бүтнээрээ багтах өргөн.
+    // Хэлтэс + албан хаагч хоёр сонголт багтана.
     if (col.key === 'department') {
-        return '13rem';
+        return props.canEdit && ! props.unitScope ? '14rem' : '13rem';
     }
 
     if (col.key === 'assignee') {
@@ -858,7 +868,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                                 isCenteredColumn(col.key) ? 'text-center' : 'text-left',
                                             ]"
                                         >
-                                            {{ col.label }}
+                                            {{ columnLabel(col) }}
                                         </th>
                                         <th
                                             v-if="hasRowActions"
@@ -915,8 +925,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                                     : '',
                                             ]"
                                         >
-                                            <!-- Хэлтэс — жинхэнэ хэлтсээс сонгоно (харагдах хүрээг тогтооно) -->
-                                            <!-- Хэлтсийн хүрээний хүн хэлтсээ сольдоггүй — зөвхөн харна. -->
+                                            <!-- Хэлтэс — удирдлага хэлтэс + албан хаагчаа сонгоно. -->
                                             <span
                                                 v-if="unitScope && isDepartmentColumn(col.key)"
                                                 class="block text-xs leading-snug text-slate-600"
@@ -924,25 +933,37 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                                                 {{ row[col.key] || '—' }}
                                             </span>
 
-                                            <select
+                                            <div
                                                 v-else-if="canEdit && isDepartmentColumn(col.key)"
-                                                class="ui-cell-select"
-                                                :title="row[col.key] || 'Хэлтэс сонгох'"
-                                                :value="departmentSelectValue(row)"
-                                                :disabled="savingCell === cellKey(row, col.key)"
-                                                @change="onDepartmentChange(row, $event.target.value)"
+                                                class="space-y-1.5"
                                             >
-                                                <option value="">— сонгоогүй —</option>
-                                                <option
-                                                    v-if="departmentSelectValue(row) === '__current__'"
-                                                    value="__current__"
+                                                <select
+                                                    class="ui-cell-select"
+                                                    :title="row[col.key] || 'Хэлтэс сонгох'"
+                                                    :value="departmentSelectValue(row)"
+                                                    :disabled="savingCell === cellKey(row, col.key)"
+                                                    @change="onDepartmentChange(row, $event.target.value)"
                                                 >
-                                                    {{ row.department }}
-                                                </option>
-                                                <option v-for="dept in departments" :key="dept.id" :value="dept.id">
-                                                    {{ dept.name }}
-                                                </option>
-                                            </select>
+                                                    <option value="">— хэлтэс —</option>
+                                                    <option
+                                                        v-if="departmentSelectValue(row) === '__current__'"
+                                                        value="__current__"
+                                                    >
+                                                        {{ row.department }}
+                                                    </option>
+                                                    <option v-for="dept in departments" :key="dept.id" :value="dept.id">
+                                                        {{ dept.name }}
+                                                    </option>
+                                                </select>
+
+                                                <SheetCell
+                                                    :model-value="row[assigneeColumn] ?? ''"
+                                                    :options="peopleForRow(row)"
+                                                    :editable="true"
+                                                    placeholder="Албан хаагч сонгох"
+                                                    @commit="(v) => saveCell(row, assigneeColumn, v)"
+                                                />
+                                            </div>
 
                                             <!-- Томъёо — сонгоно -->
                                             <select
