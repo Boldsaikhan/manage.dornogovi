@@ -139,7 +139,7 @@ class ReportCatalogController extends Controller
             throw new NotFoundHttpException();
         }
 
-        $columns = $item['columns'] ?? [];
+        $columns = self::visibleColumns($item['columns'] ?? [], $request->user());
         abort_if($columns === [], 404, 'Хүснэгтийн бүтэц тохируулаагүй байна.');
 
         $rows = ReportRows::visibleTo(ReportRows::merged($report), $request->user());
@@ -330,6 +330,16 @@ class ReportCatalogController extends Controller
         }
 
         $isDepartment = $data['column'] === ReportRowEdit::DEPARTMENT_COLUMN;
+
+        // Хэлтэс хуваарилалтыг зөвхөн бүтэн удирдлага хийнэ.
+        if ($isDepartment) {
+            abort_unless(self::canAssignDepartments($request->user()), 403);
+        }
+
+        // Агентлаг багана мөн хуваарилалтын мэдээлэл — хэлтсийн хүрээнд засахгүй.
+        if ($data['column'] === 'agency' && ! self::canAssignDepartments($request->user())) {
+            abort(403);
+        }
 
         ReportRowEdit::updateOrCreate(
             [
@@ -573,8 +583,30 @@ class ReportCatalogController extends Controller
     }
 
     /**
-     * «Хариуцах албан хаагч» баганыг зөвхөн хэлтсийн хүрээний хүнд
-     * харуулна — бусдад нь хэлтэс хуваарилах нь хангалттай.
+     * Хэлтэс / агентлаг хуваарилах эрх — зөвхөн бүтэн удирдлага, админ.
+     *
+     * Хэлтэст хуваарилагдсан удирдлага болон хариуцсан албан хаагч
+     * эдгээр баганыг харах/засахгүй.
+     */
+    private static function canAssignDepartments(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->is_admin) {
+            return true;
+        }
+
+        return ModuleAccess::level($user, 'reports') === 'manage';
+    }
+
+    /**
+     * Баганыг эрхийн түвшингээр шүүнэ.
+     *
+     * - Бүтэн удирдлага: хэлтэс / агентлаг хуваарилна (албан хаагч биш).
+     * - Хэлтсийн / хамааралтай удирдлага: зөвхөн хариуцах албан хаагчаа сонгоно.
+     * - Бусад (хуваарилагдсан албан хаагч гэх мэт): хуваарилалтын багана харагдахгүй.
      *
      * @param  list<array<string, mixed>>  $columns
      * @return list<array<string, mixed>>
@@ -582,12 +614,16 @@ class ReportCatalogController extends Controller
     private static function visibleColumns(array $columns, ?User $user): array
     {
         if (self::unitScoped($user)) {
-            return $columns;
+            $hide = ['department', 'agency'];
+        } elseif (self::canAssignDepartments($user)) {
+            $hide = ['assignee'];
+        } else {
+            $hide = ['department', 'agency', 'assignee'];
         }
 
         return array_values(array_filter(
             $columns,
-            static fn (array $column) => ($column['key'] ?? '') !== 'assignee',
+            static fn (array $column) => ! in_array($column['key'] ?? '', $hide, true),
         ));
     }
 }
