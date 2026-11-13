@@ -604,6 +604,7 @@ class ReportCatalogController extends Controller
     /**
      * Баганыг эрхийн түвшингээр шүүнэ.
      *
+     * - Томъёо: хүснэгтэд харагдахгүй (хувь сервер дээр бодогдоно).
      * - Бүтэн удирдлага: хэлтэс / агентлаг хуваарилна (албан хаагч биш).
      * - Хэлтсийн / хамааралтай удирдлага: зөвхөн хариуцах албан хаагчаа сонгоно.
      * - Бусад (хуваарилагдсан албан хаагч гэх мэт): хуваарилалтын багана харагдахгүй.
@@ -613,12 +614,15 @@ class ReportCatalogController extends Controller
      */
     private static function visibleColumns(array $columns, ?User $user): array
     {
+        // Томъёо нь дотоод тохиргоо — хэрэглэгч хүснэгтээс сонгохгүй.
+        $hide = ['formula'];
+
         if (self::unitScoped($user)) {
-            $hide = ['department', 'agency'];
+            array_push($hide, 'department', 'agency');
         } elseif (self::canAssignDepartments($user)) {
-            $hide = ['assignee'];
+            $hide[] = 'assignee';
         } else {
-            $hide = ['department', 'agency', 'assignee'];
+            array_push($hide, 'department', 'agency', 'assignee');
         }
 
         return array_values(array_filter(
