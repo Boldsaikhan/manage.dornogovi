@@ -82,7 +82,7 @@ class ReportRowEditTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_department_scoped_user_sees_only_their_rows(): void
+    public function test_unit_manager_sees_only_their_department_rows(): void
     {
         $report = $this->reportWithRows();
         $mine = Department::create(['name' => 'Миний хэлтэс', 'code' => 'MINE', 'sort_order' => 1, 'is_active' => true]);
@@ -103,22 +103,56 @@ class ReportRowEditTest extends TestCase
             'department_id' => $other->id,
         ]);
 
-        $user = User::factory()->create(['department_id' => $mine->id]);
+        $user = User::factory()->create([
+            'name' => 'Б.Болд',
+            'department_id' => $mine->id,
+        ]);
 
         UserModulePermission::create([
             'user_id' => $user->id,
             'module_key' => 'reports',
-            'level' => 'view_own',
+            'level' => 'manage_own',
         ]);
 
-        $rows = ReportRows::visibleTo(ReportRows::merged($report['key']), $user);
+        $rows = ReportRows::visibleTo(ReportRows::merged($report['key']), $user->fresh());
         $indexes = array_column($rows, '_index');
 
         $this->assertContains(0, $indexes, 'Өөрийн хэлтсийн мөр харагдах ёстой.');
         $this->assertNotContains(1, $indexes, 'Өөр хэлтсийн мөр харагдах ёсгүй.');
+    }
 
-        // Хэлтэс сонгоогүй мөр бүх хүнд харагдана.
-        $this->assertContains(2, $indexes);
+    public function test_assigned_officer_sees_only_their_clauses(): void
+    {
+        $report = $this->reportWithRows();
+
+        ReportRowEdit::create([
+            'report_key' => $report['key'],
+            'row_index' => 0,
+            'column_key' => 'assignee',
+            'value' => 'Б.Болд',
+        ]);
+
+        ReportRowEdit::create([
+            'report_key' => $report['key'],
+            'row_index' => 1,
+            'column_key' => 'assignee',
+            'value' => 'Д.Сараа',
+        ]);
+
+        $officer = User::factory()->create(['name' => 'Б.Болд']);
+
+        UserModulePermission::create([
+            'user_id' => $officer->id,
+            'module_key' => 'reports',
+            'level' => 'edit_own',
+        ]);
+
+        $rows = ReportRows::visibleTo(ReportRows::merged($report['key']), $officer->fresh());
+        $indexes = array_column($rows, '_index');
+
+        $this->assertContains(0, $indexes, 'Өөрт оноогдсон заалт харагдах ёстой.');
+        $this->assertNotContains(1, $indexes, 'Бусдын заалт харагдах ёсгүй.');
+        $this->assertNotContains(2, $indexes, 'Оноогоогүй мөр албан хаагчид харагдах ёсгүй.');
     }
 
     public function test_full_access_user_sees_every_row(): void
