@@ -10,18 +10,53 @@ const LATIN_TO_CYRILLIC = {
     X: 'Ө', Q: 'Ө',
 };
 
-const normalizeRegister = (value) => {
-    const raw = String(value ?? '').replace(/\s+/g, '').toUpperCase();
+const CYRILLIC_LETTER = /^[\u0410-\u042F\u0401\u04AE\u04E8]$/;
 
-    if (! raw) {
-        return null;
+/** Эхний 2 үсэг — зөвхөн крилл, том үсэг. Латин гарнаас ирвэл крилл рүү хөрвүүлнэ. */
+export const normalizeRegisterLetters = (value) => {
+    let out = '';
+
+    for (const ch of String(value ?? '').replace(/\s+/g, '')) {
+        const upper = ch.toUpperCase();
+        const mapped = LATIN_TO_CYRILLIC[upper] || upper;
+
+        if (CYRILLIC_LETTER.test(mapped)) {
+            out += mapped;
+        }
+
+        if (out.length >= 2) {
+            break;
+        }
     }
 
-    const letters = [...raw.slice(0, 2)]
-        .map((ch) => LATIN_TO_CYRILLIC[ch] || ch)
-        .join('');
-    const digits = raw.slice(2).replace(/\D+/g, '').slice(0, 8);
-    const register = `${letters}${digits}`;
+    return out;
+};
+
+/** Үлдсэн 8 орон — зөвхөн тоо. */
+export const normalizeRegisterDigits = (value) => (
+    String(value ?? '').replace(/\D+/g, '').slice(0, 8)
+);
+
+export const splitRegisterParts = (value) => {
+    const raw = String(value ?? '').replace(/\s+/g, '');
+
+    return {
+        letters: normalizeRegisterLetters(raw.slice(0, 2)),
+        digits: normalizeRegisterDigits(raw.slice(2)),
+    };
+};
+
+export const joinRegisterParts = (letters, digits) => (
+    `${normalizeRegisterLetters(letters)}${normalizeRegisterDigits(digits)}`
+);
+
+const normalizeRegister = (value) => {
+    const { letters, digits } = splitRegisterParts(value);
+    const register = joinRegisterParts(letters, digits);
+
+    if (! register) {
+        return null;
+    }
 
     return /^[\u0410-\u042F\u0401\u04AE\u04E8]{2}\d{8}$/.test(register) ? register : null;
 };

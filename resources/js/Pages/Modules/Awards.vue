@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
+import RegisterNoInput from '@/Components/RegisterNoInput.vue';
 import SheetCell from '@/Components/SheetCell.vue';
 import { useStickyTableHead } from '@/composables/useStickyTableHead';
 import { parseMongolianRegister } from '@/utils/mongolianRegister';
@@ -1063,6 +1064,13 @@ const confirmImport = () => {
                                     :nowrap="!!col.nowrap"
                                     placeholder="Шагнал сонгох"
                                     @commit="(v) => saveField(row.id, fieldFor(col), v)"
+                                />
+
+                                <RegisterNoInput
+                                    v-else-if="isEditable(col, row.id) && drafts[row.id] && (col.input === 'register' || fieldFor(col) === 'register_no')"
+                                    v-model="drafts[row.id].register_no"
+                                    :editable="true"
+                                    @commit="(v) => saveField(row.id, 'register_no', v)"
                                 />
 
                                 <SheetCell
