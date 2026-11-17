@@ -112,6 +112,7 @@ class AwardController extends Controller
             'allSubtypes' => Award::SUBTYPES,
             'categorySubtypes' => Award::CATEGORY_SUBTYPES,
             'awardTypes' => AwardType::options(),
+            'supportingOrgs' => Award::supportingOrgOptions(),
             // Засах эрхтэй үед in_use хэрэгтэй (устгах/идэвхгүй товч).
             'awardTypeRows' => ModuleAccess::canEdit($request->user(), self::MODULE)
                 ? $this->awardTypeRows()
@@ -390,7 +391,7 @@ class AwardController extends Controller
             'address' => ['nullable', 'string', 'max:5000'],
             'last_award' => ['nullable', 'string', 'max:255'],
             'last_award_date' => ['nullable', 'date'],
-            'supporting_org' => ['nullable', 'string', 'max:255'],
+            'supporting_org' => ['nullable', 'string', 'max:255', Rule::in(Award::SUPPORTING_ORGS)],
             'forwarded_on' => ['nullable', 'date'],
             'forwarded_letter_no' => ['nullable', 'string', 'max:255'],
             'received_award' => ['nullable', 'string', 'max:255'],
@@ -451,7 +452,7 @@ class AwardController extends Controller
             'address' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'last_award' => ['sometimes', 'nullable', 'string', 'max:255'],
             'last_award_date' => ['sometimes', 'nullable', 'date'],
-            'supporting_org' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'supporting_org' => ['sometimes', 'nullable', 'string', 'max:255', Rule::in(Award::SUPPORTING_ORGS)],
             'forwarded_on' => ['sometimes', 'nullable', 'date'],
             'forwarded_letter_no' => ['sometimes', 'nullable', 'string', 'max:255'],
             'received_award' => ['sometimes', 'nullable', 'string', 'max:255'],
@@ -631,8 +632,9 @@ class AwardController extends Controller
                     'key' => 'supporting_org',
                     'label' => 'Байгууллага',
                     'field' => 'supporting_org',
+                    'input' => 'supporting_org',
                     'group' => 'Дээд байгууллагад уламжилсан',
-                    'width' => '7rem',
+                    'width' => '9rem',
                 ],
                 [
                     'key' => 'forwarded_on_display',

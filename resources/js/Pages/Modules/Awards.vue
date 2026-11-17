@@ -5,6 +5,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import RegisterNoInput from '@/Components/RegisterNoInput.vue';
 import SheetCell from '@/Components/SheetCell.vue';
+import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import { useStickyTableHead } from '@/composables/useStickyTableHead';
 import { parseMongolianRegister } from '@/utils/mongolianRegister';
 
@@ -26,6 +27,7 @@ const props = defineProps({
     allSubtypes: { type: Object, default: () => ({}) },
     categorySubtypes: { type: Object, default: () => ({}) },
     awardTypes: { type: Array, default: () => [] },
+    supportingOrgs: { type: Array, default: () => [] },
     awardTypeRows: { type: Array, default: () => [] },
     hasAuditLog: { type: Boolean, default: true },
 });
@@ -223,6 +225,7 @@ watch(() => [props.tab, props.subtype, props.year, props.yearAll, props.page], (
 });
 
 watch(() => props.columns, () => scheduleStickySync(), { deep: true });
+watch(() => [hasFilters.value, visibleRows.value.length], () => scheduleStickySync());
 
 const queryParams = (overrides = {}) => {
     const params = {
@@ -1107,6 +1110,16 @@ const confirmImport = () => {
                                     :editable="true"
                                     :nowrap="!!col.nowrap"
                                     placeholder="Шагнал сонгох"
+                                    @commit="(v) => saveField(row.id, fieldFor(col), v)"
+                                />
+
+                                <SheetCell
+                                    v-else-if="isEditable(col, row.id) && drafts[row.id] && col.input === 'supporting_org'"
+                                    v-model="drafts[row.id][fieldFor(col)]"
+                                    :options="supportingOrgs"
+                                    :editable="true"
+                                    :nowrap="!!col.nowrap"
+                                    placeholder="Байгууллага сонгох"
                                     @commit="(v) => saveField(row.id, fieldFor(col), v)"
                                 />
 

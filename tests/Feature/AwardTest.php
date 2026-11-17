@@ -33,7 +33,45 @@ class AwardTest extends TestCase
                 ->where('tab', 'state_high')
                 ->has('rows', 1)
                 ->has('awardTypes')
+                ->has('supportingOrgs', 2)
+                ->where('supportingOrgs.0.value', 'Ерөнхийлөгчийн Тамгын газар')
+                ->where('supportingOrgs.1.value', 'Аймгийн Иргэдийн Төлөөлөгчдийн Хурал')
             );
+    }
+
+    public function test_supporting_org_is_chosen_from_the_two_bodies(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $award = Award::query()->create([
+            'category' => 'state_high',
+            'year' => 2026,
+            'surname' => 'Бат',
+            'given_name' => 'Дорж',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('awards.update', $award), [
+                'supporting_org' => 'Ерөнхийлөгчийн Тамгын газар',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame('Ерөнхийлөгчийн Тамгын газар', $award->fresh()->supporting_org);
+
+        $this->actingAs($admin)
+            ->patch(route('awards.update', $award), [
+                'supporting_org' => 'Аймгийн Иргэдийн Төлөөлөгчдийн Хурал',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame('Аймгийн Иргэдийн Төлөөлөгчдийн Хурал', $award->fresh()->supporting_org);
+
+        $this->actingAs($admin)
+            ->patch(route('awards.update', $award), [
+                'supporting_org' => 'Өөр байгууллага',
+            ])
+            ->assertSessionHasErrors('supporting_org');
     }
 
     public function test_register_number_fills_age_and_gender(): void
