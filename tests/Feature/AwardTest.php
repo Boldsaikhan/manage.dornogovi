@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Award;
+use App\Models\AwardType;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -31,7 +32,56 @@ class AwardTest extends TestCase
                 ->component('Modules/Awards')
                 ->where('tab', 'state_high')
                 ->has('rows', 1)
+                ->has('awardTypes')
             );
+    }
+
+    public function test_register_number_fills_age_and_gender(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $award = Award::query()->create([
+            'category' => 'state_high',
+            'year' => 2026,
+            'surname' => 'Бат',
+            'given_name' => 'Дорж',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('awards.update', $award), [
+                'register_no' => 'УБ85031512',
+            ])
+            ->assertRedirect();
+
+        $award->refresh();
+
+        $this->assertSame('УБ85031512', $award->register_no);
+        $this->assertSame(41, $award->age);
+        $this->assertSame('эм', $award->gender);
+    }
+
+    public function test_admin_can_manage_award_types(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->post(route('awards.types.store'), [
+                'name' => 'Шинэ туршилтын медаль',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('award_types', [
+            'name' => 'Шинэ туршилтын медаль',
+        ]);
+
+        $type = AwardType::query()->where('name', 'Шинэ туршилтын медаль')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->delete(route('awards.types.destroy', $type))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('award_types', ['id' => $type->id]);
     }
 
     public function test_can_store_state_high_and_governor_honor(): void

@@ -8,6 +8,7 @@ use App\Http\Controllers\AnnualLeaveController;
 use App\Http\Controllers\AnnualLeaveNoticeController;
 use App\Http\Controllers\AppLockController;
 use App\Http\Controllers\AwardController;
+use App\Http\Controllers\AwardTypeController;
 use App\Http\Controllers\CredentialController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DecreeController;
@@ -146,6 +147,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/modules/awards', [AwardController::class, 'index'])->name('awards.index');
     Route::get('/modules/awards/export', [AwardController::class, 'export'])->name('awards.export');
     Route::post('/modules/awards', [AwardController::class, 'store'])->name('awards.store');
+    Route::post('/modules/awards/types', [AwardTypeController::class, 'store'])->name('awards.types.store');
+    Route::patch('/modules/awards/types/{awardType}', [AwardTypeController::class, 'update'])->name('awards.types.update');
+    Route::delete('/modules/awards/types/{awardType}', [AwardTypeController::class, 'destroy'])->name('awards.types.destroy');
     Route::patch('/modules/awards/{award}', [AwardController::class, 'update'])->name('awards.update');
     Route::delete('/modules/awards/{award}', [AwardController::class, 'destroy'])->name('awards.destroy');
 
