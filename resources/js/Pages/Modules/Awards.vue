@@ -12,7 +12,11 @@ const props = defineProps({
     subtype: { type: String, default: '' },
     subtypes: { type: Array, default: () => [] },
     year: { type: Number, default: null },
+    yearAll: { type: Boolean, default: false },
     years: { type: Array, default: () => [] },
+    page: { type: Number, default: 1 },
+    perPage: { type: Number, default: 100 },
+    totalMatched: { type: Number, default: 0 },
     columns: { type: Array, default: () => [] },
     rows: { type: Array, default: () => [] },
     canManage: { type: Boolean, default: false },
@@ -47,14 +51,32 @@ const addingRow = ref(false);
 
 const isEditing = (id) => props.canManage && editingRows.value.includes(id);
 
+const ensureDraft = (id) => {
+    if (drafts[id]) {
+        return;
+    }
+
+    const row = props.rows.find((item) => item.id === id);
+
+    drafts[id] = Object.fromEntries(
+        draftFields.value.map((field) => [field, row?.[field] ?? '']),
+    );
+};
+
 const toggleRowEdit = (id) => {
     if (! props.canManage) {
         return;
     }
 
-    editingRows.value = isEditing(id)
-        ? editingRows.value.filter((value) => value !== id)
-        : [...editingRows.value, id];
+    if (isEditing(id)) {
+        editingRows.value = editingRows.value.filter((value) => value !== id);
+        delete drafts[id];
+
+        return;
+    }
+
+    ensureDraft(id);
+    editingRows.value = [...editingRows.value, id];
 };
 
 const numberFields = new Set([
@@ -165,16 +187,6 @@ const draftFields = computed(() => {
     return [...new Set([...fields, 'age', 'gender', 'register_no'])];
 });
 
-const syncDrafts = () => {
-    Object.keys(drafts).forEach((key) => delete drafts[key]);
-
-    props.rows.forEach((row) => {
-        drafts[row.id] = Object.fromEntries(
-            draftFields.value.map((field) => [field, row[field] ?? '']),
-        );
-    });
-};
-
 const syncTypeNameDrafts = () => {
     Object.keys(typeNameDrafts).forEach((key) => delete typeNameDrafts[key]);
 
@@ -183,13 +195,21 @@ const syncTypeNameDrafts = () => {
     });
 };
 
-watch(() => [props.rows, props.columns], syncDrafts, { immediate: true, deep: true });
+// Draft-ыг бүх мөрт үүсгэхгүй — зөвхөн засах горимд (гацаанаас сэргийлнэ).
+watch(() => props.rows, () => {
+    Object.keys(drafts).forEach((key) => {
+        if (! editingRows.value.includes(Number(key)) && ! editingRows.value.includes(key)) {
+            delete drafts[key];
+        }
+    });
+});
 watch(() => props.columns, syncFilters, { immediate: true, deep: true });
 watch(() => props.awardTypeRows, syncTypeNameDrafts, { immediate: true, deep: true });
-watch(() => [props.tab, props.subtype, props.year], () => {
+watch(() => [props.tab, props.subtype, props.year, props.yearAll, props.page], () => {
     undoStack.value = [];
     redoStack.value = [];
     editingRows.value = [];
+    Object.keys(drafts).forEach((key) => delete drafts[key]);
     clearFilters();
 });
 
@@ -197,7 +217,8 @@ const queryParams = (overrides = {}) => {
     const params = {
         tab: props.tab,
         ...(props.subtype ? { subtype: props.subtype } : {}),
-        ...(props.year ? { year: props.year } : {}),
+        ...(props.yearAll ? { year: 'all' } : (props.year ? { year: props.year } : {})),
+        ...(props.yearAll && props.page > 1 ? { page: props.page } : {}),
         ...overrides,
     };
 
@@ -208,6 +229,19 @@ const queryParams = (overrides = {}) => {
     });
 
     return params;
+};
+
+const totalPages = computed(() => (
+    props.yearAll ? Math.max(1, Math.ceil(props.totalMatched / 100)) : 1
+));
+
+const goToPage = (page) => {
+    const next = Math.min(Math.max(1, Number(page) || 1), totalPages.value);
+
+    router.get(route('awards.index'), queryParams({ year: 'all', page: next > 1 ? next : undefined }), {
+        preserveState: false,
+        preserveScroll: true,
+    });
 };
 
 const switchTab = (value) => {
@@ -222,8 +256,16 @@ const switchSubtype = (value) => {
 };
 
 const switchYear = (value) => {
-    const year = value === '' || value === 'all' ? undefined : Number(value);
-    router.get(route('awards.index'), queryParams({ year }), {
+    if (value === '' || value === 'all') {
+        router.get(route('awards.index'), queryParams({ year: 'all', page: undefined }), {
+            preserveState: false,
+            preserveScroll: true,
+        });
+
+        return;
+    }
+
+    router.get(route('awards.index'), queryParams({ year: Number(value), page: undefined }), {
         preserveState: false,
         preserveScroll: true,
     });
@@ -265,6 +307,7 @@ const addRow = () => {
             const added = props.rows.find((row) => ! before.includes(row.id));
 
             if (added) {
+                ensureDraft(added.id);
                 editingRows.value = [added.id];
             }
         },
@@ -665,7 +708,7 @@ const confirmImport = () => {
                         </span>
                         <select
                             class="ui-input !h-9 w-[5.75rem] appearance-none !py-1.5 pl-8 pr-2 text-xs font-semibold"
-                            :value="year ?? 'all'"
+                            :value="yearAll ? 'all' : (year ?? 'all')"
                             aria-label="Он сонгох"
                             @change="switchYear($event.target.value)"
                         >
@@ -979,6 +1022,36 @@ const confirmImport = () => {
                         </tr>
                     </tbody>
                 </table>
+                </div>
+            </div>
+
+            <div
+                v-if="yearAll && totalMatched > 100"
+                class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600"
+            >
+                <p>
+                    Нийт <span class="font-semibold text-slate-800">{{ totalMatched }}</span> мөр —
+                    хуудас {{ page }}/{{ totalPages }} ({{ perPage }} мөр). Оноор шүүвэл илүү хурдан.
+                </p>
+                <div class="flex items-center gap-1">
+                    <button
+                        type="button"
+                        class="ui-icon-btn"
+                        :disabled="page <= 1"
+                        title="Өмнөх"
+                        @click="goToPage(page - 1)"
+                    >
+                        ‹
+                    </button>
+                    <button
+                        type="button"
+                        class="ui-icon-btn"
+                        :disabled="page >= totalPages"
+                        title="Дараах"
+                        @click="goToPage(page + 1)"
+                    >
+                        ›
+                    </button>
                 </div>
             </div>
         </div>

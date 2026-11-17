@@ -27,8 +27,26 @@ class AwardController extends Controller
         abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
 
         $tab = $this->normalizeTab((string) $request->query('tab', 'state_high'));
-        $year = $this->normalizeYear($request->query('year'));
         $subtype = $this->normalizeSubtypeFilter($tab, (string) $request->query('subtype', ''));
+
+        $years = Award::query()
+            ->where('category', $tab)
+            ->whereNotNull('year')
+            ->distinct()
+            ->orderByDesc('year')
+            ->pluck('year')
+            ->map(fn ($y) => (int) $y)
+            ->values()
+            ->all();
+
+        // Он заагаагүй бол сүүлийн он — 3000+ мөрийг нэг дор ачаалахгүй.
+        $rawYear = $request->query('year');
+        $yearAll = $rawYear === 'all';
+        if ($rawYear === null || $rawYear === '') {
+            $year = $years[0] ?? (int) date('Y');
+        } else {
+            $year = $this->normalizeYear($rawYear);
+        }
 
         $countsQuery = Award::query();
         ModuleOwnScope::apply($countsQuery, $request->user(), self::MODULE);
@@ -51,22 +69,24 @@ class AwardController extends Controller
 
         ModuleOwnScope::apply($query, $request->user(), self::MODULE);
 
-        // Төрийн дээд бүртгэл олон мянган мөртэй — бүх оноор харагдах ёстой.
-        $collection = $query->limit(10000)->get()->values();
-        $total = $collection->count();
-        $rows = $collection->map(
-            fn (Award $award, int $i) => $this->serialize($award, $total - $i),
-        );
+        $totalMatched = (clone $query)->count();
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = 100;
+        $offset = 0;
 
-        $years = Award::query()
-            ->where('category', $tab)
-            ->whereNotNull('year')
-            ->distinct()
-            ->orderByDesc('year')
-            ->pluck('year')
-            ->map(fn ($y) => (int) $y)
-            ->values()
-            ->all();
+        if ($yearAll) {
+            // «Бүгд» — хуудас бүрт 100 мөр (DOM гацаанаас сэргийлнэ).
+            $collection = $query->forPage($page, $perPage)->get()->values();
+            $offset = ($page - 1) * $perPage;
+        } else {
+            $collection = $query->limit(2000)->get()->values();
+            $page = 1;
+            $perPage = max($collection->count(), 1);
+        }
+
+        $rows = $collection->map(
+            fn (Award $award, int $i) => $this->serialize($award, $totalMatched - $offset - $i),
+        );
 
         return Inertia::render('Modules/Awards', [
             'tab' => $tab,
@@ -78,7 +98,11 @@ class AwardController extends Controller
             'subtype' => $subtype,
             'subtypes' => $this->subtypeOptions($tab),
             'year' => $year,
+            'yearAll' => $yearAll,
             'years' => $years,
+            'page' => $page,
+            'perPage' => $perPage,
+            'totalMatched' => $totalMatched,
             'columns' => $this->columnsFor($tab),
             'rows' => $rows,
             'canManage' => ModuleAccess::canEdit($request->user(), self::MODULE),
@@ -86,16 +110,17 @@ class AwardController extends Controller
             'allSubtypes' => Award::SUBTYPES,
             'categorySubtypes' => Award::CATEGORY_SUBTYPES,
             'awardTypes' => AwardType::options(),
-            'awardTypeRows' => $this->awardTypeRows(),
+            // in_use тооцоо хүнд — зөвхөн төрлийн цонх нээхэд хэрэгтэй тул хөнгөнөөр өгнө.
+            'awardTypeRows' => $this->awardTypeRows(light: true),
         ]);
     }
 
     /**
      * @return list<array{id: int, name: string, is_active: bool, sort_order: int, in_use: bool}>
      */
-    private function awardTypeRows(): array
+    private function awardTypeRows(bool $light = false): array
     {
-        $used = AwardType::usedNames();
+        $used = $light ? collect() : AwardType::usedNames();
 
         return AwardType::query()
             ->orderBy('sort_order')
