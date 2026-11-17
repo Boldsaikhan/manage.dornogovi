@@ -489,7 +489,8 @@
     }
 
     .ui-page--tasks-table,
-    .ui-page--reports-table {
+    .ui-page--reports-table,
+    .ui-page--awards-table {
         @apply flex min-h-0 flex-1 flex-col gap-2 overflow-hidden !space-y-0;
     }
 
@@ -501,12 +502,37 @@
         @apply shrink-0;
     }
 
+    .ui-page--awards-table > :not(.ui-awards-table-shell) {
+        @apply shrink-0;
+    }
+
+    /* Таб/toolbar-оос хүснэгт бага зэрэг зайтай. */
+    .ui-page--awards-table {
+        @apply gap-3;
+    }
+
     .ui-tasks-table-shell {
         @apply flex min-h-0 flex-1 basis-0 flex-col gap-2 overflow-hidden;
     }
 
     .ui-reports-table-shell {
         @apply grid min-h-0 flex-1 basis-0 overflow-hidden;
+    }
+
+    .ui-awards-table-shell {
+        @apply flex min-h-0 flex-1 basis-0 flex-col overflow-hidden;
+    }
+
+    /*
+     * Баруун доод AI fab (fixed) sticky үйлдэл/хуудаслалтын товчийг
+     * бүү дарж харагдуул — хүснэгтийн бүрхүүлээс баруун зай үлдээнэ.
+     */
+    .ui-awards-table-shell:not(.ui-table-overlay) {
+        @apply mr-16;
+    }
+
+    .ui-awards-table-shell .ui-awards-pager {
+        @apply relative z-20 bg-white dark:bg-slate-900;
     }
 
     /* Хүснэгт дэд цэсийг дарахгүй — багана агуулгаараа тэлэхгүй. */
@@ -521,17 +547,20 @@
     }
 
     html:has(.ui-page--tasks-table),
-    html:has(.ui-page--reports-table) {
+    html:has(.ui-page--reports-table),
+    html:has(.ui-page--awards-table) {
         @apply h-dvh overflow-hidden;
     }
 
     html:has(.ui-page--tasks-table) body,
-    html:has(.ui-page--reports-table) body {
+    html:has(.ui-page--reports-table) body,
+    html:has(.ui-page--awards-table) body {
         @apply h-dvh overflow-x-hidden overflow-y-hidden;
     }
 
     .flex.min-h-dvh:has(.ui-page--tasks-table),
-    .flex.min-h-dvh:has(.ui-page--reports-table) {
+    .flex.min-h-dvh:has(.ui-page--reports-table),
+    .flex.min-h-dvh:has(.ui-page--awards-table) {
         @apply h-dvh overflow-hidden;
     }
 
@@ -816,7 +845,8 @@
     }
 
     .ui-register__head-group--issued {
-        @apply bg-sky-50 text-sky-900 dark:bg-sky-950/60 dark:text-sky-200;
+        /* /60 тунгалаг — sticky үед мөр нэвт харагдана тул бүрэн өнгө. */
+        @apply bg-sky-50 text-sky-900 dark:bg-sky-950 dark:text-sky-200;
     }
 
     /*
@@ -828,6 +858,8 @@
         position: sticky;
         z-index: 11;
         @apply bg-white px-1 py-1.5 align-middle dark:bg-slate-800;
+        background-clip: border-box;
+        isolation: isolate;
         /* Багана хоорондын зураас + толгойг биеэс тусгаарлах ирмэг. */
         box-shadow:
             inset -1px 0 0 theme('colors.brand-navy.200'),
@@ -871,36 +903,57 @@
     }
 
     .ui-register__head-group--numbers {
-        @apply bg-emerald-50 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200;
+        @apply bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200;
     }
 
     .ui-register__head-group--void {
-        @apply bg-amber-50 text-amber-900 dark:bg-amber-950/60 dark:text-amber-200;
+        @apply bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200;
     }
 
     /*
-     * Баруун талд наалдсан үйлдлийн багана (хэвлэх, устгах).
-     *
-     * Хэвтээ гүйлгэхэд ч харагдах ёстой тул дэвсгэр нь ил тод биш,
-     * бүрэн өнгөтэй байна — эс бөгөөс доогуур нь мөр харагдана.
+     * Sticky толгой — мөр нэвт харагдахгүй байх ёстой.
+     * Tailwind opacity (/60) эсвэл тунгалаг дэвсгэрийг энд хүчээр хаана.
      */
+    .ui-register--pin-actions thead th {
+        background-clip: border-box;
+        isolation: isolate;
+    }
+
+    /*
+     * Баруун талд наалдсан үйлдлийн багана (засах, устгах).
+     *
+     * border-collapse: collapse үед position:sticky олон хөтөчид
+     * ажиллахгүй — тул separate + spacing 0 хэрэглэнэ.
+     */
+    .ui-register--pin-actions {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
     .ui-register--pin-actions .ui-sticky-actions {
         position: sticky;
         right: 0;
+        z-index: 6;
         background-clip: padding-box;
-        box-shadow: inset 1px 0 0 rgb(226 232 240);
+        box-shadow:
+            inset 1px 0 0 rgb(226 232 240),
+            -8px 0 10px -8px rgba(15, 23, 42, 0.16);
     }
 
     .dark .ui-register--pin-actions .ui-sticky-actions {
-        box-shadow: inset 1px 0 0 rgb(51 65 85);
+        box-shadow:
+            inset 1px 0 0 rgb(51 65 85),
+            -8px 0 10px -8px rgba(0, 0, 0, 0.35);
     }
 
     .ui-register--pin-actions thead .ui-sticky-actions {
         @apply bg-brand-navy-50 dark:bg-slate-800;
+        z-index: 16;
     }
 
     .ui-register--pin-actions thead tr.ui-filters .ui-sticky-actions {
         @apply bg-white dark:bg-slate-800;
+        z-index: 16;
     }
 
     /* Үйлдлийн багана — мөрийн өгөгдлөөс өнгөөрөө ялгарна. */

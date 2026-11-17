@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Award;
 use App\Models\AwardType;
 use App\Support\AwardImporter;
@@ -27,8 +28,26 @@ class AwardController extends Controller
         abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
 
         $tab = $this->normalizeTab((string) $request->query('tab', 'state_high'));
-        $year = $this->normalizeYear($request->query('year'));
         $subtype = $this->normalizeSubtypeFilter($tab, (string) $request->query('subtype', ''));
+
+        $years = Award::query()
+            ->where('category', $tab)
+            ->whereNotNull('year')
+            ->distinct()
+            ->orderByDesc('year')
+            ->pluck('year')
+            ->map(fn ($y) => (int) $y)
+            ->values()
+            ->all();
+
+        // Он заагаагүй бол сүүлийн он — 3000+ мөрийг нэг дор ачаалахгүй.
+        $rawYear = $request->query('year');
+        $yearAll = $rawYear === 'all';
+        if ($rawYear === null || $rawYear === '') {
+            $year = $years[0] ?? (int) date('Y');
+        } else {
+            $year = $this->normalizeYear($rawYear);
+        }
 
         $countsQuery = Award::query();
         ModuleOwnScope::apply($countsQuery, $request->user(), self::MODULE);
@@ -51,21 +70,24 @@ class AwardController extends Controller
 
         ModuleOwnScope::apply($query, $request->user(), self::MODULE);
 
-        $collection = $query->limit(500)->get()->values();
-        $total = $collection->count();
-        $rows = $collection->map(
-            fn (Award $award, int $i) => $this->serialize($award, $total - $i),
-        );
+        $totalMatched = (clone $query)->count();
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = 100;
+        $offset = 0;
 
-        $years = Award::query()
-            ->where('category', $tab)
-            ->whereNotNull('year')
-            ->distinct()
-            ->orderByDesc('year')
-            ->pluck('year')
-            ->map(fn ($y) => (int) $y)
-            ->values()
-            ->all();
+        if ($yearAll) {
+            // «Бүгд» — хуудас бүрт 100 мөр (DOM гацаанаас сэргийлнэ).
+            $collection = $query->forPage($page, $perPage)->get()->values();
+            $offset = ($page - 1) * $perPage;
+        } else {
+            $collection = $query->limit(2000)->get()->values();
+            $page = 1;
+            $perPage = max($collection->count(), 1);
+        }
+
+        $rows = $collection->map(
+            fn (Award $award, int $i) => $this->serialize($award, $totalMatched - $offset - $i),
+        );
 
         return Inertia::render('Modules/Awards', [
             'tab' => $tab,
@@ -77,24 +99,33 @@ class AwardController extends Controller
             'subtype' => $subtype,
             'subtypes' => $this->subtypeOptions($tab),
             'year' => $year,
+            'yearAll' => $yearAll,
             'years' => $years,
+            'page' => $page,
+            'perPage' => $perPage,
+            'totalMatched' => $totalMatched,
             'columns' => $this->columnsFor($tab),
             'rows' => $rows,
             'canManage' => ModuleAccess::canEdit($request->user(), self::MODULE),
+            'hasAuditLog' => true,
             'categories' => Award::CATEGORIES,
             'allSubtypes' => Award::SUBTYPES,
             'categorySubtypes' => Award::CATEGORY_SUBTYPES,
             'awardTypes' => AwardType::options(),
-            'awardTypeRows' => $this->awardTypeRows(),
+            'supportingOrgs' => Award::supportingOrgOptions(),
+            // Засах эрхтэй үед in_use хэрэгтэй (устгах/идэвхгүй товч).
+            'awardTypeRows' => ModuleAccess::canEdit($request->user(), self::MODULE)
+                ? $this->awardTypeRows()
+                : [],
         ]);
     }
 
     /**
      * @return list<array{id: int, name: string, is_active: bool, sort_order: int, in_use: bool}>
      */
-    private function awardTypeRows(): array
+    private function awardTypeRows(bool $light = false): array
     {
-        $used = AwardType::usedNames();
+        $used = $light ? collect() : AwardType::usedNames();
 
         return AwardType::query()
             ->orderBy('sort_order')
@@ -119,7 +150,8 @@ class AwardController extends Controller
         ModuleOwnScope::assertCanCreate($request->user(), self::MODULE, $data);
         $data['created_by'] = $request->user()->id;
 
-        Award::query()->create($data);
+        $award = Award::query()->create($data);
+        $this->log($award, 'created');
 
         return redirect()
             ->route('awards.index', array_filter([
@@ -136,7 +168,12 @@ class AwardController extends Controller
         abort_unless(ModuleOwnScope::allows($request->user(), self::MODULE, $award), 403);
 
         $data = $this->validatedPartial($request, $award);
+        $changes = $this->changedFields($award, $data);
         $award->update($data);
+
+        if ($changes !== []) {
+            $this->log($award, 'updated', $changes);
+        }
 
         return back();
     }
@@ -149,6 +186,7 @@ class AwardController extends Controller
         $tab = $award->category;
         $subtype = $award->subtype;
         $year = $award->year;
+        $this->log($award, 'deleted');
         $award->delete();
 
         return redirect()
@@ -158,6 +196,40 @@ class AwardController extends Controller
                 'year' => $year,
             ]))
             ->with('success', 'Устгалаа.');
+    }
+
+    /**
+     * Өөрчлөлтийн түүх — хэн, хэзээ, юуг сольсныг харуулна.
+     */
+    public function logs(Request $request): JsonResponse
+    {
+        abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
+
+        $tab = $this->normalizeTab((string) $request->query('tab', 'state_high'));
+
+        $rows = AuditLog::query()
+            ->with('user:id,name')
+            ->where('model_type', self::MODULE)
+            ->when(
+                array_key_exists($tab, Award::CATEGORIES),
+                fn ($query) => $query->where('scope', $tab),
+            )
+            ->orderByDesc('id')
+            ->limit(200)
+            ->get()
+            ->map(fn (AuditLog $log) => [
+                'id' => $log->id,
+                'action' => $log->action,
+                'action_label' => $log->actionLabel(),
+                'label' => $log->label,
+                'summary' => $log->summary,
+                'changes' => $log->changes,
+                'scope' => Award::CATEGORIES[$log->scope] ?? $log->scope,
+                'user' => $log->user?->name ?? 'Систем',
+                'at' => optional($log->created_at)?->format('Y-m-d H:i'),
+            ]);
+
+        return response()->json(['rows' => $rows]);
     }
 
     public function importPreview(Request $request, TabularFileReader $reader, AwardImporter $importer): JsonResponse
@@ -207,6 +279,16 @@ class AwardController extends Controller
             'year' => $year,
             'created_by' => $request->user()->id,
         ]);
+
+        AuditLog::record(
+            modelType: self::MODULE,
+            modelId: null,
+            action: 'imported',
+            scope: $tab,
+            label: Award::CATEGORIES[$tab] ?? $tab,
+            summary: sprintf('Файлаас %d мөр нэмэгдлээ.', $created),
+            changes: ['created' => $created],
+        );
 
         return redirect()
             ->route('awards.index', array_filter([
@@ -309,7 +391,7 @@ class AwardController extends Controller
             'address' => ['nullable', 'string', 'max:5000'],
             'last_award' => ['nullable', 'string', 'max:255'],
             'last_award_date' => ['nullable', 'date'],
-            'supporting_org' => ['nullable', 'string', 'max:255'],
+            'supporting_org' => ['nullable', 'string', 'max:255', Rule::in(Award::SUPPORTING_ORGS)],
             'forwarded_on' => ['nullable', 'date'],
             'forwarded_letter_no' => ['nullable', 'string', 'max:255'],
             'received_award' => ['nullable', 'string', 'max:255'],
@@ -370,7 +452,7 @@ class AwardController extends Controller
             'address' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'last_award' => ['sometimes', 'nullable', 'string', 'max:255'],
             'last_award_date' => ['sometimes', 'nullable', 'date'],
-            'supporting_org' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'supporting_org' => ['sometimes', 'nullable', 'string', 'max:255', Rule::in(Award::SUPPORTING_ORGS)],
             'forwarded_on' => ['sometimes', 'nullable', 'date'],
             'forwarded_letter_no' => ['sometimes', 'nullable', 'string', 'max:255'],
             'received_award' => ['sometimes', 'nullable', 'string', 'max:255'],
@@ -509,7 +591,7 @@ class AwardController extends Controller
                 ],
                 ['key' => 'surname', 'label' => 'Овог', 'field' => 'surname', 'group' => 'Ерөнхий мэдээлэл', 'nowrap' => true, 'width' => '7rem'],
                 ['key' => 'given_name', 'label' => 'Нэр', 'field' => 'given_name', 'group' => 'Ерөнхий мэдээлэл', 'nowrap' => true, 'width' => '7.5rem'],
-                ['key' => 'register_no', 'label' => 'Регистрийн дугаар', 'field' => 'register_no', 'group' => 'Ерөнхий мэдээлэл', 'nowrap' => true, 'width' => '6.5rem'],
+                ['key' => 'register_no', 'label' => 'Регистрийн дугаар', 'field' => 'register_no', 'input' => 'register', 'group' => 'Ерөнхий мэдээлэл', 'nowrap' => true, 'width' => '8.5rem'],
                 ['key' => 'age', 'label' => 'Нас', 'field' => 'age', 'input' => 'number', 'readonly' => true, 'group' => 'Ерөнхий мэдээлэл', 'width' => '3rem', 'hint' => 'РД-аас'],
                 ['key' => 'gender', 'label' => 'Хүйс', 'field' => 'gender', 'input' => 'gender', 'readonly' => true, 'group' => 'Ерөнхий мэдээлэл', 'width' => '3rem', 'hint' => 'РД-аас'],
                 [
@@ -550,8 +632,9 @@ class AwardController extends Controller
                     'key' => 'supporting_org',
                     'label' => 'Байгууллага',
                     'field' => 'supporting_org',
+                    'input' => 'supporting_org',
                     'group' => 'Дээд байгууллагад уламжилсан',
-                    'width' => '7rem',
+                    'width' => '9rem',
                 ],
                 [
                     'key' => 'forwarded_on_display',
@@ -600,7 +683,7 @@ class AwardController extends Controller
                 ['key' => 'award_name', 'label' => 'Шагналын нэр', 'field' => 'award_name', 'input' => 'award_type'],
                 ['key' => 'surname', 'label' => 'Овог', 'field' => 'surname', 'nowrap' => true],
                 ['key' => 'given_name', 'label' => 'Нэр', 'field' => 'given_name', 'nowrap' => true],
-                ['key' => 'register_no', 'label' => 'Регистр', 'field' => 'register_no', 'nowrap' => true],
+                ['key' => 'register_no', 'label' => 'Регистр', 'field' => 'register_no', 'input' => 'register', 'nowrap' => true, 'width' => '8.5rem'],
                 ['key' => 'work_sector', 'label' => 'Ажилладаг салбар', 'field' => 'work_sector'],
                 ['key' => 'job_title', 'label' => 'Эрхэлдэг ажил, албан тушаал', 'field' => 'job_title', 'multiline' => true],
                 ['key' => 'total_years', 'lines' => ['Нийт', 'ажилласан', 'жил'], 'field' => 'total_years', 'input' => 'number'],
@@ -616,7 +699,7 @@ class AwardController extends Controller
             ['key' => 'no', 'label' => 'Д/д', 'readonly' => true],
             ['key' => 'surname', 'label' => 'Овог', 'field' => 'surname', 'nowrap' => true],
             ['key' => 'given_name', 'label' => 'Нэр', 'field' => 'given_name', 'nowrap' => true],
-            ['key' => 'register_no', 'label' => 'Регистр', 'field' => 'register_no', 'nowrap' => true],
+            ['key' => 'register_no', 'label' => 'Регистр', 'field' => 'register_no', 'input' => 'register', 'nowrap' => true, 'width' => '8.5rem'],
             ['key' => 'work_sector', 'label' => 'Ажилладаг салбар', 'field' => 'work_sector'],
             ['key' => 'job_title', 'lines' => ['Эрхэлдэг ажил,', 'албан тушаал'], 'field' => 'job_title', 'multiline' => true],
             ['key' => 'total_years', 'lines' => ['Нийт', 'ажилласан', 'хугацаа'], 'field' => 'total_years', 'input' => 'number'],
@@ -687,5 +770,94 @@ class AwardController extends Controller
         }
 
         return (string) ($column['label'] ?? '');
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $changes
+     */
+    private function log(Award $award, string $action, ?array $changes = null): void
+    {
+        AuditLog::record(
+            modelType: self::MODULE,
+            modelId: $award->getKey(),
+            action: $action,
+            scope: $award->category ?: null,
+            label: $this->rowLabel($award),
+            changes: $changes,
+        );
+    }
+
+    private function rowLabel(Award $award): string
+    {
+        $name = trim(implode(' ', array_filter([
+            (string) $award->surname,
+            (string) $award->given_name,
+        ])));
+
+        if ($name !== '') {
+            return $name;
+        }
+
+        $register = trim((string) $award->register_no);
+
+        return $register !== '' ? $register : '#'.$award->getKey();
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, array{from: string, to: string}>
+     */
+    private function changedFields(Award $award, array $data): array
+    {
+        $labels = [
+            'category' => 'Ангилал',
+            'subtype' => 'Дэд төрөл',
+            'year' => 'Он',
+            'surname' => 'Овог',
+            'given_name' => 'Нэр',
+            'register_no' => 'Регистр',
+            'age' => 'Нас',
+            'gender' => 'Хүйс',
+            'nominated_award' => 'Өргөн мэдүүлсэн шагнал',
+            'years_in_country' => 'Улсад ажилласан жил',
+            'years_in_sector' => 'Салбарт ажилласан жил',
+            'award_date' => 'Шагналын огноо',
+            'resolution_number' => 'Зарлигийн дугаар',
+            'position' => 'Ажил, албан тушаал',
+            'address' => 'Хаяг',
+            'last_award' => 'Сүүлд авсан шагнал',
+            'last_award_date' => 'Сүүлд авсан огноо',
+            'supporting_org' => 'Дээд байгууллага',
+            'forwarded_on' => 'Шилжүүлсэн огноо',
+            'forwarded_letter_no' => 'Шилжүүлсэн бичгийн дугаар',
+            'received_award' => 'Авсан шагнал',
+            'presidential_letter' => 'Ерөнхийлөгчийн зарлиг',
+            'award_name' => 'Шагналын нэр',
+            'work_sector' => 'Харьяалах салбар',
+            'profession' => 'Мэргэжил',
+            'job_title' => 'Албан тушаал',
+            'total_years' => 'Нийт ажилласан жил',
+            'position_years' => 'Тухайн албан тушаалд',
+            'order_ref' => 'Захирамж',
+            'award_note' => 'Шагналын тэмдэглэл',
+            'notes' => 'Тэмдэглэл',
+        ];
+
+        $changes = [];
+
+        foreach ($data as $name => $new) {
+            $old = $award->getAttribute($name);
+
+            $oldText = $old instanceof \DateTimeInterface ? $old->format('Y-m-d') : (string) ($old ?? '');
+            $newText = $new instanceof \DateTimeInterface ? $new->format('Y-m-d') : (string) ($new ?? '');
+
+            if ($oldText === $newText) {
+                continue;
+            }
+
+            $changes[$labels[$name] ?? $name] = ['from' => $oldText, 'to' => $newText];
+        }
+
+        return $changes;
     }
 }

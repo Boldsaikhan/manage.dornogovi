@@ -29,6 +29,23 @@ class Award extends Model
         'other' => [],
     ];
 
+    /** Дээд байгууллагад уламжилсан — сонгох байгууллагууд */
+    public const SUPPORTING_ORGS = [
+        'Ерөнхийлөгчийн Тамгын газар',
+        'Аймгийн Иргэдийн Төлөөлөгчдийн Хурал',
+    ];
+
+    /**
+     * @return list<array{value: string, label: string}>
+     */
+    public static function supportingOrgOptions(): array
+    {
+        return collect(self::SUPPORTING_ORGS)
+            ->map(fn (string $name) => ['value' => $name, 'label' => $name])
+            ->values()
+            ->all();
+    }
+
     protected $fillable = [
         'category',
         'subtype',
