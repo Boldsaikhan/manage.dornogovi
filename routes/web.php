@@ -145,6 +145,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/modules/annual-leaves/{annualLeave}/notice-text', [AnnualLeaveNoticeController::class, 'updateText'])->name('annual-leaves.notice.text');
 
     Route::get('/modules/awards', [AwardController::class, 'index'])->name('awards.index');
+    Route::get('/modules/awards/logs', [AwardController::class, 'logs'])->name('awards.logs');
     Route::get('/modules/awards/export', [AwardController::class, 'export'])->name('awards.export');
     Route::post('/modules/awards/import/preview', [AwardController::class, 'importPreview'])->name('awards.import.preview');
     Route::post('/modules/awards/import', [AwardController::class, 'importStore'])->name('awards.import.store');

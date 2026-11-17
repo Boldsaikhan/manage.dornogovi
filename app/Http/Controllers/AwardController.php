@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Award;
 use App\Models\AwardType;
 use App\Support\AwardImporter;
@@ -106,6 +107,7 @@ class AwardController extends Controller
             'columns' => $this->columnsFor($tab),
             'rows' => $rows,
             'canManage' => ModuleAccess::canEdit($request->user(), self::MODULE),
+            'hasAuditLog' => true,
             'categories' => Award::CATEGORIES,
             'allSubtypes' => Award::SUBTYPES,
             'categorySubtypes' => Award::CATEGORY_SUBTYPES,
@@ -147,7 +149,8 @@ class AwardController extends Controller
         ModuleOwnScope::assertCanCreate($request->user(), self::MODULE, $data);
         $data['created_by'] = $request->user()->id;
 
-        Award::query()->create($data);
+        $award = Award::query()->create($data);
+        $this->log($award, 'created');
 
         return redirect()
             ->route('awards.index', array_filter([
@@ -164,7 +167,12 @@ class AwardController extends Controller
         abort_unless(ModuleOwnScope::allows($request->user(), self::MODULE, $award), 403);
 
         $data = $this->validatedPartial($request, $award);
+        $changes = $this->changedFields($award, $data);
         $award->update($data);
+
+        if ($changes !== []) {
+            $this->log($award, 'updated', $changes);
+        }
 
         return back();
     }
@@ -177,6 +185,7 @@ class AwardController extends Controller
         $tab = $award->category;
         $subtype = $award->subtype;
         $year = $award->year;
+        $this->log($award, 'deleted');
         $award->delete();
 
         return redirect()
@@ -186,6 +195,40 @@ class AwardController extends Controller
                 'year' => $year,
             ]))
             ->with('success', 'Устгалаа.');
+    }
+
+    /**
+     * Өөрчлөлтийн түүх — хэн, хэзээ, юуг сольсныг харуулна.
+     */
+    public function logs(Request $request): JsonResponse
+    {
+        abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
+
+        $tab = $this->normalizeTab((string) $request->query('tab', 'state_high'));
+
+        $rows = AuditLog::query()
+            ->with('user:id,name')
+            ->where('model_type', self::MODULE)
+            ->when(
+                array_key_exists($tab, Award::CATEGORIES),
+                fn ($query) => $query->where('scope', $tab),
+            )
+            ->orderByDesc('id')
+            ->limit(200)
+            ->get()
+            ->map(fn (AuditLog $log) => [
+                'id' => $log->id,
+                'action' => $log->action,
+                'action_label' => $log->actionLabel(),
+                'label' => $log->label,
+                'summary' => $log->summary,
+                'changes' => $log->changes,
+                'scope' => Award::CATEGORIES[$log->scope] ?? $log->scope,
+                'user' => $log->user?->name ?? 'Систем',
+                'at' => optional($log->created_at)?->format('Y-m-d H:i'),
+            ]);
+
+        return response()->json(['rows' => $rows]);
     }
 
     public function importPreview(Request $request, TabularFileReader $reader, AwardImporter $importer): JsonResponse
@@ -235,6 +278,16 @@ class AwardController extends Controller
             'year' => $year,
             'created_by' => $request->user()->id,
         ]);
+
+        AuditLog::record(
+            modelType: self::MODULE,
+            modelId: null,
+            action: 'imported',
+            scope: $tab,
+            label: Award::CATEGORIES[$tab] ?? $tab,
+            summary: sprintf('Файлаас %d мөр нэмэгдлээ.', $created),
+            changes: ['created' => $created],
+        );
 
         return redirect()
             ->route('awards.index', array_filter([
@@ -715,5 +768,94 @@ class AwardController extends Controller
         }
 
         return (string) ($column['label'] ?? '');
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $changes
+     */
+    private function log(Award $award, string $action, ?array $changes = null): void
+    {
+        AuditLog::record(
+            modelType: self::MODULE,
+            modelId: $award->getKey(),
+            action: $action,
+            scope: $award->category ?: null,
+            label: $this->rowLabel($award),
+            changes: $changes,
+        );
+    }
+
+    private function rowLabel(Award $award): string
+    {
+        $name = trim(implode(' ', array_filter([
+            (string) $award->surname,
+            (string) $award->given_name,
+        ])));
+
+        if ($name !== '') {
+            return $name;
+        }
+
+        $register = trim((string) $award->register_no);
+
+        return $register !== '' ? $register : '#'.$award->getKey();
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, array{from: string, to: string}>
+     */
+    private function changedFields(Award $award, array $data): array
+    {
+        $labels = [
+            'category' => 'Ангилал',
+            'subtype' => 'Дэд төрөл',
+            'year' => 'Он',
+            'surname' => 'Овог',
+            'given_name' => 'Нэр',
+            'register_no' => 'Регистр',
+            'age' => 'Нас',
+            'gender' => 'Хүйс',
+            'nominated_award' => 'Өргөн мэдүүлсэн шагнал',
+            'years_in_country' => 'Улсад ажилласан жил',
+            'years_in_sector' => 'Салбарт ажилласан жил',
+            'award_date' => 'Шагналын огноо',
+            'resolution_number' => 'Зарлигийн дугаар',
+            'position' => 'Ажил, албан тушаал',
+            'address' => 'Хаяг',
+            'last_award' => 'Сүүлд авсан шагнал',
+            'last_award_date' => 'Сүүлд авсан огноо',
+            'supporting_org' => 'Дээд байгууллага',
+            'forwarded_on' => 'Шилжүүлсэн огноо',
+            'forwarded_letter_no' => 'Шилжүүлсэн бичгийн дугаар',
+            'received_award' => 'Авсан шагнал',
+            'presidential_letter' => 'Ерөнхийлөгчийн зарлиг',
+            'award_name' => 'Шагналын нэр',
+            'work_sector' => 'Харьяалах салбар',
+            'profession' => 'Мэргэжил',
+            'job_title' => 'Албан тушаал',
+            'total_years' => 'Нийт ажилласан жил',
+            'position_years' => 'Тухайн албан тушаалд',
+            'order_ref' => 'Захирамж',
+            'award_note' => 'Шагналын тэмдэглэл',
+            'notes' => 'Тэмдэглэл',
+        ];
+
+        $changes = [];
+
+        foreach ($data as $name => $new) {
+            $old = $award->getAttribute($name);
+
+            $oldText = $old instanceof \DateTimeInterface ? $old->format('Y-m-d') : (string) ($old ?? '');
+            $newText = $new instanceof \DateTimeInterface ? $new->format('Y-m-d') : (string) ($new ?? '');
+
+            if ($oldText === $newText) {
+                continue;
+            }
+
+            $changes[$labels[$name] ?? $name] = ['from' => $oldText, 'to' => $newText];
+        }
+
+        return $changes;
     }
 }
