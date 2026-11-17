@@ -32,6 +32,8 @@ const drafts = reactive({});
 const filters = reactive({});
 const registerEl = ref(null);
 const { schedule: scheduleStickySync } = useStickyTableHead(() => registerEl.value);
+/** Хүснэгтийг дэлгэц дүүрэн харах (Esc дарж хаана). */
+const tableExpanded = ref(false);
 const showTypes = ref(false);
 const newTypeName = ref('');
 const savingType = ref(false);
@@ -452,6 +454,12 @@ const typingInField = (target) => target instanceof HTMLElement
     && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
 
 const onKeydown = (event) => {
+    if (event.key === 'Escape' && tableExpanded.value) {
+        tableExpanded.value = false;
+
+        return;
+    }
+
     if (! props.canManage || ! (event.ctrlKey || event.metaKey) || typingInField(event.target)) {
         return;
     }
@@ -470,6 +478,13 @@ const onKeydown = (event) => {
         redo();
     }
 };
+
+const toggleTableExpanded = () => {
+    tableExpanded.value = ! tableExpanded.value;
+    scheduleStickySync();
+};
+
+watch(tableExpanded, () => scheduleStickySync());
 
 onMounted(() => window.addEventListener('keydown', onKeydown));
 onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
@@ -755,6 +770,29 @@ const confirmImport = () => {
                     </button>
 
                     <button
+                        type="button"
+                        class="ui-icon-btn"
+                        :title="tableExpanded ? 'Хэвийн хэмжээнд буцах (Esc)' : 'Хүснэгтийг дэлгэц дүүрэн харах'"
+                        :aria-label="tableExpanded ? 'Хаах' : 'Дэлгэц дүүрэн'"
+                        @click="toggleTableExpanded"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path
+                                v-if="tableExpanded"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M9 9L5 5m0 0h4M5 5v4m10 0l4-4m0 0h-4m4 0v4M9 15l-4 4m0 0h4m-4 0v-4m10 0l4 4m0 0h-4m4 0v-4"
+                            />
+                            <path
+                                v-else
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M4 9V5a1 1 0 011-1h4M20 9V5a1 1 0 00-1-1h-4M4 15v4a1 1 0 001 1h4M20 15v4a1 1 0 01-1 1h-4"
+                            />
+                        </svg>
+                    </button>
+
+                    <button
                         v-if="canManage"
                         type="button"
                         class="ui-icon-btn"
@@ -834,7 +872,30 @@ const confirmImport = () => {
                 </button>
             </div>
 
-            <div class="ui-card flex max-h-[min(70vh,calc(100dvh-12rem))] flex-col overflow-hidden">
+            <div :class="tableExpanded ? 'ui-table-overlay' : 'contents'">
+                <div
+                    v-if="tableExpanded"
+                    class="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-3"
+                >
+                    <div class="min-w-0">
+                        <p class="truncate text-sm font-semibold text-brand-navy-900">{{ pageTitle }}</p>
+                        <p class="text-xs text-slate-500">
+                            {{ yearAll ? 'Бүх он' : `${year} он` }}
+                            · {{ totalMatched || rows.length }} мөр
+                            · Esc дарж хаана
+                        </p>
+                    </div>
+                    <button type="button" class="ui-btn-ghost" @click="tableExpanded = false">
+                        Хаах
+                    </button>
+                </div>
+
+            <div
+                class="ui-card flex flex-col overflow-hidden"
+                :class="tableExpanded
+                    ? 'min-h-0 flex-1'
+                    : 'max-h-[min(70vh,calc(100dvh-12rem))]'"
+            >
                 <div class="min-h-0 flex-1 overflow-auto overscroll-contain">
                 <div ref="registerEl" class="ui-register">
                 <table
@@ -1066,6 +1127,7 @@ const confirmImport = () => {
                         </button>
                     </div>
                 </div>
+            </div>
             </div>
         </div>
 
