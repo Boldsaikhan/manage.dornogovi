@@ -1004,7 +1004,7 @@ const confirmImport = () => {
                             </td>
                         </tr>
 
-                        <tr v-for="row in visibleRows" :key="row.id">
+                        <tr v-for="(row, rowIndex) in visibleRows" :key="row.id">
                             <td
                                 v-for="col in columns"
                                 :key="`${row.id}-${col.key}`"
@@ -1016,7 +1016,7 @@ const confirmImport = () => {
                                 ]"
                             >
                                 <template v-if="col.key === 'no'">
-                                    {{ row.no }}
+                                    {{ hasFilters ? rowIndex + 1 : row.no }}
                                 </template>
 
                                 <span
