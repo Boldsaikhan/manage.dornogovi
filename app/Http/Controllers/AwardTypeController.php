@@ -46,6 +46,12 @@ class AwardTypeController extends Controller
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
+        if (array_key_exists('name', $data) && $data['name'] !== $awardType->name && $awardType->isInUse()) {
+            return back()->withErrors([
+                'name' => 'Энэ төрөл шагналын бүртгэлд ашиглагдаж байгаа тул нэрийг солих боломжгүй.',
+            ]);
+        }
+
         $awardType->update($data);
 
         return back()->with('success', 'Шагналын төрөл шинэчлэгдлээ.');
@@ -54,6 +60,12 @@ class AwardTypeController extends Controller
     public function destroy(Request $request, AwardType $awardType): RedirectResponse
     {
         abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
+
+        if ($awardType->isInUse()) {
+            return back()->withErrors([
+                'name' => 'Энэ төрөл шагналын бүртгэлд ашиглагдаж байгаа тул устгах боломжгүй.',
+            ]);
+        }
 
         $awardType->delete();
 

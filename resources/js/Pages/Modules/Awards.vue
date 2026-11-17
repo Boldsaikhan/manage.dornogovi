@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
@@ -27,6 +27,10 @@ const drafts = reactive({});
 const showTypes = ref(false);
 const newTypeName = ref('');
 const savingType = ref(false);
+const typeNameDrafts = reactive({});
+const undoStack = ref([]);
+const redoStack = ref([]);
+const stepping = ref(false);
 
 const numberFields = new Set([
     'age', 'years_in_country', 'years_in_sector', 'total_years', 'position_years',
@@ -51,7 +55,20 @@ const syncDrafts = () => {
     });
 };
 
+const syncTypeNameDrafts = () => {
+    Object.keys(typeNameDrafts).forEach((key) => delete typeNameDrafts[key]);
+
+    props.awardTypeRows.forEach((item) => {
+        typeNameDrafts[item.id] = item.name;
+    });
+};
+
 watch(() => [props.rows, props.columns], syncDrafts, { immediate: true, deep: true });
+watch(() => props.awardTypeRows, syncTypeNameDrafts, { immediate: true, deep: true });
+watch(() => [props.tab, props.subtype, props.year], () => {
+    undoStack.value = [];
+    redoStack.value = [];
+});
 
 const queryParams = (overrides = {}) => {
     const params = {
@@ -115,50 +132,156 @@ const addRow = () => {
     useForm(payload).post(route('awards.store'), { preserveScroll: true });
 };
 
-const saveField = (id, field, value) => {
+const normalizeFieldValue = (field, value) => {
     let next = value;
 
     if (numberFields.has(field)) {
         if (next === '' || next === null || next === undefined) {
-            next = null;
-        } else {
-            const n = Number.parseInt(String(next), 10);
-            next = Number.isNaN(n) ? null : n;
+            return null;
         }
-    } else if (typeof next === 'string') {
-        next = next.trim() === '' ? null : next.trim();
+
+        const n = Number.parseInt(String(next), 10);
+
+        return Number.isNaN(n) ? null : n;
     }
 
-    const payload = { [field]: next };
+    if (typeof next === 'string') {
+        next = next.trim();
+
+        return next === '' ? null : next;
+    }
+
+    return next ?? null;
+};
+
+const snapshotField = (id, field) => {
+    const raw = drafts[id]?.[field] ?? props.rows.find((row) => row.id === id)?.[field] ?? null;
+
+    return normalizeFieldValue(field, raw);
+};
+
+const applyDraftPayload = (id, payload) => {
+    if (! drafts[id]) {
+        return;
+    }
+
+    Object.entries(payload).forEach(([field, value]) => {
+        if (Object.prototype.hasOwnProperty.call(drafts[id], field)) {
+            drafts[id][field] = value ?? '';
+        }
+    });
+};
+
+const patchAward = (id, payload, onSaved) => {
+    applyDraftPayload(id, payload);
+
+    router.patch(route('awards.update', id), payload, {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => onSaved?.(),
+    });
+};
+
+const samePayload = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+
+const saveField = (id, field, value) => {
+    const before = { [field]: snapshotField(id, field) };
+    let next = normalizeFieldValue(field, value);
+    const after = { [field]: next };
 
     if (field === 'register_no') {
+        before.age = snapshotField(id, 'age');
+        before.gender = snapshotField(id, 'gender');
+
         const row = props.rows.find((item) => item.id === id);
         const asOfYear = Number(row?.year || props.year || new Date().getFullYear());
         const parsed = parseMongolianRegister(next, asOfYear);
 
         if (parsed) {
-            payload.register_no = parsed.register;
-            payload.age = parsed.age;
-            payload.gender = parsed.gender;
-
-            if (drafts[id]) {
-                drafts[id].register_no = parsed.register;
-                drafts[id].age = parsed.age;
-                drafts[id].gender = parsed.gender;
-            }
-        } else if (drafts[id]) {
-            drafts[id][field] = next ?? '';
+            after.register_no = parsed.register;
+            after.age = parsed.age;
+            after.gender = parsed.gender;
+            next = parsed.register;
+        } else {
+            after.age = before.age;
+            after.gender = before.gender;
         }
-    } else if (drafts[id] && Object.prototype.hasOwnProperty.call(drafts[id], field)) {
-        drafts[id][field] = next ?? '';
     }
 
-    router.patch(
-        route('awards.update', id),
-        payload,
-        { preserveScroll: true, preserveState: true },
-    );
+    if (samePayload(before, after)) {
+        applyDraftPayload(id, after);
+
+        return;
+    }
+
+    patchAward(id, after, () => {
+        if (stepping.value) {
+            return;
+        }
+
+        undoStack.value = [...undoStack.value, { id, before, after }].slice(-50);
+        redoStack.value = [];
+    });
 };
+
+const canUndo = computed(() => props.canManage && undoStack.value.length > 0);
+const canRedo = computed(() => props.canManage && redoStack.value.length > 0);
+
+const undo = () => {
+    const entry = undoStack.value.at(-1);
+
+    if (! entry || stepping.value) {
+        return;
+    }
+
+    stepping.value = true;
+    patchAward(entry.id, entry.before, () => {
+        undoStack.value = undoStack.value.slice(0, -1);
+        redoStack.value = [...redoStack.value, entry];
+    });
+    setTimeout(() => { stepping.value = false; }, 300);
+};
+
+const redo = () => {
+    const entry = redoStack.value.at(-1);
+
+    if (! entry || stepping.value) {
+        return;
+    }
+
+    stepping.value = true;
+    patchAward(entry.id, entry.after, () => {
+        redoStack.value = redoStack.value.slice(0, -1);
+        undoStack.value = [...undoStack.value, entry];
+    });
+    setTimeout(() => { stepping.value = false; }, 300);
+};
+
+const typingInField = (target) => target instanceof HTMLElement
+    && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+
+const onKeydown = (event) => {
+    if (! props.canManage || ! (event.ctrlKey || event.metaKey) || typingInField(event.target)) {
+        return;
+    }
+
+    const key = event.key.toLowerCase();
+
+    if (key === 'z' && ! event.shiftKey) {
+        event.preventDefault();
+        undo();
+
+        return;
+    }
+
+    if (key === 'y' || (key === 'z' && event.shiftKey)) {
+        event.preventDefault();
+        redo();
+    }
+};
+
+onMounted(() => window.addEventListener('keydown', onKeydown));
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 
 const destroyRow = (id) => {
     if (! confirm('Устгах уу?')) {
@@ -186,12 +309,44 @@ const addAwardType = () => {
     });
 };
 
-const removeAwardType = (id) => {
+const renameAwardType = (item) => {
+    if (item.in_use || savingType.value) {
+        typeNameDrafts[item.id] = item.name;
+
+        return;
+    }
+
+    const name = String(typeNameDrafts[item.id] ?? '').trim();
+
+    if (! name || name === item.name) {
+        typeNameDrafts[item.id] = item.name;
+
+        return;
+    }
+
+    savingType.value = true;
+
+    useForm({ name }).patch(route('awards.types.update', item.id), {
+        preserveScroll: true,
+        onFinish: () => {
+            savingType.value = false;
+        },
+        onError: () => {
+            typeNameDrafts[item.id] = item.name;
+        },
+    });
+};
+
+const removeAwardType = (item) => {
+    if (item.in_use) {
+        return;
+    }
+
     if (! confirm('Энэ шагналын төрлийг устгах уу?')) {
         return;
     }
 
-    router.delete(route('awards.types.destroy', id), { preserveScroll: true });
+    router.delete(route('awards.types.destroy', item.id), { preserveScroll: true });
 };
 
 const cellValue = (row, key) => {
@@ -275,6 +430,36 @@ const colAlign = (col) => {
                             <option v-if="year && !years.includes(year)" :value="year">{{ year }}</option>
                         </select>
                     </label>
+
+                    <button
+                        v-if="canManage"
+                        type="button"
+                        class="ui-icon-btn"
+                        :disabled="! canUndo"
+                        :title="canUndo ? 'Сүүлийн үйлдлийг буцаах (Ctrl+Z)' : 'Буцаах үйлдэл алга'"
+                        aria-label="Буцаах"
+                        @click="undo"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 14 4 9l5-5" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 9h9a6 6 0 0 1 0 12h-3" />
+                        </svg>
+                    </button>
+
+                    <button
+                        v-if="canManage"
+                        type="button"
+                        class="ui-icon-btn"
+                        :disabled="! canRedo"
+                        :title="canRedo ? 'Буцаасан үйлдлийг дахин хийх (Ctrl+Y)' : 'Дахин хийх үйлдэл алга'"
+                        aria-label="Дахин хийх"
+                        @click="redo"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m15 14 5-5-5-5" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20 9h-9a6 6 0 0 0 0 12h3" />
+                        </svg>
+                    </button>
 
                     <button
                         v-if="canManage"
@@ -487,13 +672,30 @@ const colAlign = (col) => {
                                 <td colspan="2" class="!py-8 text-center text-slate-400">Төрөл алга</td>
                             </tr>
                             <tr v-for="item in awardTypeRows" :key="item.id">
-                                <td>{{ item.name }}</td>
+                                <td>
+                                    <input
+                                        v-model="typeNameDrafts[item.id]"
+                                        type="text"
+                                        class="ui-input w-full"
+                                        :disabled="item.in_use || savingType"
+                                        :title="item.in_use
+                                            ? 'Шагналын бүртгэлд ашиглагдаж байгаа тул нэр солих боломжгүй'
+                                            : 'Нэрийг засаад Enter эсвэл гадна дарна'"
+                                        maxlength="255"
+                                        @keydown.enter.prevent="renameAwardType(item)"
+                                        @blur="renameAwardType(item)"
+                                    />
+                                </td>
                                 <td class="text-center">
                                     <button
                                         type="button"
                                         class="ui-icon-btn ui-icon-btn--danger"
-                                        title="Устгах"
-                                        @click="removeAwardType(item.id)"
+                                        :disabled="item.in_use"
+                                        :title="item.in_use
+                                            ? 'Шагналын бүртгэлд ашиглагдаж байгаа тул устгах боломжгүй'
+                                            : 'Устгах'"
+                                        :aria-label="item.in_use ? 'Устгах боломжгүй' : 'Устгах'"
+                                        @click="removeAwardType(item)"
                                     >
                                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" />

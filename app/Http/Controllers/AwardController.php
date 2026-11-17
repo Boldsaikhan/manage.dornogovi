@@ -82,11 +82,30 @@ class AwardController extends Controller
             'allSubtypes' => Award::SUBTYPES,
             'categorySubtypes' => Award::CATEGORY_SUBTYPES,
             'awardTypes' => AwardType::options(),
-            'awardTypeRows' => AwardType::query()
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get(['id', 'name', 'is_active', 'sort_order']),
+            'awardTypeRows' => $this->awardTypeRows(),
         ]);
+    }
+
+    /**
+     * @return list<array{id: int, name: string, is_active: bool, sort_order: int, in_use: bool}>
+     */
+    private function awardTypeRows(): array
+    {
+        $used = AwardType::usedNames();
+
+        return AwardType::query()
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name', 'is_active', 'sort_order'])
+            ->map(fn (AwardType $type) => [
+                'id' => $type->id,
+                'name' => $type->name,
+                'is_active' => (bool) $type->is_active,
+                'sort_order' => (int) $type->sort_order,
+                'in_use' => $used->has($type->name),
+            ])
+            ->values()
+            ->all();
     }
 
     public function store(Request $request): RedirectResponse
