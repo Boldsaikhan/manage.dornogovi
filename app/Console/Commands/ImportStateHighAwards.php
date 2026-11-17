@@ -278,6 +278,23 @@ class ImportStateHighAwards extends Command
             return $text;
         }
 
+        // Зөвхөн он (2005) → 2005-01-01
+        if (preg_match('/^\d{4}$/', $text) === 1) {
+            $year = (int) $text;
+
+            return ($year >= 1900 && $year <= 2100)
+                ? sprintf('%04d-01-01', $year)
+                : null;
+        }
+
+        if (preg_match('/^(\d{4})[.\-\/]\d{1,2}[.\-\/]\d{1,2}$/', $text, $m) === 1) {
+            $year = (int) $m[1];
+
+            return ($year >= 1900 && $year <= 2100)
+                ? sprintf('%04d-01-01', $year)
+                : null;
+        }
+
         return null;
     }
 }

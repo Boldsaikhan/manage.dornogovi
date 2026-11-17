@@ -342,6 +342,36 @@ class AwardTest extends TestCase
         ]);
     }
 
+    public function test_last_award_date_accepts_year_only(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $award = Award::query()->create([
+            'category' => 'state_high',
+            'year' => 2026,
+            'surname' => 'Бат',
+            'given_name' => 'Дорж',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('awards.update', $award), [
+                'last_award_date' => '2005',
+            ])
+            ->assertRedirect();
+
+        $award->refresh();
+        $this->assertSame('2005-01-01', optional($award->last_award_date)?->format('Y-m-d'));
+
+        $this->actingAs($admin)
+            ->get(route('awards.index', ['tab' => 'state_high', 'year' => 2026]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('rows.0.last_award_date', '2005')
+                ->where('rows.0.last_award_date_display', '2005')
+            );
+    }
+
     public function test_can_update_and_destroy(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

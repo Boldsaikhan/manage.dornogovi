@@ -407,6 +407,7 @@ class AwardController extends Controller
             'notes' => ['nullable', 'string', 'max:5000'],
         ];
 
+        $this->mergeYearOnlyDates($request);
         $data = $request->validate($rules);
         $data['category'] = $category;
 
@@ -468,6 +469,7 @@ class AwardController extends Controller
             'notes' => ['sometimes', 'nullable', 'string', 'max:5000'],
         ];
 
+        $this->mergeYearOnlyDates($request);
         $data = $request->validate($rules);
 
         foreach (['award_date', 'last_award_date', 'forwarded_on'] as $dateField) {
@@ -553,8 +555,9 @@ class AwardController extends Controller
             'position' => $award->position,
             'address' => $award->address,
             'last_award' => $award->last_award,
-            'last_award_date' => optional($award->last_award_date)?->format('Y-m-d'),
-            'last_award_date_display' => optional($award->last_award_date)?->format('Y.m.d'),
+            // Сүүлд авсан огноо — зөвхөн он (UI + хадгалалт YYYY-01-01).
+            'last_award_date' => optional($award->last_award_date)?->format('Y'),
+            'last_award_date_display' => optional($award->last_award_date)?->format('Y'),
             'supporting_org' => $award->supporting_org,
             'forwarded_on' => optional($award->forwarded_on)?->format('Y-m-d'),
             'forwarded_on_display' => optional($award->forwarded_on)?->format('Y.m.d'),
@@ -624,9 +627,10 @@ class AwardController extends Controller
                     'key' => 'last_award_date_display',
                     'label' => 'Огноо',
                     'field' => 'last_award_date',
-                    'input' => 'date',
+                    'input' => 'year',
                     'group' => 'Шагналын мэдээлэл (Сүүлд авсан)',
-                    'width' => '5.5rem',
+                    'width' => '4.5rem',
+                    'hint' => 'Зөвхөн он',
                 ],
                 [
                     'key' => 'supporting_org',
@@ -725,6 +729,52 @@ class AwardController extends Controller
     private function normalizeTab(string $tab): string
     {
         return array_key_exists($tab, Award::CATEGORIES) ? $tab : 'state_high';
+    }
+
+    /**
+     * Сүүлд авсан огноо — зөвхөн он (2005) ирвэл YYYY-01-01 болгоно.
+     */
+    private function mergeYearOnlyDates(Request $request): void
+    {
+        if (! $request->exists('last_award_date')) {
+            return;
+        }
+
+        $request->merge([
+            'last_award_date' => $this->yearOnlyToDate($request->input('last_award_date')),
+        ]);
+    }
+
+    private function yearOnlyToDate(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $raw = trim((string) $value);
+
+        if (preg_match('/^\d{4}$/', $raw) === 1) {
+            $year = (int) $raw;
+
+            if ($year < 1900 || $year > 2100) {
+                return $raw;
+            }
+
+            return sprintf('%04d-01-01', $year);
+        }
+
+        // 2005.01.01 / 2005-01-01 гэх мэтээс он авна.
+        if (preg_match('/^(\d{4})([.\-\/]\d{1,2}[.\-\/]\d{1,2})?$/', $raw, $m) === 1) {
+            $year = (int) $m[1];
+
+            if ($year < 1900 || $year > 2100) {
+                return $raw;
+            }
+
+            return sprintf('%04d-01-01', $year);
+        }
+
+        return $raw;
     }
 
     private function normalizeYear(mixed $year): ?int

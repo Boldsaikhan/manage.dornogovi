@@ -93,6 +93,23 @@ const numberFields = new Set([
     'age', 'years_in_country', 'years_in_sector', 'total_years', 'position_years',
 ]);
 
+/** Сүүлд авсан огноо — зөвхөн он (2005 эсвэл 2005-01-01 → "2005"). */
+const parseAwardYear = (value) => {
+    if (value === null || value === undefined || value === '') {
+        return null;
+    }
+
+    const match = String(value).trim().match(/^(\d{4})(?:[.\-/]\d{1,2}[.\-/]\d{1,2})?$/);
+
+    if (! match) {
+        return null;
+    }
+
+    const year = Number(match[1]);
+
+    return year >= 1900 && year <= 2100 ? String(year) : null;
+};
+
 const syncFilters = () => {
     const next = {};
 
@@ -334,6 +351,10 @@ const addRow = () => {
 const normalizeFieldValue = (field, value) => {
     let next = value;
 
+    if (field === 'last_award_date') {
+        return parseAwardYear(next);
+    }
+
     if (numberFields.has(field)) {
         if (next === '' || next === null || next === undefined) {
             return null;
@@ -385,6 +406,20 @@ const samePayload = (left, right) => JSON.stringify(left) === JSON.stringify(rig
 
 const saveField = (id, field, value) => {
     const before = { [field]: snapshotField(id, field) };
+
+    // Он талбарт бүрэн бус утга (ж: 20) — хоосон болгохгүй, хуучныг үлдээнэ.
+    if (
+        field === 'last_award_date'
+        && value !== ''
+        && value !== null
+        && value !== undefined
+        && parseAwardYear(value) === null
+    ) {
+        applyDraftPayload(id, { [field]: before[field] ?? '' });
+
+        return;
+    }
+
     let next = normalizeFieldValue(field, value);
     const after = { [field]: next };
 
@@ -659,7 +694,7 @@ const fitColPercents = computed(() => {
 });
 
 const colAlign = (col) => {
-    if (col.key === 'no' || col.input === 'number' || col.input === 'gender' || col.input === 'date') {
+    if (col.key === 'no' || col.input === 'number' || col.input === 'year' || col.input === 'gender' || col.input === 'date') {
         return 'center';
     }
 
@@ -1142,7 +1177,8 @@ const confirmImport = () => {
                                     v-else-if="isEditable(col, row.id) && drafts[row.id]"
                                     v-model="drafts[row.id][fieldFor(col)]"
                                     :multiline="!!col.multiline"
-                                    :type="col.input === 'number' || col.input === 'date' ? col.input : 'text'"
+                                    :type="col.input === 'year' ? 'number' : (col.input === 'number' || col.input === 'date' ? col.input : 'text')"
+                                    :placeholder="col.input === 'year' ? 'Он' : ''"
                                     :align="colAlign(col)"
                                     :editable="true"
                                     :nowrap="!!col.nowrap"
