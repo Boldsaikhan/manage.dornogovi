@@ -27,6 +27,16 @@ const props = defineProps({
     options: { type: Array, default: null },
     /** Олон нэр сонгох (хадгалахдаа «/»-аар залгана) */
     multiple: { type: Boolean, default: false },
+    /**
+     * Энгийн жагсаалт — хүний ангилал/бүлгийн UI-гүй.
+     * Шагналын төрөл, байгууллага зэрэгт ашиглана.
+     */
+    simple: { type: Boolean, default: false },
+    /**
+     * Жагсаалтаас сонгох эсвэл бичсэн текстийг шууд хадгална.
+     * simple=true-тай хамт ашиглана.
+     */
+    creatable: { type: Boolean, default: false },
     /** Урт текстийг 2 мөрөөр таслах эсэх. Тайлан мэтэд бүтнээр нь харуулна. */
     clamp: { type: Boolean, default: true },
     nowrap: { type: Boolean, default: false },
@@ -71,6 +81,28 @@ watch(categoryOn, (val) => {
 }, { deep: true });
 
 const hasOptions = computed(() => Array.isArray(props.options) && props.options.length > 0);
+const usePeopleUi = computed(() => hasOptions.value && ! props.simple);
+
+const exactOptionMatch = computed(() => {
+    const q = String(search.value ?? '').trim().toLowerCase();
+
+    if (! q || ! hasOptions.value) {
+        return null;
+    }
+
+    return props.options.find((opt) => {
+        const label = String(opt.label ?? opt.value ?? '').trim().toLowerCase();
+
+        return label === q;
+    }) ?? null;
+});
+
+const canCreateCustom = computed(() => (
+    props.creatable
+    && ! props.multiple
+    && String(search.value ?? '').trim() !== ''
+    && ! exactOptionMatch.value
+));
 
 // Нэрийн товчлол — «Н.Алдарбаяр» → «НА»
 const initials = (opt) => {
@@ -99,7 +131,7 @@ const selectedSet = computed(() => new Set(selected.value));
 
 /** Ангиллын шүүлтэнд тохирох бүлгүүд (Сум → Засаг/ЗДТГ, Агентлаг → дарга…) */
 const personGroups = computed(() => (
-    hasOptions.value
+    usePeopleUi.value
         ? visiblePersonGroups(props.options, categoryOn.value)
         : []
 ));
@@ -192,9 +224,11 @@ const filteredOptions = computed(() => {
     const cats = categoryOn.value;
 
     return props.options.filter((opt) => {
-        const cat = opt.category || 'baiguullaga';
-        if (Object.prototype.hasOwnProperty.call(cats, cat) && ! cats[cat]) {
-            return false;
+        if (usePeopleUi.value) {
+            const cat = opt.category || 'baiguullaga';
+            if (Object.prototype.hasOwnProperty.call(cats, cat) && ! cats[cat]) {
+                return false;
+            }
         }
 
         return optionMatchesSearch(opt, q);
@@ -307,7 +341,8 @@ const startEdit = async () => {
     categoryOn.value = { ...sharedCategoryFilters };
 
     if (hasOptions.value) {
-        search.value = '';
+        // Creatable: одоогийн утгыг хайлтад тавина — засах/шинээр бичихэд бэлэн.
+        search.value = props.creatable ? String(props.modelValue ?? '') : '';
         local.value = '';
         selected.value = expandPersonNames(props.modelValue, props.options);
     } else {
@@ -419,6 +454,11 @@ const commitMulti = () => {
     commitValue(serializePersonNames(selected.value, props.options));
 };
 
+const commitCustom = () => {
+    const typed = String(search.value ?? '').trim();
+    commitValue(typed);
+};
+
 const finish = () => {
     if (! editing.value) {
         return;
@@ -427,6 +467,8 @@ const finish = () => {
     if (hasOptions.value) {
         if (props.multiple) {
             commitMulti();
+        } else if (props.creatable) {
+            commitCustom();
         } else {
             editing.value = false;
             search.value = '';
@@ -552,27 +594,51 @@ const onKeydown = (event) => {
         return;
     }
 
-    if (hasOptions.value && filteredOptions.value.length) {
-        if (event.key === 'ArrowDown') {
-            event.preventDefault();
-            highlight.value = (highlight.value + 1) % filteredOptions.value.length;
+    if (hasOptions.value) {
+        if (filteredOptions.value.length) {
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                highlight.value = (highlight.value + 1) % filteredOptions.value.length;
 
-            return;
-        }
-        if (event.key === 'ArrowUp') {
-            event.preventDefault();
-            highlight.value = (highlight.value - 1 + filteredOptions.value.length) % filteredOptions.value.length;
+                return;
+            }
+            if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                highlight.value = (highlight.value - 1 + filteredOptions.value.length) % filteredOptions.value.length;
 
-            return;
+                return;
+            }
         }
+
         if (event.key === 'Enter') {
             event.preventDefault();
-            pickOption(filteredOptions.value[highlight.value]);
 
-            // Нэр бичээд Enter дарахад тэр хүн сонгогдоод нүд хаагдана.
-            // (Олон хүн сонгох бол хулганаар дарж үргэлжлүүлнэ.)
-            if (props.multiple) {
-                commitMulti();
+            if (filteredOptions.value.length && ! canCreateCustom.value) {
+                pickOption(filteredOptions.value[highlight.value]);
+
+                if (props.multiple) {
+                    commitMulti();
+                }
+
+                return;
+            }
+
+            if (props.creatable && ! props.multiple) {
+                if (exactOptionMatch.value) {
+                    pickOption(exactOptionMatch.value);
+                } else {
+                    commitCustom();
+                }
+
+                return;
+            }
+
+            if (filteredOptions.value.length) {
+                pickOption(filteredOptions.value[highlight.value]);
+
+                if (props.multiple) {
+                    commitMulti();
+                }
             }
 
             return;
@@ -634,7 +700,9 @@ onBeforeUnmount(() => {
             type="text"
             class="ui-sheet-editor"
             :class="{ 'text-center': align === 'center' }"
-            :placeholder="placeholder || 'Нэрээр хайх…'"
+            :placeholder="creatable
+                ? (placeholder || 'Сонгох эсвэл бичиж нэмэх…')
+                : (placeholder || 'Нэрээр хайх…')"
             autocomplete="off"
             @blur="onBlur"
             @keydown="onKeydown"
@@ -691,9 +759,11 @@ onBeforeUnmount(() => {
                         </svg>
                         <span class="min-w-0 flex-1 truncate text-xs text-slate-500">
                             <template v-if="search">«{{ search }}» — {{ filteredOptions.length }} илэрц</template>
+                            <template v-else-if="simple">Жагсаалтаас сонгох · {{ filteredOptions.length }}</template>
                             <template v-else>Нэрээр бичиж хайна · {{ filteredOptions.length }} хүн</template>
                         </span>
                         <button
+                            v-if="usePeopleUi"
                             type="button"
                             class="shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-medium text-slate-500 transition hover:bg-white hover:text-brand-navy-700"
                             @mousedown.prevent="toggleAllCategories"
@@ -702,7 +772,7 @@ onBeforeUnmount(() => {
                         </button>
                     </div>
 
-                    <div class="flex flex-wrap gap-1">
+                    <div v-if="usePeopleUi" class="flex flex-wrap gap-1">
                         <button
                             v-for="cat in CATEGORY_FILTERS"
                             :key="cat.key"
@@ -760,6 +830,15 @@ onBeforeUnmount(() => {
                     >
                         <span class="flex h-5 w-5 items-center justify-center rounded-full border border-rose-200 text-[11px]">✕</span>
                         Сонголтгүй (цэвэрлэх)
+                    </button>
+                    <button
+                        v-if="canCreateCustom"
+                        type="button"
+                        class="flex w-full items-center gap-2 border-b border-slate-100 px-3 py-2 text-left text-sm font-semibold text-brand-navy-700 transition hover:bg-brand-navy-50"
+                        @mousedown.prevent="commitCustom"
+                    >
+                        <span class="flex h-5 w-5 items-center justify-center rounded-full border border-brand-navy-200 bg-brand-navy-50 text-[12px]">+</span>
+                        <span class="min-w-0 truncate">«{{ String(search).trim() }}»-г нэмэх</span>
                     </button>
                     <button
                         v-for="group in personGroups"
@@ -838,9 +917,11 @@ onBeforeUnmount(() => {
                             ✓
                         </span>
                     </button>
-                    <p v-if="! filteredOptions.length" class="px-3 py-6 text-center text-xs text-slate-400">
+                    <p v-if="! filteredOptions.length && ! canCreateCustom" class="px-3 py-6 text-center text-xs text-slate-400">
                         Тохирох нэр олдсонгүй.<br>
-                        <span class="text-[11px]">Ангиллын шүүлтээ өөрчилж эсвэл өөр нэр бичиж үзнэ үү.</span>
+                        <span v-if="creatable" class="text-[11px]">Нэрээ бичээд Enter дарж шууд хадгална.</span>
+                        <span v-else-if="simple" class="text-[11px]">Өөр нэр бичиж хайна уу.</span>
+                        <span v-else class="text-[11px]">Ангиллын шүүлтээ өөрчилж эсвэл өөр нэр бичиж үзнэ үү.</span>
                     </p>
                 </div>
 
