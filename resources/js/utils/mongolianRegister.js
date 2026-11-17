@@ -1,5 +1,6 @@
 /**
  * Монгол регистрийн дугаараас нас, хүйс гаргана (2 үсэг + 8 орон).
+ * 2000+ төрсөн: сард +20. Хүйс: сүүлийн өмнөх орон сондгой=эр, тэгш=эм.
  */
 
 const LATIN_TO_CYRILLIC = {
@@ -39,10 +40,20 @@ export const parseMongolianRegister = (value, asOfYear = new Date().getFullYear(
 
     const digits = register.slice(2);
     const yy = Number(digits.slice(0, 2));
-    const mm = Number(digits.slice(2, 4));
+    let mm = Number(digits.slice(2, 4));
     const dd = Number(digits.slice(4, 6));
-    const seq = Number(digits.slice(6, 8));
-    const year = yy + (yy <= (asOfYear % 100) ? 2000 : 1900);
+    const genderDigit = Number(digits.slice(6, 7));
+    const currentYy = asOfYear % 100;
+
+    let year;
+
+    if (mm >= 21 && mm <= 32) {
+        mm -= 20;
+        year = 2000 + yy;
+    } else {
+        year = yy + (yy <= currentYy ? 2000 : 1900);
+    }
+
     const birth = new Date(year, mm - 1, dd);
 
     if (
@@ -63,6 +74,6 @@ export const parseMongolianRegister = (value, asOfYear = new Date().getFullYear(
         register,
         birth: `${year}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`,
         age,
-        gender: seq % 2 === 1 ? 'эр' : 'эм',
+        gender: genderDigit % 2 === 1 ? 'эр' : 'эм',
     };
 };

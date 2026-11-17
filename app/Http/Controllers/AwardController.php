@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Award;
 use App\Models\AwardType;
+use App\Support\AwardImporter;
 use App\Support\ModuleAccess;
 use App\Support\ModuleOwnScope;
 use App\Support\MongolianRegister;
+use App\Support\TabularFileReader;
 use App\Support\XlsxTableWriter;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -35,7 +38,7 @@ class AwardController extends Controller
             ->groupBy('category')
             ->pluck('aggregate', 'category');
 
-        $query = Award::query()->orderByDesc('year')->orderBy('id');
+        $query = Award::query()->orderByDesc('id');
         $query->where('category', $tab);
 
         if ($year !== null) {
@@ -48,11 +51,11 @@ class AwardController extends Controller
 
         ModuleOwnScope::apply($query, $request->user(), self::MODULE);
 
-        $rows = $query
-            ->limit(500)
-            ->get()
-            ->values()
-            ->map(fn (Award $award, int $i) => $this->serialize($award, $i + 1));
+        $collection = $query->limit(500)->get()->values();
+        $total = $collection->count();
+        $rows = $collection->map(
+            fn (Award $award, int $i) => $this->serialize($award, $total - $i),
+        );
 
         $years = Award::query()
             ->where('category', $tab)
@@ -157,6 +160,65 @@ class AwardController extends Controller
             ->with('success', 'Устгалаа.');
     }
 
+    public function importPreview(Request $request, TabularFileReader $reader, AwardImporter $importer): JsonResponse
+    {
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
+
+        $data = $request->validate([
+            'file' => ['required', 'file', 'max:10240'],
+            'tab' => ['nullable', 'string'],
+        ]);
+
+        $file = $data['file'];
+        $extension = strtolower((string) $file->getClientOriginalExtension());
+        abort_unless(in_array($extension, ['xlsx', 'xlsm'], true), 422, 'Зөвхөн .xlsx файл дэмжинэ.');
+
+        $tab = $this->normalizeTab((string) ($data['tab'] ?? 'state_high'));
+        $path = $file->getRealPath();
+        abort_unless(is_string($path) && is_file($path), 422, 'Файлыг уншиж чадсангүй.');
+
+        return response()->json($importer->preview($reader->rows($path, $extension), $this->columnsFor($tab)));
+    }
+
+    public function importStore(Request $request, AwardImporter $importer): RedirectResponse
+    {
+        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
+
+        $data = $request->validate([
+            'tab' => ['required', 'string'],
+            'subtype' => ['nullable', 'string'],
+            'year' => ['nullable', 'integer', 'min:1990', 'max:2100'],
+            'entries' => ['required', 'array', 'max:400'],
+            'entries.*' => ['array'],
+        ]);
+
+        $tab = $this->normalizeTab($data['tab']);
+        $subtype = $this->normalizeSubtypeFilter($tab, (string) ($data['subtype'] ?? ''));
+        $year = $this->normalizeYear($data['year'] ?? null) ?? (int) date('Y');
+
+        ModuleOwnScope::assertCanCreate($request->user(), self::MODULE, [
+            'category' => $tab,
+            'subtype' => $subtype !== '' ? $subtype : null,
+        ]);
+
+        $created = $importer->store($data['entries'], [
+            'category' => $tab,
+            'subtype' => $subtype !== '' ? $subtype : null,
+            'year' => $year,
+            'created_by' => $request->user()->id,
+        ]);
+
+        return redirect()
+            ->route('awards.index', array_filter([
+                'tab' => $tab,
+                'subtype' => $subtype !== '' ? $subtype : null,
+                'year' => $year,
+            ]))
+            ->with('success', $created > 0
+                ? "{$created} мөрийг Excel-ээс орууллаа."
+                : 'Оруулах мөр олдсонгүй.');
+    }
+
     public function export(Request $request, XlsxTableWriter $xlsx): HttpResponse
     {
         abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
@@ -165,7 +227,7 @@ class AwardController extends Controller
         $year = $this->normalizeYear($request->query('year'));
         $subtype = $this->normalizeSubtypeFilter($tab, (string) $request->query('subtype', ''));
 
-        $query = Award::query()->orderByDesc('year')->orderBy('id')->where('category', $tab);
+        $query = Award::query()->orderByDesc('id')->where('category', $tab);
 
         if ($year !== null) {
             $query->where('year', $year);
@@ -175,8 +237,13 @@ class AwardController extends Controller
             $query->where('subtype', $subtype);
         }
 
-        $rows = $query->limit(2000)->get()->values()
-            ->map(fn (Award $award, int $i) => $this->serialize($award, $i + 1));
+        ModuleOwnScope::apply($query, $request->user(), self::MODULE);
+
+        $collection = $query->limit(2000)->get()->values();
+        $total = $collection->count();
+        $rows = $collection->map(
+            fn (Award $award, int $i) => $this->serialize($award, $total - $i),
+        );
 
         $columns = $this->columnsFor($tab);
         $headings = array_map(fn ($c) => $this->columnHeading($c), $columns);
@@ -241,10 +308,15 @@ class AwardController extends Controller
             'position' => ['nullable', 'string', 'max:5000'],
             'address' => ['nullable', 'string', 'max:5000'],
             'last_award' => ['nullable', 'string', 'max:255'],
+            'last_award_date' => ['nullable', 'date'],
             'supporting_org' => ['nullable', 'string', 'max:255'],
+            'forwarded_on' => ['nullable', 'date'],
+            'forwarded_letter_no' => ['nullable', 'string', 'max:255'],
+            'received_award' => ['nullable', 'string', 'max:255'],
             'presidential_letter' => ['nullable', 'string', 'max:5000'],
             'award_name' => ['nullable', 'string', 'max:255'],
             'work_sector' => ['nullable', 'string', 'max:255'],
+            'profession' => ['nullable', 'string', 'max:255'],
             'job_title' => ['nullable', 'string', 'max:5000'],
             'total_years' => ['nullable', 'integer', 'min:0', 'max:80'],
             'position_years' => ['nullable', 'integer', 'min:0', 'max:80'],
@@ -297,10 +369,15 @@ class AwardController extends Controller
             'position' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'address' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'last_award' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'last_award_date' => ['sometimes', 'nullable', 'date'],
             'supporting_org' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'forwarded_on' => ['sometimes', 'nullable', 'date'],
+            'forwarded_letter_no' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'received_award' => ['sometimes', 'nullable', 'string', 'max:255'],
             'presidential_letter' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'award_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'work_sector' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'profession' => ['sometimes', 'nullable', 'string', 'max:255'],
             'job_title' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'total_years' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:80'],
             'position_years' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:80'],
@@ -311,8 +388,10 @@ class AwardController extends Controller
 
         $data = $request->validate($rules);
 
-        if (array_key_exists('award_date', $data) && empty($data['award_date'])) {
-            $data['award_date'] = null;
+        foreach (['award_date', 'last_award_date', 'forwarded_on'] as $dateField) {
+            if (array_key_exists($dateField, $data) && empty($data[$dateField])) {
+                $data[$dateField] = null;
+            }
         }
 
         if (array_key_exists('award_date', $data) && ! empty($data['award_date']) && ! array_key_exists('year', $data)) {
@@ -392,10 +471,17 @@ class AwardController extends Controller
             'position' => $award->position,
             'address' => $award->address,
             'last_award' => $award->last_award,
+            'last_award_date' => optional($award->last_award_date)?->format('Y-m-d'),
+            'last_award_date_display' => optional($award->last_award_date)?->format('Y.m.d'),
             'supporting_org' => $award->supporting_org,
+            'forwarded_on' => optional($award->forwarded_on)?->format('Y-m-d'),
+            'forwarded_on_display' => optional($award->forwarded_on)?->format('Y.m.d'),
+            'forwarded_letter_no' => $award->forwarded_letter_no,
+            'received_award' => $award->received_award,
             'presidential_letter' => $award->presidential_letter,
             'award_name' => $award->award_name,
             'work_sector' => $award->work_sector,
+            'profession' => $award->profession,
             'job_title' => $award->job_title,
             'total_years' => $award->total_years,
             'position_years' => $award->position_years,
@@ -412,22 +498,99 @@ class AwardController extends Controller
     {
         if ($tab === 'state_high') {
             return [
-                ['key' => 'no', 'label' => '№', 'readonly' => true, 'width' => '2.25rem'],
-                ['key' => 'nominated_award', 'label' => 'Өргөн мэдүүлсэн шагнал', 'field' => 'nominated_award', 'input' => 'award_type', 'width' => '7rem'],
-                ['key' => 'surname', 'label' => 'Овог', 'field' => 'surname', 'width' => '4.5rem'],
-                ['key' => 'given_name', 'label' => 'Нэр', 'field' => 'given_name', 'width' => '4.5rem'],
-                ['key' => 'register_no', 'label' => 'Регистрийн дугаар', 'field' => 'register_no', 'width' => '5.5rem'],
-                ['key' => 'age', 'label' => 'Нас', 'field' => 'age', 'input' => 'number', 'readonly' => true, 'width' => '2.75rem', 'hint' => 'РД-аас'],
-                ['key' => 'gender', 'label' => 'Хүйс', 'field' => 'gender', 'input' => 'gender', 'readonly' => true, 'width' => '3rem', 'hint' => 'РД-аас'],
-                ['key' => 'years_in_country', 'lines' => ['Улсад', 'ажилласан', 'жил'], 'field' => 'years_in_country', 'input' => 'number', 'width' => '3rem'],
-                ['key' => 'years_in_sector', 'lines' => ['Тухайн', 'салбартаа', 'ажилласан', 'жил'], 'field' => 'years_in_sector', 'input' => 'number', 'width' => '3.25rem'],
-                ['key' => 'award_date_display', 'label' => 'Огноо', 'field' => 'award_date', 'input' => 'date', 'width' => '5.5rem'],
-                ['key' => 'resolution_number', 'label' => 'Тогтоолын дугаар', 'field' => 'resolution_number', 'width' => '4.5rem'],
-                ['key' => 'position', 'label' => 'Албан тушаал', 'field' => 'position', 'multiline' => true, 'width' => '8rem'],
-                ['key' => 'address', 'label' => 'Оршин суугаа хаяг', 'field' => 'address', 'multiline' => true, 'width' => '7rem'],
-                ['key' => 'last_award', 'label' => 'Сүүлд авсан шагнал, он', 'field' => 'last_award', 'input' => 'award_type', 'width' => '7rem'],
-                ['key' => 'supporting_org', 'label' => 'Дэмжсэн байгууллага', 'field' => 'supporting_org', 'width' => '5.5rem'],
-                ['key' => 'presidential_letter', 'lines' => ['Ерөнхийлөгчийн', 'Тамгын газарт', 'уламжилсан', 'албан бичгийн', 'огноо дугаар'], 'field' => 'presidential_letter', 'multiline' => true, 'width' => '6.5rem'],
+                ['key' => 'no', 'label' => '№', 'readonly' => true, 'rowspan' => 2, 'width' => '2.5rem'],
+                [
+                    'key' => 'nominated_award',
+                    'label' => 'Өргөн мэдүүлсэн шагналын төрөл',
+                    'field' => 'nominated_award',
+                    'input' => 'award_type',
+                    'rowspan' => 2,
+                    'width' => '8rem',
+                ],
+                ['key' => 'surname', 'label' => 'Овог', 'field' => 'surname', 'group' => 'Ерөнхий мэдээлэл', 'nowrap' => true, 'width' => '7rem'],
+                ['key' => 'given_name', 'label' => 'Нэр', 'field' => 'given_name', 'group' => 'Ерөнхий мэдээлэл', 'nowrap' => true, 'width' => '7.5rem'],
+                ['key' => 'register_no', 'label' => 'Регистрийн дугаар', 'field' => 'register_no', 'group' => 'Ерөнхий мэдээлэл', 'nowrap' => true, 'width' => '6.5rem'],
+                ['key' => 'age', 'label' => 'Нас', 'field' => 'age', 'input' => 'number', 'readonly' => true, 'group' => 'Ерөнхий мэдээлэл', 'width' => '3rem', 'hint' => 'РД-аас'],
+                ['key' => 'gender', 'label' => 'Хүйс', 'field' => 'gender', 'input' => 'gender', 'readonly' => true, 'group' => 'Ерөнхий мэдээлэл', 'width' => '3rem', 'hint' => 'РД-аас'],
+                [
+                    'key' => 'position',
+                    'lines' => ['Ажил, албан тушаал', 'өндөр настан бол', 'үндсэн харьяалал'],
+                    'field' => 'position',
+                    'multiline' => true,
+                    'group' => 'Ерөнхий мэдээлэл',
+                    'width' => '9rem',
+                ],
+                ['key' => 'work_sector', 'label' => 'Харьяалах салбар', 'field' => 'work_sector', 'group' => 'Ерөнхий мэдээлэл', 'width' => '7rem'],
+                ['key' => 'profession', 'label' => 'Мэргэжил', 'field' => 'profession', 'group' => 'Ерөнхий мэдээлэл', 'width' => '6rem'],
+                [
+                    'key' => 'years_in_country',
+                    'lines' => ['Улсад', 'ажилласан', 'жил'],
+                    'field' => 'years_in_country',
+                    'input' => 'number',
+                    'group' => 'Ерөнхий мэдээлэл',
+                    'width' => '3.5rem',
+                ],
+                [
+                    'key' => 'last_award',
+                    'label' => 'Шагналын нэр',
+                    'field' => 'last_award',
+                    'input' => 'award_type',
+                    'group' => 'Шагналын мэдээлэл (Сүүлд авсан)',
+                    'width' => '7rem',
+                ],
+                [
+                    'key' => 'last_award_date_display',
+                    'label' => 'Огноо',
+                    'field' => 'last_award_date',
+                    'input' => 'date',
+                    'group' => 'Шагналын мэдээлэл (Сүүлд авсан)',
+                    'width' => '5.5rem',
+                ],
+                [
+                    'key' => 'supporting_org',
+                    'label' => 'Байгууллага',
+                    'field' => 'supporting_org',
+                    'group' => 'Дээд байгууллагад уламжилсан',
+                    'width' => '7rem',
+                ],
+                [
+                    'key' => 'forwarded_on_display',
+                    'label' => 'Огноо',
+                    'field' => 'forwarded_on',
+                    'input' => 'date',
+                    'group' => 'Дээд байгууллагад уламжилсан',
+                    'width' => '5.5rem',
+                ],
+                [
+                    'key' => 'forwarded_letter_no',
+                    'label' => 'Албан бичгийн дугаар',
+                    'field' => 'forwarded_letter_no',
+                    'group' => 'Дээд байгууллагад уламжилсан',
+                    'width' => '6rem',
+                ],
+                [
+                    'key' => 'received_award',
+                    'label' => 'Шагналын төрөл',
+                    'field' => 'received_award',
+                    'input' => 'award_type',
+                    'group' => 'Авсан шагнал',
+                    'width' => '7rem',
+                ],
+                [
+                    'key' => 'award_date_display',
+                    'label' => 'Зарлигийн огноо',
+                    'field' => 'award_date',
+                    'input' => 'date',
+                    'group' => 'Авсан шагнал',
+                    'width' => '5.5rem',
+                ],
+                [
+                    'key' => 'resolution_number',
+                    'label' => 'Зарлигийн дугаар',
+                    'field' => 'resolution_number',
+                    'group' => 'Авсан шагнал',
+                    'width' => '5.5rem',
+                ],
             ];
         }
 
@@ -435,9 +598,9 @@ class AwardController extends Controller
             return [
                 ['key' => 'no', 'label' => 'Д/д', 'readonly' => true],
                 ['key' => 'award_name', 'label' => 'Шагналын нэр', 'field' => 'award_name', 'input' => 'award_type'],
-                ['key' => 'surname', 'label' => 'Овог', 'field' => 'surname'],
-                ['key' => 'given_name', 'label' => 'Нэр', 'field' => 'given_name'],
-                ['key' => 'register_no', 'label' => 'Регистр', 'field' => 'register_no'],
+                ['key' => 'surname', 'label' => 'Овог', 'field' => 'surname', 'nowrap' => true],
+                ['key' => 'given_name', 'label' => 'Нэр', 'field' => 'given_name', 'nowrap' => true],
+                ['key' => 'register_no', 'label' => 'Регистр', 'field' => 'register_no', 'nowrap' => true],
                 ['key' => 'work_sector', 'label' => 'Ажилладаг салбар', 'field' => 'work_sector'],
                 ['key' => 'job_title', 'label' => 'Эрхэлдэг ажил, албан тушаал', 'field' => 'job_title', 'multiline' => true],
                 ['key' => 'total_years', 'lines' => ['Нийт', 'ажилласан', 'жил'], 'field' => 'total_years', 'input' => 'number'],
@@ -451,9 +614,9 @@ class AwardController extends Controller
         // governor_honor, governor_leading — төрөл нь дээрх табаар шүүгдэнэ
         return [
             ['key' => 'no', 'label' => 'Д/д', 'readonly' => true],
-            ['key' => 'surname', 'label' => 'Овог', 'field' => 'surname'],
-            ['key' => 'given_name', 'label' => 'Нэр', 'field' => 'given_name'],
-            ['key' => 'register_no', 'label' => 'Регистр', 'field' => 'register_no'],
+            ['key' => 'surname', 'label' => 'Овог', 'field' => 'surname', 'nowrap' => true],
+            ['key' => 'given_name', 'label' => 'Нэр', 'field' => 'given_name', 'nowrap' => true],
+            ['key' => 'register_no', 'label' => 'Регистр', 'field' => 'register_no', 'nowrap' => true],
             ['key' => 'work_sector', 'label' => 'Ажилладаг салбар', 'field' => 'work_sector'],
             ['key' => 'job_title', 'lines' => ['Эрхэлдэг ажил,', 'албан тушаал'], 'field' => 'job_title', 'multiline' => true],
             ['key' => 'total_years', 'lines' => ['Нийт', 'ажилласан', 'хугацаа'], 'field' => 'total_years', 'input' => 'number'],

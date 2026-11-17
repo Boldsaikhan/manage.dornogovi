@@ -29,6 +29,7 @@ const props = defineProps({
     multiple: { type: Boolean, default: false },
     /** Урт текстийг 2 мөрөөр таслах эсэх. Тайлан мэтэд бүтнээр нь харуулна. */
     clamp: { type: Boolean, default: true },
+    nowrap: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:modelValue', 'commit']);
@@ -664,7 +665,9 @@ onBeforeUnmount(() => {
             v-if="! editing"
             class="ui-sheet-display"
             :class="[
-                clamp ? 'ui-clamp-2' : 'whitespace-pre-wrap break-words',
+                nowrap
+                    ? 'whitespace-nowrap overflow-hidden text-ellipsis'
+                    : (clamp ? 'ui-clamp-2' : 'whitespace-pre-wrap break-words'),
                 { 'text-center': align === 'center', 'text-slate-400': ! modelValue && !! placeholder },
             ]"
             :title="modelValue ? (formatPersonNamesDisplay(modelValue, options) || String(modelValue)) : ''"
