@@ -210,14 +210,6 @@ const isEditable = (col) => props.canManage && ! col.readonly && col.field;
 
 const pageTitle = computed(() => props.categories[props.tab] || 'Шагнал');
 
-const activeSubtypeLabel = computed(() => {
-    if (! props.subtype) {
-        return 'Бүгд';
-    }
-
-    return props.subtypes.find((item) => item.value === props.subtype)?.label || props.subtype;
-});
-
 const fitsViewport = computed(() => (
     props.tab === 'governor_honor'
     || props.tab === 'governor_leading'
@@ -262,14 +254,39 @@ const colAlign = (col) => {
                 </nav>
 
                 <div class="flex shrink-0 items-center gap-1 border-l border-slate-200 pl-2">
+                    <label
+                        v-if="years.length"
+                        class="relative inline-flex items-center"
+                        :title="year ? `${year} он` : 'Он сонгох'"
+                    >
+                        <span class="pointer-events-none absolute left-2 text-slate-500">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 3v3M16 3v3M4 9h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" />
+                            </svg>
+                        </span>
+                        <select
+                            class="ui-input !h-9 w-[5.75rem] appearance-none !py-1.5 pl-8 pr-2 text-xs font-semibold"
+                            :value="year ?? 'all'"
+                            aria-label="Он сонгох"
+                            @change="switchYear($event.target.value)"
+                        >
+                            <option value="all">Бүгд</option>
+                            <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+                            <option v-if="year && !years.includes(year)" :value="year">{{ year }}</option>
+                        </select>
+                    </label>
+
                     <button
                         v-if="canManage"
                         type="button"
-                        class="ui-btn-ghost !px-2.5 !py-1.5 text-xs"
+                        class="ui-icon-btn"
                         title="Шагналын төрөл"
+                        aria-label="Шагналын төрөл"
                         @click="showTypes = true"
                     >
-                        Төрөл
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3l2.2 4.5 5 .7-3.6 3.5.9 5L12 14.8 7.5 16.7l.9-5L4.8 8.2l5-.7L12 3z" />
+                        </svg>
                     </button>
 
                     <a :href="exportUrl" class="ui-icon-btn" title="Excel татах" aria-label="Excel татах">
@@ -293,53 +310,29 @@ const colAlign = (col) => {
                 </div>
             </div>
 
-            <div v-if="subtypes.length || years.length" class="flex flex-wrap items-center gap-2">
-                <template v-if="subtypes.length">
-                    <button
-                        type="button"
-                        class="rounded-full border px-3.5 py-1.5 text-sm font-medium transition"
-                        :class="!subtype
-                            ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
-                            : 'border-slate-200 bg-white text-slate-600 hover:border-brand-navy-300'"
-                        @click="switchSubtype('')"
-                    >
-                        Бүгд
-                    </button>
-                    <button
-                        v-for="item in subtypes"
-                        :key="item.value"
-                        type="button"
-                        class="rounded-full border px-3.5 py-1.5 text-sm font-medium transition"
-                        :class="subtype === item.value
-                            ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
-                            : 'border-slate-200 bg-white text-slate-600 hover:border-brand-navy-300'"
-                        @click="switchSubtype(item.value)"
-                    >
-                        {{ item.label }}
-                    </button>
-                </template>
-
-                <label v-if="years.length" class="ml-auto flex items-center gap-2 text-sm text-slate-600">
-                    <span>Он</span>
-                    <select
-                        class="ui-input w-28 py-1.5"
-                        :value="year ?? 'all'"
-                        @change="switchYear($event.target.value)"
-                    >
-                        <option value="all">Бүгд</option>
-                        <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
-                        <option v-if="year && !years.includes(year)" :value="year">{{ year }}</option>
-                    </select>
-                </label>
-            </div>
-
-            <div class="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500">
-                <span>
-                    {{ pageTitle }}
-                    <template v-if="subtypes.length"> · {{ activeSubtypeLabel }}</template>
-                    <template v-if="year"> · {{ year }} он</template>
-                </span>
-                <span>{{ rows.length }} мөр</span>
+            <div v-if="subtypes.length" class="flex flex-wrap items-center gap-2">
+                <button
+                    type="button"
+                    class="rounded-full border px-3.5 py-1.5 text-sm font-medium transition"
+                    :class="!subtype
+                        ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-brand-navy-300'"
+                    @click="switchSubtype('')"
+                >
+                    Бүгд
+                </button>
+                <button
+                    v-for="item in subtypes"
+                    :key="item.value"
+                    type="button"
+                    class="rounded-full border px-3.5 py-1.5 text-sm font-medium transition"
+                    :class="subtype === item.value
+                        ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-brand-navy-300'"
+                    @click="switchSubtype(item.value)"
+                >
+                    {{ item.label }}
+                </button>
             </div>
 
             <div class="ui-card max-h-[min(70vh,calc(100dvh-12rem))] overflow-auto overscroll-contain">
