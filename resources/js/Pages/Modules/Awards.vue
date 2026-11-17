@@ -648,6 +648,8 @@ const fitsViewport = computed(() => (
     || props.tab === 'other'
 ));
 
+watch(fitsViewport, () => scheduleStickySync());
+
 const fitColPercents = computed(() => {
     if (props.tab === 'other') {
         return ['3%', '9%', '7%', '7%', '8%', '9%', '14%', '5%', '6%', '9%', '11%', '8%'];
@@ -971,8 +973,7 @@ const confirmImport = () => {
                     </button>
                 </div>
 
-            <div class="ui-card flex min-h-0 flex-1 flex-col overflow-hidden">
-                <div class="min-h-0 flex-1 overflow-auto overscroll-contain">
+            <TableScrollViewport fill pin-start>
                 <div ref="registerEl" class="ui-register">
                 <table
                     class="ui-register__table ui-register--pin-actions"
@@ -1183,7 +1184,7 @@ const confirmImport = () => {
                     </tbody>
                 </table>
                 </div>
-                </div>
+            </TableScrollViewport>
 
                 <div
                     v-if="yearAll && totalMatched > 100"
@@ -1220,7 +1221,6 @@ const confirmImport = () => {
                         </button>
                     </div>
                 </div>
-            </div>
             </div>
         </div>
 
