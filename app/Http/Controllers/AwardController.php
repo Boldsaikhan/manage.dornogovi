@@ -51,7 +51,8 @@ class AwardController extends Controller
 
         ModuleOwnScope::apply($query, $request->user(), self::MODULE);
 
-        $collection = $query->limit(500)->get()->values();
+        // Төрийн дээд бүртгэл олон мянган мөртэй — бүх оноор харагдах ёстой.
+        $collection = $query->limit(10000)->get()->values();
         $total = $collection->count();
         $rows = $collection->map(
             fn (Award $award, int $i) => $this->serialize($award, $total - $i),

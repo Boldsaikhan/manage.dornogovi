@@ -36,6 +36,27 @@ const importInput = ref(null);
 const importBusy = ref(false);
 const importData = ref(null);
 
+/**
+ * Засварлах мөрүүд.
+ *
+ * Бүх хүснэгтийг нэг дор нээхийн оронд мөр бүрийг тусад нь
+ * засварлана — санамсаргүй өөрчлөх эрсдэл багасна.
+ */
+const editingRows = ref([]);
+const addingRow = ref(false);
+
+const isEditing = (id) => props.canManage && editingRows.value.includes(id);
+
+const toggleRowEdit = (id) => {
+    if (! props.canManage) {
+        return;
+    }
+
+    editingRows.value = isEditing(id)
+        ? editingRows.value.filter((value) => value !== id)
+        : [...editingRows.value, id];
+};
+
 const numberFields = new Set([
     'age', 'years_in_country', 'years_in_sector', 'total_years', 'position_years',
 ]);
@@ -168,6 +189,7 @@ watch(() => props.awardTypeRows, syncTypeNameDrafts, { immediate: true, deep: tr
 watch(() => [props.tab, props.subtype, props.year], () => {
     undoStack.value = [];
     redoStack.value = [];
+    editingRows.value = [];
     clearFilters();
 });
 
@@ -220,6 +242,13 @@ const defaultSubtype = () => {
 };
 
 const addRow = () => {
+    if (! props.canManage || addingRow.value) {
+        return;
+    }
+
+    addingRow.value = true;
+
+    const before = props.rows.map((row) => row.id);
     const payload = {
         category: props.tab,
         year: props.year || new Date().getFullYear(),
@@ -230,7 +259,19 @@ const addRow = () => {
         payload.subtype = subtype;
     }
 
-    useForm(payload).post(route('awards.store'), { preserveScroll: true });
+    useForm(payload).post(route('awards.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            const added = props.rows.find((row) => ! before.includes(row.id));
+
+            if (added) {
+                editingRows.value = [added.id];
+            }
+        },
+        onFinish: () => {
+            addingRow.value = false;
+        },
+    });
 };
 
 const normalizeFieldValue = (field, value) => {
@@ -389,6 +430,7 @@ const destroyRow = (id) => {
         return;
     }
 
+    editingRows.value = editingRows.value.filter((value) => value !== id);
     router.delete(route('awards.destroy', id), { preserveScroll: true });
 };
 
@@ -462,7 +504,12 @@ const cellValue = (row, key) => {
 
 const fieldFor = (col) => col.field || col.key;
 
-const isEditable = (col) => props.canManage && ! col.readonly && col.field;
+const isEditable = (col, rowId) => (
+    props.canManage
+    && ! col.readonly
+    && col.field
+    && isEditing(rowId)
+);
 
 const pageTitle = computed(() => props.categories[props.tab] || 'Шагнал');
 
@@ -738,10 +785,11 @@ const confirmImport = () => {
                 </button>
             </div>
 
-            <div class="ui-card ui-register max-h-[min(70vh,calc(100dvh-12rem))] overflow-auto overscroll-contain">
+            <div class="ui-card max-h-[min(70vh,calc(100dvh-12rem))] overflow-auto overscroll-contain">
+                <div class="ui-register">
                 <table
-                    class="ui-table ui-register__table"
-                    :class="fitsViewport ? 'w-full table-fixed' : 'min-w-[1800px]'"
+                    class="ui-register__table ui-register--pin-actions"
+                    :class="fitsViewport ? 'w-full' : 'min-w-[1800px]'"
                 >
                     <colgroup>
                         <col
@@ -751,7 +799,8 @@ const confirmImport = () => {
                                 ? { width: fitColPercents[index] }
                                 : (col.width ? { width: col.width } : undefined)"
                         />
-                        <col v-if="canManage" style="width: 48px" />
+                        <!-- Засах + устгах icon багтах өргөн. -->
+                        <col v-if="canManage" style="width: 6rem" />
                     </colgroup>
 
                     <thead>
@@ -775,7 +824,7 @@ const confirmImport = () => {
                             </th>
                             <th
                                 v-if="canManage"
-                                class="sticky top-0 z-10 bg-brand-navy-50 text-center"
+                                class="ui-sticky-actions sticky top-0 z-20 bg-brand-navy-50 text-center"
                                 :rowspan="hasGroupedHeader ? 2 : 1"
                             />
                         </tr>
@@ -814,7 +863,7 @@ const confirmImport = () => {
                                     placeholder="Хайх"
                                 >
                             </th>
-                            <th v-if="canManage" />
+                            <th v-if="canManage" class="ui-sticky-actions z-20" />
                         </tr>
                     </thead>
 
@@ -850,7 +899,7 @@ const confirmImport = () => {
                                 v-for="col in columns"
                                 :key="`${row.id}-${col.key}`"
                                 :class="[
-                                    isEditable(col) && col.input !== 'gender' ? 'ui-sheet-td' : '',
+                                    isEditable(col, row.id) && col.input !== 'gender' ? 'ui-sheet-td' : '',
                                     colAlign(col) === 'center' ? 'text-center' : '',
                                     col.key === 'no' ? 'font-semibold text-slate-500' : '',
                                     col.nowrap ? 'whitespace-nowrap' : '',
@@ -869,7 +918,7 @@ const confirmImport = () => {
                                 </span>
 
                                 <SheetCell
-                                    v-else-if="isEditable(col) && drafts[row.id] && col.input === 'award_type'"
+                                    v-else-if="isEditable(col, row.id) && drafts[row.id] && col.input === 'award_type'"
                                     v-model="drafts[row.id][fieldFor(col)]"
                                     :options="awardTypes"
                                     :editable="true"
@@ -879,7 +928,7 @@ const confirmImport = () => {
                                 />
 
                                 <SheetCell
-                                    v-else-if="isEditable(col) && drafts[row.id]"
+                                    v-else-if="isEditable(col, row.id) && drafts[row.id]"
                                     v-model="drafts[row.id][fieldFor(col)]"
                                     :multiline="!!col.multiline"
                                     :type="col.input === 'number' || col.input === 'date' ? col.input : 'text'"
@@ -897,22 +946,40 @@ const confirmImport = () => {
                                 >{{ cellValue(row, col.key) }}</span>
                             </td>
 
-                            <td v-if="canManage" class="text-center align-middle">
-                                <button
-                                    type="button"
-                                    class="ui-icon-btn"
-                                    title="Устгах"
-                                    aria-label="Устгах"
-                                    @click="destroyRow(row.id)"
-                                >
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6" />
-                                    </svg>
-                                </button>
+                            <td v-if="canManage" class="ui-sticky-actions text-center align-middle">
+                                <div class="flex items-center justify-center gap-0.5">
+                                    <button
+                                        type="button"
+                                        class="ui-icon-btn"
+                                        :class="isEditing(row.id) ? 'bg-brand-navy-600 text-white' : ''"
+                                        :title="isEditing(row.id) ? 'Засварыг дуусгах' : 'Энэ мөрийг засах'"
+                                        :aria-label="isEditing(row.id) ? 'Засварыг дуусгах' : 'Энэ мөрийг засах'"
+                                        @click="toggleRowEdit(row.id)"
+                                    >
+                                        <svg v-if="isEditing(row.id)" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                        <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 20h4l10-10a2.1 2.1 0 1 0-3-3L5 17v3z" />
+                                        </svg>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="ui-icon-btn ui-icon-btn--danger"
+                                        title="Устгах"
+                                        aria-label="Устгах"
+                                        @click="destroyRow(row.id)"
+                                    >
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
 

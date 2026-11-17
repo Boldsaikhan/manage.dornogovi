@@ -879,28 +879,40 @@
     }
 
     /*
-     * Баруун талд наалдсан үйлдлийн багана (хэвлэх, устгах).
+     * Баруун талд наалдсан үйлдлийн багана (засах, устгах).
      *
-     * Хэвтээ гүйлгэхэд ч харагдах ёстой тул дэвсгэр нь ил тод биш,
-     * бүрэн өнгөтэй байна — эс бөгөөс доогуур нь мөр харагдана.
+     * border-collapse: collapse үед position:sticky олон хөтөчид
+     * ажиллахгүй — тул separate + spacing 0 хэрэглэнэ.
      */
+    .ui-register--pin-actions {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
     .ui-register--pin-actions .ui-sticky-actions {
         position: sticky;
         right: 0;
+        z-index: 6;
         background-clip: padding-box;
-        box-shadow: inset 1px 0 0 rgb(226 232 240);
+        box-shadow:
+            inset 1px 0 0 rgb(226 232 240),
+            -8px 0 10px -8px rgba(15, 23, 42, 0.16);
     }
 
     .dark .ui-register--pin-actions .ui-sticky-actions {
-        box-shadow: inset 1px 0 0 rgb(51 65 85);
+        box-shadow:
+            inset 1px 0 0 rgb(51 65 85),
+            -8px 0 10px -8px rgba(0, 0, 0, 0.35);
     }
 
     .ui-register--pin-actions thead .ui-sticky-actions {
         @apply bg-brand-navy-50 dark:bg-slate-800;
+        z-index: 16;
     }
 
     .ui-register--pin-actions thead tr.ui-filters .ui-sticky-actions {
         @apply bg-white dark:bg-slate-800;
+        z-index: 16;
     }
 
     /* Үйлдлийн багана — мөрийн өгөгдлөөс өнгөөрөө ялгарна. */
