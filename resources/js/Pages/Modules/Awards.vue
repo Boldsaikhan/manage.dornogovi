@@ -997,7 +997,10 @@ const confirmImport = () => {
                                 v-for="cell in topHeaderCells"
                                 :key="cell.key"
                                 class="bg-brand-navy-50 text-center"
-                                :class="cell.group ? groupClass(cell.label) : ''"
+                                :class="[
+                                    cell.group ? groupClass(cell.label) : '',
+                                    cell.key === 'no' ? 'ui-sticky-no' : '',
+                                ]"
                                 :colspan="cell.colspan"
                                 :rowspan="cell.rowspan"
                             >
@@ -1033,7 +1036,11 @@ const confirmImport = () => {
                             </th>
                         </tr>
                         <tr class="ui-filters ui-register__filters">
-                            <th v-for="col in columns" :key="`filter-${col.key}`">
+                            <th
+                                v-for="col in columns"
+                                :key="`filter-${col.key}`"
+                                :class="col.key === 'no' ? 'ui-sticky-no' : ''"
+                            >
                                 <button
                                     v-if="col.key === 'no' && hasFilters"
                                     type="button"
@@ -1088,7 +1095,7 @@ const confirmImport = () => {
                                 :class="[
                                     isEditable(col, row.id) && col.input !== 'gender' ? 'ui-sheet-td' : '',
                                     colAlign(col) === 'center' ? 'text-center' : '',
-                                    col.key === 'no' ? 'font-semibold text-slate-500' : '',
+                                    col.key === 'no' ? 'ui-sticky-no font-semibold tabular-nums text-slate-500' : '',
                                     col.nowrap ? 'whitespace-nowrap' : '',
                                 ]"
                             >
