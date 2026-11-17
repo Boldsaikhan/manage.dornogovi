@@ -1122,7 +1122,7 @@ const confirmImport = () => {
 
                 <div
                     v-if="yearAll && totalMatched > 100"
-                    class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-white px-3 py-2 text-xs text-slate-600"
+                    class="ui-awards-pager flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-slate-200 px-3 py-2 text-xs text-slate-600"
                 >
                     <p>
                         Нийт <span class="font-semibold text-slate-800">{{ totalMatched }}</span> мөр —

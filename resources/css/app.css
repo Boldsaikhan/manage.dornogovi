@@ -523,6 +523,18 @@
         @apply flex min-h-0 flex-1 basis-0 flex-col overflow-hidden;
     }
 
+    /*
+     * Баруун доод AI fab (fixed) sticky үйлдэл/хуудаслалтын товчийг
+     * бүү дарж харагдуул — хүснэгтийн бүрхүүлээс баруун зай үлдээнэ.
+     */
+    .ui-awards-table-shell:not(.ui-table-overlay) {
+        @apply mr-16;
+    }
+
+    .ui-awards-table-shell .ui-awards-pager {
+        @apply relative z-20 bg-white dark:bg-slate-900;
+    }
+
     /* Хүснэгт дэд цэсийг дарахгүй — багана агуулгаараа тэлэхгүй. */
     .ui-reports-table-shell > * {
         min-width: 0;
