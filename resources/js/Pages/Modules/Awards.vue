@@ -910,14 +910,15 @@ const confirmImport = () => {
                     <button
                         v-if="canManage"
                         type="button"
-                        class="ui-icon-btn"
-                        title="Шагналын төрөл"
-                        aria-label="Шагналын төрөл"
+                        class="ui-btn-ghost !gap-1.5 !px-2.5 !py-1.5 text-xs"
+                        title="Шагналын нэрэнд гарах жагсаалтын тохиргоо"
+                        aria-label="Шагналын нэрийн тохиргоо"
                         @click="showTypes = true"
                     >
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 3l2.2 4.5 5 .7-3.6 3.5.9 5L12 14.8 7.5 16.7l.9-5L4.8 8.2l5-.7L12 3z" />
                         </svg>
+                        Шагналын нэр
                     </button>
 
                     <button
@@ -1150,9 +1151,11 @@ const confirmImport = () => {
                                     v-else-if="isEditable(col, row.id) && drafts[row.id] && col.input === 'award_type'"
                                     v-model="drafts[row.id][fieldFor(col)]"
                                     :options="awardTypes"
+                                    :simple="true"
+                                    :creatable="true"
                                     :editable="true"
                                     :nowrap="!!col.nowrap"
-                                    placeholder="Шагнал сонгох"
+                                    placeholder="Сонгох эсвэл бичиж нэмэх"
                                     @commit="(v) => saveField(row.id, fieldFor(col), v)"
                                 />
 
@@ -1160,6 +1163,7 @@ const confirmImport = () => {
                                     v-else-if="isEditable(col, row.id) && drafts[row.id] && col.input === 'supporting_org'"
                                     v-model="drafts[row.id][fieldFor(col)]"
                                     :options="supportingOrgs"
+                                    :simple="true"
                                     :editable="true"
                                     :nowrap="!!col.nowrap"
                                     placeholder="Байгууллага сонгох"
@@ -1318,8 +1322,11 @@ const confirmImport = () => {
         <Modal :show="showTypes" max-width="2xl" @close="showTypes = false">
             <div class="ui-card-pad space-y-3">
                 <div>
-                    <h2 class="ui-title">Шагналын төрөл</h2>
-                    <p class="ui-subtitle">Хүснэгтээс сонгох жагсаалтыг энд нэмнэ. Идэвхгүй төрөл сонголтод гарахгүй.</p>
+                    <h2 class="ui-title">Шагналын нэрийн тохиргоо</h2>
+                    <p class="ui-subtitle">
+                        Хүснэгтийн «Шагналын нэр» баганын жагсаалтыг энд нэмнэ.
+                        Жагсаалтаас сонгох эсвэл нүдэнд шууд бичиж ч болно. Идэвхгүй нэр сонголтод гарахгүй.
+                    </p>
                 </div>
 
                 <form class="flex gap-2" @submit.prevent="addAwardType">
