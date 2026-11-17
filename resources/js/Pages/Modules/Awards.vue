@@ -4,6 +4,7 @@ import { router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import SheetCell from '@/Components/SheetCell.vue';
+import { useStickyTableHead } from '@/composables/useStickyTableHead';
 import { parseMongolianRegister } from '@/utils/mongolianRegister';
 
 const props = defineProps({
@@ -29,6 +30,8 @@ const props = defineProps({
 
 const drafts = reactive({});
 const filters = reactive({});
+const registerEl = ref(null);
+const { schedule: scheduleStickySync } = useStickyTableHead(() => registerEl.value);
 const showTypes = ref(false);
 const newTypeName = ref('');
 const savingType = ref(false);
@@ -211,7 +214,10 @@ watch(() => [props.tab, props.subtype, props.year, props.yearAll, props.page], (
     editingRows.value = [];
     Object.keys(drafts).forEach((key) => delete drafts[key]);
     clearFilters();
+    scheduleStickySync();
 });
+
+watch(() => props.columns, () => scheduleStickySync(), { deep: true });
 
 const queryParams = (overrides = {}) => {
     const params = {
@@ -829,7 +835,7 @@ const confirmImport = () => {
             </div>
 
             <div class="ui-card max-h-[min(70vh,calc(100dvh-12rem))] overflow-auto overscroll-contain">
-                <div class="ui-register">
+                <div ref="registerEl" class="ui-register">
                 <table
                     class="ui-register__table ui-register--pin-actions"
                     :class="fitsViewport ? 'w-full' : 'min-w-[1800px]'"
@@ -851,7 +857,7 @@ const confirmImport = () => {
                             <th
                                 v-for="cell in topHeaderCells"
                                 :key="cell.key"
-                                class="sticky top-0 z-10 bg-brand-navy-50 text-center"
+                                class="bg-brand-navy-50 text-center"
                                 :class="cell.group ? groupClass(cell.label) : ''"
                                 :colspan="cell.colspan"
                                 :rowspan="cell.rowspan"
@@ -867,7 +873,7 @@ const confirmImport = () => {
                             </th>
                             <th
                                 v-if="canManage"
-                                class="ui-sticky-actions sticky top-0 z-20 bg-brand-navy-50 text-center"
+                                class="ui-sticky-actions bg-brand-navy-50 text-center"
                                 :rowspan="hasGroupedHeader ? 2 : 1"
                             />
                         </tr>
@@ -875,8 +881,7 @@ const confirmImport = () => {
                             <th
                                 v-for="col in subHeaderColumns"
                                 :key="`sub-${col.key}`"
-                                class="sticky z-10 bg-brand-navy-50 text-center text-xs"
-                                :style="{ top: '2.5rem' }"
+                                class="bg-brand-navy-50 text-center text-xs"
                             >
                                 <template v-if="col.lines?.length">
                                     <span
@@ -906,7 +911,7 @@ const confirmImport = () => {
                                     placeholder="Хайх"
                                 >
                             </th>
-                            <th v-if="canManage" class="ui-sticky-actions z-20" />
+                            <th v-if="canManage" class="ui-sticky-actions" />
                         </tr>
                     </thead>
 
