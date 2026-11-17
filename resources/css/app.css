@@ -520,15 +520,7 @@
     }
 
     .ui-awards-table-shell {
-        @apply flex min-h-0 flex-1 basis-0 flex-col overflow-hidden;
-    }
-
-    /*
-     * Баруун доод AI fab (fixed) sticky үйлдэл/хуудаслалтын товчийг
-     * бүү дарж харагдуул — хүснэгтийн бүрхүүлээс баруун зай үлдээнэ.
-     */
-    .ui-awards-table-shell:not(.ui-table-overlay) {
-        @apply mr-16;
+        @apply flex min-h-0 w-full min-w-0 flex-1 basis-0 flex-col overflow-hidden;
     }
 
     .ui-awards-table-shell .ui-awards-pager {
@@ -558,10 +550,29 @@
         @apply h-dvh overflow-x-hidden overflow-y-hidden;
     }
 
+    /*
+     * Inertia #app өндөр дамжуулахгүй бол flex-1 хүснэгт доош
+     * тэлэхгүй — үлдсэн viewport хоосон үлдэнэ.
+     */
+    html:has(.ui-page--tasks-table) #app,
+    html:has(.ui-page--reports-table) #app,
+    html:has(.ui-page--awards-table) #app {
+        @apply flex h-dvh flex-col overflow-hidden;
+    }
+
     .flex.min-h-dvh:has(.ui-page--tasks-table),
     .flex.min-h-dvh:has(.ui-page--reports-table),
     .flex.min-h-dvh:has(.ui-page--awards-table) {
-        @apply h-dvh overflow-hidden;
+        @apply h-dvh min-h-0 flex-1 overflow-hidden;
+    }
+
+    /*
+     * Шагнал: AI fab-ийн pb-24-ийг болиулж хүснэгт доош дүүргэнэ;
+     * хажуугийн padding-ийг бага зэрэг шахаж өргөн нэмнэ.
+     * (! — utilities давхаргаас pb-24/px-*-ийг дарна)
+     */
+    .flex.min-h-dvh:has(.ui-page--awards-table) > main {
+        @apply min-h-0 overflow-hidden !px-2 !pb-2 sm:!px-3 sm:!pb-3 lg:!px-3 lg:!pb-3;
     }
 
     .ui-table-hscroll::-webkit-scrollbar {
@@ -771,9 +782,15 @@
     }
 
     .ui-register thead th {
-        @apply bg-brand-navy-50 px-2 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-brand-navy-700
-            dark:bg-slate-800 dark:text-slate-300;
+        @apply px-2 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-brand-navy-700
+            dark:text-slate-300;
+        /* Hex — sticky үед /opacity тунгалаг өнгө мөр нэвтрүүлдэг. */
+        background-color: #f3f7fc;
         vertical-align: middle;
+    }
+
+    .dark .ui-register thead th {
+        background-color: #1e293b;
     }
 
     /*
@@ -826,40 +843,64 @@
          * наалдсан хүснэгтийн толгойн ард нуугдана.
          */
         z-index: 14;
+        background-color: #f3f7fc;
     }
 
-    /* Наалдах байрлалыг JS бодит өндрөөр нь тавина (Decrees.vue → syncStickyHead). */
+    .dark .ui-register thead tr:first-child th {
+        background-color: #1e293b;
+    }
+
+    /* Наалдах байрлалыг JS бодит өндрөөр нь тавина (useStickyTableHead). */
     .ui-register thead tr:nth-child(2) th {
         position: sticky;
         top: 2.65rem;
         z-index: 13;
-        @apply bg-brand-navy-50 py-1.5 text-[10px] font-medium normal-case tracking-normal text-brand-navy-600
-            dark:bg-slate-800 dark:text-slate-400;
+        @apply py-1.5 text-[10px] font-medium normal-case tracking-normal text-brand-navy-600
+            dark:text-slate-400;
+        background-color: #f3f7fc;
+    }
+
+    .dark .ui-register thead tr:nth-child(2) th {
+        background-color: #1e293b;
     }
 
     .ui-register thead tr:nth-child(3) th {
         position: sticky;
+        top: 4.75rem;
         z-index: 12;
-        @apply bg-brand-navy-50 py-0.5 text-[10px] font-normal normal-case text-slate-500
-            dark:bg-slate-800 dark:text-slate-500;
+        @apply py-0.5 text-[10px] font-normal normal-case text-slate-500
+            dark:text-slate-500;
+        background-color: #f3f7fc;
+    }
+
+    .dark .ui-register thead tr:nth-child(3) th {
+        background-color: #1e293b;
     }
 
     .ui-register__head-group--issued {
         /* /60 тунгалаг — sticky үед мөр нэвт харагдана тул бүрэн өнгө. */
-        @apply bg-sky-50 text-sky-900 dark:bg-sky-950 dark:text-sky-200;
+        @apply text-sky-900 dark:text-sky-200;
+        background-color: #f0f9ff !important;
+    }
+
+    .dark .ui-register__head-group--issued {
+        background-color: #082f49 !important;
     }
 
     /*
      * Багана тус бүрийн хайлтын мөр — толгойн доор наалдаж, өнгөөрөө ялгарна.
      *
      * Аль ч хүснэгтийн <thead> дотор <tr class="ui-filters"> болгон тавина.
+     * .ui-register-тай илүү өндөр specificity — nth-child(3) navy-г дарна.
      */
+    .ui-register thead tr.ui-filters th,
     thead tr.ui-filters th {
         position: sticky;
-        z-index: 11;
-        @apply bg-white px-1 py-1.5 align-middle dark:bg-slate-800;
+        top: 4.75rem;
+        z-index: 12;
+        @apply px-1 py-1.5 align-middle;
+        background-color: #ffffff !important;
         background-clip: border-box;
-        isolation: isolate;
         /* Багана хоорондын зураас + толгойг биеэс тусгаарлах ирмэг. */
         box-shadow:
             inset -1px 0 0 theme('colors.brand-navy.200'),
@@ -868,6 +909,7 @@
             0 4px 6px -4px rgb(15 23 42 / 0.12);
     }
 
+    .ui-register thead tr.ui-filters th:last-child,
     thead tr.ui-filters th:last-child {
         box-shadow:
             inset 0 1px 0 theme('colors.brand-navy.200'),
@@ -875,13 +917,16 @@
             0 4px 6px -4px rgb(15 23 42 / 0.12);
     }
 
+    .dark .ui-register thead tr.ui-filters th,
     .dark thead tr.ui-filters th {
+        background-color: #1e293b !important;
         box-shadow:
             inset 0 1px 0 rgb(71 85 105),
             inset 0 -2px 0 rgb(100 116 139),
             0 4px 6px -4px rgb(0 0 0 / 0.4);
     }
 
+    .dark .ui-register thead tr.ui-filters th:last-child,
     .dark thead tr.ui-filters th:last-child {
         box-shadow:
             inset 0 -1px 0 rgb(71 85 105),
@@ -903,20 +948,28 @@
     }
 
     .ui-register__head-group--numbers {
-        @apply bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200;
+        @apply text-emerald-900 dark:text-emerald-200;
+        background-color: #ecfdf5 !important;
+    }
+
+    .dark .ui-register__head-group--numbers {
+        background-color: #022c22 !important;
     }
 
     .ui-register__head-group--void {
-        @apply bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200;
+        @apply text-amber-900 dark:text-amber-200;
+        background-color: #fffbeb !important;
+    }
+
+    .dark .ui-register__head-group--void {
+        background-color: #451a03 !important;
     }
 
     /*
      * Sticky толгой — мөр нэвт харагдахгүй байх ёстой.
-     * Tailwind opacity (/60) эсвэл тунгалаг дэвсгэрийг энд хүчээр хаана.
      */
     .ui-register--pin-actions thead th {
         background-clip: border-box;
-        isolation: isolate;
     }
 
     /*
@@ -947,13 +1000,21 @@
     }
 
     .ui-register--pin-actions thead .ui-sticky-actions {
-        @apply bg-brand-navy-50 dark:bg-slate-800;
+        background-color: #f3f7fc;
         z-index: 16;
     }
 
+    .dark .ui-register--pin-actions thead .ui-sticky-actions {
+        background-color: #1e293b;
+    }
+
     .ui-register--pin-actions thead tr.ui-filters .ui-sticky-actions {
-        @apply bg-white dark:bg-slate-800;
+        background-color: #ffffff !important;
         z-index: 16;
+    }
+
+    .dark .ui-register--pin-actions thead tr.ui-filters .ui-sticky-actions {
+        background-color: #1e293b !important;
     }
 
     /* Үйлдлийн багана — мөрийн өгөгдлөөс өнгөөрөө ялгарна. */
