@@ -1017,18 +1017,32 @@
         background-color: #1e293b !important;
     }
 
+    /* Бүрэн хаалттай дэвсгэр — доорх мөрийн текст нэвт харагдахгүй. */
     .ui-register--pin-actions tbody td.ui-sticky-no {
-        @apply bg-white dark:bg-slate-900;
         z-index: 5;
+        background-color: #ffffff !important;
+    }
+
+    .dark .ui-register--pin-actions tbody td.ui-sticky-no {
+        background-color: #0f172a !important;
     }
 
     .ui-register--pin-actions tbody tr:nth-child(even) td.ui-sticky-no {
-        @apply bg-slate-50 dark:bg-slate-800;
+        background-color: #f8fafc !important;
+    }
+
+    .dark .ui-register--pin-actions tbody tr:nth-child(even) td.ui-sticky-no {
+        background-color: #1e293b !important;
     }
 
     .ui-register--pin-actions tbody tr:hover td.ui-sticky-no,
     .ui-register--pin-actions tbody tr:focus-within td.ui-sticky-no {
-        @apply bg-sky-50 dark:bg-sky-950/40;
+        background-color: #f0f9ff !important;
+    }
+
+    .dark .ui-register--pin-actions tbody tr:hover td.ui-sticky-no,
+    .dark .ui-register--pin-actions tbody tr:focus-within td.ui-sticky-no {
+        background-color: #0c4a6e !important;
     }
 
     .ui-register--pin-actions .ui-sticky-actions {
@@ -1065,30 +1079,43 @@
         background-color: #1e293b !important;
     }
 
-    /* Үйлдлийн багана — мөрийн өгөгдлөөс өнгөөрөө ялгарна. */
+    /* Үйлдлийн багана — мөрийн өгөгдлөөс өнгөөрөө ялгарна (бүрэн хаалттай). */
     .ui-register--pin-actions tbody td.ui-sticky-actions {
-        @apply bg-brand-navy-50 dark:bg-slate-800;
         z-index: 5;
+        background-color: #eef4fb !important;
+    }
+
+    .dark .ui-register--pin-actions tbody td.ui-sticky-actions {
+        background-color: #1e293b !important;
     }
 
     .ui-register--pin-actions tbody tr:nth-child(even) td.ui-sticky-actions {
-        @apply bg-brand-navy-100/70 dark:bg-slate-800;
+        background-color: #dde8f5 !important;
+    }
+
+    .dark .ui-register--pin-actions tbody tr:nth-child(even) td.ui-sticky-actions {
+        background-color: #1e293b !important;
     }
 
     .ui-register--pin-actions tbody tr:hover td.ui-sticky-actions,
     .ui-register--pin-actions tbody tr:focus-within td.ui-sticky-actions {
-        @apply bg-brand-navy-100 dark:bg-slate-700;
+        background-color: #d1e0f2 !important;
     }
 
-    .ui-register tbody tr:nth-child(even) td:not(.ui-register__cell--muted) {
+    .dark .ui-register--pin-actions tbody tr:hover td.ui-sticky-actions,
+    .dark .ui-register--pin-actions tbody tr:focus-within td.ui-sticky-actions {
+        background-color: #334155 !important;
+    }
+
+    .ui-register tbody tr:nth-child(even) td:not(.ui-register__cell--muted):not(.ui-sticky-no):not(.ui-sticky-actions) {
         @apply bg-slate-50/50 dark:bg-slate-800/40;
     }
 
-    .ui-register tbody tr:hover td:not(.ui-register__cell--muted) {
+    .ui-register tbody tr:hover td:not(.ui-register__cell--muted):not(.ui-sticky-no):not(.ui-sticky-actions) {
         @apply bg-sky-50/70 dark:bg-sky-950/40;
     }
 
-    .ui-register tbody tr:focus-within td:not(.ui-register__cell--muted) {
+    .ui-register tbody tr:focus-within td:not(.ui-register__cell--muted):not(.ui-sticky-no):not(.ui-sticky-actions) {
         @apply bg-sky-50/80 dark:bg-sky-950/50;
     }
 
