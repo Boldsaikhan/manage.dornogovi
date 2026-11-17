@@ -46,10 +46,15 @@ class Award extends Model
         'position',
         'address',
         'last_award',
+        'last_award_date',
         'supporting_org',
+        'forwarded_on',
+        'forwarded_letter_no',
+        'received_award',
         'presidential_letter',
         'award_name',
         'work_sector',
+        'profession',
         'job_title',
         'total_years',
         'position_years',
@@ -69,6 +74,8 @@ class Award extends Model
             'total_years' => 'integer',
             'position_years' => 'integer',
             'award_date' => 'date',
+            'last_award_date' => 'date',
+            'forwarded_on' => 'date',
         ];
     }
 

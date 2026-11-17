@@ -146,6 +146,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/modules/awards', [AwardController::class, 'index'])->name('awards.index');
     Route::get('/modules/awards/export', [AwardController::class, 'export'])->name('awards.export');
+    Route::post('/modules/awards/import/preview', [AwardController::class, 'importPreview'])->name('awards.import.preview');
+    Route::post('/modules/awards/import', [AwardController::class, 'importStore'])->name('awards.import.store');
     Route::post('/modules/awards', [AwardController::class, 'store'])->name('awards.store');
     Route::post('/modules/awards/types', [AwardTypeController::class, 'store'])->name('awards.types.store');
     Route::patch('/modules/awards/types/{awardType}', [AwardTypeController::class, 'update'])->name('awards.types.update');

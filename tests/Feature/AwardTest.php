@@ -58,7 +58,57 @@ class AwardTest extends TestCase
 
         $this->assertSame('УБ85031512', $award->register_no);
         $this->assertSame(41, $award->age);
-        $this->assertSame('эм', $award->gender);
+        $this->assertSame('эр', $award->gender);
+    }
+
+    public function test_register_penultimate_digit_sets_male_gender(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $award = Award::query()->create([
+            'category' => 'state_high',
+            'year' => 2026,
+            'surname' => 'Тест',
+            'given_name' => 'Хүн',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('awards.update', $award), [
+                'register_no' => 'УХ92092534',
+            ])
+            ->assertRedirect();
+
+        $award->refresh();
+
+        $this->assertSame('УХ92092534', $award->register_no);
+        $this->assertSame(34, $award->age);
+        $this->assertSame('эр', $award->gender);
+    }
+
+    public function test_rows_are_numbered_descending(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        foreach (['А', 'Б', 'В'] as $name) {
+            Award::query()->create([
+                'category' => 'state_high',
+                'year' => 2026,
+                'surname' => $name,
+                'given_name' => 'Тест',
+                'created_by' => $admin->id,
+            ]);
+        }
+
+        $this->actingAs($admin)
+            ->get(route('awards.index', ['tab' => 'state_high']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Modules/Awards')
+                ->where('rows.0.no', 3)
+                ->where('rows.1.no', 2)
+                ->where('rows.2.no', 1)
+            );
     }
 
     public function test_admin_can_manage_award_types(): void
@@ -222,6 +272,36 @@ class AwardTest extends TestCase
             (string) $response->headers->get('content-type'),
         );
         $this->assertSame('PK', substr($response->getContent(), 0, 2));
+    }
+
+    public function test_admin_can_import_award_entries(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->post(route('awards.import.store'), [
+                'tab' => 'state_high',
+                'year' => 2026,
+                'entries' => [
+                    [
+                        'surname' => 'Импорт',
+                        'given_name' => 'Шалгалт',
+                        'register_no' => 'УХ92092534',
+                        'nominated_award' => 'Алтан гадас',
+                    ],
+                ],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('awards', [
+            'category' => 'state_high',
+            'surname' => 'Импорт',
+            'given_name' => 'Шалгалт',
+            'register_no' => 'УХ92092534',
+            'age' => 34,
+            'gender' => 'эр',
+            'nominated_award' => 'Алтан гадас',
+        ]);
     }
 
     public function test_can_update_and_destroy(): void

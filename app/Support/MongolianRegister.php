@@ -6,7 +6,8 @@ namespace App\Support;
  * Монгол регистрийн дугаараас төрсөн өдөр, нас, хүйс гаргана.
  *
  * Хэлбэр: 2 үсэг + 8 орон (Жишээ: УБ85031512).
- * Огноо: ЖЖССӨӨ, хүйс: дарааллын дугаарын тэгш/сонгоноор.
+ * Огноо: ЖЖССӨӨ — 2000 оноос хойш төрсөнд сард +20 нэмэгддэг.
+ * Хүйс: сүүлийн өмнөх орон (7 дахь тоо) сондгой=эр, тэгш=эм.
  */
 class MongolianRegister
 {
@@ -35,11 +36,19 @@ class MongolianRegister
         $yy = (int) substr($digits, 0, 2);
         $mm = (int) substr($digits, 2, 2);
         $dd = (int) substr($digits, 4, 2);
-        $seq = (int) substr($digits, 6, 2);
+        // Хүйс — бүтэн 2 оронт дараалал биш, сүүлийн өмнөх (7 дахь) орон.
+        $genderDigit = (int) substr($digits, 6, 1);
 
         $asOfYear ??= (int) date('Y');
         $currentYy = $asOfYear % 100;
-        $year = $yy + ($yy <= $currentYy ? 2000 : 1900);
+
+        // 2000+ төрсөн: сард +20 (01→21 … 12→32).
+        if ($mm >= 21 && $mm <= 32) {
+            $mm -= 20;
+            $year = 2000 + $yy;
+        } else {
+            $year = $yy + ($yy <= $currentYy ? 2000 : 1900);
+        }
 
         if (! checkdate($mm, $dd, $year)) {
             return null;
@@ -55,7 +64,7 @@ class MongolianRegister
             'register' => $register,
             'birth' => sprintf('%04d-%02d-%02d', $year, $mm, $dd),
             'age' => $age,
-            'gender' => ($seq % 2 === 1) ? 'эр' : 'эм',
+            'gender' => ($genderDigit % 2 === 1) ? 'эр' : 'эм',
         ];
     }
 
