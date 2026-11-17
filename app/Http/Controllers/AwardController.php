@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Award;
+use App\Models\AwardType;
 use App\Support\ModuleAccess;
 use App\Support\ModuleOwnScope;
+use App\Support\MongolianRegister;
 use App\Support\XlsxTableWriter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -79,6 +81,11 @@ class AwardController extends Controller
             'categories' => Award::CATEGORIES,
             'allSubtypes' => Award::SUBTYPES,
             'categorySubtypes' => Award::CATEGORY_SUBTYPES,
+            'awardTypes' => AwardType::options(),
+            'awardTypeRows' => AwardType::query()
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name', 'is_active', 'sort_order']),
         ]);
     }
 
@@ -242,7 +249,7 @@ class AwardController extends Controller
             $data['year'] = (int) date('Y');
         }
 
-        return $data;
+        return $this->applyRegisterDerived($data, (int) $data['year']);
     }
 
     /**
@@ -291,6 +298,48 @@ class AwardController extends Controller
 
         if (array_key_exists('award_date', $data) && ! empty($data['award_date']) && ! array_key_exists('year', $data)) {
             $data['year'] = (int) date('Y', strtotime((string) $data['award_date']));
+        }
+
+        $year = array_key_exists('year', $data)
+            ? (int) ($data['year'] ?: date('Y'))
+            : (int) ($award->year ?: date('Y'));
+
+        if (array_key_exists('register_no', $data)) {
+            return $this->applyRegisterDerived($data, $year, force: true);
+        }
+
+        return $data;
+    }
+
+    /**
+     * РД-аас нас, хүйс, цэвэрлэсэн регистр бөглөнө.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function applyRegisterDerived(array $data, int $year, bool $force = false): array
+    {
+        if (! array_key_exists('register_no', $data)) {
+            return $data;
+        }
+
+        $parsed = MongolianRegister::parse(
+            is_string($data['register_no'] ?? null) ? $data['register_no'] : null,
+            $year,
+        );
+
+        if ($parsed === null) {
+            return $data;
+        }
+
+        $data['register_no'] = $parsed['register'];
+
+        if ($force || empty($data['age'])) {
+            $data['age'] = $parsed['age'];
+        }
+
+        if ($force || empty($data['gender'])) {
+            $data['gender'] = $parsed['gender'];
         }
 
         return $data;
@@ -345,19 +394,19 @@ class AwardController extends Controller
         if ($tab === 'state_high') {
             return [
                 ['key' => 'no', 'label' => '№', 'readonly' => true, 'width' => '2.25rem'],
-                ['key' => 'nominated_award', 'label' => 'Өргөн мэдүүлсэн шагнал', 'field' => 'nominated_award', 'width' => '5.5rem'],
+                ['key' => 'nominated_award', 'label' => 'Өргөн мэдүүлсэн шагнал', 'field' => 'nominated_award', 'input' => 'award_type', 'width' => '7rem'],
                 ['key' => 'surname', 'label' => 'Овог', 'field' => 'surname', 'width' => '4.5rem'],
                 ['key' => 'given_name', 'label' => 'Нэр', 'field' => 'given_name', 'width' => '4.5rem'],
                 ['key' => 'register_no', 'label' => 'Регистрийн дугаар', 'field' => 'register_no', 'width' => '5.5rem'],
-                ['key' => 'age', 'label' => 'Нас', 'field' => 'age', 'input' => 'number', 'width' => '2.75rem'],
-                ['key' => 'gender', 'label' => 'Хүйс', 'field' => 'gender', 'input' => 'gender', 'width' => '3rem'],
+                ['key' => 'age', 'label' => 'Нас', 'field' => 'age', 'input' => 'number', 'readonly' => true, 'width' => '2.75rem', 'hint' => 'РД-аас'],
+                ['key' => 'gender', 'label' => 'Хүйс', 'field' => 'gender', 'input' => 'gender', 'readonly' => true, 'width' => '3rem', 'hint' => 'РД-аас'],
                 ['key' => 'years_in_country', 'lines' => ['Улсад', 'ажилласан', 'жил'], 'field' => 'years_in_country', 'input' => 'number', 'width' => '3rem'],
                 ['key' => 'years_in_sector', 'lines' => ['Тухайн', 'салбартаа', 'ажилласан', 'жил'], 'field' => 'years_in_sector', 'input' => 'number', 'width' => '3.25rem'],
                 ['key' => 'award_date_display', 'label' => 'Огноо', 'field' => 'award_date', 'input' => 'date', 'width' => '5.5rem'],
                 ['key' => 'resolution_number', 'label' => 'Тогтоолын дугаар', 'field' => 'resolution_number', 'width' => '4.5rem'],
                 ['key' => 'position', 'label' => 'Албан тушаал', 'field' => 'position', 'multiline' => true, 'width' => '8rem'],
                 ['key' => 'address', 'label' => 'Оршин суугаа хаяг', 'field' => 'address', 'multiline' => true, 'width' => '7rem'],
-                ['key' => 'last_award', 'label' => 'Сүүлд авсан шагнал, он', 'field' => 'last_award', 'width' => '5rem'],
+                ['key' => 'last_award', 'label' => 'Сүүлд авсан шагнал, он', 'field' => 'last_award', 'input' => 'award_type', 'width' => '7rem'],
                 ['key' => 'supporting_org', 'label' => 'Дэмжсэн байгууллага', 'field' => 'supporting_org', 'width' => '5.5rem'],
                 ['key' => 'presidential_letter', 'lines' => ['Ерөнхийлөгчийн', 'Тамгын газарт', 'уламжилсан', 'албан бичгийн', 'огноо дугаар'], 'field' => 'presidential_letter', 'multiline' => true, 'width' => '6.5rem'],
             ];
@@ -366,7 +415,7 @@ class AwardController extends Controller
         if ($tab === 'other') {
             return [
                 ['key' => 'no', 'label' => 'Д/д', 'readonly' => true],
-                ['key' => 'award_name', 'label' => 'Шагналын нэр', 'field' => 'award_name'],
+                ['key' => 'award_name', 'label' => 'Шагналын нэр', 'field' => 'award_name', 'input' => 'award_type'],
                 ['key' => 'surname', 'label' => 'Овог', 'field' => 'surname'],
                 ['key' => 'given_name', 'label' => 'Нэр', 'field' => 'given_name'],
                 ['key' => 'register_no', 'label' => 'Регистр', 'field' => 'register_no'],
