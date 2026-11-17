@@ -1044,7 +1044,7 @@ const confirmImport = () => {
                                 ]"
                             >
                                 <template v-if="col.key === 'no'">
-                                    {{ hasFilters ? rowIndex + 1 : row.no }}
+                                    {{ hasFilters ? visibleRows.length - rowIndex : row.no }}
                                 </template>
 
                                 <span
