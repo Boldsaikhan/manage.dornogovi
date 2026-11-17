@@ -506,6 +506,11 @@
         @apply shrink-0;
     }
 
+    /* Таб/toolbar-оос хүснэгт бага зэрэг зайтай. */
+    .ui-page--awards-table {
+        @apply gap-3;
+    }
+
     .ui-tasks-table-shell {
         @apply flex min-h-0 flex-1 basis-0 flex-col gap-2 overflow-hidden;
     }
