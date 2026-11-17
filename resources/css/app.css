@@ -567,12 +567,11 @@
     }
 
     /*
-     * Шагнал: AI fab-ийн pb-24-ийг болиулж хүснэгт доош дүүргэнэ;
-     * хажуугийн padding-ийг бага зэрэг шахаж өргөн нэмнэ.
-     * (! — utilities давхаргаас pb-24/px-*-ийг дарна)
+     * Шагнал: хажуугийн padding-ийг шахж хүснэгтийг баруун тийш дүүргэнэ.
+     * (! — utilities давхаргаас px-*-ийг дарна)
      */
     .flex.min-h-dvh:has(.ui-page--awards-table) > main {
-        @apply min-h-0 overflow-hidden !px-2 !pb-2 sm:!px-3 sm:!pb-3 lg:!px-3 lg:!pb-3;
+        @apply min-h-0 overflow-hidden !px-1 !pb-2 !pr-1 sm:!px-2 sm:!pb-3 sm:!pr-2 lg:!px-2 lg:!pb-3 lg:!pr-2;
     }
 
     .ui-table-hscroll::-webkit-scrollbar {
