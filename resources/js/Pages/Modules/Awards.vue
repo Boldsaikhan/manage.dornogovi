@@ -728,7 +728,7 @@ const confirmImport = () => {
 
 <template>
     <AuthenticatedLayout title="Шагнал">
-        <div class="ui-page">
+        <div class="ui-page ui-page--awards-table">
             <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
                 <nav class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <button
@@ -902,7 +902,10 @@ const confirmImport = () => {
                 </button>
             </div>
 
-            <div :class="tableExpanded ? 'ui-table-overlay' : 'contents'">
+            <div
+                class="ui-awards-table-shell"
+                :class="tableExpanded ? 'ui-table-overlay' : ''"
+            >
                 <div
                     v-if="tableExpanded"
                     class="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-3"
@@ -920,12 +923,7 @@ const confirmImport = () => {
                     </button>
                 </div>
 
-            <div
-                class="ui-card flex flex-col overflow-hidden"
-                :class="tableExpanded
-                    ? 'min-h-0 flex-1'
-                    : 'max-h-[min(70vh,calc(100dvh-12rem))]'"
-            >
+            <div class="ui-card flex min-h-0 flex-1 flex-col overflow-hidden">
                 <div class="min-h-0 flex-1 overflow-auto overscroll-contain">
                 <div ref="registerEl" class="ui-register">
                 <table

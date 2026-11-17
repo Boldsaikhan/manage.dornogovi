@@ -489,7 +489,8 @@
     }
 
     .ui-page--tasks-table,
-    .ui-page--reports-table {
+    .ui-page--reports-table,
+    .ui-page--awards-table {
         @apply flex min-h-0 flex-1 flex-col gap-2 overflow-hidden !space-y-0;
     }
 
@@ -501,12 +502,20 @@
         @apply shrink-0;
     }
 
+    .ui-page--awards-table > :not(.ui-awards-table-shell) {
+        @apply shrink-0;
+    }
+
     .ui-tasks-table-shell {
         @apply flex min-h-0 flex-1 basis-0 flex-col gap-2 overflow-hidden;
     }
 
     .ui-reports-table-shell {
         @apply grid min-h-0 flex-1 basis-0 overflow-hidden;
+    }
+
+    .ui-awards-table-shell {
+        @apply flex min-h-0 flex-1 basis-0 flex-col overflow-hidden;
     }
 
     /* Хүснэгт дэд цэсийг дарахгүй — багана агуулгаараа тэлэхгүй. */
@@ -521,17 +530,20 @@
     }
 
     html:has(.ui-page--tasks-table),
-    html:has(.ui-page--reports-table) {
+    html:has(.ui-page--reports-table),
+    html:has(.ui-page--awards-table) {
         @apply h-dvh overflow-hidden;
     }
 
     html:has(.ui-page--tasks-table) body,
-    html:has(.ui-page--reports-table) body {
+    html:has(.ui-page--reports-table) body,
+    html:has(.ui-page--awards-table) body {
         @apply h-dvh overflow-x-hidden overflow-y-hidden;
     }
 
     .flex.min-h-dvh:has(.ui-page--tasks-table),
-    .flex.min-h-dvh:has(.ui-page--reports-table) {
+    .flex.min-h-dvh:has(.ui-page--reports-table),
+    .flex.min-h-dvh:has(.ui-page--awards-table) {
         @apply h-dvh overflow-hidden;
     }
 
