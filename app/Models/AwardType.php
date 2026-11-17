@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class AwardType extends Model
 {
@@ -18,6 +19,46 @@ class AwardType extends Model
             'sort_order' => 'integer',
             'is_active' => 'boolean',
         ];
+    }
+
+    /** Шагналын бүртгэлд ашиглагдаж байгаа эсэх. */
+    public function isInUse(): bool
+    {
+        return Award::query()
+            ->where(function ($query) {
+                $query->where('nominated_award', $this->name)
+                    ->orWhere('award_name', $this->name)
+                    ->orWhere('last_award', $this->name);
+            })
+            ->exists();
+    }
+
+    /**
+     * @return Collection<string, true>
+     */
+    public static function usedNames(): Collection
+    {
+        $names = static::query()->pluck('name');
+
+        if ($names->isEmpty()) {
+            return collect();
+        }
+
+        return Award::query()
+            ->where(function ($query) use ($names) {
+                $query->whereIn('nominated_award', $names)
+                    ->orWhereIn('award_name', $names)
+                    ->orWhereIn('last_award', $names);
+            })
+            ->get(['nominated_award', 'award_name', 'last_award'])
+            ->flatMap(fn (Award $award) => [
+                $award->nominated_award,
+                $award->award_name,
+                $award->last_award,
+            ])
+            ->filter()
+            ->unique()
+            ->mapWithKeys(fn (string $name) => [$name => true]);
     }
 
     /**

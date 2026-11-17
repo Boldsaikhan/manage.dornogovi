@@ -84,6 +84,57 @@ class AwardTest extends TestCase
         $this->assertDatabaseMissing('award_types', ['id' => $type->id]);
     }
 
+    public function test_used_award_type_cannot_be_renamed_or_deleted(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $type = AwardType::query()->create([
+            'name' => 'Ашиглагдаж буй медаль',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+
+        Award::query()->create([
+            'category' => 'state_high',
+            'year' => 2026,
+            'surname' => 'Бат',
+            'given_name' => 'Дорж',
+            'nominated_award' => 'Ашиглагдаж буй медаль',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('awards.index', ['tab' => 'state_high']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Modules/Awards')
+                ->has('awardTypeRows', fn ($rows) => $rows
+                    ->where('0.name', 'Ашиглагдаж буй медаль')
+                    ->where('0.in_use', true)
+                    ->etc()
+                )
+            );
+
+        $this->actingAs($admin)
+            ->patch(route('awards.types.update', $type), [
+                'name' => 'Өөр нэр',
+            ])
+            ->assertSessionHasErrors('name');
+
+        $this->assertDatabaseHas('award_types', [
+            'id' => $type->id,
+            'name' => 'Ашиглагдаж буй медаль',
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('awards.types.destroy', $type))
+            ->assertSessionHasErrors('name');
+
+        $this->assertDatabaseHas('award_types', [
+            'id' => $type->id,
+        ]);
+    }
+
     public function test_can_store_state_high_and_governor_honor(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
