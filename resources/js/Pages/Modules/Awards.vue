@@ -977,7 +977,7 @@ const confirmImport = () => {
                 <div ref="registerEl" class="ui-register">
                 <table
                     class="ui-register__table ui-register--pin-actions"
-                    :class="fitsViewport ? 'w-full' : 'min-w-[1800px]'"
+                    :class="fitsViewport ? 'w-full' : 'w-full min-w-[1800px]'"
                 >
                     <colgroup>
                         <col

@@ -600,6 +600,33 @@ const onLinkedSystemClick = (sys, event) => {
                 <div class="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
                     <QrScanButton />
                     <NotificationBell />
+
+                    <button
+                        v-if="page.props.aiAssistant?.available"
+                        type="button"
+                        class="relative flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm transition"
+                        :class="aiOpen
+                            ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
+                            : 'border-slate-200 bg-white text-brand-navy-700 hover:border-brand-navy-200 hover:bg-brand-navy-50 dark:border-slate-700 dark:bg-slate-800 dark:text-brand-navy-300 dark:hover:border-brand-navy-700 dark:hover:bg-slate-700'"
+                        :title="page.props.aiAssistant?.name || 'Manage AI'"
+                        :aria-label="page.props.aiAssistant?.name || 'Manage AI'"
+                        :aria-pressed="aiOpen"
+                        @click="toggleAiPanel()"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24" aria-hidden="true">
+                            <path
+                                d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                            <path
+                                d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2z"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                        </svg>
+                    </button>
+
                     <AppInstallMenu />
 
                     <button
@@ -651,38 +678,10 @@ const onLinkedSystemClick = (sys, event) => {
                 </div>
             </header>
 
-            <main
-                class="flex min-h-0 flex-1 flex-col p-3 sm:p-4 lg:p-5"
-                :class="page.props.aiAssistant?.available ? 'pb-24' : ''"
-            >
+            <main class="flex min-h-0 flex-1 flex-col p-3 sm:p-4 lg:p-5">
                 <slot />
             </main>
         </div>
-
-        <button
-            v-if="page.props.aiAssistant?.available && !aiOpen"
-            type="button"
-            class="ai-fab fixed bottom-5 right-5 z-30 flex h-12 w-12 items-center justify-center overflow-visible rounded-full bg-brand-navy-700 text-white shadow-lg shadow-brand-navy-700/30 transition hover:-translate-y-0.5 hover:bg-brand-navy-800"
-            :title="page.props.aiAssistant?.name || 'Manage AI'"
-            :aria-label="page.props.aiAssistant?.name || 'Manage AI'"
-            @click="toggleAiPanel(true)"
-        >
-            <span class="ai-fab-ping" aria-hidden="true" />
-            <svg class="relative h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
-                <path
-                    class="ai-fab-star"
-                    d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                />
-                <path
-                    class="ai-fab-glint"
-                    d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2z"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                />
-            </svg>
-        </button>
 
         <AiPanel
             v-if="page.props.aiAssistant?.available"
