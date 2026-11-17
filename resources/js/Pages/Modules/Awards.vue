@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
@@ -43,6 +43,9 @@ const newTypeName = ref('');
 const typeSearch = ref('');
 const savingType = ref(false);
 const typeNameDrafts = reactive({});
+/** Шагналын нэрийн тохиргоо — аль мөрийг засаж байна. */
+const editingTypeId = ref(null);
+const typeEditInput = ref(null);
 const undoStack = ref([]);
 const redoStack = ref([]);
 const stepping = ref(false);
@@ -587,9 +590,30 @@ const addAwardType = () => {
     });
 };
 
+const startEditAwardType = async (item) => {
+    if (item.in_use || savingType.value) {
+        return;
+    }
+
+    editingTypeId.value = item.id;
+    typeNameDrafts[item.id] = item.name;
+
+    await nextTick();
+    typeEditInput.value?.focus();
+    typeEditInput.value?.select();
+};
+
+const cancelEditAwardType = (item) => {
+    typeNameDrafts[item.id] = item.name;
+    if (editingTypeId.value === item.id) {
+        editingTypeId.value = null;
+    }
+};
+
 const renameAwardType = (item) => {
     if (item.in_use || savingType.value) {
         typeNameDrafts[item.id] = item.name;
+        editingTypeId.value = null;
 
         return;
     }
@@ -598,6 +622,7 @@ const renameAwardType = (item) => {
 
     if (! name || name === item.name) {
         typeNameDrafts[item.id] = item.name;
+        editingTypeId.value = null;
 
         return;
     }
@@ -608,9 +633,11 @@ const renameAwardType = (item) => {
         preserveScroll: true,
         onFinish: () => {
             savingType.value = false;
+            editingTypeId.value = null;
         },
         onError: () => {
             typeNameDrafts[item.id] = item.name;
+            editingTypeId.value = item.id;
         },
     });
 };
@@ -1319,7 +1346,11 @@ const confirmImport = () => {
             </div>
         </Modal>
 
-        <Modal :show="showTypes" max-width="2xl" @close="showTypes = false">
+        <Modal
+            :show="showTypes"
+            max-width="2xl"
+            @close="showTypes = false; editingTypeId = null"
+        >
             <div class="ui-card-pad space-y-3">
                 <div>
                     <h2 class="ui-title">Шагналын нэрийн тохиргоо</h2>
@@ -1359,7 +1390,7 @@ const confirmImport = () => {
                         <thead>
                             <tr>
                                 <th class="sticky top-0 z-10 bg-brand-navy-50 !py-1.5 text-left">Нэр</th>
-                                <th class="sticky top-0 z-10 w-24 bg-brand-navy-50 !py-1.5 text-center">Үйлдэл</th>
+                                <th class="sticky top-0 z-10 w-32 bg-brand-navy-50 !py-1.5 text-center">Үйлдэл</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1376,51 +1407,97 @@ const confirmImport = () => {
                             >
                                 <td class="!py-1">
                                     <input
+                                        v-if="editingTypeId === item.id"
+                                        ref="typeEditInput"
                                         v-model="typeNameDrafts[item.id]"
                                         type="text"
                                         class="ui-input w-full !py-1 text-xs"
-                                        :disabled="item.in_use || savingType"
-                                        :title="item.in_use
-                                            ? 'Шагналын бүртгэлд ашиглагдаж байгаа тул нэр солих боломжгүй'
-                                            : 'Нэрийг засаад Enter эсвэл гадна дарна'"
+                                        :disabled="savingType"
                                         maxlength="255"
                                         @keydown.enter.prevent="renameAwardType(item)"
-                                        @blur="renameAwardType(item)"
-                                    />
+                                        @keydown.escape.prevent="cancelEditAwardType(item)"
+                                    >
+                                    <span
+                                        v-else
+                                        class="block px-1.5 py-1 text-xs text-slate-800"
+                                        :title="item.name"
+                                    >{{ item.name }}</span>
                                 </td>
                                 <td class="!py-1 text-center">
                                     <div class="flex items-center justify-center gap-0.5">
-                                        <button
-                                            type="button"
-                                            class="ui-icon-btn !h-7 !w-7"
-                                            :class="item.is_active ? '' : 'text-amber-600'"
-                                            :disabled="savingType"
-                                            :title="item.is_active ? 'Идэвхгүй болгох' : 'Идэвхжүүлэх'"
-                                            :aria-label="item.is_active ? 'Идэвхгүй болгох' : 'Идэвхжүүлэх'"
-                                            @click="toggleAwardTypeActive(item)"
-                                        >
-                                            <svg v-if="item.is_active" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.5 12S5.5 6 12 6s9.5 6 9.5 6-3 6-9.5 6S2.5 12 2.5 12z" />
-                                            </svg>
-                                            <svg v-else class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18M10.5 10.7a3 3 0 004.1 4.1M9.9 5.6C10.6 5.2 11.3 5 12 5c6.5 0 9.5 7 9.5 7a18 18 0 01-4.2 4.6M6.1 6.2A18.4 18.4 0 002.5 12S5.5 19 12 19c1.1 0 2.1-.2 3.1-.5" />
-                                            </svg>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="ui-icon-btn ui-icon-btn--danger !h-7 !w-7"
-                                            :disabled="item.in_use"
-                                            :title="item.in_use
-                                                ? 'Шагналын бүртгэлд ашиглагдаж байгаа тул устгах боломжгүй'
-                                                : 'Устгах'"
-                                            :aria-label="item.in_use ? 'Устгах боломжгүй' : 'Устгах'"
-                                            @click="removeAwardType(item)"
-                                        >
-                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" />
-                                            </svg>
-                                        </button>
+                                        <template v-if="editingTypeId === item.id">
+                                            <button
+                                                type="button"
+                                                class="ui-icon-btn !h-7 !w-7 text-emerald-600"
+                                                :disabled="savingType"
+                                                title="Хадгалах"
+                                                aria-label="Хадгалах"
+                                                @click="renameAwardType(item)"
+                                            >
+                                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7" />
+                                                </svg>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="ui-icon-btn !h-7 !w-7"
+                                                :disabled="savingType"
+                                                title="Болих"
+                                                aria-label="Болих"
+                                                @click="cancelEditAwardType(item)"
+                                            >
+                                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18" />
+                                                </svg>
+                                            </button>
+                                        </template>
+                                        <template v-else>
+                                            <button
+                                                type="button"
+                                                class="ui-icon-btn !h-7 !w-7"
+                                                :disabled="item.in_use || savingType"
+                                                :title="item.in_use
+                                                    ? 'Шагналын бүртгэлд ашиглагдаж байгаа тул нэр солих боломжгүй'
+                                                    : 'Нэр засах'"
+                                                :aria-label="item.in_use ? 'Засах боломжгүй' : 'Нэр засах'"
+                                                @click="startEditAwardType(item)"
+                                            >
+                                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 20h4l10-10a2.1 2.1 0 1 0-3-3L5 17v3z" />
+                                                </svg>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="ui-icon-btn !h-7 !w-7"
+                                                :class="item.is_active ? '' : 'text-amber-600'"
+                                                :disabled="savingType"
+                                                :title="item.is_active ? 'Идэвхгүй болгох' : 'Идэвхжүүлэх'"
+                                                :aria-label="item.is_active ? 'Идэвхгүй болгох' : 'Идэвхжүүлэх'"
+                                                @click="toggleAwardTypeActive(item)"
+                                            >
+                                                <svg v-if="item.is_active" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.5 12S5.5 6 12 6s9.5 6 9.5 6-3 6-9.5 6S2.5 12 2.5 12z" />
+                                                </svg>
+                                                <svg v-else class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18M10.5 10.7a3 3 0 004.1 4.1M9.9 5.6C10.6 5.2 11.3 5 12 5c6.5 0 9.5 7 9.5 7a18 18 0 01-4.2 4.6M6.1 6.2A18.4 18.4 0 002.5 12S5.5 19 12 19c1.1 0 2.1-.2 3.1-.5" />
+                                                </svg>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="ui-icon-btn ui-icon-btn--danger !h-7 !w-7"
+                                                :disabled="item.in_use"
+                                                :title="item.in_use
+                                                    ? 'Шагналын бүртгэлд ашиглагдаж байгаа тул устгах боломжгүй'
+                                                    : 'Устгах'"
+                                                :aria-label="item.in_use ? 'Устгах боломжгүй' : 'Устгах'"
+                                                @click="removeAwardType(item)"
+                                            >
+                                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" />
+                                                </svg>
+                                            </button>
+                                        </template>
                                     </div>
                                 </td>
                             </tr>
