@@ -110,8 +110,10 @@ class AwardController extends Controller
             'allSubtypes' => Award::SUBTYPES,
             'categorySubtypes' => Award::CATEGORY_SUBTYPES,
             'awardTypes' => AwardType::options(),
-            // in_use тооцоо хүнд — зөвхөн төрлийн цонх нээхэд хэрэгтэй тул хөнгөнөөр өгнө.
-            'awardTypeRows' => $this->awardTypeRows(light: true),
+            // Засах эрхтэй үед in_use хэрэгтэй (устгах/идэвхгүй товч).
+            'awardTypeRows' => ModuleAccess::canEdit($request->user(), self::MODULE)
+                ? $this->awardTypeRows()
+                : [],
         ]);
     }
 

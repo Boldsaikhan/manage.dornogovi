@@ -36,6 +36,7 @@ const { schedule: scheduleStickySync } = useStickyTableHead(() => registerEl.val
 const tableExpanded = ref(false);
 const showTypes = ref(false);
 const newTypeName = ref('');
+const typeSearch = ref('');
 const savingType = ref(false);
 const typeNameDrafts = reactive({});
 const undoStack = ref([]);
@@ -555,6 +556,35 @@ const removeAwardType = (item) => {
 
     router.delete(route('awards.types.destroy', item.id), { preserveScroll: true });
 };
+
+const toggleAwardTypeActive = (item) => {
+    if (savingType.value) {
+        return;
+    }
+
+    savingType.value = true;
+
+    useForm({ is_active: ! item.is_active }).patch(route('awards.types.update', item.id), {
+        preserveScroll: true,
+        onFinish: () => {
+            savingType.value = false;
+        },
+    });
+};
+
+const visibleAwardTypes = computed(() => {
+    const needle = typeSearch.value.trim().toLowerCase();
+
+    if (! needle) {
+        return props.awardTypeRows;
+    }
+
+    return props.awardTypeRows.filter((item) => {
+        const name = String(typeNameDrafts[item.id] ?? item.name ?? '').toLowerCase();
+
+        return name.includes(needle);
+    });
+});
 
 const cellValue = (row, key) => {
     const value = drafts[row.id]?.[key] ?? row[key];
@@ -1179,44 +1209,63 @@ const confirmImport = () => {
             </div>
         </Modal>
 
-        <Modal :show="showTypes" max-width="lg" @close="showTypes = false">
-            <div class="ui-card-pad space-y-4">
+        <Modal :show="showTypes" max-width="2xl" @close="showTypes = false">
+            <div class="ui-card-pad space-y-3">
                 <div>
                     <h2 class="ui-title">Шагналын төрөл</h2>
-                    <p class="ui-subtitle">Хүснэгтээс сонгох жагсаалтыг энд нэмнэ.</p>
+                    <p class="ui-subtitle">Хүснэгтээс сонгох жагсаалтыг энд нэмнэ. Идэвхгүй төрөл сонголтод гарахгүй.</p>
                 </div>
 
                 <form class="flex gap-2" @submit.prevent="addAwardType">
                     <input
                         v-model="newTypeName"
                         type="text"
-                        class="ui-input flex-1"
+                        class="ui-input flex-1 !py-1.5 text-sm"
                         placeholder="Жишээ: Сүхбаатарын одон"
                         maxlength="255"
                     />
-                    <button type="submit" class="ui-btn-accent" :disabled="savingType || !newTypeName.trim()">
+                    <button type="submit" class="ui-btn-accent shrink-0" :disabled="savingType || !newTypeName.trim()">
                         Нэмэх
                     </button>
                 </form>
 
-                <div class="max-h-80 overflow-auto rounded-xl border border-slate-200">
-                    <table class="ui-table w-full text-sm">
+                <div class="flex items-center gap-2">
+                    <input
+                        v-model="typeSearch"
+                        type="search"
+                        class="ui-input flex-1 !py-1.5 text-sm"
+                        placeholder="Төрлөөс хайх…"
+                    />
+                    <span class="shrink-0 text-xs text-slate-500">
+                        {{ visibleAwardTypes.length }}/{{ awardTypeRows.length }}
+                    </span>
+                </div>
+
+                <div class="max-h-[min(70vh,32rem)] overflow-auto rounded-xl border border-slate-200">
+                    <table class="ui-table w-full text-xs">
                         <thead>
                             <tr>
-                                <th class="text-left">Нэр</th>
-                                <th class="w-14 text-center" />
+                                <th class="sticky top-0 z-10 bg-brand-navy-50 !py-1.5 text-left">Нэр</th>
+                                <th class="sticky top-0 z-10 w-24 bg-brand-navy-50 !py-1.5 text-center">Үйлдэл</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="!awardTypeRows.length">
-                                <td colspan="2" class="!py-8 text-center text-slate-400">Төрөл алга</td>
+                                <td colspan="2" class="!py-6 text-center text-slate-400">Төрөл алга</td>
                             </tr>
-                            <tr v-for="item in awardTypeRows" :key="item.id">
-                                <td>
+                            <tr v-else-if="!visibleAwardTypes.length">
+                                <td colspan="2" class="!py-6 text-center text-slate-400">Хайлтад тохирох төрөл олдсонгүй</td>
+                            </tr>
+                            <tr
+                                v-for="item in visibleAwardTypes"
+                                :key="item.id"
+                                :class="item.is_active ? '' : 'bg-slate-50 opacity-70'"
+                            >
+                                <td class="!py-1">
                                     <input
                                         v-model="typeNameDrafts[item.id]"
                                         type="text"
-                                        class="ui-input w-full"
+                                        class="ui-input w-full !py-1 text-xs"
                                         :disabled="item.in_use || savingType"
                                         :title="item.in_use
                                             ? 'Шагналын бүртгэлд ашиглагдаж байгаа тул нэр солих боломжгүй'
@@ -1226,21 +1275,40 @@ const confirmImport = () => {
                                         @blur="renameAwardType(item)"
                                     />
                                 </td>
-                                <td class="text-center">
-                                    <button
-                                        type="button"
-                                        class="ui-icon-btn ui-icon-btn--danger"
-                                        :disabled="item.in_use"
-                                        :title="item.in_use
-                                            ? 'Шагналын бүртгэлд ашиглагдаж байгаа тул устгах боломжгүй'
-                                            : 'Устгах'"
-                                        :aria-label="item.in_use ? 'Устгах боломжгүй' : 'Устгах'"
-                                        @click="removeAwardType(item)"
-                                    >
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" />
-                                        </svg>
-                                    </button>
+                                <td class="!py-1 text-center">
+                                    <div class="flex items-center justify-center gap-0.5">
+                                        <button
+                                            type="button"
+                                            class="ui-icon-btn !h-7 !w-7"
+                                            :class="item.is_active ? '' : 'text-amber-600'"
+                                            :disabled="savingType"
+                                            :title="item.is_active ? 'Идэвхгүй болгох' : 'Идэвхжүүлэх'"
+                                            :aria-label="item.is_active ? 'Идэвхгүй болгох' : 'Идэвхжүүлэх'"
+                                            @click="toggleAwardTypeActive(item)"
+                                        >
+                                            <svg v-if="item.is_active" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.5 12S5.5 6 12 6s9.5 6 9.5 6-3 6-9.5 6S2.5 12 2.5 12z" />
+                                            </svg>
+                                            <svg v-else class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18M10.5 10.7a3 3 0 004.1 4.1M9.9 5.6C10.6 5.2 11.3 5 12 5c6.5 0 9.5 7 9.5 7a18 18 0 01-4.2 4.6M6.1 6.2A18.4 18.4 0 002.5 12S5.5 19 12 19c1.1 0 2.1-.2 3.1-.5" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="ui-icon-btn ui-icon-btn--danger !h-7 !w-7"
+                                            :disabled="item.in_use"
+                                            :title="item.in_use
+                                                ? 'Шагналын бүртгэлд ашиглагдаж байгаа тул устгах боломжгүй'
+                                                : 'Устгах'"
+                                            :aria-label="item.in_use ? 'Устгах боломжгүй' : 'Устгах'"
+                                            @click="removeAwardType(item)"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
