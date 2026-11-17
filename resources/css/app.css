@@ -840,48 +840,53 @@
          * 20-оос доош байлгана — толгойн самбар (header, z-20) яг доор нь
          * байрлах ёстой, эс бөгөөс мэдэгдлийн цэс мэтийн absolute цэснүүд
          * наалдсан хүснэгтийн толгойн ард нуугдана.
+         *
+         * top-ыг useStickyTableHead JS-ээр бодит өндрөөр дахин тавина.
+         * Энд тогтмол 2.65rem гэх мэт бичвэл олон мөрт гарчиг давхцана.
          */
-        z-index: 14;
-        background-color: #f3f7fc;
+        z-index: 16;
+        background-color: #f3f7fc !important;
     }
 
     .dark .ui-register thead tr:first-child th {
-        background-color: #1e293b;
+        background-color: #1e293b !important;
     }
 
     /* Наалдах байрлалыг JS бодит өндрөөр нь тавина (useStickyTableHead). */
     .ui-register thead tr:nth-child(2) th {
         position: sticky;
-        top: 2.65rem;
-        z-index: 13;
+        top: 0;
+        z-index: 15;
         @apply py-1.5 text-[10px] font-medium normal-case tracking-normal text-brand-navy-600
             dark:text-slate-400;
-        background-color: #f3f7fc;
+        background-color: #f3f7fc !important;
     }
 
     .dark .ui-register thead tr:nth-child(2) th {
-        background-color: #1e293b;
+        background-color: #1e293b !important;
     }
 
     .ui-register thead tr:nth-child(3) th {
         position: sticky;
-        top: 4.75rem;
-        z-index: 12;
+        top: 0;
+        z-index: 14;
         @apply py-0.5 text-[10px] font-normal normal-case text-slate-500
             dark:text-slate-500;
-        background-color: #f3f7fc;
+        background-color: #f3f7fc !important;
     }
 
     .dark .ui-register thead tr:nth-child(3) th {
-        background-color: #1e293b;
+        background-color: #1e293b !important;
     }
 
+    .ui-register thead th.ui-register__head-group--issued,
     .ui-register__head-group--issued {
         /* /60 тунгалаг — sticky үед мөр нэвт харагдана тул бүрэн өнгө. */
         @apply text-sky-900 dark:text-sky-200;
         background-color: #f0f9ff !important;
     }
 
+    .dark .ui-register thead th.ui-register__head-group--issued,
     .dark .ui-register__head-group--issued {
         background-color: #082f49 !important;
     }
@@ -895,8 +900,9 @@
     .ui-register thead tr.ui-filters th,
     thead tr.ui-filters th {
         position: sticky;
-        top: 4.75rem;
-        z-index: 12;
+        /* top — useStickyTableHead JS-ээр. Тогтмол 4.75rem давхцуулдаг байв. */
+        top: 0;
+        z-index: 14;
         @apply px-1 py-1.5 align-middle;
         background-color: #ffffff !important;
         background-clip: border-box;
@@ -946,20 +952,24 @@
         @apply cursor-pointer;
     }
 
+    .ui-register thead th.ui-register__head-group--numbers,
     .ui-register__head-group--numbers {
         @apply text-emerald-900 dark:text-emerald-200;
         background-color: #ecfdf5 !important;
     }
 
+    .dark .ui-register thead th.ui-register__head-group--numbers,
     .dark .ui-register__head-group--numbers {
         background-color: #022c22 !important;
     }
 
+    .ui-register thead th.ui-register__head-group--void,
     .ui-register__head-group--void {
         @apply text-amber-900 dark:text-amber-200;
         background-color: #fffbeb !important;
     }
 
+    .dark .ui-register thead th.ui-register__head-group--void,
     .dark .ui-register__head-group--void {
         background-color: #451a03 !important;
     }

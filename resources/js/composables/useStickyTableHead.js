@@ -38,62 +38,104 @@ const resolveBackground = (cell, row, dark) => {
  * Олон мөрт хүснэгтийн толгойг наалдуулна.
  *
  * `thead` дотор 2-3 мөр (гарчиг, дэд гарчиг, хайлтын мөр) байдаг тул
- * мөр бүрийн `top`-ыг дээд мөрүүдийн бодит өндрөөр тооцож тавина. CSS
- * дээр тогтмол утга бичвэл фонт, зай өөрчлөгдөхөд толгой эвдэрдэг.
+ * мөр бүрийн `top`-ыг өмнөх мөрүүдийн offsetHeight-ээр нэмж тавина.
+ *
+ * getBoundingClientRect ашиглахгүй — sticky идэвхтэй үед бүх мөр ижил
+ * байрлал руу «наалдаж» хэмжилт эвдэрч, толгой нэгтгэгдсэн мэт харагддаг.
  *
  * @param {() => (Element|null|undefined)} getRoot Хүснэгтийг агуулсан элемент
  */
 export function useStickyTableHead(getRoot) {
+    let resizeObserver = null;
+
     const sync = () => {
-        const head = getRoot()?.querySelector('thead');
+        const root = getRoot();
+        const head = root?.querySelector?.('thead');
 
         if (! head || ! head.rows.length) {
             return;
         }
 
         const dark = document.documentElement.classList.contains('dark');
-
-        /*
-         * Байрлалыг эхний мөрийн ирмэгээс хэмжинэ — өндрүүдийг нэмж бодвол
-         * rowspan-тай нүд завсар үүсгэж, доогуурх мөр нэвт харагддаг.
-         */
-        const base = head.rows[0].getBoundingClientRect().top;
+        let cumulative = 0;
 
         Array.from(head.rows).forEach((row, index) => {
-            // 1 пикселээр давхарлана — хүрээ/subpixel-ээс үүсэх завсрыг арилгана.
-            const top = row.getBoundingClientRect().top - base;
-            const offset = index === 0 ? 0 : Math.max(0, Math.round(top) - index);
+            const top = cumulative;
+            const isFilter = row.classList.contains('ui-filters');
+            const isLast = index === head.rows.length - 1;
 
             Array.from(row.cells).forEach((cell) => {
                 const isActions = cell.classList.contains('ui-sticky-actions');
-
-                cell.style.position = 'sticky';
-                cell.style.top = `${offset}px`;
+                const isNo = cell.classList.contains('ui-sticky-no');
                 /*
-                 * 20-оос доош — толгойн самбар (header, z-20) дээр нь байх
-                 * ёстой. Үйлдлийн багана нь мөрөөсөө дээгүүр наалдана.
+                 * Зүүн № / баруун үйлдэл — бусад толгойноос дээгүүр.
+                 * Дээд мөр доод мөрөөсөө өндөр z-index-тэй (давхцахад
+                 * дээд гарчиг доод дээрээ биш, зөв давхаргална).
                  */
-                cell.style.zIndex = String((isActions ? 18 : 16) - index);
+                const baseZ = isNo || isActions ? 19 : 16;
+
+                cell.style.setProperty('position', 'sticky');
+                cell.style.setProperty('top', `${top}px`);
+                cell.style.setProperty('z-index', String(baseZ - index));
                 /*
                  * Тооцоолсон өнгөнд бүү найд — sticky table cell зарим
-                 * хөтөчид transparent гэж ирдэг. Бүрэн hex өнгө шахана.
+                 * хөтөчид transparent гэж ирдэг. Бүрэн hex + important.
                  */
-                cell.style.backgroundColor = resolveBackground(cell, row, dark);
-                cell.style.backgroundClip = 'border-box';
+                cell.style.setProperty(
+                    'background-color',
+                    resolveBackground(cell, row, dark),
+                    'important',
+                );
+                cell.style.setProperty('background-clip', 'border-box');
+
+                if (isLast || isFilter) {
+                    cell.style.setProperty(
+                        'box-shadow',
+                        dark
+                            ? 'inset -1px 0 0 rgb(71 85 105), inset 0 -2px 0 rgb(100 116 139), 0 4px 6px -4px rgb(0 0 0 / 0.4)'
+                            : 'inset -1px 0 0 #bfdbfe, inset 0 -2px 0 #93c5fd, 0 4px 6px -4px rgb(15 23 42 / 0.12)',
+                    );
+                }
             });
+
+            // TR-ийн бодит өндөр — sticky байрлалаас хамаарахгүй.
+            cumulative += Math.max(row.offsetHeight, 1);
         });
     };
 
     const schedule = () => nextTick(() => requestAnimationFrame(sync));
 
+    const observe = () => {
+        resizeObserver?.disconnect();
+        resizeObserver = null;
+
+        const head = getRoot()?.querySelector?.('thead');
+
+        if (! head || typeof ResizeObserver === 'undefined') {
+            return;
+        }
+
+        resizeObserver = new ResizeObserver(() => sync());
+        resizeObserver.observe(head);
+        Array.from(head.rows).forEach((row) => resizeObserver.observe(row));
+    };
+
     onMounted(() => {
         schedule();
+        nextTick(observe);
         // Фонт хожуу ачаалагдвал толгойн өндөр өөрчлөгддөг тул дахин хэмжинэ.
-        setTimeout(sync, 400);
+        setTimeout(() => {
+            sync();
+            observe();
+        }, 400);
         window.addEventListener('resize', sync);
     });
 
-    onBeforeUnmount(() => window.removeEventListener('resize', sync));
+    onBeforeUnmount(() => {
+        window.removeEventListener('resize', sync);
+        resizeObserver?.disconnect();
+        resizeObserver = null;
+    });
 
     return { sync, schedule };
 }
