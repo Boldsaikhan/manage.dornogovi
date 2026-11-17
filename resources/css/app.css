@@ -1149,7 +1149,8 @@
      * нүдний таслалтыг түр болиулна. Үгүй бол бичих талбарын баруун
      * тал нь таслагдаж харагддаг байв.
      */
-    .ui-register td:has(.ui-sheet-cell.is-editing) {
+    .ui-register td:has(.ui-sheet-cell.is-editing),
+    .ui-register td:has(.ui-register-no:focus-within) {
         overflow: visible;
         position: relative;
         z-index: 40;

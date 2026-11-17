@@ -37,13 +37,38 @@ export const normalizeRegisterDigits = (value) => (
     String(value ?? '').replace(/\D+/g, '').slice(0, 8)
 );
 
+/**
+ * Үсэг/тоог байршлаар биш төрлөөр нь ялгана.
+ * «АА» бөглөөгүй (эсвэл 1 үсэгтэй) үед тоо оруулахад
+ * slice(0,2) тоог үсэг рүү аваачиж устгадаг байсан.
+ */
 export const splitRegisterParts = (value) => {
     const raw = String(value ?? '').replace(/\s+/g, '');
+    let letters = '';
+    let digits = '';
 
-    return {
-        letters: normalizeRegisterLetters(raw.slice(0, 2)),
-        digits: normalizeRegisterDigits(raw.slice(2)),
-    };
+    for (const ch of raw) {
+        if (letters.length < 2) {
+            const mapped = normalizeRegisterLetters(ch);
+
+            if (mapped) {
+                letters += mapped;
+                continue;
+            }
+        }
+
+        const digit = normalizeRegisterDigits(ch);
+
+        if (digit) {
+            digits += digit;
+
+            if (digits.length >= 8) {
+                break;
+            }
+        }
+    }
+
+    return { letters, digits };
 };
 
 export const joinRegisterParts = (letters, digits) => (
