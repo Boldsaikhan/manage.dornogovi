@@ -834,7 +834,8 @@ const confirmImport = () => {
                 </button>
             </div>
 
-            <div class="ui-card max-h-[min(70vh,calc(100dvh-12rem))] overflow-auto overscroll-contain">
+            <div class="ui-card flex max-h-[min(70vh,calc(100dvh-12rem))] flex-col overflow-hidden">
+                <div class="min-h-0 flex-1 overflow-auto overscroll-contain">
                 <div ref="registerEl" class="ui-register">
                 <table
                     class="ui-register__table ui-register--pin-actions"
@@ -1028,35 +1029,42 @@ const confirmImport = () => {
                     </tbody>
                 </table>
                 </div>
-            </div>
+                </div>
 
-            <div
-                v-if="yearAll && totalMatched > 100"
-                class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600"
-            >
-                <p>
-                    Нийт <span class="font-semibold text-slate-800">{{ totalMatched }}</span> мөр —
-                    хуудас {{ page }}/{{ totalPages }} ({{ perPage }} мөр). Оноор шүүвэл илүү хурдан.
-                </p>
-                <div class="flex items-center gap-1">
-                    <button
-                        type="button"
-                        class="ui-icon-btn"
-                        :disabled="page <= 1"
-                        title="Өмнөх"
-                        @click="goToPage(page - 1)"
-                    >
-                        ‹
-                    </button>
-                    <button
-                        type="button"
-                        class="ui-icon-btn"
-                        :disabled="page >= totalPages"
-                        title="Дараах"
-                        @click="goToPage(page + 1)"
-                    >
-                        ›
-                    </button>
+                <div
+                    v-if="yearAll && totalMatched > 100"
+                    class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-white px-3 py-2 text-xs text-slate-600"
+                >
+                    <p>
+                        Нийт <span class="font-semibold text-slate-800">{{ totalMatched }}</span> мөр —
+                        хуудас {{ page }}/{{ totalPages }} (100 мөр). Оноор шүүвэл илүү хурдан.
+                    </p>
+                    <div class="flex items-center gap-1">
+                        <button
+                            type="button"
+                            class="ui-icon-btn"
+                            :disabled="page <= 1"
+                            title="Өмнөх хуудас"
+                            aria-label="Өмнөх хуудас"
+                            @click="goToPage(page - 1)"
+                        >
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <button
+                            type="button"
+                            class="ui-icon-btn"
+                            :disabled="page >= totalPages"
+                            title="Дараах хуудас"
+                            aria-label="Дараах хуудас"
+                            @click="goToPage(page + 1)"
+                        >
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
