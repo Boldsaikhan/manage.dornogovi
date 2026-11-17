@@ -816,7 +816,8 @@
     }
 
     .ui-register__head-group--issued {
-        @apply bg-sky-50 text-sky-900 dark:bg-sky-950/60 dark:text-sky-200;
+        /* /60 тунгалаг — sticky үед мөр нэвт харагдана тул бүрэн өнгө. */
+        @apply bg-sky-50 text-sky-900 dark:bg-sky-950 dark:text-sky-200;
     }
 
     /*
@@ -828,6 +829,8 @@
         position: sticky;
         z-index: 11;
         @apply bg-white px-1 py-1.5 align-middle dark:bg-slate-800;
+        background-clip: border-box;
+        isolation: isolate;
         /* Багана хоорондын зураас + толгойг биеэс тусгаарлах ирмэг. */
         box-shadow:
             inset -1px 0 0 theme('colors.brand-navy.200'),
@@ -871,11 +874,20 @@
     }
 
     .ui-register__head-group--numbers {
-        @apply bg-emerald-50 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200;
+        @apply bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200;
     }
 
     .ui-register__head-group--void {
-        @apply bg-amber-50 text-amber-900 dark:bg-amber-950/60 dark:text-amber-200;
+        @apply bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200;
+    }
+
+    /*
+     * Sticky толгой — мөр нэвт харагдахгүй байх ёстой.
+     * Tailwind opacity (/60) эсвэл тунгалаг дэвсгэрийг энд хүчээр хаана.
+     */
+    .ui-register--pin-actions thead th {
+        background-clip: border-box;
+        isolation: isolate;
     }
 
     /*
