@@ -1,5 +1,6 @@
 <script setup>
-import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { registerSheetEditorFlusher } from '@/composables/sheetEditorFlush';
 import {
     joinRegisterParts,
     normalizeRegisterDigits,
@@ -120,7 +121,21 @@ const onDigitsKeydown = (event) => {
     }
 };
 
+let unregisterFlusher = null;
+
+onMounted(() => {
+    unregisterFlusher = registerSheetEditorFlusher(() => {
+        if (editing) {
+            clearBlurTimer();
+            editing = false;
+            pushValue(true);
+        }
+    });
+});
+
 onBeforeUnmount(() => {
+    unregisterFlusher?.();
+    unregisterFlusher = null;
     clearBlurTimer();
 
     // Мөр хаах / нүд устгах үед blur timer амжихгүй — өөрчлөлтийг алдахгүйн тулд commit хийнэ.
