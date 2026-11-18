@@ -242,6 +242,49 @@ class AwardTest extends TestCase
         $this->assertDatabaseMissing('award_types', ['id' => $type->id]);
     }
 
+    public function test_delete_award_types_after_nairamdal(): void
+    {
+        $anchor = AwardType::query()->where('name', 'Найрамдал медаль')->firstOrFail();
+
+        AwardType::query()->create([
+            'name' => 'Устгах ёстой нэр А',
+            'sort_order' => $anchor->sort_order + 1,
+            'is_active' => true,
+        ]);
+
+        AwardType::query()->create([
+            'name' => 'Устгах ёстой нэр Б',
+            'sort_order' => $anchor->sort_order + 2,
+            'is_active' => true,
+        ]);
+
+        // Ашиглагдаж байсан ч каталогоос хасна — мөрөн дэх текст үлдэнэ.
+        $used = AwardType::query()->create([
+            'name' => 'Устгах ёстой ашигласан',
+            'sort_order' => $anchor->sort_order + 3,
+            'is_active' => true,
+        ]);
+
+        $admin = User::factory()->create(['is_admin' => true]);
+        Award::query()->create([
+            'category' => 'state_high',
+            'year' => 2026,
+            'surname' => 'Бат',
+            'given_name' => 'Дорж',
+            'last_award' => $used->name,
+            'created_by' => $admin->id,
+        ]);
+
+        $deleted = AwardType::deleteAfter('Найрамдал медаль');
+
+        $this->assertSame(3, $deleted);
+        $this->assertDatabaseHas('award_types', ['name' => 'Найрамдал медаль']);
+        $this->assertDatabaseHas('award_types', ['name' => 'Цэргийн хүндэт медаль']);
+        $this->assertDatabaseMissing('award_types', ['name' => 'Устгах ёстой нэр А']);
+        $this->assertDatabaseMissing('award_types', ['name' => 'Устгах ёстой ашигласан']);
+        $this->assertDatabaseHas('awards', ['last_award' => 'Устгах ёстой ашигласан']);
+    }
+
     public function test_used_award_type_can_be_renamed_but_not_deleted(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
