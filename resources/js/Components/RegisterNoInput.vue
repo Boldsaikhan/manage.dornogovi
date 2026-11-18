@@ -120,7 +120,15 @@ const onDigitsKeydown = (event) => {
     }
 };
 
-onBeforeUnmount(() => clearBlurTimer());
+onBeforeUnmount(() => {
+    clearBlurTimer();
+
+    // Мөр хаах / нүд устгах үед blur timer амжихгүй — өөрчлөлтийг алдахгүйн тулд commit хийнэ.
+    if (editing) {
+        editing = false;
+        pushValue(true);
+    }
+});
 </script>
 
 <template>

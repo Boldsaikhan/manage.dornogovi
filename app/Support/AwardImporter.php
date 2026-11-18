@@ -77,6 +77,14 @@ class AwardImporter
                 $payload['year'] = $year;
             }
 
+            $names = app(AwardNameNormalizer::class);
+
+            foreach (['nominated_award', 'last_award', 'received_award', 'award_name'] as $nameField) {
+                if (array_key_exists($nameField, $payload) && is_string($payload[$nameField] ?? null)) {
+                    $payload[$nameField] = $names->canonicalize($payload[$nameField]);
+                }
+            }
+
             Award::query()->create([
                 'category' => $defaults['category'],
                 'subtype' => $defaults['subtype'] ?? null,

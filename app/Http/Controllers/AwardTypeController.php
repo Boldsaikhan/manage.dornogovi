@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AwardType;
+use App\Support\AwardNameNormalizer;
 use App\Support\ModuleAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,9 +13,13 @@ class AwardTypeController extends Controller
 {
     private const MODULE = 'awards';
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, AwardNameNormalizer $names): RedirectResponse
     {
         abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
+
+        $request->merge([
+            'name' => $names->canonicalize((string) $request->input('name')) ?? trim((string) $request->input('name')),
+        ]);
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:award_types,name'],
@@ -23,7 +28,7 @@ class AwardTypeController extends Controller
         $max = (int) AwardType::query()->max('sort_order');
 
         AwardType::query()->create([
-            'name' => trim($data['name']),
+            'name' => $data['name'],
             'sort_order' => $max + 10,
             'is_active' => true,
         ]);
@@ -31,9 +36,15 @@ class AwardTypeController extends Controller
         return back()->with('success', 'Шагналын төрөл нэмэгдлээ.');
     }
 
-    public function update(Request $request, AwardType $awardType): RedirectResponse
+    public function update(Request $request, AwardType $awardType, AwardNameNormalizer $names): RedirectResponse
     {
         abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
+
+        if ($request->exists('name')) {
+            $request->merge([
+                'name' => $names->canonicalize((string) $request->input('name')) ?? trim((string) $request->input('name')),
+            ]);
+        }
 
         $data = $request->validate([
             'name' => [

@@ -76,14 +76,95 @@ const ensureDraft = (id) => {
     );
 };
 
+const exitRowEdit = (id) => {
+    editingRows.value = editingRows.value.filter((value) => value !== id);
+    delete drafts[id];
+};
+
+/**
+ * Засварлаж байх үед SheetCell/РД draft-д орсон боловч
+ * blur/commit амжаагүй өөрчлөлтийг checkmark дээр нэг дор хадгална.
+ * (Өмнө нь draft-ыг устгаад л хаадаг байсан — хадгалалт «буцаад» харагддаг.)
+ */
+const dirtyPayloadFor = (id) => {
+    const draft = drafts[id];
+    const row = props.rows.find((item) => item.id === id);
+
+    if (! draft || ! row) {
+        return null;
+    }
+
+    const payload = {};
+
+    draftFields.value.forEach((field) => {
+        if (field === 'register_no') {
+            return;
+        }
+
+        const next = normalizeFieldValue(field, draft[field]);
+        const prev = normalizeFieldValue(field, row[field]);
+
+        if (JSON.stringify(next) !== JSON.stringify(prev)) {
+            payload[field] = next;
+        }
+    });
+
+    if (Object.prototype.hasOwnProperty.call(draft, 'register_no')) {
+        const asOfYear = Number(row.year || props.year || new Date().getFullYear());
+        const raw = draft.register_no;
+        const parsed = parseMongolianRegister(raw, asOfYear);
+        const nextRegister = parsed?.register ?? normalizeFieldValue('register_no', raw);
+        const prevRegister = normalizeFieldValue('register_no', row.register_no);
+
+        if (JSON.stringify(nextRegister) !== JSON.stringify(prevRegister)) {
+            payload.register_no = nextRegister;
+
+            if (parsed) {
+                payload.age = parsed.age;
+                payload.gender = parsed.gender;
+            }
+        }
+    }
+
+    return Object.keys(payload).length ? payload : null;
+};
+
+const finishingRows = ref({});
+
+const finishRowEdit = (id) => {
+    if (! props.canManage || ! isEditing(id) || finishingRows.value[id]) {
+        return;
+    }
+
+    const payload = dirtyPayloadFor(id);
+
+    if (! payload) {
+        exitRowEdit(id);
+
+        return;
+    }
+
+    finishingRows.value = { ...finishingRows.value, [id]: true };
+
+    patchAward(id, payload, () => {
+        exitRowEdit(id);
+    });
+
+    // Алдаатай үед ч товчийг түгжээгүй үлдээнэ.
+    setTimeout(() => {
+        const next = { ...finishingRows.value };
+        delete next[id];
+        finishingRows.value = next;
+    }, 800);
+};
+
 const toggleRowEdit = (id) => {
     if (! props.canManage) {
         return;
     }
 
     if (isEditing(id)) {
-        editingRows.value = editingRows.value.filter((value) => value !== id);
-        delete drafts[id];
+        finishRowEdit(id);
 
         return;
     }
@@ -400,8 +481,34 @@ const patchAward = (id, payload, onSaved) => {
 
     router.patch(route('awards.update', id), payload, {
         preserveScroll: true,
+        // props.rows шинэчлэгдэнэ; local draft/editingRows хадгалагдана.
         preserveState: true,
-        onSuccess: () => onSaved?.(),
+        onSuccess: () => {
+            // Серверээс ирсэн мөрийг draft-д тусгана — хуучин утга буцахгүй.
+            const row = props.rows.find((item) => item.id === id);
+
+            if (row && drafts[id]) {
+                draftFields.value.forEach((field) => {
+                    if (Object.prototype.hasOwnProperty.call(row, field)) {
+                        drafts[id][field] = row[field] ?? '';
+                    }
+                });
+            }
+
+            onSaved?.();
+        },
+        onError: () => {
+            // Амжилтгүй бол серверийн (хуучин) утгыг draft-д буцаана.
+            const row = props.rows.find((item) => item.id === id);
+
+            if (row && drafts[id]) {
+                Object.keys(payload).forEach((field) => {
+                    if (Object.prototype.hasOwnProperty.call(drafts[id], field)) {
+                        drafts[id][field] = row[field] ?? '';
+                    }
+                });
+            }
+        },
     });
 };
 
@@ -1230,8 +1337,9 @@ const confirmImport = () => {
                                         type="button"
                                         class="ui-icon-btn"
                                         :class="isEditing(row.id) ? 'bg-brand-navy-600 text-white' : ''"
-                                        :title="isEditing(row.id) ? 'Засварыг дуусгах' : 'Энэ мөрийг засах'"
-                                        :aria-label="isEditing(row.id) ? 'Засварыг дуусгах' : 'Энэ мөрийг засах'"
+                                        :title="isEditing(row.id) ? 'Хадгалаад дуусгах' : 'Энэ мөрийг засах'"
+                                        :aria-label="isEditing(row.id) ? 'Хадгалаад дуусгах' : 'Энэ мөрийг засах'"
+                                        :disabled="!!finishingRows[row.id]"
                                         @click="toggleRowEdit(row.id)"
                                     >
                                         <svg v-if="isEditing(row.id)" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
