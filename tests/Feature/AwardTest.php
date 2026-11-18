@@ -242,7 +242,7 @@ class AwardTest extends TestCase
         $this->assertDatabaseMissing('award_types', ['id' => $type->id]);
     }
 
-    public function test_used_award_type_cannot_be_renamed_or_deleted(): void
+    public function test_used_award_type_can_be_renamed_but_not_deleted(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
 
@@ -252,7 +252,7 @@ class AwardTest extends TestCase
             'is_active' => true,
         ]);
 
-        Award::query()->create([
+        $award = Award::query()->create([
             'category' => 'state_high',
             'year' => 2026,
             'surname' => 'Бат',
@@ -277,11 +277,16 @@ class AwardTest extends TestCase
             ->patch(route('awards.types.update', $type), [
                 'name' => 'Өөр нэр',
             ])
-            ->assertSessionHasErrors('name');
+            ->assertRedirect();
 
         $this->assertDatabaseHas('award_types', [
             'id' => $type->id,
-            'name' => 'Ашиглагдаж буй медаль',
+            'name' => 'Өөр нэр',
+        ]);
+
+        $this->assertDatabaseHas('awards', [
+            'id' => $award->id,
+            'nominated_award' => 'Өөр нэр',
         ]);
 
         $this->actingAs($admin)

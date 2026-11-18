@@ -698,7 +698,7 @@ const addAwardType = () => {
 };
 
 const startEditAwardType = async (item) => {
-    if (item.in_use || savingType.value) {
+    if (savingType.value) {
         return;
     }
 
@@ -718,10 +718,7 @@ const cancelEditAwardType = (item) => {
 };
 
 const renameAwardType = (item) => {
-    if (item.in_use || savingType.value) {
-        typeNameDrafts[item.id] = item.name;
-        editingTypeId.value = null;
-
+    if (savingType.value) {
         return;
     }
 
@@ -1464,7 +1461,8 @@ const confirmImport = () => {
                     <h2 class="ui-title">Шагналын нэрийн тохиргоо</h2>
                     <p class="ui-subtitle">
                         Хүснэгтийн «Шагналын нэр» баганын жагсаалтыг энд нэмнэ.
-                        Жагсаалтаас сонгох эсвэл нүдэнд шууд бичиж ч болно. Идэвхгүй нэр сонголтод гарахгүй.
+                        Бүх нэрийг засаж болно — бүртгэлд ашиглагдаж байгаа нэрийг солиход холбоотой мөрүүд хамт шинэчлэгдэнэ.
+                        Идэвхгүй нэр сонголтод гарахгүй; ашиглагдаж буй нэрийг устгахгүй.
                     </p>
                 </div>
 
@@ -1563,11 +1561,9 @@ const confirmImport = () => {
                                             <button
                                                 type="button"
                                                 class="ui-icon-btn !h-7 !w-7"
-                                                :disabled="item.in_use || savingType"
-                                                :title="item.in_use
-                                                    ? 'Шагналын бүртгэлд ашиглагдаж байгаа тул нэр солих боломжгүй'
-                                                    : 'Нэр засах'"
-                                                :aria-label="item.in_use ? 'Засах боломжгүй' : 'Нэр засах'"
+                                                :disabled="savingType"
+                                                title="Нэр засах"
+                                                aria-label="Нэр засах"
                                                 @click="startEditAwardType(item)"
                                             >
                                                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">

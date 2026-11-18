@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Award;
 use App\Models\AwardType;
 use App\Support\AwardNameNormalizer;
 use App\Support\ModuleAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class AwardTypeController extends Controller
@@ -57,13 +59,22 @@ class AwardTypeController extends Controller
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
-        if (array_key_exists('name', $data) && $data['name'] !== $awardType->name && $awardType->isInUse()) {
-            return back()->withErrors([
-                'name' => 'Энэ төрөл шагналын бүртгэлд ашиглагдаж байгаа тул нэрийг солих боломжгүй.',
-            ]);
-        }
+        $oldName = $awardType->name;
+        $newName = array_key_exists('name', $data) ? (string) $data['name'] : $oldName;
+        $renamed = array_key_exists('name', $data) && $newName !== $oldName;
 
-        $awardType->update($data);
+        DB::transaction(function () use ($awardType, $data, $oldName, $newName, $renamed) {
+            $awardType->update($data);
+
+            // Бүртгэлд ашиглагдаж буй нэрийг солиход мөрүүдийг хамт шинэчилнэ.
+            if ($renamed) {
+                foreach (['nominated_award', 'award_name', 'last_award', 'received_award'] as $field) {
+                    Award::query()
+                        ->where($field, $oldName)
+                        ->update([$field => $newName]);
+                }
+            }
+        });
 
         return back()->with('success', 'Шагналын төрөл шинэчлэгдлээ.');
     }
