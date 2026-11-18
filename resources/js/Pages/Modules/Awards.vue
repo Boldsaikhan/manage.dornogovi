@@ -1284,6 +1284,7 @@ const confirmImport = () => {
                                 v-for="col in subHeaderColumns"
                                 :key="`sub-${col.key}`"
                                 class="bg-brand-navy-50 text-center text-xs"
+                                :class="col.key === 'register_no' ? 'ui-register__cell--register' : ''"
                             >
                                 <template v-if="col.lines?.length">
                                     <span
@@ -1299,7 +1300,10 @@ const confirmImport = () => {
                             <th
                                 v-for="col in columns"
                                 :key="`filter-${col.key}`"
-                                :class="col.key === 'no' ? 'ui-sticky-no' : ''"
+                                :class="[
+                                    col.key === 'no' ? 'ui-sticky-no' : '',
+                                    col.key === 'register_no' ? 'ui-register__cell--register' : '',
+                                ]"
                             >
                                 <button
                                     v-if="col.key === 'no' && hasFilters"
@@ -1357,6 +1361,7 @@ const confirmImport = () => {
                                     isEditable(col, row.id) && col.input !== 'gender' ? 'ui-sheet-td' : '',
                                     colAlign(col) === 'center' ? 'text-center' : '',
                                     col.key === 'no' ? 'ui-sticky-no font-semibold tabular-nums text-slate-500' : '',
+                                    col.key === 'register_no' ? 'ui-register__cell--register' : '',
                                     col.nowrap ? 'whitespace-nowrap' : '',
                                 ]"
                             >
