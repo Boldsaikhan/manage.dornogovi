@@ -8,6 +8,7 @@ import SheetCell from '@/Components/SheetCell.vue';
 import LeaveRulePicker from '@/Components/LeaveRulePicker.vue';
 import { useStickyTableHead } from '@/composables/useStickyTableHead';
 import { formatYmdDisplay } from '@/utils/ymdDate';
+import { cellMatchesFilter, EMPTY_FILTER_HINT, EMPTY_FILTER_PLACEHOLDER } from '@/utils/columnFilter';
 
 const props = defineProps({
     activeScope: { type: String, default: 'baiguullaga' },
@@ -424,8 +425,6 @@ const searchKey = (value) => String(value ?? '')
 
 const DATE_FIELDS = ['start_date', 'end_date'];
 
-const digitsOnly = (value) => String(value ?? '').replace(/\D+/g, '');
-
 /**
  * Мөрийн дугаар — шинэ мөр үргэлж дээд талд, хамгийн том дугаартай орно.
  *
@@ -439,17 +438,12 @@ const rowsWithSignerLabel = computed(() => props.rows.map((row, index) => ({
     rule_label: ruleLabel(row.scope, row.rule_code),
 })));
 
-const matchesFilters = (row) => Object.entries(filters).every(([field, needle]) => {
-    const text = String(needle).trim();
-
-    if (text === '') return true;
-
-    if (DATE_FIELDS.includes(field)) {
-        return digitsOnly(row[field]).includes(digitsOnly(text));
-    }
-
-    return searchKey(row[field]).includes(searchKey(text));
-});
+const matchesFilters = (row) => Object.entries(filters).every(([field, needle]) => (
+    cellMatchesFilter(row[field], needle, {
+        digits: DATE_FIELDS.includes(field),
+        normalize: searchKey,
+    })
+));
 
 /**
  * Эхлэх огноогоор эрэмбэлэх.
@@ -698,16 +692,16 @@ const visibleRows = computed(() => {
                                 </button>
                                 <span v-else class="text-[10px] text-slate-300">Хайх</span>
                             </th>
-                            <th v-if="showOrgColumn"><input v-model="filters.org_name" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.unit_name" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.person_name" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.type_label" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.rule_label" type="search" placeholder="Хайх" /></th>
+                            <th v-if="showOrgColumn"><input v-model="filters.org_name" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.unit_name" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.person_name" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.type_label" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.rule_label" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
                             <th><input v-model="filters.start_date" type="search" placeholder="2026.09" /></th>
-                            <th><input v-model="filters.days" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.days" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
                             <th><input v-model="filters.end_date" type="search" placeholder="2026.09" /></th>
-                            <th><input v-model="filters.reason" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.signer_label" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.reason" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.signer_label" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
                             <th class="ui-sticky-actions" />
                         </tr>
                     </thead>

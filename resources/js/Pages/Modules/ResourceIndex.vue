@@ -8,6 +8,7 @@ import AssignmentSheetForm from '@/Components/AssignmentSheetForm.vue';
 import SheetCell from '@/Components/SheetCell.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import YmdDateInput from '@/Components/YmdDateInput.vue';
+import { cellMatchesFilter, EMPTY_FILTER_HINT, EMPTY_FILTER_PLACEHOLDER } from '@/utils/columnFilter';
 
 const props = defineProps({
     module: String,
@@ -69,22 +70,14 @@ const searchKey = (value) => String(value ?? '')
     .replace(/ё/g, 'е')
     .replace(/й/g, 'и');
 
-/** Огноог зөвхөн цифрээр нь харьцуулна: «2026.09.03», «09/03», «0903» бүгд таарна. */
-const digitsOnly = (value) => String(value ?? '').replace(/\D+/g, '');
-
 const dateColumns = computed(() => props.columns.filter((c) => c.date).map((c) => c.key));
 
-const matchesFilters = (row) => Object.entries(filters).every(([key, needle]) => {
-    const text = String(needle).trim();
-
-    if (text === '') return true;
-
-    if (dateColumns.value.includes(key)) {
-        return digitsOnly(row[key]).includes(digitsOnly(text));
-    }
-
-    return searchKey(row[key]).includes(searchKey(text));
-});
+const matchesFilters = (row) => Object.entries(filters).every(([key, needle]) => (
+    cellMatchesFilter(row[key], needle, {
+        digits: dateColumns.value.includes(key),
+        normalize: searchKey,
+    })
+));
 
 const visibleRows = computed(() => (hasFilters.value ? props.rows.filter(matchesFilters) : props.rows));
 
@@ -1008,7 +1001,8 @@ const destroyRow = (id) => {
                                 <input
                                     v-model="filters[col.key]"
                                     type="search"
-                                    :placeholder="col.date ? '2026.09' : 'Хайх'"
+                                    :placeholder="col.date ? '2026.09 / −' : EMPTY_FILTER_PLACEHOLDER"
+                                    :title="EMPTY_FILTER_HINT"
                                     :aria-label="col.label + ' хайх'"
                                 />
                             </th>

@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Award;
 use App\Models\AwardType;
 use App\Support\AwardImporter;
+use App\Support\ColumnFilter;
 use App\Support\ModuleAccess;
 use App\Support\ModuleOwnScope;
 use App\Support\MongolianRegister;
@@ -851,6 +852,13 @@ class AwardController extends Controller
             }
 
             $applied[$key] = $needle;
+
+            if (ColumnFilter::isEmptyNeedle($needle)) {
+                ColumnFilter::applyEmpty($query, $field);
+
+                continue;
+            }
+
             $like = '%'.$needle.'%';
 
             if (in_array($field, $dateFields, true)) {

@@ -8,6 +8,7 @@ import SheetCell from '@/Components/SheetCell.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import { useStickyTableHead } from '@/composables/useStickyTableHead';
 import { parseMongolianRegister } from '@/utils/mongolianRegister';
+import { cellMatchesFilter, EMPTY_FILTER_HINT, EMPTY_FILTER_PLACEHOLDER } from '@/utils/columnFilter';
 
 const props = defineProps({
     tab: { type: String, default: 'state_high' },
@@ -229,16 +230,11 @@ const activeFilterParams = () => {
 const hasFilters = computed(() => Object.values(filters).some((value) => String(value).trim() !== ''));
 
 const matchesFilters = (row) => props.columns.every((col) => {
-    const needle = String(filters[col.key] ?? '').trim().toLowerCase();
-
-    if (! needle) {
-        return true;
-    }
-
+    const needle = String(filters[col.key] ?? '').trim();
     const field = fieldFor(col);
     const raw = drafts[row.id]?.[field] ?? row[col.key] ?? row[field] ?? '';
 
-    return String(raw ?? '').toLowerCase().includes(needle);
+    return cellMatchesFilter(raw, needle);
 });
 
 /** «Бүгд» үед сервер шүүсэн тул дахин шүүхгүй; нэг онд клиент шүүнэ. */
@@ -1311,7 +1307,8 @@ const confirmImport = () => {
                                     v-else-if="col.key !== 'no'"
                                     v-model="filters[col.key]"
                                     type="search"
-                                    placeholder="Хайх"
+                                    :placeholder="EMPTY_FILTER_PLACEHOLDER"
+                                    :title="EMPTY_FILTER_HINT"
                                 >
                             </th>
                             <th v-if="canManage" class="ui-sticky-actions" />

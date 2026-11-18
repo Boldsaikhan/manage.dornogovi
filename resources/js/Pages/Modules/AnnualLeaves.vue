@@ -6,6 +6,7 @@ import Modal from '@/Components/Modal.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import SheetCell from '@/Components/SheetCell.vue';
 import { formatYmdDisplay } from '@/utils/ymdDate';
+import { cellMatchesFilter, EMPTY_FILTER_HINT, EMPTY_FILTER_PLACEHOLDER } from '@/utils/columnFilter';
 
 const props = defineProps({
     activeScope: { type: String, default: 'baiguullaga' },
@@ -319,8 +320,6 @@ const searchKey = (value) => String(value ?? '')
 
 const DATE_FIELDS = ['registered_on', 'start_date', 'end_date'];
 
-const digitsOnly = (value) => String(value ?? '').replace(/\D+/g, '');
-
 /**
  * Мөрийн дугаар — шинэ мөр үргэлж дээд талд, хамгийн том дугаартай орно.
  *
@@ -332,17 +331,12 @@ const rowsWithSeq = computed(() => props.rows.map((row, index) => ({
     seq: props.rows.length - index,
 })));
 
-const matchesFilters = (row) => Object.entries(filters).every(([field, needle]) => {
-    const text = String(needle).trim();
-
-    if (text === '') return true;
-
-    if (DATE_FIELDS.includes(field)) {
-        return digitsOnly(row[field]).includes(digitsOnly(text));
-    }
-
-    return searchKey(row[field]).includes(searchKey(text));
-});
+const matchesFilters = (row) => Object.entries(filters).every(([field, needle]) => (
+    cellMatchesFilter(row[field], needle, {
+        digits: DATE_FIELDS.includes(field),
+        normalize: searchKey,
+    })
+));
 
 const visibleRows = computed(() => (
     hasFilters.value ? rowsWithSeq.value.filter(matchesFilters) : rowsWithSeq.value
@@ -526,17 +520,17 @@ const visibleRows = computed(() => (
                                 <span v-else class="text-[10px] text-slate-300">Хайх</span>
                             </th>
                             <th><input v-model="filters.registered_on" type="search" placeholder="2026.09" /></th>
-                            <th><input v-model="filters.org_name" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.position" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.person_name" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.work_years" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.entitled_days" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.org_name" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.position" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.person_name" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.work_years" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.entitled_days" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
                             <th><input v-model="filters.start_date" type="search" placeholder="2026.09" /></th>
                             <th><input v-model="filters.end_date" type="search" placeholder="2026.09" /></th>
-                            <th><input v-model="filters.signer" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.substitute_position" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.substitute_name" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.substitute_phone" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.signer" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.substitute_position" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.substitute_name" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.substitute_phone" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
                             <th class="ui-sticky-actions" />
                         </tr>
                     </thead>
