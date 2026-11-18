@@ -148,7 +148,7 @@ onBeforeUnmount(() => {
 
 <template>
     <div
-        class="ui-register-no inline-flex w-full max-w-full items-center gap-0.5"
+        class="ui-register-no inline-flex w-full max-w-full items-center gap-0"
         :title="editable ? 'Эхний 2 үсэг криллээр, дараа нь 8 орон' : undefined"
     >
         <input
@@ -159,7 +159,7 @@ onBeforeUnmount(() => {
             autocomplete="off"
             spellcheck="false"
             maxlength="2"
-            class="ui-input w-[2.6rem] shrink-0 !px-1 !py-1 text-center text-xs font-semibold uppercase tracking-wide"
+            class="ui-input w-[1.85rem] shrink-0 !px-0.5 !py-1 text-center text-xs font-semibold uppercase tracking-tight"
             placeholder="АА"
             :disabled="!editable"
             aria-label="Регистрийн эхний хоёр үсэг"
@@ -177,7 +177,7 @@ onBeforeUnmount(() => {
             autocomplete="off"
             spellcheck="false"
             maxlength="8"
-            class="ui-input min-w-[5.5rem] flex-1 !px-1 !py-1 text-xs tabular-nums"
+            class="ui-input min-w-0 flex-1 !px-0.5 !py-1 text-xs tabular-nums tracking-tight"
             placeholder="00000000"
             :disabled="!editable"
             aria-label="Регистрийн 8 орон"

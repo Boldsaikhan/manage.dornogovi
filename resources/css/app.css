@@ -1138,6 +1138,20 @@
         @apply p-0 align-middle overflow-hidden;
     }
 
+    /* Регистр — зүүн/баруун зай шахаж 10 тэмдэгтэд тааруулна. */
+    .ui-register td.ui-register__cell--register,
+    .ui-register th.ui-register__cell--register {
+        @apply !px-0.5;
+    }
+
+    .ui-register td.ui-register__cell--register {
+        @apply tabular-nums tracking-tight;
+    }
+
+    .ui-register thead tr.ui-filters th.ui-register__cell--register input {
+        @apply !px-0.5;
+    }
+
     .ui-register__cell--no {
         @apply px-1.5 py-1.5 text-center text-xs font-semibold tabular-nums text-slate-500 dark:text-slate-400;
     }
