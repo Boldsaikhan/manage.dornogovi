@@ -70,6 +70,11 @@ class AwardController extends Controller
 
         ModuleOwnScope::apply($query, $request->user(), self::MODULE);
 
+        // «Бүгд» — баганын хайлтыг бүх оноос сервер дээр шүүнэ (зөвхөн хуудасны 100 мөр биш).
+        $filters = $yearAll
+            ? $this->applyColumnFilters($query, $tab, $request->query('f', []))
+            : [];
+
         $totalMatched = (clone $query)->count();
         $page = max(1, (int) $request->query('page', 1));
         $perPage = 100;
@@ -77,6 +82,8 @@ class AwardController extends Controller
 
         if ($yearAll) {
             // «Бүгд» — хуудас бүрт 100 мөр (DOM гацаанаас сэргийлнэ).
+            $lastPage = max(1, (int) ceil($totalMatched / $perPage));
+            $page = min($page, $lastPage);
             $collection = $query->forPage($page, $perPage)->get()->values();
             $offset = ($page - 1) * $perPage;
         } else {
@@ -104,6 +111,7 @@ class AwardController extends Controller
             'page' => $page,
             'perPage' => $perPage,
             'totalMatched' => $totalMatched,
+            'filters' => $filters,
             'columns' => $this->columnsFor($tab),
             'rows' => $rows,
             'canManage' => ModuleAccess::canEdit($request->user(), self::MODULE),
@@ -320,6 +328,7 @@ class AwardController extends Controller
         }
 
         ModuleOwnScope::apply($query, $request->user(), self::MODULE);
+        $this->applyColumnFilters($query, $tab, $request->query('f', []));
 
         $collection = $query->limit(2000)->get()->values();
         $total = $collection->count();
@@ -786,6 +795,67 @@ class AwardController extends Controller
         $y = (int) $year;
 
         return ($y >= 1990 && $y <= 2100) ? $y : null;
+    }
+
+    /**
+     * Баганын хайлт — зөвшөөрөгдсөн field-ээр LIKE (огноонд он/YYYY.MM.DD).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<\App\Models\Award>  $query
+     * @return array<string, string>
+     */
+    private function applyColumnFilters($query, string $tab, mixed $raw): array
+    {
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        $columns = collect($this->columnsFor($tab))->keyBy('key');
+        $dateFields = ['award_date', 'last_award_date', 'forwarded_on'];
+        $applied = [];
+
+        foreach ($raw as $key => $value) {
+            $key = (string) $key;
+            $needle = trim((string) $value);
+
+            if ($needle === '' || $key === 'no') {
+                continue;
+            }
+
+            $col = $columns->get($key);
+
+            if (! is_array($col)) {
+                continue;
+            }
+
+            $field = $col['field'] ?? null;
+
+            if (! is_string($field) || preg_match('/^[a-z_]+$/', $field) !== 1) {
+                continue;
+            }
+
+            $applied[$key] = $needle;
+            $like = '%'.$needle.'%';
+
+            if (in_array($field, $dateFields, true)) {
+                $dateNeedle = str_replace(['.', '/'], '-', $needle);
+
+                $query->where(function ($q) use ($field, $like, $dateNeedle, $needle) {
+                    $q->where($field, 'like', $like);
+
+                    if ($dateNeedle !== $needle) {
+                        $q->orWhere($field, 'like', '%'.$dateNeedle.'%');
+                    }
+
+                    if (preg_match('/^\d{4}$/', $needle) === 1) {
+                        $q->orWhereYear($field, (int) $needle);
+                    }
+                });
+            } else {
+                $query->where($field, 'like', $like);
+            }
+        }
+
+        return $applied;
     }
 
     private function normalizeSubtypeFilter(string $tab, string $subtype): string

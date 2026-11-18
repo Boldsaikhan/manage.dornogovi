@@ -448,6 +448,56 @@ class AwardTest extends TestCase
             );
     }
 
+    public function test_year_all_column_search_covers_all_years(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        Award::query()->create([
+            'category' => 'state_high',
+            'year' => 2020,
+            'surname' => 'Хуучин',
+            'given_name' => 'Оноос',
+            'last_award_date' => '2005-01-01',
+            'created_by' => $admin->id,
+        ]);
+
+        Award::query()->create([
+            'category' => 'state_high',
+            'year' => 2026,
+            'surname' => 'Шинэ',
+            'given_name' => 'Оноос',
+            'last_award_date' => '2019-01-01',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('awards.index', [
+                'tab' => 'state_high',
+                'year' => 'all',
+                'f' => ['last_award_date_display' => '2005'],
+            ]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('yearAll', true)
+                ->where('totalMatched', 1)
+                ->has('rows', 1)
+                ->where('rows.0.surname', 'Хуучин')
+                ->where('filters.last_award_date_display', '2005')
+            );
+
+        $this->actingAs($admin)
+            ->get(route('awards.index', [
+                'tab' => 'state_high',
+                'year' => 'all',
+                'f' => ['surname' => 'Шинэ'],
+            ]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('totalMatched', 1)
+                ->where('rows.0.surname', 'Шинэ')
+            );
+    }
+
     public function test_can_update_and_destroy(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

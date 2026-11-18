@@ -20,6 +20,7 @@ const props = defineProps({
     page: { type: Number, default: 1 },
     perPage: { type: Number, default: 100 },
     totalMatched: { type: Number, default: 0 },
+    filters: { type: Object, default: () => ({}) },
     columns: { type: Array, default: () => [] },
     rows: { type: Array, default: () => [] },
     canManage: { type: Boolean, default: false },
@@ -198,7 +199,7 @@ const syncFilters = () => {
     const next = {};
 
     props.columns.forEach((col) => {
-        next[col.key] = filters[col.key] ?? '';
+        next[col.key] = filters[col.key] ?? props.filters?.[col.key] ?? '';
     });
 
     Object.keys(filters).forEach((key) => delete filters[key]);
@@ -209,6 +210,20 @@ const clearFilters = () => {
     Object.keys(filters).forEach((key) => {
         filters[key] = '';
     });
+};
+
+const activeFilterParams = () => {
+    const next = {};
+
+    Object.entries(filters).forEach(([key, value]) => {
+        const needle = String(value ?? '').trim();
+
+        if (needle !== '') {
+            next[key] = needle;
+        }
+    });
+
+    return next;
 };
 
 const hasFilters = computed(() => Object.values(filters).some((value) => String(value).trim() !== ''));
@@ -226,8 +241,11 @@ const matchesFilters = (row) => props.columns.every((col) => {
     return String(raw ?? '').toLowerCase().includes(needle);
 });
 
+/** «Бүгд» үед сервер шүүсэн тул дахин шүүхгүй; нэг онд клиент шүүнэ. */
 const visibleRows = computed(() => (
-    hasFilters.value ? props.rows.filter(matchesFilters) : props.rows
+    props.yearAll || ! hasFilters.value
+        ? props.rows
+        : props.rows.filter(matchesFilters)
 ));
 
 const hasGroupedHeader = computed(() => props.columns.some((col) => col.group || col.rowspan === 2));
@@ -314,26 +332,77 @@ watch(() => props.rows, () => {
         }
     });
 });
-watch(() => props.columns, syncFilters, { immediate: true, deep: true });
+let skipFilterReload = false;
+let filterReloadTimer = null;
+
+watch(() => props.columns, () => {
+    skipFilterReload = true;
+    syncFilters();
+    nextTick(() => {
+        skipFilterReload = false;
+    });
+}, { immediate: true, deep: true });
 watch(() => props.awardTypeRows, syncTypeNameDrafts, { immediate: true, deep: true });
-watch(() => [props.tab, props.subtype, props.year, props.yearAll, props.page], () => {
+
+watch(() => [props.tab, props.subtype, props.year, props.yearAll], () => {
+    skipFilterReload = true;
     undoStack.value = [];
     redoStack.value = [];
     editingRows.value = [];
     Object.keys(drafts).forEach((key) => delete drafts[key]);
     clearFilters();
     scheduleStickySync();
+    nextTick(() => {
+        skipFilterReload = false;
+    });
+});
+
+watch(() => props.page, () => {
+    undoStack.value = [];
+    redoStack.value = [];
+    editingRows.value = [];
+    Object.keys(drafts).forEach((key) => delete drafts[key]);
+    scheduleStickySync();
+});
+
+watch(filters, () => {
+    scheduleStickySync();
+
+    if (! props.yearAll || skipFilterReload) {
+        return;
+    }
+
+    clearTimeout(filterReloadTimer);
+    filterReloadTimer = setTimeout(() => {
+        const f = activeFilterParams();
+
+        router.get(route('awards.index'), queryParams({
+            year: 'all',
+            page: undefined,
+            f: Object.keys(f).length ? f : undefined,
+        }), {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        });
+    }, 350);
+}, { deep: true });
+
+onBeforeUnmount(() => {
+    clearTimeout(filterReloadTimer);
 });
 
 watch(() => props.columns, () => scheduleStickySync(), { deep: true });
 watch(() => [hasFilters.value, visibleRows.value.length], () => scheduleStickySync());
 
 const queryParams = (overrides = {}) => {
+    const f = activeFilterParams();
     const params = {
         tab: props.tab,
         ...(props.subtype ? { subtype: props.subtype } : {}),
         ...(props.yearAll ? { year: 'all' } : (props.year ? { year: props.year } : {})),
         ...(props.yearAll && props.page > 1 ? { page: props.page } : {}),
+        ...(props.yearAll && Object.keys(f).length ? { f } : {}),
         ...overrides,
     };
 
@@ -354,7 +423,7 @@ const goToPage = (page) => {
     const next = Math.min(Math.max(1, Number(page) || 1), totalPages.value);
 
     router.get(route('awards.index'), queryParams({ year: 'all', page: next > 1 ? next : undefined }), {
-        preserveState: false,
+        preserveState: true,
         preserveScroll: true,
     });
 };
@@ -1267,7 +1336,7 @@ const confirmImport = () => {
                                 ]"
                             >
                                 <template v-if="col.key === 'no'">
-                                    {{ hasFilters ? visibleRows.length - rowIndex : row.no }}
+                                    {{ yearAll || !hasFilters ? row.no : visibleRows.length - rowIndex }}
                                 </template>
 
                                 <span
