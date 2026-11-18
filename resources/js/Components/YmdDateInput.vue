@@ -1,5 +1,6 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { registerSheetEditorFlusher } from '@/composables/sheetEditorFlush';
 import {
     daysInMonth,
     formatYmdDisplay,
@@ -98,6 +99,19 @@ const onClear = () => {
     emit('commit', '');
 };
 
+const flushPending = () => {
+    const nextValue = joinYmdParts(year.value, month.value, day.value);
+    const empty = ! year.value && ! month.value && ! day.value;
+
+    if (! empty && ! nextValue) {
+        syncFromModel();
+
+        return;
+    }
+
+    pushValue(true);
+};
+
 const onRootBlur = (event) => {
     const next = event.relatedTarget;
     if (next instanceof Node && rootRef.value?.contains(next)) {
@@ -118,6 +132,17 @@ const onRootBlur = (event) => {
     pushValue(true);
     emit('blur');
 };
+
+let unregisterFlusher = null;
+
+onMounted(() => {
+    unregisterFlusher = registerSheetEditorFlusher(flushPending);
+});
+
+onBeforeUnmount(() => {
+    unregisterFlusher?.();
+    unregisterFlusher = null;
+});
 
 const onInteract = () => {
     emit('interact');

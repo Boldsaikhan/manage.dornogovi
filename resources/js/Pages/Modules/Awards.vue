@@ -7,6 +7,7 @@ import RegisterNoInput from '@/Components/RegisterNoInput.vue';
 import SheetCell from '@/Components/SheetCell.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import { useStickyTableHead } from '@/composables/useStickyTableHead';
+import { flushSheetEditors } from '@/composables/sheetEditorFlush';
 import { parseMongolianRegister } from '@/utils/mongolianRegister';
 import { cellMatchesFilter, EMPTY_FILTER_HINT, EMPTY_FILTER_PLACEHOLDER } from '@/utils/columnFilter';
 
@@ -138,6 +139,10 @@ const finishRowEdit = (id) => {
         return;
     }
 
+    // Copy-paste / бичилт blur timer-ээс өмнө checkmark дарвал алдагдана —
+    // нээлттэй нүднүүдийг эхлээд flush хийнэ.
+    flushSheetEditors();
+
     const payload = dirtyPayloadFor(id);
 
     if (! payload) {
@@ -179,13 +184,15 @@ const numberFields = new Set([
     'age', 'years_in_country', 'years_in_sector', 'total_years', 'position_years',
 ]);
 
-/** Сүүлд авсан огноо — зөвхөн он (2005 эсвэл 2005-01-01 → "2005"). */
+/** Сүүлд авсан огноо — зөвхөн он (2005, 2005 он, 2005-01-01 → "2005"). */
 const parseAwardYear = (value) => {
     if (value === null || value === undefined || value === '') {
         return null;
     }
 
-    const match = String(value).trim().match(/^(\d{4})(?:[.\-/]\d{1,2}[.\-/]\d{1,2})?$/);
+    const raw = String(value).trim();
+    const match = raw.match(/^(\d{4})(?:[.\-/]\d{1,2}[.\-/]\d{1,2})?(?:\s*он)?$/i)
+        || raw.match(/(?<!\d)((?:19|20)\d{2})(?!\d)/);
 
     if (! match) {
         return null;
@@ -1435,6 +1442,7 @@ const confirmImport = () => {
                                         :title="isEditing(row.id) ? 'Хадгалаад дуусгах' : 'Энэ мөрийг засах'"
                                         :aria-label="isEditing(row.id) ? 'Хадгалаад дуусгах' : 'Энэ мөрийг засах'"
                                         :disabled="!!finishingRows[row.id]"
+                                        @mousedown="isEditing(row.id) && $event.preventDefault()"
                                         @click="toggleRowEdit(row.id)"
                                     >
                                         <svg v-if="isEditing(row.id)" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

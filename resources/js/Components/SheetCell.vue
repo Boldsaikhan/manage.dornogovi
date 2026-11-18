@@ -1,6 +1,7 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import YmdDateInput from '@/Components/YmdDateInput.vue';
+import { registerSheetEditorFlusher } from '@/composables/sheetEditorFlush';
 import {
     expandPersonNames,
     formatPersonNamesDisplay,
@@ -493,13 +494,53 @@ const finish = () => {
     commitValue(local.value);
 };
 
-const onBlur = () => {
+const onBlur = (event) => {
     if (ignoreBlur.value) {
         return;
     }
+
+    // Мөр хаах / үйлдлийн товч руу шилжихэд blur timer-тэй уралдахгүй.
+    const next = event?.relatedTarget;
+    if (
+        next instanceof Element
+        && next.closest('button, .ui-icon-btn, .ui-sticky-actions, a[href]')
+    ) {
+        finish();
+
+        return;
+    }
+
     blurTimer = setTimeout(() => {
         finish();
     }, 150);
+};
+
+/** Бичилт/paste-ийг draft (v-model) руу шууд тусгана — зөвхөн blur хүлээлгүй. */
+const syncDraftFromEditor = () => {
+    if (! editing.value) {
+        return;
+    }
+
+    if (hasOptions.value) {
+        if (props.creatable && ! props.multiple) {
+            const typed = String(search.value ?? '');
+            emit('update:modelValue', typed);
+        }
+
+        return;
+    }
+
+    emit('update:modelValue', local.value);
+};
+
+const onPlainInput = (event) => {
+    onInput(event);
+    syncDraftFromEditor();
+};
+
+const onSearchInput = () => {
+    updateMenuPosition();
+    syncDraftFromEditor();
 };
 
 const cancel = () => {
@@ -669,7 +710,19 @@ const onInput = (event) => {
     el.style.height = `${el.scrollHeight}px`;
 };
 
+let unregisterFlusher = null;
+
+onMounted(() => {
+    unregisterFlusher = registerSheetEditorFlusher(() => {
+        if (editing.value) {
+            finish();
+        }
+    });
+});
+
 onBeforeUnmount(() => {
+    unregisterFlusher?.();
+    unregisterFlusher = null;
     stopListeners();
     if (blurTimer) {
         clearTimeout(blurTimer);
@@ -706,7 +759,7 @@ onBeforeUnmount(() => {
             rows="2"
             @blur="onBlur"
             @keydown="onKeydown"
-            @input="onInput"
+            @input="onPlainInput"
         />
         <input
             v-else-if="editing && hasOptions"
@@ -721,7 +774,7 @@ onBeforeUnmount(() => {
             autocomplete="off"
             @blur="onBlur"
             @keydown="onKeydown"
-            @input="updateMenuPosition"
+            @input="onSearchInput"
         />
         <YmdDateInput
             v-else-if="editing && type === 'date'"
@@ -743,6 +796,7 @@ onBeforeUnmount(() => {
             autocomplete="off"
             @blur="onBlur"
             @keydown="onKeydown"
+            @input="syncDraftFromEditor"
         />
         <button
             v-if="! editing && editable && (hasOptions || type === 'date') && modelValue"
