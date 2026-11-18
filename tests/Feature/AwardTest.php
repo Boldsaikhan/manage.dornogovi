@@ -99,6 +99,76 @@ class AwardTest extends TestCase
         $this->assertSame('эр', $award->gender);
     }
 
+    public function test_register_number_normalizes_spaces_and_latin_letters(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $award = Award::query()->create([
+            'category' => 'state_high',
+            'year' => 2026,
+            'surname' => 'Өргөнцагаан',
+            'given_name' => 'Амарсанаа',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('awards.update', $award), [
+                'register_no' => 'EC 72021813',
+            ])
+            ->assertRedirect();
+
+        $award->refresh();
+
+        $this->assertSame('ЕЦ72021813', $award->register_no);
+        $this->assertSame(54, $award->age);
+        $this->assertSame('эр', $award->gender);
+    }
+
+    public function test_award_name_normalizer_fixes_mojibake_and_aliases(): void
+    {
+        $names = app(\App\Support\AwardNameNormalizer::class);
+
+        $this->assertSame(
+            'Монгол улсын төрийн шагнал',
+            $names->canonicalize('Ìîíãîë óëñûí òºðèéí øàãíàë'),
+        );
+        $this->assertSame('Алтан гадас одон', $names->canonicalize('АГО'));
+        $this->assertSame('Алтан гадас одон', $names->canonicalize('Алтангадас” одон'));
+        $this->assertSame('Хөдөлмөрийн хүндэт медаль', $names->canonicalize('ХХМ'));
+        $this->assertSame('Цэргийн гавьяаны одон', $names->canonicalize('Öýðãèéí ãàâúÿàíû îäîí'));
+    }
+
+    public function test_repair_award_names_merges_duplicates(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        AwardType::query()->create(['name' => 'АГО', 'sort_order' => 100, 'is_active' => true]);
+        AwardType::query()->create(['name' => 'Алтангадас одон', 'sort_order' => 110, 'is_active' => true]);
+        AwardType::query()->create(['name' => 'Алтан гадас одон', 'sort_order' => 120, 'is_active' => true]);
+        AwardType::query()->create(['name' => 'Ìîíãîë óëñûí õºäºëìºðèéí áààòàð', 'sort_order' => 130, 'is_active' => true]);
+
+        $award = Award::query()->create([
+            'category' => 'state_high',
+            'year' => 2026,
+            'surname' => 'Тест',
+            'given_name' => 'Нэр',
+            'nominated_award' => 'АГО',
+            'last_award' => 'Алтангадас одон',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->artisan('awards:repair-names')->assertSuccessful();
+
+        $award->refresh();
+        $this->assertSame('Алтан гадас одон', $award->nominated_award);
+        $this->assertSame('Алтан гадас одон', $award->last_award);
+
+        $this->assertSame(1, AwardType::query()->where('name', 'Алтан гадас одон')->count());
+        $this->assertDatabaseMissing('award_types', ['name' => 'АГО']);
+        $this->assertDatabaseMissing('award_types', ['name' => 'Алтангадас одон']);
+        $this->assertDatabaseHas('award_types', ['name' => 'Монгол Улсын Хөдөлмөрийн баатар']);
+    }
+
     public function test_register_penultimate_digit_sets_male_gender(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
@@ -338,7 +408,8 @@ class AwardTest extends TestCase
             'register_no' => 'УХ92092534',
             'age' => 34,
             'gender' => 'эр',
-            'nominated_award' => 'Алтан гадас',
+            // Import үед нэрийг canonical болгоно.
+            'nominated_award' => 'Алтан гадас одон',
         ]);
     }
 

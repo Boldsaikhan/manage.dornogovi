@@ -664,6 +664,12 @@ onBeforeUnmount(() => {
     stopListeners();
     if (blurTimer) {
         clearTimeout(blurTimer);
+        blurTimer = null;
+    }
+
+    // Мөр хаах үед blur timer амжихгүй байсан — нүдний өөрчлөлт алдагдана.
+    if (editing.value) {
+        finish();
     }
 });
 </script>

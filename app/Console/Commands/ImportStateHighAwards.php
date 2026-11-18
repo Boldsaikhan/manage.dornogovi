@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Award;
 use App\Models\AwardType;
+use App\Support\AwardNameNormalizer;
 use App\Support\MongolianRegister;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -104,18 +105,24 @@ class ImportStateHighAwards extends Command
      */
     private function seedAwardTypes(array $types): void
     {
+        $names = app(AwardNameNormalizer::class);
         $order = (int) AwardType::query()->max('sort_order');
+        $seen = AwardType::query()->pluck('name')
+            ->mapWithKeys(fn (string $name) => [$names->fingerprint($name) => true])
+            ->all();
 
-        foreach ($types as $name) {
-            $name = trim((string) $name);
+        foreach ($types as $raw) {
+            $name = $names->canonicalize((string) $raw);
 
-            if ($name === '') {
+            if ($name === null || $name === '') {
                 continue;
             }
 
-            $exists = AwardType::query()->where('name', $name)->exists();
+            $fp = $names->fingerprint($name);
 
-            if ($exists) {
+            if (isset($seen[$fp]) || AwardType::query()->where('name', $name)->exists()) {
+                $seen[$fp] = true;
+
                 continue;
             }
 
@@ -125,6 +132,7 @@ class ImportStateHighAwards extends Command
                 'sort_order' => $order,
                 'is_active' => true,
             ]);
+            $seen[$fp] = true;
         }
     }
 
@@ -174,6 +182,8 @@ class ImportStateHighAwards extends Command
             $gender = $parsed['gender'];
         }
 
+        $names = app(AwardNameNormalizer::class);
+
         return [
             'category' => 'state_high',
             'subtype' => null,
@@ -183,21 +193,21 @@ class ImportStateHighAwards extends Command
             'register_no' => $register,
             'age' => $age,
             'gender' => $gender,
-            'nominated_award' => $this->nullableString($entry['nominated_award'] ?? null),
+            'nominated_award' => $names->canonicalize($this->nullableString($entry['nominated_award'] ?? null)),
             'years_in_country' => $this->nullableInt($entry['years_in_country'] ?? null),
             'years_in_sector' => $this->nullableInt($entry['years_in_sector'] ?? null),
             'award_date' => $this->nullableDate($entry['award_date'] ?? null),
             'resolution_number' => $this->nullableString($entry['resolution_number'] ?? null),
             'position' => $this->nullableString($entry['position'] ?? null),
             'address' => $this->nullableString($entry['address'] ?? null),
-            'last_award' => $this->nullableString($entry['last_award'] ?? null),
+            'last_award' => $names->canonicalize($this->nullableString($entry['last_award'] ?? null)),
             'last_award_date' => $this->nullableDate($entry['last_award_date'] ?? null),
             'supporting_org' => $this->nullableString($entry['supporting_org'] ?? null),
             'forwarded_on' => $this->nullableDate($entry['forwarded_on'] ?? null),
             'forwarded_letter_no' => $this->nullableString($entry['forwarded_letter_no'] ?? null),
-            'received_award' => $this->nullableString($entry['received_award'] ?? null),
+            'received_award' => $names->canonicalize($this->nullableString($entry['received_award'] ?? null)),
             'presidential_letter' => $this->nullableString($entry['presidential_letter'] ?? null),
-            'award_name' => $this->nullableString($entry['award_name'] ?? null),
+            'award_name' => $names->canonicalize($this->nullableString($entry['award_name'] ?? null)),
             'work_sector' => $this->nullableString($entry['work_sector'] ?? null),
             'profession' => $this->nullableString($entry['profession'] ?? null),
             'job_title' => $this->nullableString($entry['job_title'] ?? null),
