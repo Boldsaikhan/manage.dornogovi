@@ -448,6 +448,62 @@ class AwardTest extends TestCase
             );
     }
 
+    public function test_received_status_column_reflects_award_fields(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        Award::query()->create([
+            'category' => 'state_high',
+            'year' => 2026,
+            'surname' => 'Хоосон',
+            'given_name' => 'Мөр',
+            'created_by' => $admin->id,
+        ]);
+
+        Award::query()->create([
+            'category' => 'state_high',
+            'year' => 2026,
+            'surname' => 'Бөглөсөн',
+            'given_name' => 'Мөр',
+            'received_award' => 'Алтан гадас одон',
+            'created_by' => $admin->id,
+        ]);
+
+        Award::query()->create([
+            'category' => 'state_high',
+            'year' => 2026,
+            'surname' => 'ЗөвхөнОгноо',
+            'given_name' => 'Мөр',
+            'award_date' => '2024-05-01',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('awards.index', ['tab' => 'state_high', 'year' => 2026]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('rows', fn ($rows) => collect($rows)->firstWhere('surname', 'Хоосон')['received_status'] === 'аваагүй'
+                    && collect($rows)->firstWhere('surname', 'Бөглөсөн')['received_status'] === 'авсан'
+                    && collect($rows)->firstWhere('surname', 'ЗөвхөнОгноо')['received_status'] === 'авсан')
+                ->where('columns', fn ($columns) => collect($columns)->contains(
+                    fn ($col) => ($col['key'] ?? null) === 'received_status'
+                ))
+            );
+
+        $this->actingAs($admin)
+            ->get(route('awards.index', [
+                'tab' => 'state_high',
+                'year' => 'all',
+                'f' => ['received_status' => 'аваагүй'],
+            ]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('totalMatched', 1)
+                ->where('rows.0.surname', 'Хоосон')
+                ->where('rows.0.received_status', 'аваагүй')
+            );
+    }
+
     public function test_year_all_column_search_covers_all_years(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

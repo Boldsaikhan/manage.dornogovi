@@ -572,6 +572,7 @@ class AwardController extends Controller
             'forwarded_on_display' => optional($award->forwarded_on)?->format('Y.m.d'),
             'forwarded_letter_no' => $award->forwarded_letter_no,
             'received_award' => $award->received_award,
+            'received_status' => $this->receivedStatus($award),
             'presidential_letter' => $award->presidential_letter,
             'award_name' => $award->award_name,
             'work_sector' => $award->work_sector,
@@ -663,6 +664,15 @@ class AwardController extends Controller
                     'field' => 'forwarded_letter_no',
                     'group' => 'Дээд байгууллагад уламжилсан',
                     'width' => '6rem',
+                ],
+                [
+                    'key' => 'received_status',
+                    'label' => 'Төлөв',
+                    'readonly' => true,
+                    'group' => 'Авсан шагнал',
+                    'nowrap' => true,
+                    'width' => '4.5rem',
+                    'hint' => 'Шагнал/огноо/дугаар аль нэг бөглөгдсөн бол авсан',
                 ],
                 [
                     'key' => 'received_award',
@@ -827,6 +837,13 @@ class AwardController extends Controller
                 continue;
             }
 
+            if ($key === 'received_status') {
+                $applied[$key] = $needle;
+                $this->applyReceivedStatusFilter($query, $needle);
+
+                continue;
+            }
+
             $field = $col['field'] ?? null;
 
             if (! is_string($field) || preg_match('/^[a-z_]+$/', $field) !== 1) {
@@ -856,6 +873,60 @@ class AwardController extends Controller
         }
 
         return $applied;
+    }
+
+    /**
+     * Авсан шагнал: төрөл / зарлигийн огноо / дугаар аль нэг нь бөглөгдсөн эсэх.
+     */
+    private function receivedStatus(Award $award): string
+    {
+        $hasType = trim((string) ($award->received_award ?? '')) !== '';
+        $hasDate = $award->award_date !== null;
+        $hasNumber = trim((string) ($award->resolution_number ?? '')) !== '';
+
+        return ($hasType || $hasDate || $hasNumber) ? 'авсан' : 'аваагүй';
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<\App\Models\Award>  $query
+     */
+    private function applyReceivedStatusFilter($query, string $needle): void
+    {
+        $needleLower = mb_strtolower($needle);
+        $matchReceived = str_contains(mb_strtolower('авсан'), $needleLower);
+        $matchNotReceived = str_contains(mb_strtolower('аваагүй'), $needleLower);
+
+        if ($matchReceived === $matchNotReceived) {
+            if (! $matchReceived) {
+                $query->whereRaw('0 = 1');
+            }
+
+            return;
+        }
+
+        if ($matchReceived) {
+            $query->where(function ($q) {
+                $q->where(function ($inner) {
+                    $inner->whereNotNull('received_award')->where('received_award', '!=', '');
+                })
+                    ->orWhereNotNull('award_date')
+                    ->orWhere(function ($inner) {
+                        $inner->whereNotNull('resolution_number')->where('resolution_number', '!=', '');
+                    });
+            });
+
+            return;
+        }
+
+        $query->where(function ($q) {
+            $q->where(function ($inner) {
+                $inner->whereNull('received_award')->orWhere('received_award', '');
+            })
+                ->whereNull('award_date')
+                ->where(function ($inner) {
+                    $inner->whereNull('resolution_number')->orWhere('resolution_number', '');
+                });
+        });
     }
 
     private function normalizeSubtypeFilter(string $tab, string $subtype): string
