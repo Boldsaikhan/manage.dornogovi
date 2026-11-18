@@ -856,7 +856,21 @@ const visibleAwardTypes = computed(() => {
     });
 });
 
+/** Авсан шагнал: төрөл/огноо/дугаар аль нэг бөглөгдсөн бол авсан. */
+const receivedStatusFor = (row) => {
+    const draft = drafts[row.id] || {};
+    const type = String(draft.received_award ?? row.received_award ?? '').trim();
+    const date = String(draft.award_date ?? row.award_date ?? '').trim();
+    const number = String(draft.resolution_number ?? row.resolution_number ?? '').trim();
+
+    return (type || date || number) ? 'авсан' : 'аваагүй';
+};
+
 const cellValue = (row, key) => {
+    if (key === 'received_status') {
+        return receivedStatusFor(row);
+    }
+
     const value = drafts[row.id]?.[key] ?? row[key];
 
     if (value === null || value === undefined || value === '') {
@@ -894,7 +908,14 @@ const fitColPercents = computed(() => {
 });
 
 const colAlign = (col) => {
-    if (col.key === 'no' || col.input === 'number' || col.input === 'year' || col.input === 'gender' || col.input === 'date') {
+    if (
+        col.key === 'no'
+        || col.key === 'received_status'
+        || col.input === 'number'
+        || col.input === 'year'
+        || col.input === 'gender'
+        || col.input === 'date'
+    ) {
         return 'center';
     }
 
@@ -1338,6 +1359,17 @@ const confirmImport = () => {
                                 <template v-if="col.key === 'no'">
                                     {{ yearAll || !hasFilters ? row.no : visibleRows.length - rowIndex }}
                                 </template>
+
+                                <span
+                                    v-else-if="col.key === 'received_status'"
+                                    class="inline-flex min-w-[4rem] justify-center rounded px-1.5 py-0.5 text-xs font-medium"
+                                    :class="receivedStatusFor(row) === 'авсан'
+                                        ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200'
+                                        : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'"
+                                    :title="col.hint || undefined"
+                                >
+                                    {{ receivedStatusFor(row) }}
+                                </span>
 
                                 <span
                                     v-else-if="col.readonly"
