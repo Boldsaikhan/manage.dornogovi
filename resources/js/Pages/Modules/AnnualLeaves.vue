@@ -5,6 +5,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import SheetCell from '@/Components/SheetCell.vue';
+import { formatYmdDisplay } from '@/utils/ymdDate';
 
 const props = defineProps({
     activeScope: { type: String, default: 'baiguullaga' },
@@ -604,7 +605,7 @@ const visibleRows = computed(() => (
                                 />
                             </td>
                             <td class="px-1.5 py-1.5 text-center text-xs tabular-nums text-slate-600">
-                                {{ row.end_date || '—' }}
+                                {{ formatYmdDisplay(row.end_date) || '—' }}
                             </td>
                             <td class="px-1.5 py-1.5">
                                 <select

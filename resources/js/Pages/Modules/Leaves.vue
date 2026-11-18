@@ -7,6 +7,7 @@ import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import SheetCell from '@/Components/SheetCell.vue';
 import LeaveRulePicker from '@/Components/LeaveRulePicker.vue';
 import { useStickyTableHead } from '@/composables/useStickyTableHead';
+import { formatYmdDisplay } from '@/utils/ymdDate';
 
 const props = defineProps({
     activeScope: { type: String, default: 'baiguullaga' },
@@ -850,7 +851,7 @@ const visibleRows = computed(() => {
                                     @commit="(v) => saveField(row.id, 'days', v)"
                                 />
                             </td>
-                            <td class="leave-table__date px-1.5 py-1.5 text-center">{{ row.end_date || '—' }}</td>
+                            <td class="leave-table__date px-1.5 py-1.5 text-center">{{ formatYmdDisplay(row.end_date) || '—' }}</td>
                             <td :class="cellClass">
                                 <SheetCell
                                     v-if="drafts[row.id]"
@@ -1020,7 +1021,7 @@ const visibleRows = computed(() => {
                             <tbody>
                                 <tr v-for="item in personSummary.rows" :key="item.id">
                                     <td class="whitespace-nowrap">{{ item.start_date || '—' }}</td>
-                                    <td class="whitespace-nowrap">{{ item.end_date || '—' }}</td>
+                                    <td class="whitespace-nowrap">{{ formatYmdDisplay(item.end_date) || '—' }}</td>
                                     <td class="text-center">{{ item.days || '—' }}</td>
                                     <td class="whitespace-nowrap">{{ item.type_label }}</td>
                                     <td class="whitespace-nowrap">{{ item.rule_code || '—' }}</td>

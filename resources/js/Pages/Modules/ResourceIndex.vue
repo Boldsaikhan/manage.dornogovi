@@ -7,6 +7,7 @@ import InputError from '@/Components/InputError.vue';
 import AssignmentSheetForm from '@/Components/AssignmentSheetForm.vue';
 import SheetCell from '@/Components/SheetCell.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
+import YmdDateInput from '@/Components/YmdDateInput.vue';
 
 const props = defineProps({
     module: String,
@@ -1536,6 +1537,12 @@ const destroyRow = (id) => {
                             />
                             {{ field.label }}
                         </label>
+                        <YmdDateInput
+                            v-else-if="field.type === 'date'"
+                            v-model="form[field.name]"
+                            @update:model-value="onFieldInput(field)"
+                            @commit="onFieldInput(field)"
+                        />
                         <input
                             v-else
                             v-model="form[field.name]"

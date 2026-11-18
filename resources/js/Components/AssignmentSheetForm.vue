@@ -2,6 +2,7 @@
 import { computed, watch } from 'vue';
 import InputError from '@/Components/InputError.vue';
 import SheetCell from '@/Components/SheetCell.vue';
+import YmdDateInput from '@/Components/YmdDateInput.vue';
 
 /**
  * «ТОМИЛОЛТЫН УДИРДАМЖ» — A4 цаасан дээр хэвлэгдэх байдлаараа бөглөх маягт.
@@ -173,8 +174,8 @@ const pickerClass = 'w-auto border-0 border-b border-dotted border-black bg-tran
                 <InputError :message="form.errors.person_name" class="mt-1" />
             </div>
             <div>
-                <label class="ui-label">Эхлэх огноо</label>
-                <input v-model="form.start_date" type="date" class="ui-input !py-2 text-sm" />
+                <label class="ui-label">Эхлэх огноо (он.сар.өдөр)</label>
+                <YmdDateInput v-model="form.start_date" />
                 <InputError :message="form.errors.start_date" class="mt-1" />
             </div>
             <div>
@@ -357,19 +358,9 @@ const pickerClass = 'w-auto border-0 border-b border-dotted border-black bg-tran
             <div class="flex-1">
                 <span class="font-bold italic underline">Хугацаа:</span>
                 <div class="mt-1 flex flex-wrap items-center gap-2">
-                    <input
-                        v-model="form.start_date"
-                        type="date"
-                        required
-                        class="border-0 border-b border-dotted border-black bg-transparent p-0 font-serif text-[13px] focus:border-brand-navy-600 focus:ring-0"
-                    />
+                    <YmdDateInput v-model="form.start_date" />
                     <span>—</span>
-                    <input
-                        v-model="form.end_date"
-                        type="date"
-                        required
-                        class="border-0 border-b border-dotted border-black bg-transparent p-0 font-serif text-[13px] focus:border-brand-navy-600 focus:ring-0"
-                    />
+                    <YmdDateInput v-model="form.end_date" />
                     <span class="text-slate-400">·</span>
                     <input
                         v-model="form.destination"

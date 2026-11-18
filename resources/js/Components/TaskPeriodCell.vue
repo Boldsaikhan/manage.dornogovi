@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import YmdDateInput from '@/Components/YmdDateInput.vue';
 import { formatTaskPeriodMd, periodToInputRange } from '@/utils/taskPeriod';
 
 const props = defineProps({
@@ -211,23 +212,16 @@ onBeforeUnmount(() => {
                 <p class="mb-2 text-xs font-semibold text-slate-600">Хугацаа сонгох</p>
                 <div class="grid gap-2 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
                     <label class="block min-w-0">
-                        <span class="mb-1 block text-[10px] font-medium uppercase tracking-wide text-slate-400">Эхлэх</span>
-                        <input
+                        <span class="mb-1 block text-[10px] font-medium uppercase tracking-wide text-slate-400">Эхлэх (он.сар.өдөр)</span>
+                        <YmdDateInput
                             v-model="startDate"
-                            type="date"
-                            class="ui-input w-full min-w-0 !px-2 text-sm"
-                            @change="onStartChange"
+                            @update:model-value="onStartChange"
                         />
                     </label>
                     <span class="hidden text-center text-slate-400 sm:block">—</span>
                     <label class="block min-w-0">
-                        <span class="mb-1 block text-[10px] font-medium uppercase tracking-wide text-slate-400">Дуусах</span>
-                        <input
-                            v-model="endDate"
-                            type="date"
-                            class="ui-input w-full min-w-0 !px-2 text-sm"
-                            :min="startDate || undefined"
-                        />
+                        <span class="mb-1 block text-[10px] font-medium uppercase tracking-wide text-slate-400">Дуусах (он.сар.өдөр)</span>
+                        <YmdDateInput v-model="endDate" />
                     </label>
                 </div>
                 <div class="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">

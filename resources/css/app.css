@@ -737,7 +737,7 @@
         overflow: visible;
     }
 
-    .ui-sheet-cell.is-editing .ui-sheet-editor:not([type='date']):not([type='number']) {
+    .ui-sheet-cell.is-editing .ui-sheet-editor:not([type='number']) {
         @apply absolute left-0 top-0 rounded-md bg-white px-1.5 py-1 shadow-xl
             ring-2 ring-brand-navy-500/40 dark:bg-slate-800;
         width: 100%;
@@ -748,9 +748,14 @@
     }
 
     /* Баруун ирмэгт ойрхон нүд — зүүн тийшээ дэлгэгдэнэ. */
-    .ui-sheet-cell.is-editing.is-anchor-right .ui-sheet-editor:not([type='date']):not([type='number']) {
+    .ui-sheet-cell.is-editing.is-anchor-right .ui-sheet-editor:not([type='number']) {
         left: auto;
         right: 0;
+    }
+
+    /* Огноо — он.сар.өдөр сонголт нүдэнд багтана, absolute өргөтгөл хэрэггүй. */
+    .ui-sheet-cell.is-editing .ui-sheet-ymd {
+        @apply relative z-[41] flex w-full min-w-[11rem] justify-center px-0.5 py-0.5;
     }
 
     /*
