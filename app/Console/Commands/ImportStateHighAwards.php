@@ -19,7 +19,9 @@ class ImportStateHighAwards extends Command
 {
     protected $signature = 'awards:import-state-high
                             {--file= : JSON замыг гараар заах}
-                            {--fresh : state_high мөрүүдийг устгаад дахин оруулах}';
+                            {--year= : Зөвхөн энэ оны мөрүүдийг оруулах/солих}
+                            {--fresh : state_high бүх мөрийг устгаад дахин оруулах}
+                            {--replace-year : --year-тай: тухайн оны state_high-ийг устгаад дахин оруулах}';
 
     protected $description = 'Төрийн дээд шагналын бүртгэлийг JSON-оос оруулах';
 
@@ -30,6 +32,7 @@ class ImportStateHighAwards extends Command
         if (! is_file($path)) {
             $this->error("JSON олдсонгүй: {$path}");
             $this->line('Эхлээд: python scripts/build_state_high_awards_import.py');
+            $this->line('эсвэл: python scripts/build_odon_year_import.py --file ... --year 2024');
 
             return self::FAILURE;
         }
@@ -42,13 +45,48 @@ class ImportStateHighAwards extends Command
             return self::FAILURE;
         }
 
+        $yearFilter = $this->option('year');
+        $year = $yearFilter !== null && $yearFilter !== '' ? (int) $yearFilter : null;
+
+        if ($year !== null && ($year < 1990 || $year > 2100)) {
+            $this->error("Он буруу: {$year}");
+
+            return self::FAILURE;
+        }
+
         /** @var list<array<string, mixed>> $entries */
-        $entries = array_values($payload['entries']);
+        $entries = array_values(array_filter(
+            $payload['entries'],
+            function ($entry) use ($year) {
+                if (! is_array($entry)) {
+                    return false;
+                }
+
+                if ($year === null) {
+                    return true;
+                }
+
+                return (int) ($entry['year'] ?? 0) === $year;
+            },
+        ));
+
         $types = is_array($payload['award_types'] ?? null) ? $payload['award_types'] : [];
 
         if ($this->option('fresh')) {
             $deleted = Award::query()->where('category', 'state_high')->delete();
             $this->warn("state_high хуучин мөр устгав: {$deleted}");
+        } elseif ($this->option('replace-year')) {
+            if ($year === null) {
+                $this->error('--replace-year нь --year шаардана.');
+
+                return self::FAILURE;
+            }
+
+            $deleted = Award::query()
+                ->where('category', 'state_high')
+                ->where('year', $year)
+                ->delete();
+            $this->warn("state_high {$year} он устгав: {$deleted}");
         }
 
         $this->seedAwardTypes($types);
@@ -87,14 +125,20 @@ class ImportStateHighAwards extends Command
             }
         });
 
-        $total = Award::query()->where('category', 'state_high')->count();
-
-        $this->info("Оруулсан: {$created}, алгассан: {$skipped}, нийт state_high: {$total}");
+        $totalQuery = Award::query()->where('category', 'state_high');
+        if ($year !== null) {
+            $yearTotal = (clone $totalQuery)->where('year', $year)->count();
+            $this->info("Оруулсан: {$created}, алгассан: {$skipped}, {$year} он state_high: {$yearTotal}");
+        } else {
+            $this->info("Оруулсан: {$created}, алгассан: {$skipped}, нийт state_high: ".$totalQuery->count());
+        }
 
         if (! empty($payload['stats']) && is_array($payload['stats'])) {
             foreach ($payload['stats'] as $file => $count) {
                 $this->line("  · {$file}: {$count}");
             }
+        } elseif (! empty($payload['source'])) {
+            $this->line('  · '.(string) $payload['source'].': '.count($entries));
         }
 
         return self::SUCCESS;
