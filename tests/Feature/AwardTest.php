@@ -491,6 +491,34 @@ class AwardTest extends TestCase
             );
     }
 
+    public function test_last_award_name_strips_year_into_date_column(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $award = Award::query()->create([
+            'category' => 'state_high',
+            'year' => 2024,
+            'surname' => 'Бат',
+            'given_name' => 'Дорж',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('awards.update', $award), [
+                'last_award' => 'ХХМ - 2020 он',
+            ])
+            ->assertRedirect();
+
+        $award->refresh();
+        $this->assertSame('Хөдөлмөрийн хүндэт медаль', $award->last_award);
+        $this->assertSame('2020-01-01', optional($award->last_award_date)?->format('Y-m-d'));
+
+        [$name, $date] = app(\App\Support\AwardNameNormalizer::class)
+            ->splitLastAward('АХ-ын 100 жилийн ойн медаль 2021 он');
+        $this->assertSame('АХ-ын 100 жилийн ойн медаль', $name);
+        $this->assertSame('2021-01-01', $date);
+    }
+
     public function test_received_status_column_reflects_award_fields(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

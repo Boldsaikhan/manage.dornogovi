@@ -79,11 +79,16 @@ class AwardImporter
 
             $names = app(AwardNameNormalizer::class);
 
-            foreach (['nominated_award', 'last_award', 'received_award', 'award_name'] as $nameField) {
+            foreach (['nominated_award', 'received_award', 'award_name'] as $nameField) {
                 if (array_key_exists($nameField, $payload) && is_string($payload[$nameField] ?? null)) {
                     $payload[$nameField] = $names->canonicalize($payload[$nameField]);
                 }
             }
+
+            [$lastAward, $lastAwardDate] = $names->splitLastAward(
+                is_string($payload['last_award'] ?? null) ? $payload['last_award'] : null,
+                $payload['last_award_date'] ?? null,
+            );
 
             Award::query()->create([
                 'category' => $defaults['category'],
@@ -101,8 +106,8 @@ class AwardImporter
                 'resolution_number' => $payload['resolution_number'] ?? null,
                 'position' => $payload['position'] ?? null,
                 'address' => $payload['address'] ?? null,
-                'last_award' => $payload['last_award'] ?? null,
-                'last_award_date' => $payload['last_award_date'] ?? null,
+                'last_award' => $lastAward,
+                'last_award_date' => $lastAwardDate,
                 'supporting_org' => $payload['supporting_org'] ?? null,
                 'forwarded_on' => $payload['forwarded_on'] ?? null,
                 'forwarded_letter_no' => $payload['forwarded_letter_no'] ?? null,
