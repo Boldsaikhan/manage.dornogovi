@@ -2,6 +2,8 @@
 import { reactive } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import YmdDateInput from '@/Components/YmdDateInput.vue';
+import { formatYmdDisplay } from '@/utils/ymdDate';
 
 defineProps({
     groups: Array,
@@ -89,7 +91,7 @@ const bumpProgress = (task, value) => {
                                 />
                                 <span v-else>{{ task.progress }}%</span>
                             </td>
-                            <td class="py-2.5 text-slate-400">{{ task.due_on || '—' }}</td>
+                            <td class="py-2.5 text-slate-400">{{ formatYmdDisplay(task.due_on) || '—' }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -97,7 +99,7 @@ const bumpProgress = (task, value) => {
                 <form v-if="canManage" class="mt-4 flex flex-wrap gap-2" @submit.prevent="addTask(group.id)">
                     <input v-model="draft(group.id).title" required placeholder="Шинэ үүрэг" class="ui-input !w-auto min-w-[10rem]" />
                     <input v-model="draft(group.id).owner" placeholder="Хариуцагч" class="ui-input !w-auto min-w-[8rem]" />
-                    <input v-model="draft(group.id).due_on" type="date" class="ui-input !w-auto" />
+                    <YmdDateInput v-model="draft(group.id).due_on" />
                     <button class="ui-btn-primary !py-2">Нэмэх</button>
                 </form>
             </div>

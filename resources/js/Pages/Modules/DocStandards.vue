@@ -3,6 +3,7 @@ import { computed, reactive, ref } from 'vue';
 import { Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import InputError from '@/Components/InputError.vue';
+import YmdDateInput from '@/Components/YmdDateInput.vue';
 
 const props = defineProps({
     formats: { type: Array, default: () => [] },
@@ -170,16 +171,16 @@ const submit = () => {
                     <InputError :message="form.errors.source_url" class="mt-1" />
                 </div>
                 <div>
-                    <label class="ui-label">Хүчин төгөлдөр огноо</label>
-                    <input v-model="form.effective_on" type="date" class="ui-input" />
+                    <label class="ui-label">Хүчин төгөлдөр огноо (он.сар.өдөр)</label>
+                    <YmdDateInput v-model="form.effective_on" />
                 </div>
                 <div>
-                    <label class="ui-label">Шинэчлэгдсэн огноо</label>
-                    <input v-model="form.amended_on" type="date" class="ui-input" />
+                    <label class="ui-label">Шинэчлэгдсэн огноо (он.сар.өдөр)</label>
+                    <YmdDateInput v-model="form.amended_on" />
                 </div>
                 <div>
-                    <label class="ui-label">Хүчингүй болсон огноо</label>
-                    <input v-model="form.repealed_on" type="date" class="ui-input" />
+                    <label class="ui-label">Хүчингүй болсон огноо (он.сар.өдөр)</label>
+                    <YmdDateInput v-model="form.repealed_on" />
                 </div>
                 <div>
                     <label class="ui-label">Дараалал</label>

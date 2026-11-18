@@ -1,11 +1,13 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import YmdDateInput from '@/Components/YmdDateInput.vue';
 import {
     expandPersonNames,
     formatPersonNamesDisplay,
     serializePersonNames,
     visiblePersonGroups,
 } from '@/utils/soumGovernors';
+import { formatYmdDisplay, parseYmd } from '@/utils/ymdDate';
 
 const CATEGORY_FILTERS = [
     { key: 'udirdlaga', label: 'Удирдлагууд', short: 'Удирдлага' },
@@ -287,6 +289,10 @@ const displayText = () => {
         return props.placeholder || props.emptyLabel;
     }
 
+    if (props.type === 'date') {
+        return formatYmdDisplay(value) || String(value);
+    }
+
     if (hasOptions.value) {
         return formatPersonNamesDisplay(value, props.options) || String(value);
     }
@@ -433,6 +439,9 @@ const commitValue = (value) => {
             const n = Number.parseInt(raw, 10);
             next = Number.isNaN(n) ? '' : n;
         }
+    }
+    if (props.type === 'date') {
+        next = parseYmd(next) ?? '';
     }
     local.value = next;
     search.value = '';
@@ -714,11 +723,20 @@ onBeforeUnmount(() => {
             @keydown="onKeydown"
             @input="updateMenuPosition"
         />
+        <YmdDateInput
+            v-else-if="editing && type === 'date'"
+            v-model="local"
+            compact
+            class="ui-sheet-ymd"
+            @interact="ignoreBlur = true; releaseIgnoreBlur()"
+            @commit="(v) => commitValue(v)"
+            @blur="onBlur"
+        />
         <input
             v-else-if="editing"
             ref="inputRef"
             v-model="local"
-            :type="type === 'number' ? 'number' : (type === 'date' ? 'date' : 'text')"
+            :type="type === 'number' ? 'number' : 'text'"
             class="ui-sheet-editor"
             :class="{ 'text-center': align === 'center' }"
             :placeholder="placeholder"
@@ -727,7 +745,7 @@ onBeforeUnmount(() => {
             @keydown="onKeydown"
         />
         <button
-            v-if="! editing && editable && hasOptions && modelValue"
+            v-if="! editing && editable && (hasOptions || type === 'date') && modelValue"
             type="button"
             class="ui-sheet-clear"
             title="Цэвэрлэх"
@@ -744,7 +762,11 @@ onBeforeUnmount(() => {
                     : (clamp ? 'ui-clamp-2' : 'whitespace-pre-wrap break-words'),
                 { 'text-center': align === 'center', 'text-slate-400': ! modelValue && !! placeholder },
             ]"
-            :title="modelValue ? (formatPersonNamesDisplay(modelValue, options) || String(modelValue)) : ''"
+            :title="modelValue
+                ? (type === 'date'
+                    ? formatYmdDisplay(modelValue)
+                    : (formatPersonNamesDisplay(modelValue, options) || String(modelValue)))
+                : ''"
         >
             <slot>{{ displayText() }}</slot>
         </div>

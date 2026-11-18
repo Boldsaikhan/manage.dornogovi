@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import StandardVisual from '@/Components/DocStandards/StandardVisual.vue';
+import YmdDateInput from '@/Components/YmdDateInput.vue';
 
 const props = defineProps({
     standard: { type: Object, required: true },
@@ -165,9 +166,9 @@ const runCheck = async () => {
                 <div class="md:col-span-2"><label class="ui-label">Агуулга</label><textarea v-model="form.body" rows="8" class="ui-input" /></div>
                 <div><label class="ui-label">Эх сурвалж</label><input v-model="form.source_title" class="ui-input" /></div>
                 <div><label class="ui-label">Холбоос</label><input v-model="form.source_url" type="url" class="ui-input" /></div>
-                <div><label class="ui-label">Хүчин төгөлдөр</label><input v-model="form.effective_on" type="date" class="ui-input" /></div>
-                <div><label class="ui-label">Шинэчлэгдсэн</label><input v-model="form.amended_on" type="date" class="ui-input" /></div>
-                <div><label class="ui-label">Хүчингүй</label><input v-model="form.repealed_on" type="date" class="ui-input" /></div>
+                <div><label class="ui-label">Хүчин төгөлдөр</label><YmdDateInput v-model="form.effective_on" /></div>
+                <div><label class="ui-label">Шинэчлэгдсэн</label><YmdDateInput v-model="form.amended_on" /></div>
+                <div><label class="ui-label">Хүчингүй</label><YmdDateInput v-model="form.repealed_on" /></div>
                 <div class="md:col-span-2"><button class="ui-btn-primary" :disabled="form.processing">Хадгалах</button></div>
             </form>
 

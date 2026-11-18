@@ -7,6 +7,7 @@ import SheetCell from '@/Components/SheetCell.vue';
 import TaskPeriodCell from '@/Components/TaskPeriodCell.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import TaskCalendar from '@/Components/TaskCalendar.vue';
+import YmdDateInput from '@/Components/YmdDateInput.vue';
 import { expandPersonNames, GROUP_LABELS } from '@/utils/soumGovernors';
 import { formatTaskPeriodMd, isTaskDone, isTaskOverdue, isTaskPending, parseTaskPeriod } from '@/utils/taskPeriod';
 
@@ -2097,19 +2098,16 @@ const cellEditable = (col) => {
                             <input v-model="bulkApply.period" type="checkbox" class="rounded border-slate-300 text-brand-navy-600" />
                             Хугацаа
                         </span>
-                        <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-1">
-                            <input
+                        <div class="flex flex-wrap items-center gap-1">
+                            <YmdDateInput
                                 v-model="bulkPeriodStart"
-                                type="date"
-                                class="ui-input w-full min-w-0 !px-2 text-sm"
+                                compact
                                 aria-label="Эхлэх огноо"
                             />
                             <span class="text-center text-slate-400">—</span>
-                            <input
+                            <YmdDateInput
                                 v-model="bulkPeriodEnd"
-                                type="date"
-                                class="ui-input w-full min-w-0 !px-2 text-sm"
-                                :min="bulkPeriodStart || undefined"
+                                compact
                                 aria-label="Дуусах огноо"
                             />
                         </div>
@@ -2278,10 +2276,10 @@ const cellEditable = (col) => {
                                 <span v-else class="text-[10px] text-slate-300">Хайх</span>
                             </th>
                             <th v-for="col in tableColumns" :key="'f-' + col.key">
-                                <input
+                                <YmdDateInput
                                     v-if="col.type === 'period'"
                                     v-model="columnFilters[col.key]"
-                                    type="date"
+                                    compact
                                     :aria-label="col.label + ' — огноогоор шүүх'"
                                     title="Сонгосон огноог хамарсан үүрэг чиглэлүүд"
                                 />

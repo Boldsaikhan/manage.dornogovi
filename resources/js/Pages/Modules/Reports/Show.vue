@@ -7,6 +7,7 @@ import ReportNavTree from '@/Components/Reports/ReportNavTree.vue';
 import ReportSectionTabs from '@/Components/Reports/ReportSectionTabs.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import SheetCell from '@/Components/SheetCell.vue';
+import YmdDateInput from '@/Components/YmdDateInput.vue';
 import { findReportSection } from '@/utils/reportsNavigation';
 import { useReportSubnav } from '@/composables/useReportSubnav';
 
@@ -800,7 +801,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                         </template>
 
                         <template v-else>
-                            <input v-model="scheduleForm.due_on" type="date" class="ui-input !w-auto !py-1 text-xs" />
+                            <YmdDateInput v-model="scheduleForm.due_on" compact />
                             <input
                                 v-model="scheduleForm.note"
                                 class="ui-input !w-56 !py-1 text-xs"
