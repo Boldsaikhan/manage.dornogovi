@@ -21,14 +21,15 @@ class AwardType extends Model
         ];
     }
 
-    /** Шагналын бүртгэлд ашиглагдаж байгаа эсэх. */
+    /** Шагналын бүртгэлд ашиглагдаж байгаа эсэх (устгахыг хориглоход). */
     public function isInUse(): bool
     {
         return Award::query()
             ->where(function ($query) {
                 $query->where('nominated_award', $this->name)
                     ->orWhere('award_name', $this->name)
-                    ->orWhere('last_award', $this->name);
+                    ->orWhere('last_award', $this->name)
+                    ->orWhere('received_award', $this->name);
             })
             ->exists();
     }
@@ -48,13 +49,15 @@ class AwardType extends Model
             ->where(function ($query) use ($names) {
                 $query->whereIn('nominated_award', $names)
                     ->orWhereIn('award_name', $names)
-                    ->orWhereIn('last_award', $names);
+                    ->orWhereIn('last_award', $names)
+                    ->orWhereIn('received_award', $names);
             })
-            ->get(['nominated_award', 'award_name', 'last_award'])
+            ->get(['nominated_award', 'award_name', 'last_award', 'received_award'])
             ->flatMap(fn (Award $award) => [
                 $award->nominated_award,
                 $award->award_name,
                 $award->last_award,
+                $award->received_award,
             ])
             ->filter()
             ->unique()
