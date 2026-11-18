@@ -547,6 +547,54 @@ class AwardTest extends TestCase
             );
     }
 
+    public function test_year_all_empty_column_search_finds_blank_fields(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        Award::query()->create([
+            'category' => 'state_high',
+            'year' => 2024,
+            'surname' => 'ХоосонОвог',
+            'given_name' => 'Нэр',
+            'profession' => null,
+            'created_by' => $admin->id,
+        ]);
+
+        Award::query()->create([
+            'category' => 'state_high',
+            'year' => 2025,
+            'surname' => 'Бөглөсөн',
+            'given_name' => 'Нэр',
+            'profession' => 'Багш',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('awards.index', [
+                'tab' => 'state_high',
+                'year' => 'all',
+                'f' => ['profession' => '-'],
+            ]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('totalMatched', 1)
+                ->where('rows.0.surname', 'ХоосонОвог')
+                ->where('filters.profession', '-')
+            );
+
+        $this->actingAs($admin)
+            ->get(route('awards.index', [
+                'tab' => 'state_high',
+                'year' => 'all',
+                'f' => ['profession' => 'хоосон'],
+            ]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('totalMatched', 1)
+                ->where('rows.0.surname', 'ХоосонОвог')
+            );
+    }
+
     public function test_year_all_column_search_covers_all_years(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

@@ -10,6 +10,7 @@ import TaskCalendar from '@/Components/TaskCalendar.vue';
 import YmdDateInput from '@/Components/YmdDateInput.vue';
 import { expandPersonNames, GROUP_LABELS } from '@/utils/soumGovernors';
 import { formatTaskPeriodMd, isTaskDone, isTaskOverdue, isTaskPending, parseTaskPeriod } from '@/utils/taskPeriod';
+import { cellMatchesFilter, EMPTY_FILTER_HINT, EMPTY_FILTER_PLACEHOLDER, isEmptyFilterNeedle } from '@/utils/columnFilter';
 
 const props = defineProps({
     kind: { type: String, required: true },
@@ -1029,13 +1030,18 @@ const matchesColumnFilters = (task) => Object.entries(columnFilters).every(([key
     if (text === '') return true;
 
     const column = tableColumns.value.find((col) => col.key === key);
+    const raw = task[column?.field ?? key];
+
+    if (isEmptyFilterNeedle(text)) {
+        return cellMatchesFilter(raw, text);
+    }
 
     /*
      * «Хугацаа» баганад огноо сонгоно — тухайн өдрийг хамарсан
      * үүрэг чиглэлүүд үлдэнэ (08.01–09.30 гэх мэт мөрийг задалж үзнэ).
      */
     if (column?.type === 'period') {
-        const parsed = parseTaskPeriod(task[column.field] ?? '', new Date(text).getFullYear());
+        const parsed = parseTaskPeriod(raw ?? '', new Date(text).getFullYear());
 
         if (! parsed || parsed.unparsed || ! parsed.start || ! parsed.end) {
             return false;
@@ -1046,7 +1052,7 @@ const matchesColumnFilters = (task) => Object.entries(columnFilters).every(([key
         return parsed.start.getTime() <= target && target <= parsed.end.getTime();
     }
 
-    return searchKey(task[column?.field ?? key]).includes(searchKey(text));
+    return cellMatchesFilter(raw, text, { normalize: searchKey });
 });
 
 // Шүүлттэй үед зөвхөн холбогдох үүрэг чиглэл харагдана.
@@ -2287,7 +2293,8 @@ const cellEditable = (col) => {
                                     v-else
                                     v-model="columnFilters[col.key]"
                                     type="search"
-                                    placeholder="Хайх"
+                                    :placeholder="EMPTY_FILTER_PLACEHOLDER"
+                                    :title="EMPTY_FILTER_HINT"
                                     :aria-label="col.label + ' хайх'"
                                 />
                             </th>

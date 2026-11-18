@@ -5,6 +5,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import SheetCell from '@/Components/SheetCell.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import Modal from '@/Components/Modal.vue';
+import { cellMatchesFilter, EMPTY_FILTER_HINT, EMPTY_FILTER_PLACEHOLDER } from '@/utils/columnFilter';
 
 const props = defineProps({
     tab: { type: String, default: 'zahiramj_a' },
@@ -177,26 +178,20 @@ const searchKey = (value) => String(value ?? '')
 /** Огноог зөвхөн цифрээр нь харьцуулна: «2026.09.03», «09/03», «0903» бүгд таарна. */
 const DATE_FIELDS = ['issued_on', 'effective_on', 'blank_issued_on'];
 
-const digitsOnly = (value) => String(value ?? '').replace(/\D+/g, '');
-
 const matchesFilters = (row) => Object.entries(filters).every(([field, needle]) => {
-    const text = String(needle).trim();
-
-    if (text === '') return true;
-
     if (DATE_FIELDS.includes(field)) {
         const value = field === 'effective_on'
             ? (row.effective_on_display ?? row.effective_on ?? '')
             : (row.issued_on ?? '');
 
-        return digitsOnly(value).includes(digitsOnly(text));
+        return cellMatchesFilter(value, needle, { digits: true });
     }
 
     const value = field === 'number'
         ? (row.number_display ?? row.number)
         : (field === 'blank_person' ? row.person_name : row[field]);
 
-    return searchKey(value).includes(searchKey(text));
+    return cellMatchesFilter(value, needle, { normalize: searchKey });
 });
 
 const visibleRows = computed(() => (hasFilters.value ? props.rows.filter(matchesFilters) : props.rows));
@@ -941,7 +936,7 @@ const docColumnCount = computed(() => {
                                 </button>
                                 <span v-else class="text-[10px] text-slate-300">Хайх</span>
                             </th>
-                            <th><input v-model="filters.blank_person" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.blank_person" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
                             <th><input v-model="filters.blank_issued_on" type="search" placeholder="2026.09" /></th>
                             <th><input v-model="filters.qty_zahiramj" type="search" placeholder="—" /></th>
                             <th><input v-model="filters.qty_zahiramj_mn" type="search" placeholder="—" /></th>
@@ -951,10 +946,10 @@ const docColumnCount = computed(() => {
                             <th><input v-model="filters.qty_assignment_mn" type="search" placeholder="—" /></th>
                             <th><input v-model="filters.qty_council" type="search" placeholder="—" /></th>
                             <th><input v-model="filters.qty_council_mn" type="search" placeholder="—" /></th>
-                            <th><input v-model="filters.num_zahiramj" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.num_tushaal" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.void_zahiramj" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.void_tushaal" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.num_zahiramj" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.num_tushaal" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.void_zahiramj" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.void_tushaal" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
                             <th></th>
                             <th v-if="canManage"></th>
                         </tr>
@@ -1274,16 +1269,16 @@ const docColumnCount = computed(() => {
                                 <span v-else class="text-[10px] text-slate-300">Хайх</span>
                             </th>
                             <th><input v-model="filters.issued_on" type="search" placeholder="2026.09" /></th>
-                            <th><input v-model="filters.number" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.title" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.page_count" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.number" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.title" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.page_count" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
                             <th><input v-model="filters.effective_on" type="search" placeholder="2026.09" /></th>
-                            <th><input v-model="filters.attachment_name" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.attachment_pages" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.original_form" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.file_index" type="search" placeholder="Хайх" /></th>
-                            <th><input v-model="filters.person_name" type="search" placeholder="Хайх" /></th>
-                            <th v-if="isNiit"><input v-model="filters.kind_label" type="search" placeholder="Хайх" /></th>
+                            <th><input v-model="filters.attachment_name" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.attachment_pages" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.original_form" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.file_index" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th><input v-model="filters.person_name" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
+                            <th v-if="isNiit"><input v-model="filters.kind_label" type="search" :placeholder="EMPTY_FILTER_PLACEHOLDER" :title="EMPTY_FILTER_HINT" /></th>
                             <th></th>
                         </tr>
                     </thead>
