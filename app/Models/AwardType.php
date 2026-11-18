@@ -83,6 +83,41 @@ class AwardType extends Model
             ->all();
     }
 
+    /**
+     * Жагсаалтын дарааллаар ($anchorName-аас доош) бүртгэгдсэн нэрүүдийг устгана.
+     *
+     * @return int Устгасан мөрийн тоо
+     */
+    public static function deleteAfter(string $anchorName): int
+    {
+        $rows = static::query()
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->orderBy('id')
+            ->get(['id', 'name']);
+
+        $passedAnchor = false;
+        $ids = [];
+
+        foreach ($rows as $row) {
+            if (! $passedAnchor) {
+                if ($row->name === $anchorName) {
+                    $passedAnchor = true;
+                }
+
+                continue;
+            }
+
+            $ids[] = (int) $row->id;
+        }
+
+        if ($ids === []) {
+            return 0;
+        }
+
+        return static::query()->whereIn('id', $ids)->delete();
+    }
+
     /** @return list<string> */
     public static function defaultNames(): array
     {
