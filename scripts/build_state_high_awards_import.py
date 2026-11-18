@@ -88,14 +88,22 @@ def parse_letter_no(text: str) -> str | None:
 
 
 def split_last_award(text: str) -> tuple[str | None, str | None]:
+    """«ХХМ - 2020 он» → («ХХМ», 2020-01-01). Нэрээс оныг хасна."""
     text = clean(text)
     if not text:
         return None, None
+
+    years = re.findall(r"(?<!\d)((?:19|20)\d{2})(?!\d)", text)
     year = None
-    m = re.search(r"(19|20)\d{2}", text)
-    if m:
-        year = f"{m.group(0)}-01-01"
-    return text, year
+    name = text
+    if years:
+        y = int(years[-1])
+        if 1900 <= y <= 2100:
+            year = f"{y:04d}-01-01"
+            name = re.sub(rf"\s*[-–—/]?\s*{y}\s*(?:он)?\.?\s*", " ", name, flags=re.IGNORECASE)
+            name = re.sub(r"\s+", " ", name).strip(" \t-–—/|.,;")
+
+    return (name or None), year
 
 
 def parse_decree_blob(text: str) -> tuple[str | None, str | None, str | None]:

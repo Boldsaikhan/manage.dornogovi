@@ -233,4 +233,79 @@ class AwardNameNormalizer
 
         return true;
     }
+
+    /**
+     * Сүүлд авсан шагнал: нэрээс оныг салгана.
+     * «ХХМ - 2020 он» → нэр «Хөдөлмөрийн хүндэт медаль», огноо 2020-01-01.
+     *
+     * @return array{0: ?string, 1: ?string} [name, date Y-m-d]
+     */
+    public function splitLastAward(?string $value, mixed $existingDate = null): array
+    {
+        $existing = $this->normalizeYearDate($existingDate);
+
+        if ($value === null) {
+            return [null, $existing];
+        }
+
+        $text = trim((string) $value);
+
+        if ($text === '') {
+            return [null, $existing];
+        }
+
+        $year = null;
+
+        if (preg_match_all('/(?<!\d)((?:19|20)\d{2})(?!\d)/u', $text, $matches) > 0) {
+            $candidate = (int) end($matches[1]);
+
+            if ($candidate >= 1900 && $candidate <= 2100) {
+                $year = $candidate;
+            }
+        }
+
+        $name = $text;
+
+        if ($year !== null) {
+            $name = preg_replace(
+                '/\s*[-–—\/]?\s*'.preg_quote((string) $year, '/').'\s*(?:он)?\.?\s*/iu',
+                ' ',
+                $name,
+            ) ?? $name;
+            $name = preg_replace('/\s*,\s*/u', ', ', $name) ?? $name;
+            $name = preg_replace('/\s+/u', ' ', $name) ?? $name;
+            // trim()-ийн Unicode charlist UTF-8-ийг эвддэг тул regex ашиглана.
+            $name = preg_replace('/^[\s\-–—\/|.,;]+|[\s\-–—\/|.,;]+$/u', '', $name) ?? $name;
+        }
+
+        $canonical = $this->canonicalize($name !== '' ? $name : null);
+        $date = $existing ?? ($year !== null ? sprintf('%04d-01-01', $year) : null);
+
+        return [$canonical, $date];
+    }
+
+    private function normalizeYearDate(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        $raw = trim((string) $value);
+
+        if (preg_match('/^\d{4}$/', $raw) === 1) {
+            $year = (int) $raw;
+
+            return ($year >= 1900 && $year <= 2100) ? sprintf('%04d-01-01', $year) : null;
+        }
+
+        if (preg_match('/^(\d{4})-\d{2}-\d{2}/', $raw, $m) === 1) {
+            return sprintf('%04d-01-01', (int) $m[1]);
+        }
+
+        return null;
+    }
 }

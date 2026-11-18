@@ -244,8 +244,11 @@ class ImportStateHighAwards extends Command
             'resolution_number' => $this->nullableString($entry['resolution_number'] ?? null),
             'position' => $this->nullableString($entry['position'] ?? null),
             'address' => $this->nullableString($entry['address'] ?? null),
-            'last_award' => $names->canonicalize($this->nullableString($entry['last_award'] ?? null)),
-            'last_award_date' => $this->nullableDate($entry['last_award_date'] ?? null),
+            'last_award' => ($lastAward = $names->splitLastAward(
+                $this->nullableString($entry['last_award'] ?? null),
+                $entry['last_award_date'] ?? null,
+            ))[0],
+            'last_award_date' => $lastAward[1],
             'supporting_org' => $this->nullableString($entry['supporting_org'] ?? null),
             'forwarded_on' => $this->nullableDate($entry['forwarded_on'] ?? null),
             'forwarded_letter_no' => $this->nullableString($entry['forwarded_letter_no'] ?? null),

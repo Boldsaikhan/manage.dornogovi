@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\Award;
 use App\Models\AwardType;
 use App\Support\AwardImporter;
+use App\Support\AwardNameNormalizer;
 use App\Support\ColumnFilter;
 use App\Support\ModuleAccess;
 use App\Support\ModuleOwnScope;
@@ -420,6 +421,7 @@ class AwardController extends Controller
         $this->mergeYearOnlyDates($request);
         $data = $request->validate($rules);
         $data['category'] = $category;
+        $data = $this->applyLastAwardSplit($data);
 
         if (empty($allowedSubtypes)) {
             $data['subtype'] = null;
@@ -481,6 +483,7 @@ class AwardController extends Controller
 
         $this->mergeYearOnlyDates($request);
         $data = $request->validate($rules);
+        $data = $this->applyLastAwardSplit($data, $award);
 
         foreach (['award_date', 'last_award_date', 'forwarded_on'] as $dateField) {
             if (array_key_exists($dateField, $data) && empty($data[$dateField])) {
@@ -763,6 +766,36 @@ class AwardController extends Controller
         $request->merge([
             'last_award_date' => $this->yearOnlyToDate($request->input('last_award_date')),
         ]);
+    }
+
+    /**
+     * «ХХМ - 2020 он» → нэрээс оныг хасаж огноо багана руу шилжүүлнэ.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function applyLastAwardSplit(array $data, ?Award $existing = null): array
+    {
+        if (! array_key_exists('last_award', $data)) {
+            return $data;
+        }
+
+        $existingDate = array_key_exists('last_award_date', $data)
+            ? $data['last_award_date']
+            : $existing?->last_award_date;
+
+        [$name, $date] = app(AwardNameNormalizer::class)->splitLastAward(
+            is_string($data['last_award'] ?? null) ? $data['last_award'] : null,
+            $existingDate,
+        );
+
+        $data['last_award'] = $name;
+
+        if ($date !== null) {
+            $data['last_award_date'] = $date;
+        }
+
+        return $data;
     }
 
     private function yearOnlyToDate(mixed $value): ?string
