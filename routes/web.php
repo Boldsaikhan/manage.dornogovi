@@ -229,6 +229,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/modules/meetings/{meeting}/retry', [MeetingController::class, 'retry'])->name('meetings.retry');
     Route::post('/modules/meetings/{meeting}/audio', [MeetingController::class, 'uploadAudio'])->name('meetings.audio');
     Route::get('/modules/meetings/{meeting}/audio', [MeetingController::class, 'downloadAudio'])->name('meetings.audio.download');
+    Route::get('/modules/meetings/{meeting}/audio/stream', [MeetingController::class, 'streamAudio'])->name('meetings.audio.stream');
     Route::get('/modules/meetings/{meeting}/status', [MeetingController::class, 'status'])->name('meetings.status');
     Route::get('/modules/reports', [ReportCatalogController::class, 'index'])->name('reports.index');
     Route::get('/modules/reports/{report}/export', [ReportCatalogController::class, 'export'])->name('reports.export');

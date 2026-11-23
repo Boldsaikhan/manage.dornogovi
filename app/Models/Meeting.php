@@ -39,6 +39,7 @@ class Meeting extends Model
         'attendees',
         'minutes',
         'transcript',
+        'transcript_segments',
         'audio_path',
         'audio_original_name',
         'audio_mime',
@@ -59,6 +60,7 @@ class Meeting extends Model
         return [
             'held_at' => 'datetime',
             'attendees' => 'array',
+            'transcript_segments' => 'array',
             'transcribed_at' => 'datetime',
             'audio_size' => 'integer',
             'audio_duration_sec' => 'integer',

@@ -59,12 +59,157 @@ const form = useForm({
     held_at: '',
     minutes: '',
     transcript: '',
+    transcript_segments: [],
     status: 'draft',
     audio: null,
 });
 
 const isEditing = computed(() => editingId.value != null);
 const editingRow = computed(() => props.meetings.find((m) => m.id === editingId.value) ?? null);
+
+const editorTab = ref('convert'); // convert | notes
+const segments = ref([]);
+const speakerFilter = ref('');
+const followSpeech = ref(true);
+const audioPlayer = ref(null);
+const playing = ref(false);
+const currentTime = ref(0);
+const mediaDuration = ref(0);
+const playbackRate = ref(1);
+
+const speakerChoices = [
+    'Танигдаагүй яригч',
+    'Яригч 1',
+    'Яригч 2',
+    'Яригч 3',
+    'Яригч 4',
+    'Яригч 5',
+];
+
+const formatClock = (sec) => {
+    const n = Math.max(0, Math.floor(Number(sec) || 0));
+    const h = Math.floor(n / 3600);
+    const m = Math.floor((n % 3600) / 60);
+    const s = n % 60;
+    if (h > 0) {
+        return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    return `${m}:${String(s).padStart(2, '0')}`;
+};
+
+const syncSegmentsFromRow = (row) => {
+    const list = Array.isArray(row?.transcript_segments) ? row.transcript_segments : [];
+    if (list.length) {
+        segments.value = list.map((seg) => ({
+            id: seg.id || `seg_${Math.random().toString(36).slice(2)}`,
+            start: Number(seg.start || 0),
+            end: Number(seg.end || 0),
+            speaker: seg.speaker || 'Танигдаагүй яригч',
+            text: seg.text || '',
+        }));
+
+        return;
+    }
+
+    if (row?.transcript) {
+        segments.value = [{
+            id: `seg_${Math.random().toString(36).slice(2)}`,
+            start: 0,
+            end: Number(row.audio_duration_sec || 0),
+            speaker: 'Танигдаагүй яригч',
+            text: row.transcript,
+        }];
+
+        return;
+    }
+
+    segments.value = [];
+};
+
+const speakersInUse = computed(() => {
+    const set = new Set(segments.value.map((s) => s.speaker || 'Танигдаагүй яригч'));
+
+    return [...set];
+});
+
+const filteredSegments = computed(() => {
+    if (! speakerFilter.value) return segments.value;
+
+    return segments.value.filter((s) => s.speaker === speakerFilter.value);
+});
+
+const activeSegmentId = computed(() => {
+    const t = currentTime.value;
+    const hit = segments.value.find((s) => t >= s.start && t < Math.max(s.end, s.start + 0.5));
+
+    return hit?.id || null;
+});
+
+const totalDurationLabel = computed(() => {
+    const sec = editingRow.value?.audio_duration_sec || mediaDuration.value || 0;
+
+    return formatClock(sec);
+});
+
+const syncTranscriptFromSegments = () => {
+    form.transcript = segments.value.map((s) => s.text).filter(Boolean).join('\n\n');
+    form.transcript_segments = segments.value;
+};
+
+const removeSegment = (id) => {
+    segments.value = segments.value.filter((s) => s.id !== id);
+    syncTranscriptFromSegments();
+};
+
+const seekTo = (sec) => {
+    const el = audioPlayer.value;
+    if (! el) return;
+    el.currentTime = Math.max(0, sec);
+    currentTime.value = el.currentTime;
+};
+
+const togglePlay = async () => {
+    const el = audioPlayer.value;
+    if (! el) return;
+    if (el.paused) {
+        await el.play();
+        playing.value = true;
+    } else {
+        el.pause();
+        playing.value = false;
+    }
+};
+
+const onAudioTimeUpdate = () => {
+    const el = audioPlayer.value;
+    if (! el) return;
+    currentTime.value = el.currentTime || 0;
+    if (Number.isFinite(el.duration)) {
+        mediaDuration.value = el.duration;
+    }
+};
+
+const onAudioEnded = () => {
+    playing.value = false;
+};
+
+const cycleSpeed = () => {
+    const rates = [1, 1.25, 1.5, 2, 0.75];
+    const idx = rates.indexOf(playbackRate.value);
+    playbackRate.value = rates[(idx + 1) % rates.length];
+    if (audioPlayer.value) {
+        audioPlayer.value.playbackRate = playbackRate.value;
+    }
+};
+
+const copySegmentText = async (text) => {
+    try {
+        await navigator.clipboard.writeText(text || '');
+    } catch {
+        // ignore
+    }
+};
 
 const transcriptionBadge = (status) => {
     const map = {
@@ -133,10 +278,17 @@ const openCreate = () => {
     form.held_at = new Date().toISOString().slice(0, 16);
     form.minutes = '';
     form.transcript = '';
+    form.transcript_segments = [];
     form.status = 'draft';
     form.audio = null;
     audioFile.value = null;
     audioPreviewName.value = '';
+    segments.value = [];
+    editorTab.value = 'notes';
+    speakerFilter.value = '';
+    currentTime.value = 0;
+    mediaDuration.value = 0;
+    playing.value = false;
     showModal.value = true;
 };
 
@@ -151,12 +303,24 @@ const openEdit = (row) => {
     form.audio = null;
     audioFile.value = null;
     audioPreviewName.value = row.audio_name || '';
+    syncSegmentsFromRow(row);
+    syncTranscriptFromSegments();
+    editorTab.value = row.has_audio || (row.transcript_segments || []).length ? 'convert' : 'notes';
+    speakerFilter.value = '';
+    currentTime.value = 0;
+    mediaDuration.value = Number(row.audio_duration_sec || 0);
+    playing.value = false;
     showModal.value = true;
 };
 
 const closeModal = () => {
     showModal.value = false;
     stopRecording();
+    const el = audioPlayer.value;
+    if (el) {
+        el.pause();
+    }
+    playing.value = false;
 };
 
 watch(
@@ -199,6 +363,10 @@ const onDrop = (event) => {
 };
 
 const submit = () => {
+    syncTranscriptFromSegments();
+    form.transcript_segments = segments.value;
+    form.transcript = segments.value.map((s) => s.text).filter(Boolean).join('\n\n');
+
     if (isEditing.value) {
         form.audio = null;
         form.patch(route('meetings.update', editingId.value), {
@@ -341,13 +509,18 @@ const pollEditingStatus = async () => {
                 Object.assign(props.meetings[idx], data);
             }
             noteBusyProgress(data);
-            // Амьд текст — боловсруулж байх үед ч транскрипт шинэчлэгдэнэ.
-            if (typeof data.transcript === 'string' && data.transcript !== '') {
+            // Амьд текст / сегмент — боловсруулж байх үед ч шинэчлэгдэнэ.
+            if (Array.isArray(data.transcript_segments) && data.transcript_segments.length) {
+                syncSegmentsFromRow(data);
+                syncTranscriptFromSegments();
+            } else if (typeof data.transcript === 'string' && data.transcript !== '') {
                 form.transcript = data.transcript;
             }
             if (data.transcription_status === 'ready') {
                 form.minutes = data.minutes || form.minutes;
                 audioPreviewName.value = data.audio_name || audioPreviewName.value;
+                syncSegmentsFromRow(data);
+                syncTranscriptFromSegments();
                 stuckBusy.value = false;
             }
             if (data.transcription_status === 'failed') {
@@ -668,46 +841,235 @@ onBeforeUnmount(() => {
                     </button>
                 </div>
 
-                <form class="space-y-4" @submit.prevent="submit">
-                    <div class="grid gap-4 lg:grid-cols-5">
-                        <!-- Зүүн / гол: гарчиг, огноо, транскрипт -->
-                        <div class="flex min-h-0 flex-col gap-4 lg:col-span-3">
+                <form class="space-y-3" @submit.prevent="submit">
+                    <div class="flex gap-4 border-b border-slate-200 dark:border-slate-700">
+                        <button
+                            type="button"
+                            class="border-b-2 px-1 pb-2 text-sm font-semibold transition"
+                            :class="editorTab === 'convert'
+                                ? 'border-brand-navy-600 text-brand-navy-700 dark:border-sky-400 dark:text-sky-200'
+                                : 'border-transparent text-slate-500 hover:text-slate-700'"
+                            @click="editorTab = 'convert'"
+                        >
+                            Хөрвүүлэг
+                        </button>
+                        <button
+                            type="button"
+                            class="border-b-2 px-1 pb-2 text-sm font-semibold transition"
+                            :class="editorTab === 'notes'
+                                ? 'border-brand-navy-600 text-brand-navy-700 dark:border-sky-400 dark:text-sky-200'
+                                : 'border-transparent text-slate-500 hover:text-slate-700'"
+                            @click="editorTab = 'notes'"
+                        >
+                            Тэмдэглэл
+                        </button>
+                    </div>
+
+                    <!-- Хөрвүүлэг: сегмент + тоглуулагч -->
+                    <div v-show="editorTab === 'convert'" class="space-y-3">
+                        <div v-if="speakersInUse.length" class="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                class="rounded-full border px-3 py-1 text-xs font-medium transition"
+                                :class="!speakerFilter
+                                    ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
+                                    : 'border-slate-200 bg-white text-slate-600 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300'"
+                                @click="speakerFilter = ''"
+                            >
+                                Бүгд
+                            </button>
+                            <button
+                                v-for="name in speakersInUse"
+                                :key="name"
+                                type="button"
+                                class="rounded-full border px-3 py-1 text-xs font-medium transition"
+                                :class="speakerFilter === name
+                                    ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
+                                    : 'border-slate-200 bg-white text-slate-600 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300'"
+                                @click="speakerFilter = name"
+                            >
+                                {{ name }}
+                            </button>
+                        </div>
+
+                        <div class="relative max-h-[min(52vh,28rem)] space-y-3 overflow-y-auto pr-1">
+                            <div
+                                v-if="!filteredSegments.length"
+                                class="rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-400 dark:border-slate-700"
+                            >
+                                Боловсруулж эхлэхэд сегментүүд энд гарна…
+                            </div>
+
+                            <div
+                                v-for="seg in filteredSegments"
+                                :key="seg.id"
+                                class="rounded-xl border p-3 transition dark:border-slate-700"
+                                :class="activeSegmentId === seg.id
+                                    ? 'border-sky-300 bg-sky-50 dark:border-sky-700 dark:bg-sky-950/40'
+                                    : 'border-slate-200 bg-white dark:bg-slate-900/40'"
+                            >
+                                <div class="mb-2 flex flex-wrap items-center gap-2">
+                                    <select
+                                        v-model="seg.speaker"
+                                        class="ui-input !h-8 !w-auto min-w-[9rem] !py-1 text-xs"
+                                        :disabled="!canManage"
+                                        @change="syncTranscriptFromSegments"
+                                    >
+                                        <option
+                                            v-for="opt in speakerChoices"
+                                            :key="opt"
+                                            :value="opt"
+                                        >
+                                            {{ opt }}
+                                        </option>
+                                    </select>
+                                    <button
+                                        type="button"
+                                        class="rounded-md px-2 py-1 text-xs font-semibold tabular-nums text-brand-navy-700 hover:bg-slate-100 dark:text-sky-300 dark:hover:bg-slate-800"
+                                        @click="seekTo(seg.start)"
+                                    >
+                                        {{ formatClock(seg.start) }}
+                                    </button>
+                                    <span class="text-[11px] text-slate-400">→ {{ formatClock(seg.end) }}</span>
+                                    <div class="ml-auto flex items-center gap-1">
+                                        <button
+                                            type="button"
+                                            class="ui-icon-btn"
+                                            title="Хуулах"
+                                            @click="copySegmentText(seg.text)"
+                                        >
+                                            ⎘
+                                        </button>
+                                        <button
+                                            v-if="canManage"
+                                            type="button"
+                                            class="ui-icon-btn ui-icon-btn--danger"
+                                            title="Устгах"
+                                            @click="removeSegment(seg.id)"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                </div>
+                                <textarea
+                                    v-model="seg.text"
+                                    rows="3"
+                                    class="ui-input text-sm leading-relaxed"
+                                    :disabled="!canManage"
+                                    @input="syncTranscriptFromSegments"
+                                />
+                            </div>
+
+                            <button
+                                v-if="followSpeech && filteredSegments.length"
+                                type="button"
+                                class="sticky bottom-2 left-1/2 z-10 -translate-x-1/2 rounded-full bg-slate-800 px-3 py-1.5 text-xs font-medium text-white shadow-lg dark:bg-slate-700"
+                                @click="followSpeech = false"
+                            >
+                                Яриа дагахыг болиулах ×
+                            </button>
+                        </div>
+
+                        <div
+                            v-if="editingRow?.audio_stream_url"
+                            class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+                        >
+                            <audio
+                                ref="audioPlayer"
+                                class="hidden"
+                                :src="editingRow.audio_stream_url"
+                                preload="metadata"
+                                @timeupdate="onAudioTimeUpdate"
+                                @loadedmetadata="onAudioTimeUpdate"
+                                @ended="onAudioEnded"
+                                @play="playing = true"
+                                @pause="playing = false"
+                            />
+                            <div class="mb-2 flex items-center gap-3 text-xs tabular-nums text-slate-500">
+                                <span>{{ formatClock(currentTime) }}</span>
+                                <input
+                                    type="range"
+                                    class="h-1.5 flex-1 cursor-pointer accent-brand-navy-600"
+                                    min="0"
+                                    :max="Math.max(mediaDuration || editingRow.audio_duration_sec || 1, 1)"
+                                    step="0.1"
+                                    :value="currentTime"
+                                    @input="seekTo(Number($event.target.value))"
+                                />
+                                <span>{{ totalDurationLabel }}</span>
+                            </div>
+                            <div class="flex items-center justify-between gap-3">
+                                <button
+                                    type="button"
+                                    class="rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold dark:border-slate-600"
+                                    @click="cycleSpeed"
+                                >
+                                    {{ playbackRate }}x
+                                </button>
+                                <div class="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        class="ui-icon-btn"
+                                        title="10 сек ухраах"
+                                        @click="seekTo(currentTime - 10)"
+                                    >
+                                        ‹‹
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="flex h-11 w-11 items-center justify-center rounded-full bg-brand-navy-600 text-lg text-white shadow"
+                                        :title="playing ? 'Түр зогсоох' : 'Тоглуулах'"
+                                        @click="togglePlay"
+                                    >
+                                        {{ playing ? '❚❚' : '▶' }}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="ui-icon-btn"
+                                        title="10 сек урагшлуулах"
+                                        @click="seekTo(currentTime + 10)"
+                                    >
+                                        ››
+                                    </button>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="rounded-md border border-slate-200 px-2 py-1 text-xs dark:border-slate-600"
+                                    :class="followSpeech ? 'bg-slate-100 dark:bg-slate-800' : ''"
+                                    @click="followSpeech = !followSpeech"
+                                >
+                                    {{ followSpeech ? 'Дагах' : 'Дагахгүй' }}
+                                </button>
+                            </div>
+                        </div>
+                        <p
+                            v-else
+                            class="rounded-xl border border-dashed border-slate-200 px-3 py-4 text-center text-sm text-slate-400 dark:border-slate-700"
+                        >
+                            Аудио оруулсны дараа энд тоглуулагч гарна. «Тэмдэглэл» табаас файл оруулна.
+                        </p>
+                    </div>
+
+                    <!-- Тэмдэглэл: мета + файл + minutes -->
+                    <div v-show="editorTab === 'notes'" class="grid gap-4 lg:grid-cols-2">
+                        <div class="space-y-4">
                             <div>
                                 <label class="ui-label">Гарчиг</label>
                                 <input v-model="form.title" class="ui-input" required :disabled="!canManage" />
                                 <InputError :message="form.errors.title" class="mt-1" />
                             </div>
-
                             <div>
                                 <label class="ui-label">Огноо</label>
                                 <input v-model="form.held_at" type="datetime-local" class="ui-input" :disabled="!canManage" />
                                 <InputError :message="form.errors.held_at" class="mt-1" />
                             </div>
-
-                            <div class="flex min-h-0 flex-1 flex-col">
-                                <div class="mb-1 flex items-end justify-between gap-2">
-                                    <label class="ui-label !mb-0">Транскрипт (түүхий текст)</label>
-                                    <span
-                                        v-if="editingRow?.audio_duration_label"
-                                        class="text-[11px] tabular-nums text-slate-400"
-                                    >
-                                        {{ editingRow.transcription_position_label || '0:00' }}
-                                        /
-                                        {{ editingRow.audio_duration_label }}
-                                    </span>
-                                </div>
-                                <textarea
-                                    v-model="form.transcript"
-                                    rows="16"
-                                    class="ui-input min-h-[16rem] flex-1 font-mono text-sm"
-                                    :disabled="!canManage"
-                                    placeholder="Боловсруулж эхлэхэд эндээс текст бичигдэнэ…"
-                                />
+                            <div>
+                                <label class="ui-label">Төлөв</label>
+                                <select v-model="form.status" class="ui-input" :disabled="!canManage">
+                                    <option value="draft">Ноорог</option>
+                                    <option value="final">Батлагдсан</option>
+                                </select>
                             </div>
-                        </div>
-
-                        <!-- Баруун: файл, төлөв, хурлын тэмдэглэл -->
-                        <div class="flex min-h-0 flex-col gap-4 lg:col-span-2">
                             <div v-if="canManage" class="space-y-2">
                                 <label class="ui-label">Аудио (MP3, WAV, M4A, WEBM, WMA · max {{ maxUploadMb }}MB)</label>
                                 <div
@@ -719,15 +1081,9 @@ onBeforeUnmount(() => {
                                     @dragleave.prevent="dragOver = false"
                                     @drop.prevent="onDrop"
                                 >
-                                    <p class="text-sm text-slate-600 dark:text-slate-300">
-                                        Файл чирж оруулах эсвэл сонгох
-                                    </p>
+                                    <p class="text-sm text-slate-600 dark:text-slate-300">Файл чирж оруулах эсвэл сонгох</p>
                                     <div class="mt-3 flex flex-wrap items-center justify-center gap-2">
-                                        <button
-                                            type="button"
-                                            class="ui-btn-primary !py-2"
-                                            @click="fileInput?.click()"
-                                        >
+                                        <button type="button" class="ui-btn-primary !py-2" @click="fileInput?.click()">
                                             Файл сонгох
                                         </button>
                                         <button
@@ -772,49 +1128,30 @@ onBeforeUnmount(() => {
                                     />
                                 </div>
                                 <InputError :message="form.errors.audio" class="mt-1" />
-                                <p v-if="!sttReady" class="text-xs text-amber-700 dark:text-amber-300">
-                                    {{ sttHint }}
-                                </p>
+                                <p v-if="!sttReady" class="text-xs text-amber-700 dark:text-amber-300">{{ sttHint }}</p>
                                 <p v-if="editingRow?.has_audio && !audioFile" class="text-xs text-slate-400">
-                                    <a
-                                        :href="route('meetings.audio.download', editingRow.id)"
-                                        class="underline"
-                                        @click.stop
-                                    >
+                                    <a :href="route('meetings.audio.download', editingRow.id)" class="underline" @click.stop>
                                         Одоогийн аудио татах
                                     </a>
                                 </p>
                             </div>
-
-                            <div>
-                                <label class="ui-label">Төлөв</label>
-                                <select v-model="form.status" class="ui-input" :disabled="!canManage">
-                                    <option value="draft">Ноорог</option>
-                                    <option value="final">Батлагдсан</option>
-                                </select>
-                            </div>
-
-                            <div class="flex min-h-0 flex-1 flex-col">
-                                <label class="ui-label">Хурлын тэмдэглэл</label>
-                                <textarea
-                                    v-model="form.minutes"
-                                    rows="12"
-                                    class="ui-input min-h-[12rem] flex-1"
-                                    :disabled="!canManage"
-                                    placeholder="Цэгцтэй тэмдэглэл — засаж хадгална"
-                                />
-                                <InputError :message="form.errors.minutes" class="mt-1" />
-                            </div>
+                        </div>
+                        <div>
+                            <label class="ui-label">Хурлын тэмдэглэл</label>
+                            <textarea
+                                v-model="form.minutes"
+                                rows="16"
+                                class="ui-input min-h-[16rem]"
+                                :disabled="!canManage"
+                                placeholder="Цэгцтэй тэмдэглэл — засаж хадгална"
+                            />
+                            <InputError :message="form.errors.minutes" class="mt-1" />
                         </div>
                     </div>
 
                     <div v-if="canManage" class="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
                         <button type="button" class="ui-btn-ghost" @click="closeModal">Болих</button>
-                        <button
-                            type="submit"
-                            class="ui-btn-accent"
-                            :disabled="form.processing"
-                        >
+                        <button type="submit" class="ui-btn-accent" :disabled="form.processing">
                             {{ form.processing ? 'Хадгалж байна…' : (isEditing ? 'Хадгалах' : 'Үүсгэх') }}
                         </button>
                     </div>
