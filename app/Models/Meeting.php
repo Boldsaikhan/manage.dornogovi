@@ -43,8 +43,10 @@ class Meeting extends Model
         'audio_original_name',
         'audio_mime',
         'audio_size',
+        'audio_duration_sec',
         'transcription_status',
         'transcription_progress',
+        'transcription_position_sec',
         'transcription_stage',
         'transcription_error',
         'transcribed_at',
@@ -59,8 +61,42 @@ class Meeting extends Model
             'attendees' => 'array',
             'transcribed_at' => 'datetime',
             'audio_size' => 'integer',
+            'audio_duration_sec' => 'integer',
             'transcription_progress' => 'integer',
+            'transcription_position_sec' => 'integer',
         ];
+    }
+
+    public function audioDurationLabel(): ?string
+    {
+        if (! $this->audio_duration_sec) {
+            return null;
+        }
+
+        return $this->formatClock((int) $this->audio_duration_sec);
+    }
+
+    public function transcriptionPositionLabel(): ?string
+    {
+        if ($this->transcription_position_sec === null) {
+            return null;
+        }
+
+        return $this->formatClock((int) $this->transcription_position_sec);
+    }
+
+    public function formatClock(int $seconds): string
+    {
+        $seconds = max(0, $seconds);
+        $h = intdiv($seconds, 3600);
+        $m = intdiv($seconds % 3600, 60);
+        $s = $seconds % 60;
+
+        if ($h > 0) {
+            return sprintf('%d:%02d:%02d', $h, $m, $s);
+        }
+
+        return sprintf('%d:%02d', $m, $s);
     }
 
     public function creator(): BelongsTo

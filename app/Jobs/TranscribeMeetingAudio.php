@@ -20,8 +20,8 @@ class TranscribeMeetingAudio
 
     public function handle(MeetingTranscriptionService $transcription): void
     {
-        $timeout = (int) config('ai.whisper_timeout', 180);
-        @set_time_limit($timeout + 90);
+        // Урт бичлэгийг хэсэгчилж боловсруулна — нийт хугацааг нэмэгдүүлнэ.
+        @set_time_limit(0);
         ignore_user_abort(true);
 
         $meeting = Meeting::query()->find($this->meetingId);

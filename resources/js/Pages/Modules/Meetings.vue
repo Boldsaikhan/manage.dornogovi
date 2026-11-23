@@ -341,8 +341,11 @@ const pollEditingStatus = async () => {
                 Object.assign(props.meetings[idx], data);
             }
             noteBusyProgress(data);
+            // Амьд текст — боловсруулж байх үед ч транскрипт шинэчлэгдэнэ.
+            if (typeof data.transcript === 'string' && data.transcript !== '') {
+                form.transcript = data.transcript;
+            }
             if (data.transcription_status === 'ready') {
-                form.transcript = data.transcript || form.transcript;
                 form.minutes = data.minutes || form.minutes;
                 audioPreviewName.value = data.audio_name || audioPreviewName.value;
                 stuckBusy.value = false;
@@ -605,8 +608,35 @@ onBeforeUnmount(() => {
                             :style="{ width: `${busyProgress}%` }"
                         />
                     </div>
+                    <div
+                        v-if="editingRow.audio_duration_sec"
+                        class="mt-2 flex items-center justify-between text-xs tabular-nums opacity-90"
+                    >
+                        <span>
+                            Бичлэгийн урт:
+                            <strong>{{ editingRow.audio_duration_label }}</strong>
+                        </span>
+                        <span>
+                            Бичигдсэн:
+                            <strong>{{ editingRow.transcription_position_label || '0:00' }}</strong>
+                            /
+                            {{ editingRow.audio_duration_label }}
+                        </span>
+                    </div>
+                    <div
+                        v-if="editingRow.audio_duration_sec"
+                        class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"
+                        :title="`Бичигдсэн ${editingRow.transcription_position_label || '0:00'} / ${editingRow.audio_duration_label}`"
+                    >
+                        <div
+                            class="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                            :style="{
+                                width: `${Math.min(100, Math.round(100 * (editingRow.transcription_position_sec || 0) / editingRow.audio_duration_sec))}%`,
+                            }"
+                        />
+                    </div>
                     <p class="mt-2 text-xs opacity-80">
-                        Эхлээд MP3 болгож, дараа нь текст тэмдэглэл үүсгэнэ. Явц автоматаар шинэчлэгдэнэ.
+                        Бичлэгийг хэсэгчилж боловсруулна — зүүн талын транскрипт эхнээсээ бичигдэнэ.
                     </p>
                     <div
                         v-if="stuckBusy && canManage"
@@ -655,13 +685,23 @@ onBeforeUnmount(() => {
                             </div>
 
                             <div class="flex min-h-0 flex-1 flex-col">
-                                <label class="ui-label">Транскрипт (түүхий текст)</label>
+                                <div class="mb-1 flex items-end justify-between gap-2">
+                                    <label class="ui-label !mb-0">Транскрипт (түүхий текст)</label>
+                                    <span
+                                        v-if="editingRow?.audio_duration_label"
+                                        class="text-[11px] tabular-nums text-slate-400"
+                                    >
+                                        {{ editingRow.transcription_position_label || '0:00' }}
+                                        /
+                                        {{ editingRow.audio_duration_label }}
+                                    </span>
+                                </div>
                                 <textarea
                                     v-model="form.transcript"
                                     rows="16"
                                     class="ui-input min-h-[16rem] flex-1 font-mono text-sm"
                                     :disabled="!canManage"
-                                    placeholder="Аудио хөрвүүлсний дараа энд гарна…"
+                                    placeholder="Боловсруулж эхлэхэд эндээс текст бичигдэнэ…"
                                 />
                             </div>
                         </div>
@@ -719,6 +759,9 @@ onBeforeUnmount(() => {
                                     </div>
                                     <p v-if="audioPreviewName" class="mt-3 text-xs text-slate-500">
                                         Сонгосон: {{ audioPreviewName }}
+                                        <span v-if="editingRow?.audio_duration_label" class="ml-1 tabular-nums">
+                                            · {{ editingRow.audio_duration_label }}
+                                        </span>
                                     </p>
                                     <input
                                         ref="fileInput"
