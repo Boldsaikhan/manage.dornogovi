@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { router, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import InputError from '@/Components/InputError.vue';
@@ -76,6 +76,8 @@ const playing = ref(false);
 const currentTime = ref(0);
 const mediaDuration = ref(0);
 const playbackRate = ref(1);
+const docEditor = ref(null);
+const notesMetaOpen = ref(false);
 
 const speakerChoices = [
     'Танигдаагүй яригч',
@@ -155,6 +157,166 @@ const totalDurationLabel = computed(() => {
 const syncTranscriptFromSegments = () => {
     form.transcript = segments.value.map((s) => s.text).filter(Boolean).join('\n\n');
     form.transcript_segments = segments.value;
+};
+
+const escapeHtml = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
+const formatMnLongDate = (iso) => {
+    if (! iso) return '…… оны …-р сарын …-ны өдөр';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '…… оны …-р сарын …-ны өдөр';
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
+    const daySuffix = [1, 4, 9].includes(day % 10) && ! [11, 14].includes(day) ? 'ний' : 'ны';
+
+    return `${y} оны ${m}-р сарын ${day}-${daySuffix} өдөр`;
+};
+
+const formatMnClockPhrase = (iso) => {
+    if (! iso) return '…… цаг …… минут';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '…… цаг …… минут';
+
+    return `${d.getHours()} цаг ${String(d.getMinutes()).padStart(2, '0')} минутад`;
+};
+
+const buildFormalMinutes = () => {
+    const title = (form.title || 'Хурлын тэмдэглэл').trim();
+    const dateLine = formatMnLongDate(form.held_at);
+    const timePhrase = formatMnClockPhrase(form.held_at);
+    const bodySegs = segments.value.filter((s) => String(s.text || '').trim() !== '');
+
+    const lines = [
+        title,
+        '',
+        dateLine,
+        '',
+        `Аймгийн Засаг даргын Тамгын газрын ${title} хурал ${timePhrase} эхэлж, дараахь бүрэлдэхүүнтэйгээр хуралдав. Үүнд:`,
+        '',
+        'ХУРАЛД ОРОЛЦСОН БҮРЭЛДЭХҮҮН:',
+        '',
+        'Хурлын ирц: 0/0 (0.0%)',
+        '',
+        'ХЭЛЭЛЦСЭН АСУУДАЛ:',
+        '',
+        'ХУРЛЫН ТЭМДЭГЛЭЛ:',
+        '',
+    ];
+
+    if (bodySegs.length) {
+        bodySegs.forEach((seg) => {
+            const speaker = (seg.speaker || 'Танигдаагүй яригч').trim();
+            const text = String(seg.text || '').trim();
+            lines.push(`${speaker}: ${text}`);
+            lines.push('');
+        });
+    } else if (form.transcript) {
+        lines.push(String(form.transcript).trim());
+    } else if (form.minutes && ! looksLikeFormalMinutes(form.minutes)) {
+        lines.push(String(form.minutes).trim());
+    }
+
+    return lines.join('\n').trimEnd() + '\n';
+};
+
+const looksLikeFormalMinutes = (text) => {
+    const t = String(text || '');
+
+    return t.includes('ХУРЛЫН ТЭМДЭГЛЭЛ') || t.includes('ХУРАЛД ОРОЛЦСОН');
+};
+
+const minutesToHtml = (text) => {
+    const raw = String(text || '').replace(/\r\n/g, '\n').trim();
+    if (! raw) {
+        return '<p><br></p>';
+    }
+
+    const parts = raw.split('\n');
+    const html = [];
+    let isFirstNonEmpty = true;
+
+    parts.forEach((line) => {
+        if (line === '') {
+            html.push('<p><br></p>');
+
+            return;
+        }
+
+        if (isFirstNonEmpty) {
+            html.push(`<p class="meeting-doc__title">${escapeHtml(line)}</p>`);
+            isFirstNonEmpty = false;
+
+            return;
+        }
+
+        if (/^(ХУРАЛД ОРОЛЦСОН БҮРЭЛДЭХҮҮН|ХЭЛЭЛЦСЭН АСУУДАЛ|ХУРЛЫН ТЭМДЭГЛЭЛ):?\s*$/u.test(line)) {
+            html.push(`<p class="meeting-doc__heading">${escapeHtml(line)}</p>`);
+
+            return;
+        }
+
+        const speakerMatch = line.match(/^([^:]{1,80}):\s*(.*)$/u);
+        if (speakerMatch && /Яригч|Танигдаагүй|дарга|нарийн|гишүүн/i.test(speakerMatch[1])) {
+            html.push(
+                `<p><strong>${escapeHtml(speakerMatch[1])}:</strong> ${escapeHtml(speakerMatch[2])}</p>`,
+            );
+
+            return;
+        }
+
+        html.push(`<p>${escapeHtml(line)}</p>`);
+    });
+
+    return html.join('');
+};
+
+const syncDocEditorFromMinutes = async () => {
+    await nextTick();
+    if (! docEditor.value) return;
+    docEditor.value.innerHTML = minutesToHtml(form.minutes || '');
+};
+
+const onDocInput = () => {
+    if (! docEditor.value) return;
+    form.minutes = docEditor.value.innerText
+        .replace(/\u00a0/g, ' ')
+        .replace(/\n{3,}/g, '\n\n')
+        .trimEnd();
+};
+
+const ensureFormalMinutes = (force = false) => {
+    const current = String(form.minutes || '').trim();
+    if (force) {
+        form.minutes = buildFormalMinutes();
+
+        return;
+    }
+    if (looksLikeFormalMinutes(current)) {
+        return;
+    }
+    // Хоосон, эсвэл сегменттэй боловч албан загвар биш бол Word маягийн тэмдэглэл бүрдүүлнэ.
+    if (current === '' || segments.value.length > 0) {
+        form.minutes = buildFormalMinutes();
+    }
+};
+
+const regenerateMinutesFromSegments = async () => {
+    syncTranscriptFromSegments();
+    form.minutes = buildFormalMinutes();
+    await syncDocEditorFromMinutes();
+};
+
+const switchEditorTab = async (tab) => {
+    editorTab.value = tab;
+    if (tab === 'notes') {
+        ensureFormalMinutes(false);
+        await syncDocEditorFromMinutes();
+    }
 };
 
 const removeSegment = (id) => {
@@ -286,10 +448,13 @@ const openCreate = () => {
     segments.value = [];
     editorTab.value = 'notes';
     speakerFilter.value = '';
+    notesMetaOpen.value = true;
     currentTime.value = 0;
     mediaDuration.value = 0;
     playing.value = false;
+    form.minutes = buildFormalMinutes();
     showModal.value = true;
+    nextTick(() => syncDocEditorFromMinutes());
 };
 
 const openEdit = (row) => {
@@ -305,12 +470,20 @@ const openEdit = (row) => {
     audioPreviewName.value = row.audio_name || '';
     syncSegmentsFromRow(row);
     syncTranscriptFromSegments();
-    editorTab.value = row.has_audio || (row.transcript_segments || []).length ? 'convert' : 'notes';
+    const preferConvert = row.has_audio || (row.transcript_segments || []).length;
+    editorTab.value = preferConvert ? 'convert' : 'notes';
     speakerFilter.value = '';
+    notesMetaOpen.value = ! row.minutes;
     currentTime.value = 0;
     mediaDuration.value = Number(row.audio_duration_sec || 0);
     playing.value = false;
+    if (! preferConvert) {
+        ensureFormalMinutes(false);
+    }
     showModal.value = true;
+    if (! preferConvert) {
+        nextTick(() => syncDocEditorFromMinutes());
+    }
 };
 
 const closeModal = () => {
@@ -333,10 +506,24 @@ watch(
             form.minutes = row.minutes || form.minutes;
             form.transcript = row.transcript || form.transcript;
             audioPreviewName.value = row.audio_name || audioPreviewName.value;
+            syncSegmentsFromRow(row);
+            if (editorTab.value === 'notes' && row.transcription_status === 'ready') {
+                if (! looksLikeFormalMinutes(form.minutes)) {
+                    ensureFormalMinutes(true);
+                }
+                syncDocEditorFromMinutes();
+            }
         }
     },
     { deep: true },
 );
+
+watch(editorTab, (tab) => {
+    if (tab === 'notes') {
+        ensureFormalMinutes(false);
+        syncDocEditorFromMinutes();
+    }
+});
 
 const setAudio = (file) => {
     if (! file) return;
@@ -363,6 +550,9 @@ const onDrop = (event) => {
 };
 
 const submit = () => {
+    if (editorTab.value === 'notes') {
+        onDocInput();
+    }
     syncTranscriptFromSegments();
     form.transcript_segments = segments.value;
     form.transcript = segments.value.map((s) => s.text).filter(Boolean).join('\n\n');
@@ -750,15 +940,15 @@ onBeforeUnmount(() => {
             </div>
         </div>
 
-        <Modal :show="showModal" max-width="6xl" @close="closeModal">
-            <div class="space-y-4 p-5">
+        <Modal :show="showModal" max-width="7xl" @close="closeModal">
+            <div class="space-y-3 p-4 sm:p-5">
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <h2 class="text-lg font-semibold text-brand-navy-800 dark:text-slate-100">
                             {{ isEditing ? 'Тэмдэглэл засах' : 'Шинэ хурлын тэмдэглэл' }}
                         </h2>
                         <p class="mt-1 text-sm text-slate-500">
-                            Аудио → Whisper → засварлах текст
+                            Аудио → Whisper → Word маягаар засварлах
                         </p>
                     </div>
                     <button type="button" class="ui-btn-ghost !px-2 !py-1" @click="closeModal">Хаах</button>
@@ -842,25 +1032,29 @@ onBeforeUnmount(() => {
                 </div>
 
                 <form class="space-y-3" @submit.prevent="submit">
-                    <div class="flex gap-4 border-b border-slate-200 dark:border-slate-700">
+                    <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2 dark:border-slate-700">
                         <button
                             type="button"
-                            class="border-b-2 px-1 pb-2 text-sm font-semibold transition"
+                            class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition"
                             :class="editorTab === 'convert'
-                                ? 'border-brand-navy-600 text-brand-navy-700 dark:border-sky-400 dark:text-sky-200'
-                                : 'border-transparent text-slate-500 hover:text-slate-700'"
-                            @click="editorTab = 'convert'"
+                                ? 'bg-slate-100 text-brand-navy-800 dark:bg-slate-800 dark:text-sky-100'
+                                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 dark:hover:bg-slate-800'"
+                            @click="switchEditorTab('convert')"
                         >
+                            <span class="text-base leading-none" aria-hidden="true">☰</span>
                             Хөрвүүлэг
                         </button>
                         <button
                             type="button"
-                            class="border-b-2 px-1 pb-2 text-sm font-semibold transition"
+                            class="inline-flex items-center gap-1.5 rounded-t-md border px-3 py-1.5 text-sm font-semibold transition"
                             :class="editorTab === 'notes'
-                                ? 'border-brand-navy-600 text-brand-navy-700 dark:border-sky-400 dark:text-sky-200'
-                                : 'border-transparent text-slate-500 hover:text-slate-700'"
-                            @click="editorTab = 'notes'"
+                                ? 'border-sky-400 border-b-white bg-white text-brand-navy-800 shadow-sm dark:border-sky-500 dark:border-b-slate-900 dark:bg-slate-900 dark:text-sky-100'
+                                : 'border-transparent text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'"
+                            @click="switchEditorTab('notes')"
                         >
+                            <svg class="h-4 w-4 opacity-70" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h8l4-4V4a2 2 0 00-2-2H4zm8 13v-3h3l-3 3z" />
+                            </svg>
                             Тэмдэглэл
                         </button>
                     </div>
@@ -1050,10 +1244,33 @@ onBeforeUnmount(() => {
                         </p>
                     </div>
 
-                    <!-- Тэмдэглэл: мета + файл + minutes -->
-                    <div v-show="editorTab === 'notes'" class="grid gap-4 lg:grid-cols-2">
-                        <div class="space-y-4">
-                            <div>
+                    <!-- Тэмдэглэл: Word маягийн хуудас -->
+                    <div v-show="editorTab === 'notes'" class="space-y-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                class="ui-btn-ghost !py-1.5 text-xs"
+                                @click="notesMetaOpen = !notesMetaOpen"
+                            >
+                                {{ notesMetaOpen ? 'Тохиргоог хураах' : 'Гарчиг · огноо · аудио' }}
+                            </button>
+                            <button
+                                v-if="canManage && segments.length"
+                                type="button"
+                                class="ui-btn-ghost !py-1.5 text-xs"
+                                title="Хөрвүүлэг сегментээс албан тэмдэглэл дахин бүрдүүлнэ"
+                                @click="regenerateMinutesFromSegments"
+                            >
+                                Сегментээс дахин үүсгэх
+                            </button>
+                            <InputError :message="form.errors.minutes" class="mt-0" />
+                        </div>
+
+                        <div
+                            v-show="notesMetaOpen"
+                            class="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900/50 sm:grid-cols-2 lg:grid-cols-4"
+                        >
+                            <div class="lg:col-span-2">
                                 <label class="ui-label">Гарчиг</label>
                                 <input v-model="form.title" class="ui-input" required :disabled="!canManage" />
                                 <InputError :message="form.errors.title" class="mt-1" />
@@ -1070,10 +1287,13 @@ onBeforeUnmount(() => {
                                     <option value="final">Батлагдсан</option>
                                 </select>
                             </div>
-                            <div v-if="canManage" class="space-y-2">
+                            <div
+                                v-if="canManage"
+                                class="sm:col-span-2 lg:col-span-4"
+                            >
                                 <label class="ui-label">Аудио (MP3, WAV, M4A, WEBM, WMA · max {{ maxUploadMb }}MB)</label>
                                 <div
-                                    class="rounded-xl border-2 border-dashed px-3 py-4 text-center transition"
+                                    class="rounded-xl border-2 border-dashed px-3 py-3 text-center transition"
                                     :class="dragOver
                                         ? 'border-brand-orange-400 bg-brand-orange-50/60 dark:bg-brand-orange-950/20'
                                         : 'border-slate-200 dark:border-slate-700'"
@@ -1081,24 +1301,23 @@ onBeforeUnmount(() => {
                                     @dragleave.prevent="dragOver = false"
                                     @drop.prevent="onDrop"
                                 >
-                                    <p class="text-sm text-slate-600 dark:text-slate-300">Файл чирж оруулах эсвэл сонгох</p>
-                                    <div class="mt-3 flex flex-wrap items-center justify-center gap-2">
-                                        <button type="button" class="ui-btn-primary !py-2" @click="fileInput?.click()">
+                                    <div class="flex flex-wrap items-center justify-center gap-2">
+                                        <button type="button" class="ui-btn-primary !py-1.5 text-xs" @click="fileInput?.click()">
                                             Файл сонгох
                                         </button>
                                         <button
                                             v-if="!recording"
                                             type="button"
-                                            class="ui-btn-ghost !py-2"
+                                            class="ui-btn-ghost !py-1.5 text-xs"
                                             :disabled="!sttReady"
                                             @click="startRecording"
                                         >
-                                            ● Бичлэг эхлүүлэх
+                                            ● Бичлэг
                                         </button>
                                         <button
                                             v-else
                                             type="button"
-                                            class="ui-btn-danger !py-2"
+                                            class="ui-btn-danger !py-1.5 text-xs"
                                             @click="stopRecording"
                                         >
                                             ■ Зогсоох ({{ recordLabel }})
@@ -1106,19 +1325,19 @@ onBeforeUnmount(() => {
                                         <button
                                             v-if="isEditing && audioFile"
                                             type="button"
-                                            class="ui-btn-accent !py-2"
+                                            class="ui-btn-accent !py-1.5 text-xs"
                                             :disabled="!sttReady"
                                             @click="uploadAudioToExisting"
                                         >
-                                            Аудио илгээж хөрвүүлэх
+                                            Хөрвүүлэх
                                         </button>
-                                    </div>
-                                    <p v-if="audioPreviewName" class="mt-3 text-xs text-slate-500">
-                                        Сонгосон: {{ audioPreviewName }}
-                                        <span v-if="editingRow?.audio_duration_label" class="ml-1 tabular-nums">
-                                            · {{ editingRow.audio_duration_label }}
+                                        <span v-if="audioPreviewName" class="text-xs text-slate-500">
+                                            {{ audioPreviewName }}
+                                            <span v-if="editingRow?.audio_duration_label" class="tabular-nums">
+                                                · {{ editingRow.audio_duration_label }}
+                                            </span>
                                         </span>
-                                    </p>
+                                    </div>
                                     <input
                                         ref="fileInput"
                                         type="file"
@@ -1128,24 +1347,26 @@ onBeforeUnmount(() => {
                                     />
                                 </div>
                                 <InputError :message="form.errors.audio" class="mt-1" />
-                                <p v-if="!sttReady" class="text-xs text-amber-700 dark:text-amber-300">{{ sttHint }}</p>
-                                <p v-if="editingRow?.has_audio && !audioFile" class="text-xs text-slate-400">
+                                <p v-if="!sttReady" class="mt-1 text-xs text-amber-700 dark:text-amber-300">{{ sttHint }}</p>
+                                <p v-if="editingRow?.has_audio && !audioFile" class="mt-1 text-xs text-slate-400">
                                     <a :href="route('meetings.audio.download', editingRow.id)" class="underline" @click.stop>
                                         Одоогийн аудио татах
                                     </a>
                                 </p>
                             </div>
                         </div>
-                        <div>
-                            <label class="ui-label">Хурлын тэмдэглэл</label>
-                            <textarea
-                                v-model="form.minutes"
-                                rows="16"
-                                class="ui-input min-h-[16rem]"
-                                :disabled="!canManage"
-                                placeholder="Цэгцтэй тэмдэглэл — засаж хадгална"
-                            />
-                            <InputError :message="form.errors.minutes" class="mt-1" />
+
+                        <div class="meeting-doc-canvas max-h-[min(68vh,40rem)] overflow-y-auto rounded-lg">
+                            <div class="meeting-doc-sheet">
+                                <div
+                                    ref="docEditor"
+                                    class="meeting-doc-page"
+                                    :contenteditable="canManage ? 'true' : 'false'"
+                                    spellcheck="true"
+                                    @input="onDocInput"
+                                    @blur="onDocInput"
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -1160,3 +1381,77 @@ onBeforeUnmount(() => {
         </Modal>
     </AuthenticatedLayout>
 </template>
+
+<style scoped>
+.meeting-doc-canvas {
+    background:
+        linear-gradient(180deg, #e8eaed 0%, #dfe3e8 100%);
+    padding: 1.25rem 0.75rem 2rem;
+}
+
+.dark .meeting-doc-canvas {
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+}
+
+.meeting-doc-sheet {
+    margin: 0 auto;
+    width: min(100%, 48rem);
+    min-height: 36rem;
+    background: #fff;
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.06),
+        0 8px 24px rgba(15, 23, 42, 0.12),
+        0 0 0 1px rgba(15, 23, 42, 0.04);
+}
+
+.dark .meeting-doc-sheet {
+    background: #f8fafc;
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.35),
+        0 10px 28px rgba(0, 0, 0, 0.45);
+}
+
+.meeting-doc-page {
+    min-height: 36rem;
+    padding: 2.75rem 3rem 3.5rem;
+    color: #0f172a;
+    font-size: 14.5px;
+    line-height: 1.65;
+    font-family: "Segoe UI", "Noto Sans Mongolian", "Arial", sans-serif;
+    outline: none;
+    word-break: break-word;
+}
+
+.meeting-doc-page:focus {
+    box-shadow: inset 0 0 0 2px rgba(14, 165, 233, 0.25);
+}
+
+.meeting-doc-page :deep(p) {
+    margin: 0 0 0.65em;
+}
+
+.meeting-doc-page :deep(.meeting-doc__title) {
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.15rem;
+    letter-spacing: 0.02em;
+    margin-bottom: 1.1em;
+}
+
+.meeting-doc-page :deep(.meeting-doc__heading) {
+    font-weight: 700;
+    margin-top: 1em;
+    margin-bottom: 0.55em;
+}
+
+.meeting-doc-page :deep(strong) {
+    font-weight: 700;
+}
+
+@media (max-width: 640px) {
+    .meeting-doc-page {
+        padding: 1.5rem 1.15rem 2rem;
+        font-size: 14px;
+    }
+}
+</style>
