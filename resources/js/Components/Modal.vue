@@ -63,7 +63,13 @@ onUnmounted(() => {
     document.body.style.overflow = '';
 });
 
+const isFull = computed(() => props.maxWidth === 'full');
+
 const maxWidthClass = computed(() => {
+    if (isFull.value) {
+        return 'h-dvh max-h-dvh w-full max-w-none rounded-none';
+    }
+
     return {
         sm: 'sm:max-w-sm',
         md: 'sm:max-w-md',
@@ -84,7 +90,8 @@ const maxWidthClass = computed(() => {
         ref="dialog"
     >
         <div
-            class="fixed inset-0 z-50 overflow-y-auto px-4 py-6 sm:px-0"
+            class="fixed inset-0 z-50 overflow-y-auto"
+            :class="isFull ? 'p-0' : 'px-4 py-6 sm:px-0'"
             scroll-region
         >
             <Transition
@@ -116,8 +123,13 @@ const maxWidthClass = computed(() => {
             >
                 <div
                     v-show="show"
-                    class="mb-6 transform overflow-hidden rounded-lg bg-white text-slate-800 shadow-xl transition-all dark:bg-slate-800 dark:text-slate-100 sm:mx-auto sm:w-full"
-                    :class="maxWidthClass"
+                    class="relative z-10 transform overflow-hidden bg-white text-slate-800 shadow-xl transition-all dark:bg-slate-800 dark:text-slate-100"
+                    :class="[
+                        maxWidthClass,
+                        isFull
+                            ? 'flex flex-col'
+                            : 'mb-6 rounded-lg sm:mx-auto sm:w-full',
+                    ]"
                 >
                     <slot v-if="showSlot" />
                 </div>
