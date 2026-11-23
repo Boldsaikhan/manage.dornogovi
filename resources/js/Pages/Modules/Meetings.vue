@@ -542,7 +542,7 @@ onBeforeUnmount(() => {
             </div>
         </div>
 
-        <Modal :show="showModal" max-width="4xl" @close="closeModal">
+        <Modal :show="showModal" max-width="6xl" @close="closeModal">
             <div class="space-y-4 p-5">
                 <div class="flex items-start justify-between gap-3">
                     <div>
@@ -593,126 +593,134 @@ onBeforeUnmount(() => {
                     </button>
                 </div>
 
-                <form class="grid gap-4 md:grid-cols-2" @submit.prevent="submit">
-                    <div class="md:col-span-2">
-                        <label class="ui-label">Гарчиг</label>
-                        <input v-model="form.title" class="ui-input" required :disabled="!canManage" />
-                        <InputError :message="form.errors.title" class="mt-1" />
-                    </div>
-
-                    <div>
-                        <label class="ui-label">Огноо</label>
-                        <input v-model="form.held_at" type="datetime-local" class="ui-input" :disabled="!canManage" />
-                        <InputError :message="form.errors.held_at" class="mt-1" />
-                    </div>
-
-                    <div>
-                        <label class="ui-label">Төлөв</label>
-                        <select v-model="form.status" class="ui-input" :disabled="!canManage">
-                            <option value="draft">Ноорог</option>
-                            <option value="final">Батлагдсан</option>
-                        </select>
-                    </div>
-
-                    <div v-if="canManage" class="md:col-span-2 space-y-2">
-                        <label class="ui-label">Аудио (MP3, WAV, M4A, WEBM, WMA · max {{ maxUploadMb }}MB)</label>
-                        <div
-                            class="rounded-xl border-2 border-dashed px-4 py-6 text-center transition"
-                            :class="dragOver
-                                ? 'border-brand-orange-400 bg-brand-orange-50/60 dark:bg-brand-orange-950/20'
-                                : 'border-slate-200 dark:border-slate-700'"
-                            @dragover.prevent="dragOver = true"
-                            @dragleave.prevent="dragOver = false"
-                            @drop.prevent="onDrop"
-                        >
-                            <p class="text-sm text-slate-600 dark:text-slate-300">
-                                Файл чирж оруулах эсвэл сонгох
-                            </p>
-                            <div class="mt-3 flex flex-wrap items-center justify-center gap-2">
-                                <button
-                                    type="button"
-                                    class="ui-btn-primary !py-2"
-                                    @click="fileInput?.click()"
-                                >
-                                    Файл сонгох
-                                </button>
-                                <button
-                                    v-if="!recording"
-                                    type="button"
-                                    class="ui-btn-ghost !py-2"
-                                    :disabled="!sttReady"
-                                    @click="startRecording"
-                                >
-                                    ● Бичлэг эхлүүлэх
-                                </button>
-                                <button
-                                    v-else
-                                    type="button"
-                                    class="ui-btn-danger !py-2"
-                                    @click="stopRecording"
-                                >
-                                    ■ Зогсоох ({{ recordLabel }})
-                                </button>
-                                <button
-                                    v-if="isEditing && audioFile"
-                                    type="button"
-                                    class="ui-btn-accent !py-2"
-                                    :disabled="!sttReady"
-                                    @click="uploadAudioToExisting"
-                                >
-                                    Аудио илгээж хөрвүүлэх
-                                </button>
+                <form class="space-y-4" @submit.prevent="submit">
+                    <div class="grid gap-4 lg:grid-cols-5">
+                        <!-- Зүүн / гол: гарчиг, огноо, транскрипт -->
+                        <div class="flex min-h-0 flex-col gap-4 lg:col-span-3">
+                            <div>
+                                <label class="ui-label">Гарчиг</label>
+                                <input v-model="form.title" class="ui-input" required :disabled="!canManage" />
+                                <InputError :message="form.errors.title" class="mt-1" />
                             </div>
-                            <p v-if="audioPreviewName" class="mt-3 text-xs text-slate-500">
-                                Сонгосон: {{ audioPreviewName }}
-                            </p>
-                            <input
-                                ref="fileInput"
-                                type="file"
-                                class="hidden"
-                                accept="audio/*,.mp3,.wav,.m4a,.webm,.ogg,.flac,.wma,.asf"
-                                @change="onFileChange"
-                            />
+
+                            <div>
+                                <label class="ui-label">Огноо</label>
+                                <input v-model="form.held_at" type="datetime-local" class="ui-input" :disabled="!canManage" />
+                                <InputError :message="form.errors.held_at" class="mt-1" />
+                            </div>
+
+                            <div class="flex min-h-0 flex-1 flex-col">
+                                <label class="ui-label">Транскрипт (түүхий текст)</label>
+                                <textarea
+                                    v-model="form.transcript"
+                                    rows="16"
+                                    class="ui-input min-h-[16rem] flex-1 font-mono text-sm"
+                                    :disabled="!canManage"
+                                    placeholder="Аудио хөрвүүлсний дараа энд гарна…"
+                                />
+                            </div>
                         </div>
-                        <InputError :message="form.errors.audio" class="mt-1" />
-                        <p v-if="!sttReady" class="text-xs text-amber-700 dark:text-amber-300">
-                            {{ sttHint }}
-                        </p>
-                        <p v-if="editingRow?.has_audio && !audioFile" class="text-xs text-slate-400">
-                            <a
-                                :href="route('meetings.audio.download', editingRow.id)"
-                                class="underline"
-                                @click.stop
-                            >
-                                Одоогийн аудио татах
-                            </a>
-                        </p>
+
+                        <!-- Баруун: файл, төлөв, хурлын тэмдэглэл -->
+                        <div class="flex min-h-0 flex-col gap-4 lg:col-span-2">
+                            <div v-if="canManage" class="space-y-2">
+                                <label class="ui-label">Аудио (MP3, WAV, M4A, WEBM, WMA · max {{ maxUploadMb }}MB)</label>
+                                <div
+                                    class="rounded-xl border-2 border-dashed px-3 py-4 text-center transition"
+                                    :class="dragOver
+                                        ? 'border-brand-orange-400 bg-brand-orange-50/60 dark:bg-brand-orange-950/20'
+                                        : 'border-slate-200 dark:border-slate-700'"
+                                    @dragover.prevent="dragOver = true"
+                                    @dragleave.prevent="dragOver = false"
+                                    @drop.prevent="onDrop"
+                                >
+                                    <p class="text-sm text-slate-600 dark:text-slate-300">
+                                        Файл чирж оруулах эсвэл сонгох
+                                    </p>
+                                    <div class="mt-3 flex flex-wrap items-center justify-center gap-2">
+                                        <button
+                                            type="button"
+                                            class="ui-btn-primary !py-2"
+                                            @click="fileInput?.click()"
+                                        >
+                                            Файл сонгох
+                                        </button>
+                                        <button
+                                            v-if="!recording"
+                                            type="button"
+                                            class="ui-btn-ghost !py-2"
+                                            :disabled="!sttReady"
+                                            @click="startRecording"
+                                        >
+                                            ● Бичлэг эхлүүлэх
+                                        </button>
+                                        <button
+                                            v-else
+                                            type="button"
+                                            class="ui-btn-danger !py-2"
+                                            @click="stopRecording"
+                                        >
+                                            ■ Зогсоох ({{ recordLabel }})
+                                        </button>
+                                        <button
+                                            v-if="isEditing && audioFile"
+                                            type="button"
+                                            class="ui-btn-accent !py-2"
+                                            :disabled="!sttReady"
+                                            @click="uploadAudioToExisting"
+                                        >
+                                            Аудио илгээж хөрвүүлэх
+                                        </button>
+                                    </div>
+                                    <p v-if="audioPreviewName" class="mt-3 text-xs text-slate-500">
+                                        Сонгосон: {{ audioPreviewName }}
+                                    </p>
+                                    <input
+                                        ref="fileInput"
+                                        type="file"
+                                        class="hidden"
+                                        accept="audio/*,.mp3,.wav,.m4a,.webm,.ogg,.flac,.wma,.asf"
+                                        @change="onFileChange"
+                                    />
+                                </div>
+                                <InputError :message="form.errors.audio" class="mt-1" />
+                                <p v-if="!sttReady" class="text-xs text-amber-700 dark:text-amber-300">
+                                    {{ sttHint }}
+                                </p>
+                                <p v-if="editingRow?.has_audio && !audioFile" class="text-xs text-slate-400">
+                                    <a
+                                        :href="route('meetings.audio.download', editingRow.id)"
+                                        class="underline"
+                                        @click.stop
+                                    >
+                                        Одоогийн аудио татах
+                                    </a>
+                                </p>
+                            </div>
+
+                            <div>
+                                <label class="ui-label">Төлөв</label>
+                                <select v-model="form.status" class="ui-input" :disabled="!canManage">
+                                    <option value="draft">Ноорог</option>
+                                    <option value="final">Батлагдсан</option>
+                                </select>
+                            </div>
+
+                            <div class="flex min-h-0 flex-1 flex-col">
+                                <label class="ui-label">Хурлын тэмдэглэл</label>
+                                <textarea
+                                    v-model="form.minutes"
+                                    rows="12"
+                                    class="ui-input min-h-[12rem] flex-1"
+                                    :disabled="!canManage"
+                                    placeholder="Цэгцтэй тэмдэглэл — засаж хадгална"
+                                />
+                                <InputError :message="form.errors.minutes" class="mt-1" />
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="md:col-span-2">
-                        <label class="ui-label">Транскрипт (түүхий текст)</label>
-                        <textarea
-                            v-model="form.transcript"
-                            rows="5"
-                            class="ui-input font-mono text-sm"
-                            :disabled="!canManage"
-                            placeholder="Аудио хөрвүүлсний дараа энд гарна…"
-                        />
-                    </div>
-
-                    <div class="md:col-span-2">
-                        <label class="ui-label">Хурлын тэмдэглэл</label>
-                        <textarea
-                            v-model="form.minutes"
-                            rows="10"
-                            class="ui-input"
-                            :disabled="!canManage"
-                            placeholder="Цэгцтэй тэмдэглэл — засаж хадгална"
-                        />
-                        <InputError :message="form.errors.minutes" class="mt-1" />
-                    </div>
-
-                    <div v-if="canManage" class="md:col-span-2 flex flex-wrap justify-end gap-2">
+                    <div v-if="canManage" class="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
                         <button type="button" class="ui-btn-ghost" @click="closeModal">Болих</button>
                         <button
                             type="submit"
