@@ -215,6 +215,76 @@ class MeetingMinutesTest extends TestCase
         $this->assertStringContainsString('текст олдсонгүй', (string) $meeting->transcription_error);
     }
 
+    public function test_hallucinated_chinese_transcript_is_rejected(): void
+    {
+        Storage::fake('local');
+        $admin = $this->admin();
+
+        app(AiSettings::class)->setOpenAiApiKey('sk-test-meeting-key');
+        app(AiSettings::class)->set(AiSettings::KEY_PROVIDER, 'openai');
+
+        $path = 'meeting-audio/1/zh.mp3';
+        Storage::disk('local')->put($path, 'fake-audio-bytes');
+
+        $meeting = Meeting::query()->create([
+            'title' => 'Хятад hallucination',
+            'held_at' => now(),
+            'status' => 'draft',
+            'audio_path' => $path,
+            'audio_original_name' => 'zh.mp3',
+            'audio_mime' => 'audio/mpeg',
+            'audio_size' => 16,
+            'transcription_status' => Meeting::TRANSCRIPTION_PENDING,
+            'created_by' => $admin->id,
+        ]);
+
+        Http::fake([
+            '*/audio/transcriptions' => Http::response('本期视频就拍到这里了. 谢谢观看. Менің тіл.', 200),
+        ]);
+
+        (new TranscribeMeetingAudio($meeting->id))->handle(app(\App\Services\Ai\MeetingTranscriptionService::class));
+
+        $meeting->refresh();
+        $this->assertSame(Meeting::TRANSCRIPTION_FAILED, $meeting->transcription_status);
+        $this->assertStringContainsString('найдвартай', (string) $meeting->transcription_error);
+    }
+
+    public function test_prompt_echo_transcript_is_rejected(): void
+    {
+        Storage::fake('local');
+        $admin = $this->admin();
+
+        app(AiSettings::class)->setOpenAiApiKey('sk-test-meeting-key');
+        app(AiSettings::class)->set(AiSettings::KEY_PROVIDER, 'openai');
+
+        $path = 'meeting-audio/1/echo.mp3';
+        Storage::disk('local')->put($path, 'fake-audio-bytes');
+
+        $meeting = Meeting::query()->create([
+            'title' => 'Prompt echo',
+            'held_at' => now(),
+            'status' => 'draft',
+            'audio_path' => $path,
+            'audio_original_name' => 'echo.mp3',
+            'audio_mime' => 'audio/mpeg',
+            'audio_size' => 16,
+            'transcription_status' => Meeting::TRANSCRIPTION_PENDING,
+            'created_by' => $admin->id,
+        ]);
+
+        Http::fake([
+            '*/audio/transcriptions' => Http::response(
+                'Зөвхөн сонсогдсон монгол үгийг кирилл үсгээр бич. Англиар бүү орчуул.',
+                200
+            ),
+        ]);
+
+        (new TranscribeMeetingAudio($meeting->id))->handle(app(\App\Services\Ai\MeetingTranscriptionService::class));
+
+        $meeting->refresh();
+        $this->assertSame(Meeting::TRANSCRIPTION_FAILED, $meeting->transcription_status);
+    }
+
     public function test_hallucinated_english_transcript_is_rejected(): void
     {
         Storage::fake('local');
