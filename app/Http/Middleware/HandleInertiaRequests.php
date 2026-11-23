@@ -46,6 +46,7 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'info' => fn () => $request->session()->get('info'),
                 'warning' => fn () => $request->session()->get('warning'),
+                'error' => fn () => $request->session()->get('error'),
                 // Сан нээгдмэгц тухайн систем рүү үргэлжлүүлнэ.
                 'launch_after_unlock' => fn () => $request->session()->get('launch_after_unlock'),
             ],

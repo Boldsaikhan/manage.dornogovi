@@ -13,6 +13,9 @@ return [
     'default_provider' => env('AI_PROVIDER', 'local'),
     'openai_base_url' => env('AI_OPENAI_BASE_URL', 'https://api.openai.com/v1'),
     'openai_timeout' => (int) env('AI_OPENAI_TIMEOUT', 45),
+    'whisper_model' => env('AI_WHISPER_MODEL', 'whisper-1'),
+    'whisper_timeout' => (int) env('AI_WHISPER_TIMEOUT', 180),
+    'whisper_max_mb' => (int) env('AI_WHISPER_MAX_MB', 25),
     'max_history_messages' => 12,
     'max_tool_results' => 12,
 ];

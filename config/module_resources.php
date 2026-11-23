@@ -385,10 +385,11 @@ return [
     'meetings' => [
         'model' => App\Models\Meeting::class,
         'title' => 'Хурлын тэмдэглэл',
-        'description' => 'Хурлын тэмдэглэлийг бүртгэж, автоматжуулах суурь.',
+        'description' => 'Аудио → текст хурлын тэмдэглэл (Whisper STT).',
         'columns' => [
             ['key' => 'title', 'label' => 'Гарчиг'],
             ['key' => 'held_at', 'label' => 'Огноо'],
+            ['key' => 'transcription_status', 'label' => 'Боловсруулалт'],
             ['key' => 'status', 'label' => 'Төлөв'],
         ],
         'fields' => [
@@ -400,7 +401,7 @@ return [
                 'draft' => 'Ноорог', 'final' => 'Батлагдсан',
             ]],
         ],
-        'defaults' => ['status' => 'draft'],
+        'defaults' => ['status' => 'draft', 'transcription_status' => 'none'],
         'on_create' => 'attach_creator',
     ],
     'reports' => [
