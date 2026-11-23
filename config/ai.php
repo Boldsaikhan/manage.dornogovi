@@ -16,6 +16,8 @@ return [
     'whisper_model' => env('AI_WHISPER_MODEL', 'whisper-1'),
     'whisper_timeout' => (int) env('AI_WHISPER_TIMEOUT', 180),
     'whisper_max_mb' => (int) env('AI_WHISPER_MAX_MB', 25),
+    // Амьд текст бичилтэд аудиог хэдэн секундээр хэсэглэх.
+    'whisper_chunk_seconds' => (int) env('AI_WHISPER_CHUNK_SECONDS', 30),
     // Whisper API mn кодыг дэмжихгүй тул prompt-оор монгол руу чиглүүлнэ.
     'whisper_prompt' => env(
         'AI_WHISPER_PROMPT',

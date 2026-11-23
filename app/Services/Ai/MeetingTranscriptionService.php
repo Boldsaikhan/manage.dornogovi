@@ -30,6 +30,9 @@ class MeetingTranscriptionService
         return 'Системийн тохиргоо → Manage AI хэсэгт OpenAI API түлхүүр оруулна уу. Whisper (speech-to-text) энэ түлхүүрээр ажиллана.';
     }
 
+    /** Нэг хэсгийн урт (сек) — эхнээсээ текст бичигдэхийн тулд жижиг хэсэгчилж Whisper дуудна. */
+    private const CHUNK_SECONDS = 30;
+
     public function transcribeMeeting(Meeting $meeting): Meeting
     {
         if (! $this->isReady()) {
@@ -40,25 +43,41 @@ class MeetingTranscriptionService
             throw new RuntimeException('Аудио файл олдсонгүй.');
         }
 
-        $this->setProgress($meeting, Meeting::TRANSCRIPTION_CONVERTING, 5, 'Аудиог MP3 болгож хөрвүүлж байна…');
+        $this->setProgress($meeting, Meeting::TRANSCRIPTION_CONVERTING, 5, 'Аудиог MP3 болгож хөрвүүлж байна…', 0);
 
         $mp3Relative = $this->ensureMp3($meeting);
-
-        $this->setProgress($meeting, Meeting::TRANSCRIPTION_PROCESSING, 45, 'Текст рүү хөрвүүлж байна (Whisper)…');
-
         $absolute = Storage::disk('local')->path($mp3Relative);
-        $raw = $this->whisper($meeting, $absolute, basename($mp3Relative));
+        $ffmpeg = $this->findFfmpeg();
+        $duration = $ffmpeg ? $this->probeDurationSeconds($ffmpeg, $absolute) : null;
 
-        $this->setProgress($meeting, Meeting::TRANSCRIPTION_PROCESSING, 85, 'Тэмдэглэл цэгцэлж байна…');
+        $meeting->forceFill([
+            'audio_duration_sec' => $duration ? (int) round($duration) : null,
+            'transcription_position_sec' => 0,
+            'transcript' => '',
+        ])->save();
+
+        $raw = $this->transcribeProgressively($meeting, $absolute, $ffmpeg, $duration);
+
+        $this->setProgress(
+            $meeting,
+            Meeting::TRANSCRIPTION_PROCESSING,
+            92,
+            'Тэмдэглэл цэгцэлж байна…',
+            (int) ($meeting->audio_duration_sec ?? $meeting->transcription_position_sec ?? 0),
+        );
 
         $minutes = $this->formatMinutes($raw, $meeting);
+        $endPos = (int) ($meeting->fresh()?->audio_duration_sec ?? $meeting->transcription_position_sec ?? 0);
 
         $meeting->forceFill([
             'transcript' => $raw,
             'minutes' => $minutes,
             'transcription_status' => Meeting::TRANSCRIPTION_READY,
             'transcription_progress' => 100,
-            'transcription_stage' => 'Бэлэн',
+            'transcription_position_sec' => $endPos,
+            'transcription_stage' => $endPos > 0
+                ? 'Бэлэн · '.$this->formatClock($endPos)
+                : 'Бэлэн',
             'transcription_error' => null,
             'transcribed_at' => now(),
         ])->save();
@@ -68,12 +87,189 @@ class MeetingTranscriptionService
 
     public function markFailed(Meeting $meeting, string $message): void
     {
+        $pos = (int) ($meeting->transcription_position_sec ?? 0);
+        $dur = (int) ($meeting->audio_duration_sec ?? 0);
+        $where = $dur > 0
+            ? sprintf(' · алдааны байрлал %s / %s', $this->formatClock($pos), $this->formatClock($dur))
+            : ($pos > 0 ? ' · бичигдсэн '.$this->formatClock($pos) : '');
+
         $meeting->forceFill([
             'transcription_status' => Meeting::TRANSCRIPTION_FAILED,
-            'transcription_progress' => 0,
-            'transcription_stage' => 'Алдаа',
-            'transcription_error' => mb_substr($message, 0, 2000),
+            'transcription_stage' => mb_substr('Алдаа'.$where, 0, 64),
+            'transcription_error' => mb_substr(trim($message.$where), 0, 2000),
         ])->save();
+    }
+
+    /**
+     * Аудиог хэсэгчилж Whisper-ээр боловсруулж, транскриптыг амьд хадгална.
+     */
+    private function transcribeProgressively(
+        Meeting $meeting,
+        string $absolutePath,
+        ?string $ffmpeg,
+        ?float $duration,
+    ): string {
+        $chunkSec = (int) config('ai.whisper_chunk_seconds', self::CHUNK_SECONDS);
+        $chunkSec = max(15, min(60, $chunkSec));
+
+        // ffmpeg/урт байхгүй бол нэг удаа бүтнээр.
+        if (! $ffmpeg || ! $duration || $duration <= $chunkSec + 5) {
+            $label = $duration
+                ? 'Текст бичиж байна… 0:00 / '.$this->formatClock((int) round($duration))
+                : 'Текст бичиж байна (Whisper)…';
+            $this->setProgress($meeting, Meeting::TRANSCRIPTION_PROCESSING, 50, $label, 0);
+            $text = $this->whisperFile($absolutePath, basename($absolutePath));
+            $text = $this->collapseRepetitions($text);
+            if ($this->looksUnreliableTranscript($text)) {
+                throw new RuntimeException(
+                    'Аудиог найдвартай монгол текст болгож чадсангүй (буруу хэл/давталт илэрлээ). '
+                    .'Дуу чимээгүй, тод монгол яриатай хэсгийг дахин оруулна уу.'
+                );
+            }
+            $end = $duration ? (int) round($duration) : 0;
+            $meeting->forceFill([
+                'transcript' => $text,
+                'transcription_position_sec' => $end,
+            ])->save();
+
+            return $text;
+        }
+
+        $parts = [];
+        $total = (int) ceil($duration);
+        $overlap = 1;
+        $start = 0;
+        $index = 0;
+
+        while ($start < $duration - 0.5) {
+            $len = min($chunkSec, $duration - $start);
+            $chunkPath = sys_get_temp_dir().DIRECTORY_SEPARATOR
+                .'meeting-chunk-'.$meeting->id.'-'.$index.'-'.uniqid('', true).'.mp3';
+
+            try {
+                $this->extractAudioChunk($ffmpeg, $absolutePath, $chunkPath, $start, $len);
+                $pct = (int) round(45 + (($start + $len) / $duration) * 45); // 45→90
+                $this->setProgress(
+                    $meeting,
+                    Meeting::TRANSCRIPTION_PROCESSING,
+                    $pct,
+                    sprintf(
+                        'Текст бичиж байна… %s / %s',
+                        $this->formatClock((int) round($start + $len)),
+                        $this->formatClock($total),
+                    ),
+                    (int) round($start),
+                );
+
+                $chunkText = $this->whisperFile($chunkPath, basename($chunkPath));
+                $chunkText = trim($this->collapseRepetitions($chunkText));
+
+                // Хэсэг доторх хүчтэй hallucination-ийг алгасна (бүтэн файл унагахгүй).
+                if ($chunkText !== '' && ! $this->looksUnreliableTranscript($chunkText)) {
+                    $parts[] = $chunkText;
+                } elseif ($chunkText !== '' && $this->hasCyrillic($chunkText)) {
+                    $parts[] = $chunkText;
+                }
+
+                $combined = trim(implode("\n\n", $parts));
+                $pos = (int) round(min($duration, $start + $len));
+                $meeting->forceFill([
+                    'transcript' => $combined,
+                    'transcription_position_sec' => $pos,
+                ])->save();
+            } catch (RuntimeException $e) {
+                $meeting->forceFill([
+                    'transcription_position_sec' => (int) round($start),
+                ])->save();
+
+                throw new RuntimeException(
+                    sprintf(
+                        '%s (байрлал %s / %s)',
+                        $e->getMessage(),
+                        $this->formatClock((int) round($start)),
+                        $this->formatClock($total),
+                    )
+                );
+            } finally {
+                if (is_file($chunkPath)) {
+                    @unlink($chunkPath);
+                }
+            }
+
+            $start += max(1, $chunkSec - $overlap);
+            $index++;
+        }
+
+        $raw = trim(implode("\n\n", $parts));
+        if ($raw === '' || $this->looksUnreliableTranscript($raw)) {
+            throw new RuntimeException(
+                'Аудиог найдвартай монгол текст болгож чадсангүй. '
+                .'Дуу чимээгүй, тод монгол яриатай хэсгийг дахин оруулна уу.'
+            );
+        }
+
+        return $raw;
+    }
+
+    private function extractAudioChunk(
+        string $ffmpeg,
+        string $input,
+        string $output,
+        float $start,
+        float $length,
+    ): void {
+        $cmd = [
+            $ffmpeg,
+            '-y',
+            '-ss', (string) max(0, $start),
+            '-i', $input,
+            '-t', (string) max(0.5, $length),
+            '-vn',
+            '-acodec', 'libmp3lame',
+            '-ar', '16000',
+            '-ac', '1',
+            '-b:a', '64k',
+            $output,
+        ];
+
+        $descriptor = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+        $process = proc_open($cmd, $descriptor, $pipes, null, null, ['bypass_shell' => true]);
+        if (! is_resource($process)) {
+            throw new RuntimeException('Аудио хэсэглэлт эхлүүлж чадсангүй.');
+        }
+
+        fclose($pipes[0]);
+        $stderr = stream_get_contents($pipes[2]) ?: '';
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $code = proc_close($process);
+
+        if ($code !== 0 || ! is_file($output) || filesize($output) < 1) {
+            throw new RuntimeException('Аудио хэсэг үүсгэж чадсангүй. '.mb_substr(trim($stderr), 0, 200));
+        }
+    }
+
+    public function formatClock(int $seconds): string
+    {
+        $seconds = max(0, $seconds);
+        $h = intdiv($seconds, 3600);
+        $m = intdiv($seconds % 3600, 60);
+        $s = $seconds % 60;
+
+        if ($h > 0) {
+            return sprintf('%d:%02d:%02d', $h, $m, $s);
+        }
+
+        return sprintf('%d:%02d', $m, $s);
+    }
+
+    private function hasCyrillic(string $text): bool
+    {
+        return (bool) preg_match('/\p{Cyrillic}/u', $text);
     }
 
     /**
@@ -323,17 +519,28 @@ class MeetingTranscriptionService
         return null;
     }
 
-    private function setProgress(Meeting $meeting, string $status, int $percent, string $stage): void
-    {
-        $meeting->forceFill([
+    private function setProgress(
+        Meeting $meeting,
+        string $status,
+        int $percent,
+        string $stage,
+        ?int $positionSec = null,
+    ): void {
+        $payload = [
             'transcription_status' => $status,
             'transcription_progress' => max(0, min(100, $percent)),
             'transcription_stage' => mb_substr($stage, 0, 64),
             'transcription_error' => null,
-        ])->save();
+        ];
+
+        if ($positionSec !== null) {
+            $payload['transcription_position_sec'] = max(0, $positionSec);
+        }
+
+        $meeting->forceFill($payload)->save();
     }
 
-    private function whisper(Meeting $meeting, string $absolutePath, string $filename): string
+    private function whisperFile(string $absolutePath, string $filename): string
     {
         $apiKey = $this->settings->openaiApiKey();
         if (! $apiKey) {
@@ -341,10 +548,10 @@ class MeetingTranscriptionService
         }
 
         $timeout = (int) config('ai.whisper_timeout', 180);
+        // Хэсэгчилсэн боловсруулалтад нэг хэсэгт богино timeout.
+        $timeout = min($timeout, 90);
         $model = (string) config('ai.whisper_model', 'whisper-1');
 
-        // API 'mn' кодыг дэмждэггүй тул монгол prompt + temperature=0-оор чиглүүлнэ.
-        // Хоёр дахин Whisper дуудахгүй — удаан гацахаас сэргийлнэ.
         $prompt = (string) config(
             'ai.whisper_prompt',
             'Энэ бол монгол хэлээр яригдсан албан хурлын бичлэг. '
@@ -352,22 +559,7 @@ class MeetingTranscriptionService
             .'Англиар бүү орчуул, үг бүү зохио, үг бүү давта.',
         );
 
-        $this->setProgress($meeting, Meeting::TRANSCRIPTION_PROCESSING, 50, 'Whisper API руу илгээж байна…');
-
-        $text = $this->callWhisper($apiKey, $model, $timeout, $absolutePath, $filename, $prompt);
-
-        $this->setProgress($meeting, Meeting::TRANSCRIPTION_PROCESSING, 75, 'Текстийг шалгаж байна…');
-
-        $text = $this->collapseRepetitions($text);
-
-        if ($this->looksUnreliableTranscript($text)) {
-            throw new RuntimeException(
-                'Аудиог найдвартай монгол текст болгож чадсангүй (буруу хэл/давталт илэрлээ). '
-                .'Дуу чимээгүй, тод монгол яриатай хэсгийг дахин оруулна уу.'
-            );
-        }
-
-        return $text;
+        return $this->callWhisper($apiKey, $model, $timeout, $absolutePath, $filename, $prompt);
     }
 
     private function callWhisper(

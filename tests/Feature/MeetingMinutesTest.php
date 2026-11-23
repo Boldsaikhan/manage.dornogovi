@@ -220,6 +220,28 @@ class MeetingMinutesTest extends TestCase
         $this->assertStringContainsString('найдвартай', (string) $meeting->transcription_error);
     }
 
+    public function test_status_includes_duration_fields(): void
+    {
+        $admin = $this->admin();
+        $meeting = Meeting::query()->create([
+            'title' => 'Урттай',
+            'held_at' => now(),
+            'status' => 'draft',
+            'audio_duration_sec' => 125,
+            'transcription_position_sec' => 40,
+            'transcription_status' => Meeting::TRANSCRIPTION_PROCESSING,
+            'transcription_progress' => 50,
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('meetings.status', $meeting))
+            ->assertOk()
+            ->assertJsonPath('audio_duration_sec', 125)
+            ->assertJsonPath('audio_duration_label', '2:05')
+            ->assertJsonPath('transcription_position_label', '0:40');
+    }
+
     public function test_can_update_and_delete_meeting(): void
     {
         $admin = $this->admin();
