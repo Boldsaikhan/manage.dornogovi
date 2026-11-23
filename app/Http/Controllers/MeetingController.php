@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\TranscribeMeetingAudio;
+use App\Models\DocumentFormat;
 use App\Models\Meeting;
 use App\Services\Ai\MeetingTranscriptionService;
 use App\Services\Push\EmployeePushNotifier;
@@ -41,6 +42,8 @@ class MeetingController extends Controller
             return $this->serialize($m);
         });
 
+        $format = DocumentFormat::defaultFormat();
+
         return Inertia::render('Modules/Meetings', [
             'meetings' => $meetings,
             'canManage' => ModuleAccess::canEdit($request->user(), self::MODULE),
@@ -52,6 +55,17 @@ class MeetingController extends Controller
                 Meeting::TRANSCRIPTION_CONVERTING,
                 Meeting::TRANSCRIPTION_PROCESSING,
             ], true)),
+            'docFormat' => [
+                'width_mm' => (float) ($format?->width_mm ?? 210),
+                'height_mm' => (float) ($format?->height_mm ?? 297),
+                'margin_top_mm' => (float) ($format?->margin_top_mm ?? 20),
+                'margin_right_mm' => (float) ($format?->margin_right_mm ?? 20),
+                'margin_bottom_mm' => (float) ($format?->margin_bottom_mm ?? 20),
+                'margin_left_mm' => (float) ($format?->margin_left_mm ?? 30),
+                'font_name' => $format?->font_name ?: 'Arial',
+                'font_size_pt' => (float) ($format?->font_size_pt ?? 12),
+                'line_spacing' => (float) ($format?->line_spacing ?? 1.0),
+            ],
         ]);
     }
 

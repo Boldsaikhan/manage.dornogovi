@@ -14,6 +14,36 @@ const props = defineProps({
     sttHint: { type: String, default: '' },
     maxUploadMb: { type: Number, default: 25 },
     hasProcessing: { type: Boolean, default: false },
+    docFormat: {
+        type: Object,
+        default: () => ({
+            width_mm: 210,
+            height_mm: 297,
+            margin_top_mm: 20,
+            margin_right_mm: 20,
+            margin_bottom_mm: 20,
+            margin_left_mm: 30,
+            font_name: 'Arial',
+            font_size_pt: 12,
+            line_spacing: 1,
+        }),
+    },
+});
+
+const docPageStyle = computed(() => {
+    const f = props.docFormat || {};
+
+    return {
+        '--doc-width': `${f.width_mm ?? 210}mm`,
+        '--doc-height': `${f.height_mm ?? 297}mm`,
+        '--doc-pad-top': `${f.margin_top_mm ?? 20}mm`,
+        '--doc-pad-right': `${f.margin_right_mm ?? 20}mm`,
+        '--doc-pad-bottom': `${f.margin_bottom_mm ?? 20}mm`,
+        '--doc-pad-left': `${f.margin_left_mm ?? 30}mm`,
+        '--doc-font': `"${f.font_name || 'Arial'}", Arial, Helvetica, sans-serif`,
+        '--doc-size': `${f.font_size_pt ?? 12}pt`,
+        '--doc-line': String(f.line_spacing ?? 1),
+    };
 });
 
 const page = usePage();
@@ -186,16 +216,25 @@ const escapeHtml = (value) => String(value ?? '')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
+const monthSuffixMn = (month) => {
+    // Албан бичгийн стандарт: 1,3,4,5,9,11 → дүгээр; бусад → дугаар
+    return [1, 3, 4, 5, 9, 11].includes(month) ? 'дүгээр' : 'дугаар';
+};
+
+const daySuffixMn = (day) => {
+    const unit = day % 10;
+    return [1, 4, 9].includes(unit) && ! [11, 14].includes(day) ? 'ний' : 'ны';
+};
+
 const formatMnLongDate = (iso) => {
-    if (! iso) return '…… оны …-р сарын …-ны өдөр';
+    if (! iso) return '…… оны … дугаар сарын …-ны өдөр';
     const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '…… оны …-р сарын …-ны өдөр';
+    if (Number.isNaN(d.getTime())) return '…… оны … дугаар сарын …-ны өдөр';
     const y = d.getFullYear();
     const m = d.getMonth() + 1;
     const day = d.getDate();
-    const daySuffix = [1, 4, 9].includes(day % 10) && ! [11, 14].includes(day) ? 'ний' : 'ны';
 
-    return `${y} оны ${m}-р сарын ${day}-${daySuffix} өдөр`;
+    return `${y} оны ${String(m).padStart(2, '0')} ${monthSuffixMn(m)} сарын ${day}-${daySuffixMn(day)} өдөр`;
 };
 
 const formatMnClockPhrase = (iso) => {
@@ -335,6 +374,7 @@ const regenerateMinutesFromSegments = async () => {
 const switchEditorTab = async (tab) => {
     editorTab.value = tab;
     if (tab === 'notes') {
+        notesMetaOpen.value = false;
         ensureFormalMinutes(false);
         await syncDocEditorFromMinutes();
     }
@@ -469,7 +509,7 @@ const openCreate = () => {
     segments.value = [];
     editorTab.value = 'notes';
     speakerFilter.value = '';
-    notesMetaOpen.value = true;
+    notesMetaOpen.value = false;
     currentTime.value = 0;
     mediaDuration.value = 0;
     playing.value = false;
@@ -494,7 +534,7 @@ const openEdit = (row) => {
     const preferConvert = row.has_audio || (row.transcript_segments || []).length;
     editorTab.value = preferConvert ? 'convert' : 'notes';
     speakerFilter.value = '';
-    notesMetaOpen.value = ! row.minutes;
+    notesMetaOpen.value = false;
     currentTime.value = 0;
     mediaDuration.value = Number(row.audio_duration_sec || 0);
     playing.value = false;
@@ -969,8 +1009,11 @@ onBeforeUnmount(() => {
         </div>
 
         <Modal :show="showModal" max-width="full" @close="closeModal">
-            <div class="flex h-dvh max-h-dvh flex-col">
-                <div class="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-700 sm:px-5">
+            <div class="flex h-dvh max-h-dvh flex-col" :style="docPageStyle">
+                <div
+                    v-if="editorTab !== 'notes'"
+                    class="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-700 sm:px-5"
+                >
                     <div>
                         <h2 class="text-lg font-semibold text-brand-navy-800 dark:text-slate-100">
                             {{ isEditing ? 'Тэмдэглэл засах' : 'Шинэ хурлын тэмдэглэл' }}
@@ -981,10 +1024,13 @@ onBeforeUnmount(() => {
                     </div>
                     <button type="button" class="ui-btn-ghost !px-2 !py-1" @click="closeModal">Хаах</button>
                 </div>
-                <div class="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-4 sm:p-5">
+                <div
+                    class="flex min-h-0 flex-1 flex-col overflow-hidden"
+                    :class="editorTab === 'notes' ? 'gap-0 p-0' : 'gap-3 p-4 sm:p-5'"
+                >
 
                 <div
-                    v-if="editingRow && isBusyStatus(editingRow.transcription_status)"
+                    v-if="editorTab !== 'notes' && editingRow && isBusyStatus(editingRow.transcription_status)"
                     class="shrink-0 rounded-lg border border-sky-200 bg-sky-50 px-3 py-3 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100"
                 >
                     <div class="flex items-center justify-between gap-3">
@@ -1046,7 +1092,7 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div
-                    v-if="editingRow?.transcription_status === 'failed'"
+                    v-if="editorTab !== 'notes' && editingRow?.transcription_status === 'failed'"
                     class="shrink-0 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-100"
                 >
                     <p>{{ editingRow.transcription_error || 'Боловсруулалт амжилтгүй.' }}</p>
@@ -1060,8 +1106,11 @@ onBeforeUnmount(() => {
                     </button>
                 </div>
 
-                <form class="flex min-h-0 flex-1 flex-col gap-3" @submit.prevent="submit">
-                    <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-slate-200 pb-2 dark:border-slate-700">
+                <form class="flex min-h-0 flex-1 flex-col" :class="editorTab === 'notes' ? 'gap-0' : 'gap-3'" @submit.prevent="submit">
+                    <div
+                        class="flex shrink-0 flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-700"
+                        :class="editorTab === 'notes' ? 'bg-slate-50 px-3 py-2 dark:bg-slate-900' : 'pb-2'"
+                    >
                         <button
                             type="button"
                             class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition"
@@ -1086,6 +1135,34 @@ onBeforeUnmount(() => {
                             </svg>
                             Тэмдэглэл
                         </button>
+                        <div v-if="editorTab === 'notes'" class="ml-auto flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                class="ui-btn-ghost !py-1 text-xs"
+                                @click="notesMetaOpen = !notesMetaOpen"
+                            >
+                                {{ notesMetaOpen ? 'Тохиргоо ×' : '⚙' }}
+                            </button>
+                            <button
+                                v-if="canManage && segments.length"
+                                type="button"
+                                class="ui-btn-ghost !py-1 text-xs"
+                                @click="regenerateMinutesFromSegments"
+                            >
+                                Сегментээс
+                            </button>
+                            <button
+                                v-if="canManage"
+                                type="submit"
+                                class="ui-btn-accent !py-1.5 !px-3 text-xs"
+                                :disabled="form.processing"
+                            >
+                                {{ form.processing ? '…' : 'Хадгалах' }}
+                            </button>
+                            <button type="button" class="ui-btn-ghost !py-1.5 !px-3 text-xs" @click="closeModal">
+                                Хаах
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Хөрвүүлэг: сегмент + тоглуулагч -->
@@ -1288,31 +1365,11 @@ onBeforeUnmount(() => {
                         </p>
                     </div>
 
-                    <!-- Тэмдэглэл: Word маягийн хуудас -->
-                    <div v-show="editorTab === 'notes'" class="flex min-h-0 flex-1 flex-col gap-2">
-                        <div class="flex shrink-0 flex-wrap items-center gap-2">
-                            <button
-                                type="button"
-                                class="ui-btn-ghost !py-1.5 text-xs"
-                                @click="notesMetaOpen = !notesMetaOpen"
-                            >
-                                {{ notesMetaOpen ? 'Тохиргоог хураах' : 'Гарчиг · огноо · аудио' }}
-                            </button>
-                            <button
-                                v-if="canManage && segments.length"
-                                type="button"
-                                class="ui-btn-ghost !py-1.5 text-xs"
-                                title="Хөрвүүлэг сегментээс албан тэмдэглэл дахин бүрдүүлнэ"
-                                @click="regenerateMinutesFromSegments"
-                            >
-                                Сегментээс дахин үүсгэх
-                            </button>
-                            <InputError :message="form.errors.minutes" class="mt-0" />
-                        </div>
-
+                    <!-- Тэмдэглэл: Word / албан бичгийн стандарт хуудас -->
+                    <div v-show="editorTab === 'notes'" class="flex min-h-0 flex-1 flex-col">
                         <div
                             v-show="notesMetaOpen"
-                            class="grid shrink-0 gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900/50 sm:grid-cols-2 lg:grid-cols-4"
+                            class="grid shrink-0 gap-3 border-b border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900/50 sm:grid-cols-2 lg:grid-cols-4"
                         >
                             <div class="lg:col-span-2">
                                 <label class="ui-label">Гарчиг</label>
@@ -1400,7 +1457,7 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
 
-                        <div class="meeting-doc-canvas min-h-0 flex-1 overflow-y-auto rounded-lg">
+                        <div class="meeting-doc-canvas min-h-0 flex-1 overflow-y-auto">
                             <div class="meeting-doc-sheet">
                                 <div
                                     ref="docEditor"
@@ -1412,9 +1469,13 @@ onBeforeUnmount(() => {
                                 />
                             </div>
                         </div>
+                        <InputError :message="form.errors.minutes" class="px-3" />
                     </div>
 
-                    <div v-if="canManage" class="mt-auto flex shrink-0 flex-wrap justify-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+                    <div
+                        v-if="canManage && editorTab !== 'notes'"
+                        class="mt-auto flex shrink-0 flex-wrap justify-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-800"
+                    >
                         <button type="button" class="ui-btn-ghost" @click="closeModal">Болих</button>
                         <button type="submit" class="ui-btn-accent" :disabled="form.processing">
                             {{ form.processing ? 'Хадгалж байна…' : (isEditing ? 'Хадгалах' : 'Үүсгэх') }}
@@ -1429,74 +1490,84 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .meeting-doc-canvas {
-    background:
-        linear-gradient(180deg, #e8eaed 0%, #dfe3e8 100%);
-    padding: 1.25rem 0.75rem 2rem;
+    background: #e8eaed;
+    padding: 16px 12px 28px;
 }
 
 .dark .meeting-doc-canvas {
-    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    background: #1e293b;
 }
 
+/* Бичиг хэргийн стандарт — DocumentFormat (A4, ирмэг, Arial …) */
 .meeting-doc-sheet {
     margin: 0 auto;
-    width: min(100%, 52rem);
-    min-height: min(70vh, 48rem);
+    width: var(--doc-width, 210mm);
+    min-height: var(--doc-height, 297mm);
+    max-width: 100%;
     background: #fff;
     box-shadow:
         0 1px 2px rgba(15, 23, 42, 0.06),
-        0 8px 24px rgba(15, 23, 42, 0.12),
-        0 0 0 1px rgba(15, 23, 42, 0.04);
+        0 8px 28px rgba(15, 23, 42, 0.14);
 }
 
 .dark .meeting-doc-sheet {
-    background: #f8fafc;
-    box-shadow:
-        0 1px 2px rgba(0, 0, 0, 0.35),
-        0 10px 28px rgba(0, 0, 0, 0.45);
+    background: #fff;
 }
 
 .meeting-doc-page {
-    min-height: 36rem;
-    padding: 2.75rem 3rem 3.5rem;
-    color: #0f172a;
-    font-size: 14.5px;
-    line-height: 1.65;
-    font-family: "Segoe UI", "Noto Sans Mongolian", "Arial", sans-serif;
+    box-sizing: border-box;
+    min-height: var(--doc-height, 297mm);
+    padding: var(--doc-pad-top, 20mm) var(--doc-pad-right, 20mm) var(--doc-pad-bottom, 20mm) var(--doc-pad-left, 30mm);
+    color: #000;
+    font-size: var(--doc-size, 12pt);
+    line-height: var(--doc-line, 1);
+    font-family: var(--doc-font, Arial, Helvetica, sans-serif);
     outline: none;
     word-break: break-word;
+    text-align: justify;
 }
 
 .meeting-doc-page:focus {
-    box-shadow: inset 0 0 0 2px rgba(14, 165, 233, 0.25);
+    box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.35);
 }
 
 .meeting-doc-page :deep(p) {
-    margin: 0 0 0.65em;
+    margin: 0 0 0.75em;
+    text-indent: 0;
 }
 
 .meeting-doc-page :deep(.meeting-doc__title) {
     text-align: center;
     font-weight: 700;
-    font-size: 1.15rem;
-    letter-spacing: 0.02em;
-    margin-bottom: 1.1em;
+    font-size: 1.08em;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin: 0 0 1.25em;
+    text-indent: 0;
 }
 
 .meeting-doc-page :deep(.meeting-doc__heading) {
     font-weight: 700;
     margin-top: 1em;
-    margin-bottom: 0.55em;
+    margin-bottom: 0.5em;
+    text-align: left;
+    text-indent: 0;
 }
 
 .meeting-doc-page :deep(strong) {
     font-weight: 700;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 720px) {
+    .meeting-doc-sheet {
+        width: 100%;
+        min-height: auto;
+    }
+
     .meeting-doc-page {
-        padding: 1.5rem 1.15rem 2rem;
-        font-size: 14px;
+        min-height: 70vh;
+        padding: 16px 14px 24px;
+        font-size: 11pt;
     }
 }
 </style>
