@@ -548,6 +548,25 @@ const onLinkedSystemClick = (sys, event) => {
                     <span :class="navCollapsed ? 'lg:hidden' : ''">Системийн тохиргоо</span>
                 </Link>
 
+                <Link
+                    v-if="user.is_admin"
+                    :href="route('admin.database.index')"
+                    class="ui-nav-link"
+                    :class="[
+                        isCurrent('admin.database.*') ? 'ui-nav-link-active' : '',
+                        navCollapsed ? 'lg:justify-center lg:px-0' : '',
+                    ]"
+                    @mouseenter="showNavTip($event, 'Өгөгдлийн сан')"
+                    @mouseleave="hideNavTip"
+                    @focus="showNavTip($event, 'Өгөгдлийн сан')"
+                    @blur="hideNavTip"
+                >
+                    <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path :d="iconPaths.archive" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <span :class="navCollapsed ? 'lg:hidden' : ''">Өгөгдлийн сан</span>
+                </Link>
+
                 <div
                     class="flex items-center justify-center gap-2 px-2 pt-2"
                     :class="navCollapsed ? 'lg:hidden' : ''"
