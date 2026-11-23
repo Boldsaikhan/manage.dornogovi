@@ -46,7 +46,16 @@ class MeetingTranscriptionService
         ])->save();
 
         $absolute = Storage::disk('local')->path($meeting->audio_path);
-        $raw = $this->whisper($absolute, $meeting->audio_original_name ?: basename($meeting->audio_path));
+        $originalName = $meeting->audio_original_name ?: basename($meeting->audio_path);
+        [$whisperPath, $whisperName, $tempPath] = $this->prepareForWhisper($absolute, $originalName);
+
+        try {
+            $raw = $this->whisper($whisperPath, $whisperName);
+        } finally {
+            if ($tempPath && is_file($tempPath)) {
+                @unlink($tempPath);
+            }
+        }
 
         $minutes = $this->formatMinutes($raw, $meeting);
 
@@ -67,6 +76,103 @@ class MeetingTranscriptionService
             'transcription_status' => Meeting::TRANSCRIPTION_FAILED,
             'transcription_error' => mb_substr($message, 0, 2000),
         ])->save();
+    }
+
+    /**
+     * Whisper шууд дэмждэггүй өргөтгөл (ж: WMA)-ыг ffmpeg-ээр mp3 руу хөрвүүлнэ.
+     *
+     * @return array{0: string, 1: string, 2: ?string} [path, filename, tempPathToCleanup]
+     */
+    private function prepareForWhisper(string $absolutePath, string $filename): array
+    {
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION) ?: pathinfo($absolutePath, PATHINFO_EXTENSION));
+        $native = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm'];
+
+        if ($ext === '' || in_array($ext, $native, true)) {
+            return [$absolutePath, $filename, null];
+        }
+
+        if (! in_array($ext, ['wma', 'asf'], true)) {
+            return [$absolutePath, $filename, null];
+        }
+
+        $ffmpeg = $this->findFfmpeg();
+        if ($ffmpeg === null) {
+            throw new RuntimeException(
+                'WMA файл оруулахын тулд сервер дээр ffmpeg суусан байх ёстой. '
+                .'Админд хандана уу, эсвэл MP3/WAV/M4A болгож дахин оруулна уу.'
+            );
+        }
+
+        $tempPath = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR)
+            .DIRECTORY_SEPARATOR
+            .'meeting-wma-'.uniqid('', true).'.mp3';
+
+        $cmd = [
+            $ffmpeg,
+            '-y',
+            '-i', $absolutePath,
+            '-vn',
+            '-acodec', 'libmp3lame',
+            '-ar', '16000',
+            '-ac', '1',
+            $tempPath,
+        ];
+
+        $descriptor = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+        $process = proc_open($cmd, $descriptor, $pipes, null, null, ['bypass_shell' => true]);
+
+        if (! is_resource($process)) {
+            throw new RuntimeException('WMA → MP3 хөрвүүлэлт эхлүүлж чадсангүй (ffmpeg).');
+        }
+
+        fclose($pipes[0]);
+        $stderr = stream_get_contents($pipes[2]) ?: '';
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $code = proc_close($process);
+
+        if ($code !== 0 || ! is_file($tempPath) || filesize($tempPath) < 1) {
+            if (is_file($tempPath)) {
+                @unlink($tempPath);
+            }
+
+            throw new RuntimeException(
+                'WMA файлыг хөрвүүлж чадсангүй. '
+                .mb_substr(trim($stderr), 0, 400)
+            );
+        }
+
+        return [$tempPath, basename($tempPath), $tempPath];
+    }
+
+    private function findFfmpeg(): ?string
+    {
+        $configured = trim((string) config('ai.ffmpeg_path', ''));
+        if ($configured !== '' && is_file($configured) && is_executable($configured)) {
+            return $configured;
+        }
+
+        $which = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN' ? 'where' : 'which';
+        $out = [];
+        $code = 0;
+        @exec($which.' ffmpeg', $out, $code);
+
+        if ($code === 0 && ! empty($out[0]) && is_file(trim($out[0]))) {
+            return trim($out[0]);
+        }
+
+        foreach (['/usr/bin/ffmpeg', '/usr/local/bin/ffmpeg'] as $path) {
+            if (is_file($path) && is_executable($path)) {
+                return $path;
+            }
+        }
+
+        return null;
     }
 
     private function whisper(string $absolutePath, string $filename): string

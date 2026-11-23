@@ -16,6 +16,8 @@ return [
     'whisper_model' => env('AI_WHISPER_MODEL', 'whisper-1'),
     'whisper_timeout' => (int) env('AI_WHISPER_TIMEOUT', 180),
     'whisper_max_mb' => (int) env('AI_WHISPER_MAX_MB', 25),
+    // WMA/ASF → MP3 хөрвүүлэхэд. Хоосон бол PATH /usr/bin/ffmpeg хайна.
+    'ffmpeg_path' => env('AI_FFMPEG_PATH', ''),
     'max_history_messages' => 12,
     'max_tool_results' => 12,
 ];
