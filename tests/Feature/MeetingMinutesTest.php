@@ -112,6 +112,32 @@ class MeetingMinutesTest extends TestCase
         Bus::assertDispatched(TranscribeMeetingAudio::class, fn (TranscribeMeetingAudio $job) => $job->meetingId === $meeting->id);
     }
 
+    public function test_wma_audio_upload_is_accepted(): void
+    {
+        Bus::fake();
+        Storage::fake('local');
+        $admin = $this->admin();
+
+        app(AiSettings::class)->setOpenAiApiKey('sk-test-meeting-key');
+        app(AiSettings::class)->set(AiSettings::KEY_PROVIDER, 'openai');
+
+        $file = UploadedFile::fake()->create('250126_0705.WMA', 200, 'audio/x-ms-wma');
+
+        $this->actingAs($admin)
+            ->post(route('meetings.store'), [
+                'title' => 'WMA хурал',
+                'held_at' => '2026-11-23 11:00',
+                'audio' => $file,
+            ])
+            ->assertRedirect()
+            ->assertSessionDoesntHaveErrors('audio');
+
+        $meeting = Meeting::query()->where('title', 'WMA хурал')->first();
+        $this->assertNotNull($meeting);
+        $this->assertSame('250126_0705.WMA', $meeting->audio_original_name);
+        Bus::assertDispatched(TranscribeMeetingAudio::class);
+    }
+
     public function test_transcription_job_writes_minutes(): void
     {
         Storage::fake('local');

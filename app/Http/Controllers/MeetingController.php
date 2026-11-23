@@ -272,7 +272,7 @@ class MeetingController extends Controller
             $required ? 'required' : 'nullable',
             'file',
             'max:'.($maxMb * 1024),
-            'extensions:mp3,wav,m4a,webm,ogg,flac,mp4,mpeg,mpga,oga,opus',
+            'extensions:mp3,wav,m4a,webm,ogg,flac,mp4,mpeg,mpga,oga,opus,wma,asf',
         ];
     }
 }

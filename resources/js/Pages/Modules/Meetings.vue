@@ -510,7 +510,7 @@ onBeforeUnmount(() => {
                     </div>
 
                     <div v-if="canManage" class="md:col-span-2 space-y-2">
-                        <label class="ui-label">Аудио (MP3, WAV, M4A, WEBM · max {{ maxUploadMb }}MB)</label>
+                        <label class="ui-label">Аудио (MP3, WAV, M4A, WEBM, WMA · max {{ maxUploadMb }}MB)</label>
                         <div
                             class="rounded-xl border-2 border-dashed px-4 py-6 text-center transition"
                             :class="dragOver
@@ -565,7 +565,7 @@ onBeforeUnmount(() => {
                                 ref="fileInput"
                                 type="file"
                                 class="hidden"
-                                accept="audio/*,.mp3,.wav,.m4a,.webm,.ogg,.flac"
+                                accept="audio/*,.mp3,.wav,.m4a,.webm,.ogg,.flac,.wma,.asf"
                                 @change="onFileChange"
                             />
                         </div>
