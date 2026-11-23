@@ -141,10 +141,10 @@ onBeforeUnmount(() => {
             type="button"
             class="relative flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm transition"
             :class="unread
-                ? 'border-brand-orange-400 bg-brand-orange-50 text-brand-orange-700 hover:bg-brand-orange-100'
+                ? 'border-brand-orange-400 bg-brand-orange-50 text-brand-orange-700 hover:bg-brand-orange-100 dark:border-brand-orange-500/60 dark:bg-brand-orange-950/40 dark:text-brand-orange-300 dark:hover:bg-brand-orange-950/60'
                 : open
-                    ? 'border-brand-navy-300 bg-brand-navy-50 text-brand-navy-700'
-                    : 'border-slate-200 bg-white text-brand-navy-700 hover:border-brand-navy-200 hover:bg-brand-navy-50'"
+                    ? 'border-brand-navy-300 bg-brand-navy-50 text-brand-navy-700 dark:border-brand-navy-600 dark:bg-slate-700 dark:text-brand-navy-200'
+                    : 'border-slate-200 bg-white text-brand-navy-700 hover:border-brand-navy-200 hover:bg-brand-navy-50 dark:border-slate-700 dark:bg-slate-800 dark:text-brand-navy-300 dark:hover:border-brand-navy-700 dark:hover:bg-slate-700'"
             title="Мэдэгдэл"
             aria-label="Мэдэгдэл"
             @click.stop="toggle"
@@ -158,7 +158,7 @@ onBeforeUnmount(() => {
             </svg>
             <span
                 v-if="unread"
-                class="absolute -right-1 -top-1 flex min-w-[1.1rem] items-center justify-center rounded-full bg-brand-orange-500 px-1 text-[10px] font-bold leading-4 text-white ring-2 ring-white"
+                class="absolute -right-1 -top-1 flex min-w-[1.1rem] items-center justify-center rounded-full bg-brand-orange-500 px-1 text-[10px] font-bold leading-4 text-white ring-2 ring-white dark:ring-slate-900"
             >
                 {{ unread > 9 ? '9+' : unread }}
             </span>
@@ -172,16 +172,16 @@ onBeforeUnmount(() => {
         >
             <div
                 v-if="open"
-                class="fixed inset-x-3 top-[4.75rem] z-40 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-[22rem]"
+                class="fixed inset-x-3 top-[4.75rem] z-40 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-[22rem]"
                 @click.stop
             >
-                <div class="flex items-center justify-between border-b border-slate-100 px-3 py-2.5">
-                    <p class="text-sm font-semibold text-slate-800">Мэдэгдэл</p>
+                <div class="flex items-center justify-between border-b border-slate-100 px-3 py-2.5 dark:border-slate-800">
+                    <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">Мэдэгдэл</p>
                     <div class="flex gap-2">
                         <button
                             v-if="unread"
                             type="button"
-                            class="text-[11px] font-medium text-brand-navy-600 hover:underline"
+                            class="text-[11px] font-medium text-brand-navy-600 hover:underline dark:text-brand-navy-300"
                             @click="markRead"
                         >
                             Уншсан
@@ -189,7 +189,7 @@ onBeforeUnmount(() => {
                         <button
                             v-if="items.length"
                             type="button"
-                            class="text-[11px] font-medium text-slate-500 hover:underline"
+                            class="text-[11px] font-medium text-slate-500 hover:underline dark:text-slate-400"
                             @click="clearAll"
                         >
                             Цэвэрлэх
@@ -197,31 +197,31 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <p v-if="loading && ! items.length" class="px-3 py-8 text-center text-sm text-slate-400">
+                <p v-if="loading && ! items.length" class="px-3 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
                     Ачаалж байна…
                 </p>
-                <ul v-else-if="items.length" class="max-h-80 overflow-y-auto divide-y divide-slate-50">
+                <ul v-else-if="items.length" class="max-h-80 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-800">
                     <li v-for="item in items" :key="item.id">
                         <button
                             type="button"
-                            class="flex w-full flex-col gap-0.5 px-3 py-2.5 text-left transition hover:bg-slate-50"
-                            :class="item.read ? 'opacity-70' : 'bg-brand-orange-50/40'"
+                            class="flex w-full flex-col gap-0.5 px-3 py-2.5 text-left transition hover:bg-slate-50 dark:hover:bg-slate-800"
+                            :class="item.read ? 'opacity-70' : 'bg-brand-orange-50/40 dark:bg-brand-orange-950/20'"
                             @click="openItem(item)"
                         >
-                            <span class="text-sm font-semibold text-slate-800">{{ item.title }}</span>
-                            <span v-if="item.body" class="line-clamp-2 text-xs text-slate-500">{{ item.body }}</span>
-                            <span class="text-[10px] text-slate-400">{{ formatTime(item.at) }}</span>
+                            <span class="text-sm font-semibold text-slate-800 dark:text-slate-100">{{ item.title }}</span>
+                            <span v-if="item.body" class="line-clamp-2 text-xs text-slate-500 dark:text-slate-400">{{ item.body }}</span>
+                            <span class="text-[10px] text-slate-400 dark:text-slate-500">{{ formatTime(item.at) }}</span>
                         </button>
                     </li>
                 </ul>
-                <p v-else class="px-3 py-8 text-center text-sm text-slate-400">
+                <p v-else class="px-3 py-8 text-center text-sm text-slate-400 dark:text-slate-500">
                     Мэдэгдэл алга.
                 </p>
 
-                <div v-if="pushConfigured" class="border-t border-slate-100 p-2">
+                <div v-if="pushConfigured" class="border-t border-slate-100 p-2 dark:border-slate-800">
                     <PushSubscribe />
                 </div>
-                <p v-else class="border-t border-slate-100 px-3 py-2 text-[11px] text-slate-500">
+                <p v-else class="border-t border-slate-100 px-3 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
                     Push тохиргоог админ «Системийн тохиргоо» хэсэгт хийнэ.
                 </p>
             </div>

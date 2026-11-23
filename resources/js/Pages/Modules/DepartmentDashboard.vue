@@ -26,11 +26,11 @@ const statCards = computed(() => [
         panel: true,
         route: 'leaves.index',
         title: 'Сүүлийн чөлөө',
-        cardClass: 'border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 hover:border-amber-300',
-        labelClass: 'text-amber-700',
-        valueClass: 'text-amber-900',
+        cardClass: 'border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 hover:border-amber-300 dark:border-amber-700/40 dark:from-amber-950/50 dark:to-orange-950/30 dark:hover:border-amber-600/60',
+        labelClass: 'text-amber-700 dark:text-amber-300',
+        valueClass: 'text-amber-900 dark:text-amber-100',
         dotClass: 'bg-amber-500',
-        selectedRing: 'ring-2 ring-amber-400 ring-offset-2',
+        selectedRing: 'ring-2 ring-amber-400 ring-offset-2 dark:ring-offset-slate-950',
     },
     {
         key: 'assignments',
@@ -39,11 +39,11 @@ const statCards = computed(() => [
         panel: true,
         route: 'assignments.index',
         title: 'Сүүлийн томилолт',
-        cardClass: 'border-sky-200 bg-gradient-to-br from-sky-50 to-blue-50 hover:border-sky-300',
-        labelClass: 'text-sky-700',
-        valueClass: 'text-sky-900',
+        cardClass: 'border-sky-200 bg-gradient-to-br from-sky-50 to-blue-50 hover:border-sky-300 dark:border-sky-700/40 dark:from-sky-950/50 dark:to-blue-950/30 dark:hover:border-sky-600/60',
+        labelClass: 'text-sky-700 dark:text-sky-300',
+        valueClass: 'text-sky-900 dark:text-sky-100',
         dotClass: 'bg-sky-500',
-        selectedRing: 'ring-2 ring-sky-400 ring-offset-2',
+        selectedRing: 'ring-2 ring-sky-400 ring-offset-2 dark:ring-offset-slate-950',
     },
     {
         key: 'plans',
@@ -52,11 +52,11 @@ const statCards = computed(() => [
         panel: true,
         route: 'plans.index',
         title: 'Сүүлийн төлөвлөгөө',
-        cardClass: 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 hover:border-emerald-300',
-        labelClass: 'text-emerald-700',
-        valueClass: 'text-emerald-900',
+        cardClass: 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 hover:border-emerald-300 dark:border-emerald-700/40 dark:from-emerald-950/50 dark:to-teal-950/30 dark:hover:border-emerald-600/60',
+        labelClass: 'text-emerald-700 dark:text-emerald-300',
+        valueClass: 'text-emerald-900 dark:text-emerald-100',
         dotClass: 'bg-emerald-500',
-        selectedRing: 'ring-2 ring-emerald-400 ring-offset-2',
+        selectedRing: 'ring-2 ring-emerald-400 ring-offset-2 dark:ring-offset-slate-950',
     },
     {
         key: 'work_groups',
@@ -65,11 +65,11 @@ const statCards = computed(() => [
         panel: true,
         route: 'work-groups.index',
         title: 'Ажлын хэсгийн явц',
-        cardClass: 'border-violet-200 bg-gradient-to-br from-violet-50 to-purple-50 hover:border-violet-300',
-        labelClass: 'text-violet-700',
-        valueClass: 'text-violet-900',
+        cardClass: 'border-violet-200 bg-gradient-to-br from-violet-50 to-purple-50 hover:border-violet-300 dark:border-violet-700/40 dark:from-violet-950/50 dark:to-purple-950/30 dark:hover:border-violet-600/60',
+        labelClass: 'text-violet-700 dark:text-violet-300',
+        valueClass: 'text-violet-900 dark:text-violet-100',
         dotClass: 'bg-violet-500',
-        selectedRing: 'ring-2 ring-violet-400 ring-offset-2',
+        selectedRing: 'ring-2 ring-violet-400 ring-offset-2 dark:ring-offset-slate-950',
     },
     {
         key: 'tasks',
@@ -78,11 +78,11 @@ const statCards = computed(() => [
         panel: true,
         route: 'tasks.index',
         title: 'Үүрэг даалгаврын явц',
-        cardClass: 'border-rose-200 bg-gradient-to-br from-rose-50 to-pink-50 hover:border-rose-300',
-        labelClass: 'text-rose-700',
-        valueClass: 'text-rose-900',
+        cardClass: 'border-rose-200 bg-gradient-to-br from-rose-50 to-pink-50 hover:border-rose-300 dark:border-rose-700/40 dark:from-rose-950/50 dark:to-pink-950/30 dark:hover:border-rose-600/60',
+        labelClass: 'text-rose-700 dark:text-rose-300',
+        valueClass: 'text-rose-900 dark:text-rose-100',
         dotClass: 'bg-rose-500',
-        selectedRing: 'ring-2 ring-rose-400 ring-offset-2',
+        selectedRing: 'ring-2 ring-rose-400 ring-offset-2 dark:ring-offset-slate-950',
     },
 ]);
 
@@ -181,7 +181,7 @@ function switchIndicatorUnit(id) {
                     <Link
                         v-if="lawDashboard.canOpen"
                         :href="route('legal-acts.index')"
-                        class="text-xs font-semibold text-brand-navy-600 hover:underline"
+                        class="text-xs font-semibold text-brand-navy-600 hover:underline dark:text-brand-navy-300"
                     >
                         Хүснэгт
                     </Link>
@@ -193,17 +193,17 @@ function switchIndicatorUnit(id) {
                         :key="scope.key"
                         class="grid grid-cols-[9rem_1fr_2rem] items-center gap-2"
                     >
-                        <span class="truncate text-xs font-medium text-slate-600">{{ scope.label }}</span>
-                        <div class="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                        <span class="truncate text-xs font-medium text-slate-600 dark:text-slate-300">{{ scope.label }}</span>
+                        <div class="h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                             <div
-                                class="h-full rounded-full bg-brand-navy-600"
+                                class="h-full rounded-full bg-brand-navy-600 dark:bg-brand-navy-400"
                                 :style="{ width: `${Math.max(scope.count ? 4 : 0, (scope.count / lawDashboard.max) * 100)}%` }"
                             />
                         </div>
-                        <span class="text-right text-sm font-bold tabular-nums text-brand-navy-900">{{ scope.count }}</span>
+                        <span class="text-right text-sm font-bold tabular-nums text-brand-navy-900 dark:text-brand-navy-200">{{ scope.count }}</span>
                     </div>
                 </div>
-                <p v-else class="text-sm text-slate-400">Салбарын хууль бүртгэгдээгүй.</p>
+                <p v-else class="text-sm text-slate-400 dark:text-slate-500">Салбарын хууль бүртгэгдээгүй.</p>
             </section>
 
             <section v-if="indicatorDashboard.visible" class="ui-card-pad">
@@ -228,7 +228,7 @@ function switchIndicatorUnit(id) {
                         <Link
                             v-if="indicatorDashboard.canOpen"
                             :href="route('indicators.index', indicatorDashboard.unitId ? { unit: indicatorDashboard.unitId } : {})"
-                            class="text-xs font-semibold text-brand-navy-600 hover:underline"
+                            class="text-xs font-semibold text-brand-navy-600 hover:underline dark:text-brand-navy-300"
                         >
                             Хүснэгт
                         </Link>
@@ -239,28 +239,28 @@ function switchIndicatorUnit(id) {
                     <article
                         v-for="row in indicators"
                         :key="row.id"
-                        class="flex flex-col rounded-xl border border-slate-200 bg-slate-50/60 p-3"
+                        class="flex flex-col rounded-xl border border-slate-200 bg-slate-50/60 p-3 dark:border-slate-700 dark:bg-slate-800/70"
                     >
-                        <p class="text-sm font-semibold leading-snug text-slate-800">{{ row.title }}</p>
-                        <p class="mt-1 text-[11px] text-slate-500">
+                        <p class="text-sm font-semibold leading-snug text-slate-800 dark:text-slate-100">{{ row.title }}</p>
+                        <p class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
                             <span v-if="row.measure_unit">{{ row.measure_unit }}</span>
                             <span v-if="row.target_display"> · хүрэх {{ row.target_display }}</span>
                         </p>
 
                         <div class="mt-3 flex items-end justify-between gap-3">
-                            <p class="text-2xl font-bold tabular-nums tracking-tight text-brand-navy-900">
+                            <p class="text-2xl font-bold tabular-nums tracking-tight text-brand-navy-900 dark:text-brand-navy-100">
                                 {{ row.latest_display || '—' }}
                             </p>
                             <p
                                 v-if="row.progress != null"
                                 class="text-sm font-bold tabular-nums"
-                                :class="row.progress >= 80 ? 'text-emerald-600' : row.progress >= 50 ? 'text-brand-navy-700' : 'text-brand-orange-600'"
+                                :class="row.progress >= 80 ? 'text-emerald-600 dark:text-emerald-400' : row.progress >= 50 ? 'text-brand-navy-700 dark:text-brand-navy-300' : 'text-brand-orange-600 dark:text-brand-orange-400'"
                             >
                                 {{ row.progress }}%
                             </p>
                         </div>
 
-                        <div class="relative mt-3 flex h-24 items-end gap-1 border-b border-slate-200">
+                        <div class="relative mt-3 flex h-24 items-end gap-1 border-b border-slate-200 dark:border-slate-600">
                             <div
                                 v-if="targetLine(row)"
                                 class="pointer-events-none absolute inset-x-0 border-t border-dashed border-brand-orange-500"
@@ -273,7 +273,7 @@ function switchIndicatorUnit(id) {
                                 :title="point.display ? `${point.label}: ${point.display}` : point.label"
                             >
                                 <div
-                                    class="w-full rounded-t bg-brand-navy-600"
+                                    class="w-full rounded-t bg-brand-navy-600 dark:bg-brand-navy-400"
                                     :style="{ height: barHeight(point, row) }"
                                 />
                             </div>
@@ -282,7 +282,7 @@ function switchIndicatorUnit(id) {
                             <span
                                 v-for="(point, index) in row.points"
                                 :key="'l-' + row.id + '-' + index"
-                                class="min-w-0 flex-1 truncate text-center text-[10px] text-slate-400"
+                                class="min-w-0 flex-1 truncate text-center text-[10px] text-slate-400 dark:text-slate-500"
                             >
                                 {{ point.label }}
                             </span>
@@ -290,7 +290,7 @@ function switchIndicatorUnit(id) {
                     </article>
                 </div>
 
-                <p v-else class="text-sm text-slate-400">Энэ нэгжид салбарын үзүүлэлт алга.</p>
+                <p v-else class="text-sm text-slate-400 dark:text-slate-500">Энэ нэгжид салбарын үзүүлэлт алга.</p>
             </section>
 
             <div
@@ -298,10 +298,10 @@ function switchIndicatorUnit(id) {
                 class="ui-card-pad"
             >
                 <div class="mb-3 flex items-center justify-between">
-                    <h3 class="font-bold text-brand-navy-800">{{ activeCard.title }}</h3>
+                    <h3 class="font-bold text-brand-navy-800 dark:text-brand-navy-200">{{ activeCard.title }}</h3>
                     <Link
                         :href="route(activeCard.route)"
-                        class="text-xs font-semibold text-brand-navy-600 hover:underline"
+                        class="text-xs font-semibold text-brand-navy-600 hover:underline dark:text-brand-navy-300"
                     >
                         Бүгд
                     </Link>
@@ -311,74 +311,74 @@ function switchIndicatorUnit(id) {
                     <li
                         v-for="row in recentLeaves"
                         :key="row.id"
-                        class="flex justify-between gap-2 border-b border-slate-100 pb-2"
+                        class="flex justify-between gap-2 border-b border-slate-100 pb-2 dark:border-slate-800"
                     >
-                        <span class="text-slate-700">{{ row.user?.name || '—' }} · {{ row.type }}</span>
-                        <span class="text-slate-400">{{ statusLabel(row.status) }}</span>
+                        <span class="text-slate-700 dark:text-slate-200">{{ row.user?.name || '—' }} · {{ row.type }}</span>
+                        <span class="text-slate-400 dark:text-slate-500">{{ statusLabel(row.status) }}</span>
                     </li>
-                    <li v-if="!recentLeaves.length" class="text-slate-400">Бүртгэл алга</li>
+                    <li v-if="!recentLeaves.length" class="text-slate-400 dark:text-slate-500">Бүртгэл алга</li>
                 </ul>
 
                 <ul v-else-if="activeCard.key === 'assignments'" class="space-y-2 text-sm">
                     <li
                         v-for="row in recentAssignments"
                         :key="row.id"
-                        class="flex justify-between gap-2 border-b border-slate-100 pb-2"
+                        class="flex justify-between gap-2 border-b border-slate-100 pb-2 dark:border-slate-800"
                     >
-                        <span class="text-slate-700">
+                        <span class="text-slate-700 dark:text-slate-200">
                             {{ row.user?.name || '—' }} · {{ row.destination || '—' }}
                         </span>
-                        <span class="text-slate-400">{{ statusLabel(row.status) }}</span>
+                        <span class="text-slate-400 dark:text-slate-500">{{ statusLabel(row.status) }}</span>
                     </li>
-                    <li v-if="!recentAssignments.length" class="text-slate-400">Бүртгэл алга</li>
+                    <li v-if="!recentAssignments.length" class="text-slate-400 dark:text-slate-500">Бүртгэл алга</li>
                 </ul>
 
                 <ul v-else-if="activeCard.key === 'plans'" class="space-y-2 text-sm">
                     <li
                         v-for="row in recentPlans"
                         :key="row.id"
-                        class="flex justify-between gap-2 border-b border-slate-100 pb-2"
+                        class="flex justify-between gap-2 border-b border-slate-100 pb-2 dark:border-slate-800"
                     >
-                        <span class="text-slate-700">
+                        <span class="text-slate-700 dark:text-slate-200">
                             {{ row.title || '—' }}
-                            <span v-if="row.year" class="text-slate-400">· {{ row.year }}</span>
+                            <span v-if="row.year" class="text-slate-400 dark:text-slate-500">· {{ row.year }}</span>
                         </span>
-                        <span class="text-slate-400">{{ statusLabel(row.status) }}</span>
+                        <span class="text-slate-400 dark:text-slate-500">{{ statusLabel(row.status) }}</span>
                     </li>
-                    <li v-if="!recentPlans.length" class="text-slate-400">Бүртгэл алга</li>
+                    <li v-if="!recentPlans.length" class="text-slate-400 dark:text-slate-500">Бүртгэл алга</li>
                 </ul>
 
                 <ul v-else-if="activeCard.key === 'work_groups'" class="space-y-3 text-sm">
                     <li v-for="g in workGroups" :key="g.id">
-                        <div class="flex justify-between font-medium text-slate-700">
+                        <div class="flex justify-between font-medium text-slate-700 dark:text-slate-200">
                             <span>{{ g.name }}</span>
                             <span>{{ g.progress }}%</span>
                         </div>
-                        <div class="mt-1.5 h-2 rounded-full bg-slate-100">
+                        <div class="mt-1.5 h-2 rounded-full bg-slate-100 dark:bg-slate-800">
                             <div
-                                class="h-full rounded-full bg-violet-600"
+                                class="h-full rounded-full bg-violet-600 dark:bg-violet-400"
                                 :style="{ width: g.progress + '%' }"
                             />
                         </div>
                     </li>
-                    <li v-if="!workGroups.length" class="text-slate-400">Бүртгэл алга</li>
+                    <li v-if="!workGroups.length" class="text-slate-400 dark:text-slate-500">Бүртгэл алга</li>
                 </ul>
 
                 <ul v-else-if="activeCard.key === 'tasks'" class="space-y-3 text-sm">
                     <li v-for="t in recentTasks" :key="t.id">
-                        <div class="flex justify-between gap-3 font-medium text-slate-700">
+                        <div class="flex justify-between gap-3 font-medium text-slate-700 dark:text-slate-200">
                             <span class="min-w-0 flex-1 truncate">{{ t.text }}</span>
                             <span class="shrink-0">{{ t.progress }}%</span>
                         </div>
-                        <div v-if="t.source" class="text-xs text-slate-400">{{ t.source }}</div>
-                        <div class="mt-1.5 h-2 rounded-full bg-slate-100">
+                        <div v-if="t.source" class="text-xs text-slate-400 dark:text-slate-500">{{ t.source }}</div>
+                        <div class="mt-1.5 h-2 rounded-full bg-slate-100 dark:bg-slate-800">
                             <div
-                                class="h-full rounded-full bg-rose-600"
+                                class="h-full rounded-full bg-rose-600 dark:bg-rose-400"
                                 :style="{ width: t.progress + '%' }"
                             />
                         </div>
                     </li>
-                    <li v-if="!recentTasks.length" class="text-slate-400">Бүртгэл алга</li>
+                    <li v-if="!recentTasks.length" class="text-slate-400 dark:text-slate-500">Бүртгэл алга</li>
                 </ul>
             </div>
         </div>

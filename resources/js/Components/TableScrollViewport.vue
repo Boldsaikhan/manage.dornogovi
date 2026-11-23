@@ -179,7 +179,7 @@ watch(() => props.fill, () => nextTick(measure));
         <div
             v-show="showHBar && ! pinStart"
             ref="hBarRef"
-            class="ui-table-hscroll shrink-0 border-t border-slate-100 bg-white"
+            class="ui-table-hscroll shrink-0 border-t border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900"
             aria-label="Хэвтээ гүйлгэх"
             @scroll="syncFromBar"
         >
