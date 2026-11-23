@@ -343,13 +343,54 @@ class MeetingTranscriptionService
         $timeout = (int) config('ai.whisper_timeout', 180);
         $model = (string) config('ai.whisper_model', 'whisper-1');
 
-        // Whisper API 'mn' (монгол) language кодыг дэмждэггүй — автоматаар илрүүлнэ.
+        // API 'mn' кодыг дэмждэггүй тул монгол prompt + temperature=0-оор чиглүүлнэ.
+        $prompt = (string) config(
+            'ai.whisper_prompt',
+            'Энэ бол монгол хэлээр яригдсан албан хурлын бичлэг. '
+            .'Зөвхөн сонсогдсон монгол үгийг кирилл үсгээр бич. '
+            .'Англиар бүү орчуул, үг бүү зохио, үг бүү давта.',
+        );
+
+        $text = $this->callWhisper($apiKey, $model, $timeout, $absolutePath, $filename, $prompt, 0);
+
+        // Анхны оролдлого англи hallucination / давталт бол дахин оролдоно.
+        if ($this->looksUnreliableTranscript($text)) {
+            $retryPrompt = 'Монгол хэл. Кирилл бичиг. Хурлын ярианы үгсийг яг сонссоноор бичнэ. '
+                .'Давтан бичихгүй. Орчуулахгүй.';
+            $retry = $this->callWhisper($apiKey, $model, $timeout, $absolutePath, $filename, $retryPrompt, 0);
+            if (! $this->looksUnreliableTranscript($retry)) {
+                $text = $retry;
+            } else {
+                $text = $this->collapseRepetitions($text);
+                if ($this->looksUnreliableTranscript($text)) {
+                    throw new RuntimeException(
+                        'Аудиог найдвартай монгол текст болгож чадсангүй (буруу хэл/давталт илэрлээ). '
+                        .'Дуу чимээгүй, тод монгол яриатай хэсгийг дахин оруулна уу.'
+                    );
+                }
+            }
+        }
+
+        return $this->collapseRepetitions($text);
+    }
+
+    private function callWhisper(
+        string $apiKey,
+        string $model,
+        int $timeout,
+        string $absolutePath,
+        string $filename,
+        string $prompt,
+        float $temperature,
+    ): string {
         $response = Http::baseUrl(rtrim((string) config('ai.openai_base_url'), '/'))
             ->withToken($apiKey)
             ->timeout($timeout)
             ->attach('file', file_get_contents($absolutePath), $filename)
             ->post('/audio/transcriptions', [
                 'model' => $model,
+                'prompt' => $prompt,
+                'temperature' => $temperature,
                 'response_format' => 'text',
             ]);
 
@@ -365,8 +406,60 @@ class MeetingTranscriptionService
         return $text;
     }
 
+    /** Давтагдсан үг/хэллэгийг таслана (Whisper hallucination). */
+    private function collapseRepetitions(string $text): string
+    {
+        $cleaned = preg_replace('/\b([\p{L}\p{N}\']{2,})(?:\s+\1){3,}/ui', '$1', $text) ?? $text;
+        $cleaned = preg_replace('/(.{8,40}?)\1{3,}/u', '$1', $cleaned) ?? $cleaned;
+
+        return trim(preg_replace('/[ \t]{2,}/u', ' ', $cleaned) ?? $cleaned);
+    }
+
+    private function looksUnreliableTranscript(string $text): bool
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return true;
+        }
+
+        // Нэг үг хэт олон давтагдах
+        if (preg_match('/\b([\p{L}\p{N}\']{2,})(?:\s+\1){5,}/ui', $text)) {
+            return true;
+        }
+
+        $words = preg_split('/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $wordCount = count($words);
+        if ($wordCount >= 15) {
+            $freq = [];
+            foreach ($words as $word) {
+                $key = mb_strtolower($word);
+                $freq[$key] = ($freq[$key] ?? 0) + 1;
+            }
+            $top = max($freq);
+            if ($top / $wordCount >= 0.35) {
+                return true;
+            }
+        }
+
+        // Монгол хуралд кирилл бараг байхгүй, латин давамгайлсан = буруу хэл/орчуулга
+        $cyrillic = preg_match_all('/\p{Cyrillic}/u', $text) ?: 0;
+        $latin = preg_match_all('/[A-Za-z]/', $text) ?: 0;
+        $letters = $cyrillic + $latin;
+        if ($letters >= 20 && $latin >= 12 && ($cyrillic / $letters) < 0.25) {
+            return true;
+        }
+
+        return false;
+    }
+
     private function formatMinutes(string $transcript, Meeting $meeting): string
     {
+        if ($this->looksUnreliableTranscript($transcript)) {
+            return "Гарчиг: ".($meeting->title ?: 'Хурлын тэмдэглэл')."\n"
+                ."Огноо: ".(optional($meeting->held_at)?->format('Y-m-d H:i') ?: '—')."\n\n"
+                ."Тэмдэглэл: Аудиог найдвартай текстлэж чадсангүй. Дахин оруулна уу.";
+        }
+
         if (! $this->openAi->isAvailable()) {
             return $transcript;
         }
@@ -379,17 +472,19 @@ class MeetingTranscriptionService
                 [
                     'role' => 'system',
                     'content' => 'Та Монгол хэлээр албан хурлын тэмдэглэл бичдэг туслах. '
-                        .'Өгөгдсөн ярианы транскриптаас цэгцтэй тэмдэглэл гарга. '
+                        .'Зөвхөн монгол (кирилл) утгатай транскриптыг ашигла. '
+                        .'Англи текст, давтагдсан утгагүй үг, орчуулга зохиохыг хориглоно. '
+                        .'Хэрэв транскрипт утгагүй/буруу хэлтэй бол «Аудиог найдвартай текстлэж чадсангүй» гэж бич. '
                         .'Бүтэц: 1) Гарчиг/сэдэв 2) Огноо 3) Оролцогчид (хэрэв дурдсан бол) '
                         .'4) Хэлэлцсэн асуудал 5) Шийдвэр/үүрэг. '
-                        .'Зөвхөн тэмдэглэлийн текстийг буцаа. Англиар бичихгүй.',
+                        .'Зөвхөн тэмдэглэлийн текстийг буцаа.',
                 ],
                 [
                     'role' => 'user',
                     'content' => "Гарчиг: {$title}\nОгноо: {$when}\n\nТранскрипт:\n{$transcript}",
                 ],
             ], [
-                'temperature' => 0.2,
+                'temperature' => 0.1,
             ]);
 
             $content = trim((string) ($result['content'] ?? ''));
