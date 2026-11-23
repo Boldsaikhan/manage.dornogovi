@@ -343,13 +343,13 @@ class MeetingTranscriptionService
         $timeout = (int) config('ai.whisper_timeout', 180);
         $model = (string) config('ai.whisper_model', 'whisper-1');
 
+        // Whisper API 'mn' (монгол) language кодыг дэмждэггүй — автоматаар илрүүлнэ.
         $response = Http::baseUrl(rtrim((string) config('ai.openai_base_url'), '/'))
             ->withToken($apiKey)
             ->timeout($timeout)
             ->attach('file', file_get_contents($absolutePath), $filename)
             ->post('/audio/transcriptions', [
                 'model' => $model,
-                'language' => 'mn',
                 'response_format' => 'text',
             ]);
 

@@ -550,7 +550,7 @@ onBeforeUnmount(() => {
                             {{ isEditing ? 'Тэмдэглэл засах' : 'Шинэ хурлын тэмдэглэл' }}
                         </h2>
                         <p class="mt-1 text-sm text-slate-500">
-                            Аудио → Whisper (монгол) → засварлах текст
+                            Аудио → Whisper → засварлах текст
                         </p>
                     </div>
                     <button type="button" class="ui-btn-ghost !px-2 !py-1" @click="closeModal">Хаах</button>
