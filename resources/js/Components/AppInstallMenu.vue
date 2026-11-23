@@ -187,10 +187,10 @@ const toggle = () => {
             type="button"
             class="relative flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm transition"
             :class="appMissing
-                ? 'border-rose-400 bg-rose-50 text-rose-600 hover:border-rose-500 hover:bg-rose-100'
+                ? 'border-rose-400 bg-rose-50 text-rose-600 hover:border-rose-500 hover:bg-rose-100 dark:border-rose-500/60 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-950/60'
                 : open
-                    ? 'border-brand-navy-300 bg-brand-navy-50 text-brand-navy-700'
-                    : 'border-slate-200 bg-white text-brand-navy-700 hover:border-brand-navy-200 hover:bg-brand-navy-50'"
+                    ? 'border-brand-navy-300 bg-brand-navy-50 text-brand-navy-700 dark:border-brand-navy-600 dark:bg-slate-700 dark:text-brand-navy-200'
+                    : 'border-slate-200 bg-white text-brand-navy-700 hover:border-brand-navy-200 hover:bg-brand-navy-50 dark:border-slate-700 dark:bg-slate-800 dark:text-brand-navy-300 dark:hover:border-brand-navy-700 dark:hover:bg-slate-700'"
             :title="appMissing ? 'Ширээний програм суугаагүй — дарж татна уу' : 'Ширээний програм'"
             :aria-label="appMissing ? 'Програм суугаагүй' : 'Ширээний програм'"
             @click.stop="toggle"
@@ -201,7 +201,7 @@ const toggle = () => {
             </svg>
             <span
                 v-if="appMissing"
-                class="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-600 text-[8px] font-bold text-white ring-2 ring-white"
+                class="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-600 text-[8px] font-bold text-white ring-2 ring-white dark:ring-slate-900"
             >
                 !
             </span>
@@ -215,14 +215,14 @@ const toggle = () => {
         >
             <div
                 v-if="open"
-                class="absolute right-0 z-50 mt-2 w-[min(92vw,20rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+                class="absolute right-0 z-50 mt-2 w-[min(92vw,20rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
                 @click.stop
             >
-                <div class="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-                    <p class="text-sm font-semibold text-slate-800">Ширээний програм</p>
+                <div class="flex items-center justify-between border-b border-slate-100 px-3 py-2 dark:border-slate-800">
+                    <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">Ширээний програм</p>
                     <button
                         type="button"
-                        class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                        class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
                         aria-label="Хаах"
                         @click="open = false"
                     >
@@ -233,20 +233,20 @@ const toggle = () => {
                 </div>
 
                 <div class="space-y-3 p-3">
-                    <div v-if="inDesktopApp" class="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                    <div v-if="inDesktopApp" class="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
                         <div class="flex items-center justify-between gap-2">
                             <span class="font-semibold">Ширээний програмаар орсон байна</span>
                             <span
                                 v-if="runningVersion"
-                                class="shrink-0 rounded-full bg-white/70 px-2 py-0.5 font-mono text-[10px] font-semibold"
+                                class="shrink-0 rounded-full bg-white/70 px-2 py-0.5 font-mono text-[10px] font-semibold dark:bg-slate-800/80"
                             >v{{ runningVersion }}</span>
                         </div>
                         <p class="mt-0.5 leading-relaxed">Холбосон системүүд рүү автоматаар нэвтэрнэ.</p>
-                        <p v-if="newerAvailable" class="mt-1 font-semibold text-amber-700">
+                        <p v-if="newerAvailable" class="mt-1 font-semibold text-amber-700 dark:text-amber-300">
                             Шинэ хувилбар гарсан: v{{ installer.version }}
                         </p>
                     </div>
-                    <p v-else class="text-xs leading-relaxed text-slate-600">
+                    <p v-else class="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
                         Windows програмыг суулгавал холбосон системүүд рүү
                         нэр, нууц үгээ бичихгүйгээр шууд нэвтэрнэ.
                     </p>
@@ -275,7 +275,7 @@ const toggle = () => {
 
                     <p
                         v-if="! installer.available"
-                        class="rounded-lg bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800"
+                        class="rounded-lg bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
                     >
                         Суулгацыг сервер дээр хараахан байршуулаагүй байна.
                         <template v-if="! installer.canUpload">Системийн админд хандана уу.</template>
@@ -297,10 +297,10 @@ const toggle = () => {
                         >
                             {{ uploading ? `Байршуулж байна… ${progress}%` : (installer.available ? 'Суулгацыг шинэчлэх' : 'Суулгац байршуулах') }}
                         </button>
-                        <p v-if="uploadError" class="text-xs text-rose-600">{{ uploadError }}</p>
+                        <p v-if="uploadError" class="text-xs text-rose-600 dark:text-rose-400">{{ uploadError }}</p>
                     </div>
 
-                    <ol class="list-decimal space-y-1 rounded-lg bg-slate-50 px-3 py-2 pl-5 text-xs leading-relaxed text-slate-600">
+                    <ol class="list-decimal space-y-1 rounded-lg bg-slate-50 px-3 py-2 pl-5 text-xs leading-relaxed text-slate-600 dark:bg-slate-800/70 dark:text-slate-300">
                         <li>Татсан <b>Manage-Dornogovi-Setup.exe</b> файлыг ажиллуулна.</li>
                         <li>
                             Windows «<b>Windows protected your PC</b>» гэж сануулбал
@@ -311,7 +311,7 @@ const toggle = () => {
                         <li>«Холбосон системүүд» цэсэнд нэвтрэх мэдээллээ нэг удаа хадгална.</li>
                     </ol>
 
-                    <p class="rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-800">
+                    <p class="rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
                         Програм нь гарын үсэг (code signing) гэрчилгээгүй тул Windows
                         анх удаа сануулга өгдөг. Энэ нь вирус гэсэн үг биш — суулгац
                         манай системээс татагдаж байна.
