@@ -16,6 +16,7 @@ use App\Http\Controllers\DecreeController;
 use App\Http\Controllers\DepartmentDashboardController;
 use App\Http\Controllers\DesktopAppController;
 use App\Http\Controllers\DocumentStandardController;
+use App\Http\Controllers\FileLibraryController;
 use App\Http\Controllers\LaunchController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\LeaveSlipController;
@@ -241,6 +242,12 @@ Route::middleware('auth')->group(function () {
     Route::patch('/modules/reports/{report}/schedule', [ReportCatalogController::class, 'updateSchedule'])
         ->name('reports.schedule');
     Route::get('/modules/onboarding', [ModuleResourceController::class, 'index'])->name('onboarding.index');
+
+    Route::get('/modules/file-library', [FileLibraryController::class, 'index'])->name('file-library.index');
+    Route::post('/modules/file-library', [FileLibraryController::class, 'store'])->name('file-library.store');
+    Route::patch('/modules/file-library/{libraryFile}', [FileLibraryController::class, 'update'])->name('file-library.update');
+    Route::delete('/modules/file-library/{libraryFile}', [FileLibraryController::class, 'destroy'])->name('file-library.destroy');
+    Route::get('/modules/file-library/{libraryFile}/download', [FileLibraryController::class, 'download'])->name('file-library.download');
 
     Route::get('/modules/{module}/logs', [ModuleResourceController::class, 'logs'])
         ->name('modules.logs');
