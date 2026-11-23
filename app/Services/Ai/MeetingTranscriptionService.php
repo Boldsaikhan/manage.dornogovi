@@ -183,9 +183,12 @@ class MeetingTranscriptionService
                 $segStart = (int) round($start);
                 $segEnd = (int) round(min($duration, $start + $len));
 
-                // Чимээгүй/хоосон хэсэг — алгасаад үргэлжилнэ (эхний секундүүд ихэвчлэн чимээгүй).
-                // Хүчтэй hallucination-ийг ч алгасна (бүтэн файл унагахгүй).
-                if ($chunkText !== '' && (! $this->looksUnreliableTranscript($chunkText) || $this->hasCyrillic($chunkText))) {
+                // Зөвхөн найдвартай монгол кирилл хэсгийг хадгална.
+                // (Өмнө нь «кирилл байвал зөвшөөр» гэж хятад/казах hallucination нэвтрүүлдэг байсан.)
+                if ($chunkText !== ''
+                    && $this->hasCyrillic($chunkText)
+                    && ! $this->looksUnreliableTranscript($chunkText)
+                ) {
                     $segments[] = [
                         'id' => uniqid('seg_', true),
                         'start' => $segStart,
@@ -595,19 +598,38 @@ class MeetingTranscriptionService
 
         $prompt = (string) config(
             'ai.whisper_prompt',
-            'Энэ бол монгол хэлээр яригдсан албан хурлын бичлэг. '
-            .'Зөвхөн сонсогдсон монгол үгийг кирилл үсгээр бич. '
-            .'Англиар бүү орчуул, үг бүү зохио, үг бүү давта.',
+            'Сайн байна уу. Хурал эхэллээ. Өнөөдрийн хэлэлцэх асуудал. '
+            .'Ирц бүртгэе. Тайлан хэлэлцэж, шийдвэр гаргая. Баярлалаа.',
         );
 
-        $text = $this->callWhisper($apiKey, $model, $timeout, $absolutePath, $filename, $prompt);
+        $text = $this->sanitizeWhisperText(
+            $this->callWhisper($apiKey, $model, $timeout, $absolutePath, $filename, $prompt)
+        );
 
-        // Чимээгүй буюу prompt-оос болж хоосон ирвэл нэг удаа promptгүйгээр дахин оролдоно.
-        if ($text === '') {
-            $text = $this->callWhisper($apiKey, $model, $timeout, $absolutePath, $filename, null);
+        // Хоосон/буруу хэлтэй бол нэг удаа өөр монгол жишээтэй дахин оролдоно (promptгүйгээр бүү дууд — хятад/казах ирдэг).
+        if ($text === '' || $this->looksUnreliableTranscript($text)) {
+            $retryPrompt = 'Хурлын тэмдэглэл. Монгол хэл. Кирилл үсэг. Сайн байна уу.';
+            $retry = $this->sanitizeWhisperText(
+                $this->callWhisper($apiKey, $model, $timeout, $absolutePath, $filename, $retryPrompt)
+            );
+            if ($retry !== '' && ! $this->looksUnreliableTranscript($retry)) {
+                return $retry;
+            }
         }
 
         return $text;
+    }
+
+    private function sanitizeWhisperText(string $text): string
+    {
+        $text = preg_replace('/\x{FFFD}/u', '', $text) ?? $text;
+        // Whisper заримдаа prompt-ыг шууд буцаадаг — тэр мөрийг хасна.
+        $prompt = trim((string) config('ai.whisper_prompt', ''));
+        if ($prompt !== '' && mb_stripos($text, $prompt) !== false) {
+            $text = str_ireplace($prompt, '', $text);
+        }
+
+        return trim($text);
     }
 
     private function callWhisper(
@@ -704,6 +726,27 @@ class MeetingTranscriptionService
             return true;
         }
 
+        // Хятад / солигдсон тэмдэгт
+        $han = preg_match_all('/\p{Han}/u', $text) ?: 0;
+        if ($han >= 2) {
+            return true;
+        }
+        if (str_contains($text, "\u{FFFD}")) {
+            return true;
+        }
+
+        // Whisper prompt-ыг дахин бичсэн эсэх
+        if ($this->looksLikePromptEcho($text)) {
+            return true;
+        }
+
+        // Казак/кирилл бусад хэлний үсэг давамгайлсан
+        $mnSpecial = preg_match_all('/[ӨөҮүЁё]/u', $text) ?: 0;
+        $kzSpecial = preg_match_all('/[ӘәҒғҚқҢңҰұҺһІі]/u', $text) ?: 0;
+        if ($kzSpecial >= 3 && $kzSpecial > $mnSpecial) {
+            return true;
+        }
+
         // Нэг үг хэт олон давтагдах
         if (preg_match('/\b([\p{L}\p{N}\']{2,})(?:\s+\1){5,}/ui', $text)) {
             return true;
@@ -726,12 +769,49 @@ class MeetingTranscriptionService
         // Монгол хуралд кирилл бараг байхгүй, латин давамгайлсан = буруу хэл/орчуулга
         $cyrillic = preg_match_all('/\p{Cyrillic}/u', $text) ?: 0;
         $latin = preg_match_all('/[A-Za-z]/', $text) ?: 0;
-        $letters = $cyrillic + $latin;
-        if ($letters >= 20 && $latin >= 12 && ($cyrillic / $letters) < 0.25) {
+        $letters = $cyrillic + $latin + $han;
+        if ($letters >= 20 && $latin >= 12 && ($cyrillic / max(1, $letters)) < 0.25) {
+            return true;
+        }
+
+        // Кирилл бараг байхгүй урт текст
+        if (mb_strlen($text) >= 24 && $cyrillic < 8) {
             return true;
         }
 
         return false;
+    }
+
+    private function looksLikePromptEcho(string $text): bool
+    {
+        $prompt = trim((string) config('ai.whisper_prompt', ''));
+        $needles = array_filter(array_unique([
+            $prompt,
+            'Зөвхөн сонсогдсон монгол',
+            'кирилл үсгээр бич',
+            'Англиар бүү орчуул',
+            'үг бүү зохио',
+            'Үг бүү давта',
+        ]));
+
+        foreach ($needles as $needle) {
+            if ($needle !== '' && mb_stripos($text, $needle) !== false) {
+                return true;
+            }
+        }
+
+        // Prompt-ын үгсийн overlap
+        if ($prompt === '') {
+            return false;
+        }
+        $promptWords = preg_split('/\s+/u', mb_strtolower($prompt), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $textWords = preg_split('/\s+/u', mb_strtolower($text), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        if (count($promptWords) < 4 || count($textWords) < 4) {
+            return false;
+        }
+        $overlap = count(array_intersect($promptWords, $textWords));
+
+        return ($overlap / count($promptWords)) >= 0.55;
     }
 
     private function formatMinutes(string $transcript, Meeting $meeting): string

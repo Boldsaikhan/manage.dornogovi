@@ -141,11 +141,32 @@ const filteredSegments = computed(() => {
     return segments.value.filter((s) => s.speaker === speakerFilter.value);
 });
 
-const activeSegmentId = computed(() => {
+const activeSegment = computed(() => {
+    const list = [...segments.value].sort((a, b) => a.start - b.start);
+    if (! list.length) return null;
     const t = currentTime.value;
-    const hit = segments.value.find((s) => t >= s.start && t < Math.max(s.end, s.start + 0.5));
 
-    return hit?.id || null;
+    const exact = list.find((s) => t >= s.start && t < Math.max(s.end, s.start + 0.35));
+    if (exact) return exact;
+
+    // Цоорхойд — хамгийн ойрын өмнөх сегмент (тоглуулж буй байрлалыг харуулах).
+    let prev = null;
+    for (const s of list) {
+        if (s.start <= t) prev = s;
+        else break;
+    }
+
+    return prev || list[0];
+});
+
+const activeSegmentId = computed(() => activeSegment.value?.id || null);
+
+const activeSegmentLabel = computed(() => {
+    const seg = activeSegment.value;
+    if (! seg) return '';
+    const preview = String(seg.text || '').replace(/\s+/g, ' ').trim().slice(0, 72);
+
+    return `${seg.speaker || 'Яригч'} · ${formatClock(seg.start)}` + (preview ? ` — ${preview}` : '');
 });
 
 const totalDurationLabel = computed(() => {
@@ -523,6 +544,13 @@ watch(editorTab, (tab) => {
         ensureFormalMinutes(false);
         syncDocEditorFromMinutes();
     }
+});
+
+watch(activeSegmentId, async (id) => {
+    if (! followSpeech.value || ! id || editorTab.value !== 'convert') return;
+    await nextTick();
+    const el = document.querySelector(`[data-seg-id="${CSS.escape(id)}"]`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 });
 
 const setAudio = (file) => {
@@ -1098,12 +1126,19 @@ onBeforeUnmount(() => {
                             <div
                                 v-for="seg in filteredSegments"
                                 :key="seg.id"
-                                class="rounded-xl border p-3 transition dark:border-slate-700"
+                                :data-seg-id="seg.id"
+                                class="rounded-xl border-2 p-3 transition dark:border-slate-700"
                                 :class="activeSegmentId === seg.id
-                                    ? 'border-sky-300 bg-sky-50 dark:border-sky-700 dark:bg-sky-950/40'
+                                    ? 'border-brand-navy-500 bg-sky-100 shadow-md ring-2 ring-brand-navy-400/40 dark:border-sky-400 dark:bg-sky-950/60 dark:ring-sky-400/30'
                                     : 'border-slate-200 bg-white dark:bg-slate-900/40'"
                             >
                                 <div class="mb-2 flex flex-wrap items-center gap-2">
+                                    <span
+                                        v-if="activeSegmentId === seg.id"
+                                        class="rounded-full bg-brand-navy-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white dark:bg-sky-500"
+                                    >
+                                        ▶ Одоо
+                                    </span>
                                     <select
                                         v-model="seg.speaker"
                                         class="ui-input !h-8 !w-auto min-w-[9rem] !py-1 text-xs"
@@ -1150,6 +1185,7 @@ onBeforeUnmount(() => {
                                     v-model="seg.text"
                                     rows="3"
                                     class="ui-input text-sm leading-relaxed"
+                                    :class="activeSegmentId === seg.id ? '!border-brand-navy-300 !bg-white dark:!bg-slate-900' : ''"
                                     :disabled="!canManage"
                                     @input="syncTranscriptFromSegments"
                                 />
@@ -1180,6 +1216,13 @@ onBeforeUnmount(() => {
                                 @play="playing = true"
                                 @pause="playing = false"
                             />
+                            <div
+                                v-if="activeSegmentLabel"
+                                class="mb-2 truncate rounded-lg bg-brand-navy-50 px-2.5 py-1.5 text-xs text-brand-navy-800 dark:bg-sky-950/50 dark:text-sky-100"
+                                :title="activeSegmentLabel"
+                            >
+                                <span class="font-semibold">Одоо:</span> {{ activeSegmentLabel }}
+                            </div>
                             <div class="mb-2 flex items-center gap-3 text-xs tabular-nums text-slate-500">
                                 <span>{{ formatClock(currentTime) }}</span>
                                 <input
