@@ -108,6 +108,9 @@ const mediaDuration = ref(0);
 const playbackRate = ref(1);
 const docEditor = ref(null);
 const notesMetaOpen = ref(false);
+const transcriptDraft = ref('');
+const transcriptDirty = ref(false);
+const transcriptHovered = ref(false);
 
 const speakerChoices = [
     'Танигдаагүй яригч',
@@ -207,6 +210,32 @@ const totalDurationLabel = computed(() => {
 
 const syncTranscriptFromSegments = () => {
     form.transcript = segments.value.map((s) => s.text).filter(Boolean).join('\n\n');
+    form.transcript_segments = segments.value;
+    if (! transcriptDirty.value) {
+        transcriptDraft.value = form.transcript;
+    }
+};
+
+const syncTranscriptFieldFromSegments = () => {
+    if (transcriptDirty.value) return;
+    const joined = segments.value.map((s) => String(s.text || '').trim()).filter(Boolean).join('\n\n');
+    transcriptDraft.value = joined || form.transcript || '';
+    form.transcript = transcriptDraft.value;
+    form.transcript_segments = segments.value;
+};
+
+const onTranscriptFieldInput = () => {
+    transcriptDirty.value = true;
+    form.transcript = transcriptDraft.value;
+    const dur = Number(editingRow.value?.audio_duration_sec || mediaDuration.value || 0);
+    const first = segments.value[0];
+    segments.value = [{
+        id: first?.id || `seg_${Math.random().toString(36).slice(2)}`,
+        start: 0,
+        end: dur,
+        speaker: first?.speaker || 'Танигдаагүй яригч',
+        text: transcriptDraft.value,
+    }];
     form.transcript_segments = segments.value;
 };
 
@@ -507,6 +536,8 @@ const openCreate = () => {
     audioFile.value = null;
     audioPreviewName.value = '';
     segments.value = [];
+    transcriptDraft.value = '';
+    transcriptDirty.value = false;
     editorTab.value = 'notes';
     speakerFilter.value = '';
     notesMetaOpen.value = false;
@@ -529,8 +560,9 @@ const openEdit = (row) => {
     form.audio = null;
     audioFile.value = null;
     audioPreviewName.value = row.audio_name || '';
+    transcriptDirty.value = false;
     syncSegmentsFromRow(row);
-    syncTranscriptFromSegments();
+    syncTranscriptFieldFromSegments();
     const preferConvert = row.has_audio || (row.transcript_segments || []).length;
     editorTab.value = preferConvert ? 'convert' : 'notes';
     speakerFilter.value = '';
@@ -586,12 +618,6 @@ watch(editorTab, (tab) => {
     }
 });
 
-watch(activeSegmentId, async (id) => {
-    if (! followSpeech.value || ! id || editorTab.value !== 'convert') return;
-    await nextTick();
-    const el = document.querySelector(`[data-seg-id="${CSS.escape(id)}"]`);
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-});
 
 const setAudio = (file) => {
     if (! file) return;
@@ -621,9 +647,13 @@ const submit = () => {
     if (editorTab.value === 'notes') {
         onDocInput();
     }
-    syncTranscriptFromSegments();
+    if (editorTab.value === 'convert' || transcriptDirty.value) {
+        onTranscriptFieldInput();
+    } else {
+        syncTranscriptFromSegments();
+    }
     form.transcript_segments = segments.value;
-    form.transcript = segments.value.map((s) => s.text).filter(Boolean).join('\n\n');
+    form.transcript = transcriptDraft.value || segments.value.map((s) => s.text).filter(Boolean).join('\n\n');
 
     if (isEditing.value) {
         form.audio = null;
@@ -770,15 +800,19 @@ const pollEditingStatus = async () => {
             // Амьд текст / сегмент — боловсруулж байх үед ч шинэчлэгдэнэ.
             if (Array.isArray(data.transcript_segments) && data.transcript_segments.length) {
                 syncSegmentsFromRow(data);
-                syncTranscriptFromSegments();
+                syncTranscriptFieldFromSegments();
             } else if (typeof data.transcript === 'string' && data.transcript !== '') {
                 form.transcript = data.transcript;
+                if (! transcriptDirty.value) {
+                    transcriptDraft.value = data.transcript;
+                }
             }
             if (data.transcription_status === 'ready') {
                 form.minutes = data.minutes || form.minutes;
                 audioPreviewName.value = data.audio_name || audioPreviewName.value;
+                transcriptDirty.value = false;
                 syncSegmentsFromRow(data);
-                syncTranscriptFromSegments();
+                syncTranscriptFieldFromSegments();
                 stuckBusy.value = false;
             }
             if (data.transcription_status === 'failed') {
@@ -1165,117 +1199,41 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
 
-                    <!-- Хөрвүүлэг: сегмент + тоглуулагч -->
+                    <!-- Хөрвүүлэг: нэг талбар + тоглуулагч -->
                     <div v-show="editorTab === 'convert'" class="flex min-h-0 flex-1 flex-col gap-3">
-                        <div v-if="speakersInUse.length" class="flex shrink-0 flex-wrap gap-2">
-                            <button
-                                type="button"
-                                class="rounded-full border px-3 py-1 text-xs font-medium transition"
-                                :class="!speakerFilter
-                                    ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
-                                    : 'border-slate-200 bg-white text-slate-600 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300'"
-                                @click="speakerFilter = ''"
-                            >
-                                Бүгд
-                            </button>
-                            <button
-                                v-for="name in speakersInUse"
-                                :key="name"
-                                type="button"
-                                class="rounded-full border px-3 py-1 text-xs font-medium transition"
-                                :class="speakerFilter === name
-                                    ? 'border-brand-navy-600 bg-brand-navy-600 text-white'
-                                    : 'border-slate-200 bg-white text-slate-600 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300'"
-                                @click="speakerFilter = name"
-                            >
-                                {{ name }}
-                            </button>
-                        </div>
-
-                        <div class="relative min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-                            <div
-                                v-if="!filteredSegments.length"
-                                class="rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-400 dark:border-slate-700"
-                            >
-                                Боловсруулж эхлэхэд сегментүүд энд гарна…
-                            </div>
-
-                            <div
-                                v-for="seg in filteredSegments"
-                                :key="seg.id"
-                                :data-seg-id="seg.id"
-                                class="rounded-xl border-2 p-3 transition dark:border-slate-700"
-                                :class="activeSegmentId === seg.id
-                                    ? 'border-brand-navy-500 bg-sky-100 shadow-md ring-2 ring-brand-navy-400/40 dark:border-sky-400 dark:bg-sky-950/60 dark:ring-sky-400/30'
-                                    : 'border-slate-200 bg-white dark:bg-slate-900/40'"
-                            >
-                                <div class="mb-2 flex flex-wrap items-center gap-2">
-                                    <span
-                                        v-if="activeSegmentId === seg.id"
-                                        class="rounded-full bg-brand-navy-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white dark:bg-sky-500"
-                                    >
-                                        ▶ Одоо
+                        <div
+                            class="transcript-field relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border-2 bg-white transition dark:bg-slate-900/50"
+                            :class="transcriptHovered || playing
+                                ? 'border-brand-navy-500 shadow-md ring-2 ring-brand-navy-400/35 dark:border-sky-400 dark:ring-sky-400/30'
+                                : 'border-slate-200 dark:border-slate-700'"
+                            @mouseenter="transcriptHovered = true"
+                            @mouseleave="transcriptHovered = false"
+                        >
+                            <div class="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 px-3 py-2 dark:border-slate-800">
+                                <div class="min-w-0 truncate text-xs text-slate-500">
+                                    <span v-if="activeSegmentLabel" class="text-brand-navy-700 dark:text-sky-200">
+                                        <span class="font-semibold">Одоо:</span> {{ activeSegmentLabel }}
                                     </span>
-                                    <select
-                                        v-model="seg.speaker"
-                                        class="ui-input !h-8 !w-auto min-w-[9rem] !py-1 text-xs"
-                                        :disabled="!canManage"
-                                        @change="syncTranscriptFromSegments"
-                                    >
-                                        <option
-                                            v-for="opt in speakerChoices"
-                                            :key="opt"
-                                            :value="opt"
-                                        >
-                                            {{ opt }}
-                                        </option>
-                                    </select>
-                                    <button
-                                        type="button"
-                                        class="rounded-md px-2 py-1 text-xs font-semibold tabular-nums text-brand-navy-700 hover:bg-slate-100 dark:text-sky-300 dark:hover:bg-slate-800"
-                                        @click="seekTo(seg.start)"
-                                    >
-                                        {{ formatClock(seg.start) }}
-                                    </button>
-                                    <span class="text-[11px] text-slate-400">→ {{ formatClock(seg.end) }}</span>
-                                    <div class="ml-auto flex items-center gap-1">
-                                        <button
-                                            type="button"
-                                            class="ui-icon-btn"
-                                            title="Хуулах"
-                                            @click="copySegmentText(seg.text)"
-                                        >
-                                            ⎘
-                                        </button>
-                                        <button
-                                            v-if="canManage"
-                                            type="button"
-                                            class="ui-icon-btn ui-icon-btn--danger"
-                                            title="Устгах"
-                                            @click="removeSegment(seg.id)"
-                                        >
-                                            ×
-                                        </button>
-                                    </div>
+                                    <span v-else>Хөрвүүлсэн текст</span>
                                 </div>
-                                <textarea
-                                    v-model="seg.text"
-                                    rows="3"
-                                    class="ui-input text-sm leading-relaxed"
-                                    :class="activeSegmentId === seg.id ? '!border-brand-navy-300 !bg-white dark:!bg-slate-900' : ''"
-                                    :disabled="!canManage"
-                                    @input="syncTranscriptFromSegments"
-                                />
+                                <button
+                                    v-if="transcriptDraft"
+                                    type="button"
+                                    class="ui-icon-btn shrink-0"
+                                    title="Хуулах"
+                                    @click="copySegmentText(transcriptDraft)"
+                                >
+                                    ⎘
+                                </button>
                             </div>
-
-                            <button
-                                v-if="followSpeech && filteredSegments.length"
-                                type="button"
-                                class="sticky bottom-2 left-1/2 z-10 -translate-x-1/2 rounded-full bg-slate-800 px-3 py-1.5 text-xs font-medium text-white shadow-lg dark:bg-slate-700"
-                                @click="followSpeech = false"
-                            >
-                                Яриа дагахыг болиулах ×
-                            </button>
+                            <textarea
+                                v-model="transcriptDraft"
+                                class="transcript-field__input w-full flex-1 resize-none border-0 bg-transparent px-3 py-3 text-sm leading-relaxed text-slate-800 outline-none focus:ring-0 dark:text-slate-100"
+                                :disabled="!canManage"
+                                placeholder="Боловсруулж эхлэхэд хөрвүүлсэн текст энд нэг талбарт гарна…"
+                                @input="onTranscriptFieldInput"
+                                @focus="transcriptHovered = true"
+                            />
                         </div>
 
                         <div
@@ -1293,13 +1251,6 @@ onBeforeUnmount(() => {
                                 @play="playing = true"
                                 @pause="playing = false"
                             />
-                            <div
-                                v-if="activeSegmentLabel"
-                                class="mb-2 truncate rounded-lg bg-brand-navy-50 px-2.5 py-1.5 text-xs text-brand-navy-800 dark:bg-sky-950/50 dark:text-sky-100"
-                                :title="activeSegmentLabel"
-                            >
-                                <span class="font-semibold">Одоо:</span> {{ activeSegmentLabel }}
-                            </div>
                             <div class="mb-2 flex items-center gap-3 text-xs tabular-nums text-slate-500">
                                 <span>{{ formatClock(currentTime) }}</span>
                                 <input
@@ -1489,6 +1440,11 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.transcript-field__input {
+    min-height: 12rem;
+    height: 100%;
+}
+
 .meeting-doc-canvas {
     background: #e8eaed;
     padding: 16px 12px 28px;
