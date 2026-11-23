@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\PhonePasswordResetController;
+use App\Http\Controllers\Admin\DatabaseBackupController;
 use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\UserAccessController;
 use App\Http\Controllers\AiAssistantController;
@@ -299,6 +300,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/roles', [UserAccessController::class, 'storeRole'])->name('roles.store');
         Route::patch('/roles/{role}', [UserAccessController::class, 'updateRole'])->name('roles.update');
         Route::delete('/roles/{role}', [UserAccessController::class, 'destroyRole'])->name('roles.destroy');
+
+        // Өгөгдлийн сангийн үзүүлэлт / нөөц.
+        Route::get('/database', [DatabaseBackupController::class, 'index'])->name('database.index');
+        Route::get('/database/download', [DatabaseBackupController::class, 'download'])
+            ->middleware('throttle:6,1')
+            ->name('database.download');
     });
 
     // Системийн алдааны бүртгэл — зөвхөн админ.
