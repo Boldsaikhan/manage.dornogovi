@@ -47,9 +47,9 @@ class MeetingTranscriptionService
         $this->setProgress($meeting, Meeting::TRANSCRIPTION_PROCESSING, 45, 'Текст рүү хөрвүүлж байна (Whisper)…');
 
         $absolute = Storage::disk('local')->path($mp3Relative);
-        $raw = $this->whisper($absolute, basename($mp3Relative));
+        $raw = $this->whisper($meeting, $absolute, basename($mp3Relative));
 
-        $this->setProgress($meeting, Meeting::TRANSCRIPTION_PROCESSING, 80, 'Тэмдэглэл цэгцэлж байна…');
+        $this->setProgress($meeting, Meeting::TRANSCRIPTION_PROCESSING, 85, 'Тэмдэглэл цэгцэлж байна…');
 
         $minutes = $this->formatMinutes($raw, $meeting);
 
@@ -333,7 +333,7 @@ class MeetingTranscriptionService
         ])->save();
     }
 
-    private function whisper(string $absolutePath, string $filename): string
+    private function whisper(Meeting $meeting, string $absolutePath, string $filename): string
     {
         $apiKey = $this->settings->openaiApiKey();
         if (! $apiKey) {
@@ -344,6 +344,7 @@ class MeetingTranscriptionService
         $model = (string) config('ai.whisper_model', 'whisper-1');
 
         // API 'mn' кодыг дэмждэггүй тул монгол prompt + temperature=0-оор чиглүүлнэ.
+        // Хоёр дахин Whisper дуудахгүй — удаан гацахаас сэргийлнэ.
         $prompt = (string) config(
             'ai.whisper_prompt',
             'Энэ бол монгол хэлээр яригдсан албан хурлын бичлэг. '
@@ -351,27 +352,22 @@ class MeetingTranscriptionService
             .'Англиар бүү орчуул, үг бүү зохио, үг бүү давта.',
         );
 
-        $text = $this->callWhisper($apiKey, $model, $timeout, $absolutePath, $filename, $prompt, 0);
+        $this->setProgress($meeting, Meeting::TRANSCRIPTION_PROCESSING, 50, 'Whisper API руу илгээж байна…');
 
-        // Анхны оролдлого англи hallucination / давталт бол дахин оролдоно.
+        $text = $this->callWhisper($apiKey, $model, $timeout, $absolutePath, $filename, $prompt);
+
+        $this->setProgress($meeting, Meeting::TRANSCRIPTION_PROCESSING, 75, 'Текстийг шалгаж байна…');
+
+        $text = $this->collapseRepetitions($text);
+
         if ($this->looksUnreliableTranscript($text)) {
-            $retryPrompt = 'Монгол хэл. Кирилл бичиг. Хурлын ярианы үгсийг яг сонссоноор бичнэ. '
-                .'Давтан бичихгүй. Орчуулахгүй.';
-            $retry = $this->callWhisper($apiKey, $model, $timeout, $absolutePath, $filename, $retryPrompt, 0);
-            if (! $this->looksUnreliableTranscript($retry)) {
-                $text = $retry;
-            } else {
-                $text = $this->collapseRepetitions($text);
-                if ($this->looksUnreliableTranscript($text)) {
-                    throw new RuntimeException(
-                        'Аудиог найдвартай монгол текст болгож чадсангүй (буруу хэл/давталт илэрлээ). '
-                        .'Дуу чимээгүй, тод монгол яриатай хэсгийг дахин оруулна уу.'
-                    );
-                }
-            }
+            throw new RuntimeException(
+                'Аудиог найдвартай монгол текст болгож чадсангүй (буруу хэл/давталт илэрлээ). '
+                .'Дуу чимээгүй, тод монгол яриатай хэсгийг дахин оруулна уу.'
+            );
         }
 
-        return $this->collapseRepetitions($text);
+        return $text;
     }
 
     private function callWhisper(
@@ -381,18 +377,29 @@ class MeetingTranscriptionService
         string $absolutePath,
         string $filename,
         string $prompt,
-        float $temperature,
     ): string {
-        $response = Http::baseUrl(rtrim((string) config('ai.openai_base_url'), '/'))
-            ->withToken($apiKey)
-            ->timeout($timeout)
-            ->attach('file', file_get_contents($absolutePath), $filename)
-            ->post('/audio/transcriptions', [
-                'model' => $model,
-                'prompt' => $prompt,
-                'temperature' => $temperature,
-                'response_format' => 'text',
-            ]);
+        $stream = fopen($absolutePath, 'r');
+        if ($stream === false) {
+            throw new RuntimeException('Аудио файлыг уншиж чадсангүй.');
+        }
+
+        try {
+            $response = Http::baseUrl(rtrim((string) config('ai.openai_base_url'), '/'))
+                ->withToken($apiKey)
+                ->connectTimeout(20)
+                ->timeout(max(30, $timeout))
+                ->attach('file', $stream, $filename)
+                ->post('/audio/transcriptions', [
+                    'model' => $model,
+                    'prompt' => $prompt,
+                    'temperature' => '0',
+                    'response_format' => 'text',
+                ]);
+        } finally {
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+        }
 
         if (! $response->successful()) {
             throw new RuntimeException('Whisper алдаа: '.$response->status().' '.mb_substr($response->body(), 0, 500));
@@ -404,6 +411,28 @@ class MeetingTranscriptionService
         }
 
         return $text;
+    }
+
+    /** Гацсан боловсруулалтыг алдаа болгоно. */
+    public function failIfStuck(Meeting $meeting): Meeting
+    {
+        if (! $meeting->isTranscribing()) {
+            return $meeting;
+        }
+
+        $timeout = (int) config('ai.whisper_timeout', 180) + 60;
+        $updatedAt = $meeting->updated_at;
+
+        if ($updatedAt && $updatedAt->gte(now()->subSeconds($timeout))) {
+            return $meeting;
+        }
+
+        $this->markFailed(
+            $meeting,
+            'Боловсруулалт хэт удаан үргэлжиллээ. Дахин оролдоно уу.',
+        );
+
+        return $meeting->fresh() ?? $meeting;
     }
 
     /** Давтагдсан үг/хэллэгийг таслана (Whisper hallucination). */
