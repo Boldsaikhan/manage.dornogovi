@@ -220,6 +220,39 @@ class MeetingMinutesTest extends TestCase
         $this->assertStringContainsString('найдвартай', (string) $meeting->transcription_error);
     }
 
+    public function test_can_update_transcript_segments(): void
+    {
+        $admin = $this->admin();
+        $meeting = Meeting::query()->create([
+            'title' => 'Сегмент',
+            'held_at' => now(),
+            'status' => 'draft',
+            'transcript' => 'хуучин',
+            'transcription_status' => Meeting::TRANSCRIPTION_READY,
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('meetings.update', $meeting), [
+                'title' => 'Сегмент',
+                'status' => 'draft',
+                'transcript_segments' => [
+                    [
+                        'id' => 'seg_1',
+                        'start' => 0,
+                        'end' => 30,
+                        'speaker' => 'Яригч 1',
+                        'text' => 'Сайн байна уу',
+                    ],
+                ],
+            ])
+            ->assertRedirect();
+
+        $meeting->refresh();
+        $this->assertSame('Сайн байна уу', $meeting->transcript);
+        $this->assertSame('Яригч 1', $meeting->transcript_segments[0]['speaker'] ?? null);
+    }
+
     public function test_status_includes_duration_fields(): void
     {
         $admin = $this->admin();

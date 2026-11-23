@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MeetingController extends Controller
@@ -127,14 +128,40 @@ class MeetingController extends Controller
             'held_at' => ['nullable', 'date'],
             'minutes' => ['nullable', 'string'],
             'transcript' => ['nullable', 'string'],
+            'transcript_segments' => ['nullable', 'array'],
+            'transcript_segments.*.id' => ['nullable', 'string', 'max:64'],
+            'transcript_segments.*.start' => ['nullable', 'integer', 'min:0'],
+            'transcript_segments.*.end' => ['nullable', 'integer', 'min:0'],
+            'transcript_segments.*.speaker' => ['nullable', 'string', 'max:120'],
+            'transcript_segments.*.text' => ['nullable', 'string'],
             'status' => ['nullable', Rule::in(['draft', 'final'])],
         ]);
+
+        $segments = null;
+        if (array_key_exists('transcript_segments', $data) && is_array($data['transcript_segments'])) {
+            $segments = collect($data['transcript_segments'])
+                ->map(fn ($seg) => [
+                    'id' => (string) ($seg['id'] ?? uniqid('seg_', true)),
+                    'start' => (int) ($seg['start'] ?? 0),
+                    'end' => (int) ($seg['end'] ?? 0),
+                    'speaker' => (string) ($seg['speaker'] ?? 'Танигдаагүй яригч'),
+                    'text' => (string) ($seg['text'] ?? ''),
+                ])
+                ->values()
+                ->all();
+        }
+
+        $transcript = $data['transcript'] ?? null;
+        if ($segments !== null) {
+            $transcript = trim(collect($segments)->pluck('text')->filter()->implode("\n\n"));
+        }
 
         $meeting->fill([
             'title' => $data['title'],
             'held_at' => $data['held_at'] ?? $meeting->held_at,
             'minutes' => $data['minutes'] ?? null,
-            'transcript' => $data['transcript'] ?? null,
+            'transcript' => $transcript,
+            'transcript_segments' => $segments ?? $meeting->transcript_segments,
             'status' => $data['status'] ?? $meeting->status,
         ])->save();
 
@@ -204,6 +231,7 @@ class MeetingController extends Controller
             'transcription_stage' => 'Дараалалд орлоо…',
             'transcription_error' => null,
             'transcript' => null,
+            'transcript_segments' => [],
             'transcribed_at' => null,
         ])->save();
 
@@ -238,6 +266,20 @@ class MeetingController extends Controller
         );
     }
 
+    public function streamAudio(Request $request, Meeting $meeting): BinaryFileResponse
+    {
+        abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
+        abort_unless(ModuleOwnScope::allows($request->user(), self::MODULE, $meeting), 403);
+        abort_unless($meeting->audio_path && Storage::disk('local')->exists($meeting->audio_path), 404);
+
+        $path = Storage::disk('local')->path($meeting->audio_path);
+
+        return response()->file($path, [
+            'Content-Type' => $meeting->audio_mime ?: 'audio/mpeg',
+            'Content-Disposition' => 'inline; filename="'.addslashes($meeting->audio_original_name ?: 'meeting-audio').'"',
+        ]);
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -250,6 +292,8 @@ class MeetingController extends Controller
             'held_at_label' => optional($m->held_at)?->format('Y-m-d H:i'),
             'minutes' => $m->minutes,
             'transcript' => $m->transcript,
+            'transcript_segments' => array_values($m->transcript_segments ?? []),
+            'audio_stream_url' => $m->audio_path ? route('meetings.audio.stream', $m) : null,
             'status' => $m->status,
             'status_label' => $m->statusLabel(),
             'transcription_status' => $m->transcription_status,

@@ -54,9 +54,11 @@ class MeetingTranscriptionService
             'audio_duration_sec' => $duration ? (int) round($duration) : null,
             'transcription_position_sec' => 0,
             'transcript' => '',
+            'transcript_segments' => [],
         ])->save();
 
         $raw = $this->transcribeProgressively($meeting, $absolute, $ffmpeg, $duration);
+        $meeting->refresh();
 
         $this->setProgress(
             $meeting,
@@ -127,15 +129,23 @@ class MeetingTranscriptionService
                 );
             }
             $end = $duration ? (int) round($duration) : 0;
+            $segments = [[
+                'id' => uniqid('seg_', true),
+                'start' => 0,
+                'end' => $end,
+                'speaker' => 'Танигдаагүй яригч',
+                'text' => $text,
+            ]];
             $meeting->forceFill([
                 'transcript' => $text,
+                'transcript_segments' => $segments,
                 'transcription_position_sec' => $end,
             ])->save();
 
             return $text;
         }
 
-        $parts = [];
+        $segments = [];
         $total = (int) ceil($duration);
         $overlap = 1;
         $start = 0;
@@ -164,22 +174,32 @@ class MeetingTranscriptionService
                 $chunkText = $this->whisperFile($chunkPath, basename($chunkPath));
                 $chunkText = trim($this->collapseRepetitions($chunkText));
 
+                $segStart = (int) round($start);
+                $segEnd = (int) round(min($duration, $start + $len));
+
                 // Хэсэг доторх хүчтэй hallucination-ийг алгасна (бүтэн файл унагахгүй).
-                if ($chunkText !== '' && ! $this->looksUnreliableTranscript($chunkText)) {
-                    $parts[] = $chunkText;
-                } elseif ($chunkText !== '' && $this->hasCyrillic($chunkText)) {
-                    $parts[] = $chunkText;
+                if ($chunkText !== '' && (! $this->looksUnreliableTranscript($chunkText) || $this->hasCyrillic($chunkText))) {
+                    $segments[] = [
+                        'id' => uniqid('seg_', true),
+                        'start' => $segStart,
+                        'end' => $segEnd,
+                        'speaker' => 'Танигдаагүй яригч',
+                        'text' => $chunkText,
+                    ];
                 }
 
-                $combined = trim(implode("\n\n", $parts));
-                $pos = (int) round(min($duration, $start + $len));
+                $combined = trim(implode("\n\n", array_column($segments, 'text')));
+                $pos = $segEnd;
                 $meeting->forceFill([
                     'transcript' => $combined,
+                    'transcript_segments' => $segments,
                     'transcription_position_sec' => $pos,
                 ])->save();
             } catch (RuntimeException $e) {
                 $meeting->forceFill([
                     'transcription_position_sec' => (int) round($start),
+                    'transcript_segments' => $segments,
+                    'transcript' => trim(implode("\n\n", array_column($segments, 'text'))),
                 ])->save();
 
                 throw new RuntimeException(
@@ -200,7 +220,7 @@ class MeetingTranscriptionService
             $index++;
         }
 
-        $raw = trim(implode("\n\n", $parts));
+        $raw = trim(implode("\n\n", array_column($segments, 'text')));
         if ($raw === '' || $this->looksUnreliableTranscript($raw)) {
             throw new RuntimeException(
                 'Аудиог найдвартай монгол текст болгож чадсангүй. '
