@@ -38,8 +38,11 @@ class MeetingMinutesTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Modules/Meetings')
                 ->has('meetings')
+                ->has('docFormat')
                 ->where('canManage', true)
                 ->where('sttReady', false)
+                ->where('docFormat.width_mm', 210)
+                ->where('docFormat.margin_left_mm', 30)
             );
     }
 
