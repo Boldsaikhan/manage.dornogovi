@@ -176,6 +176,7 @@ class MeetingMinutesTest extends TestCase
 
         $meeting->refresh();
         $this->assertSame(Meeting::TRANSCRIPTION_READY, $meeting->transcription_status);
+        $this->assertSame(100, (int) $meeting->transcription_progress);
         $this->assertStringContainsString('Хурал эхэллээ', (string) $meeting->transcript);
         $this->assertStringContainsString('Шийдвэр', (string) $meeting->minutes);
     }

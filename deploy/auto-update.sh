@@ -42,6 +42,16 @@ fi
 # Cron-ийн PATH ихэвчлэн богино байдаг.
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
 
+# Хурлын аудио (WMA гэх мэт) → MP3 хөрвүүлэлтэд ffmpeg хэрэгтэй.
+# Шинэ commit байхгүй үед ч нэг удаа шалгаад суулгана.
+if ! command -v ffmpeg >/dev/null 2>&1; then
+    if command -v apt-get >/dev/null 2>&1; then
+        echo "==> $(date '+%F %T') ffmpeg олдсонгүй — суулгаж байна…"
+        apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg \
+            || echo "!! ffmpeg суулгалт амжилтгүй (админ гараар суулгана уу)" >&2
+    fi
+fi
+
 git config --global --add safe.directory "${SRC_DIR}" 2>/dev/null || true
 
 cd "${SRC_DIR}"

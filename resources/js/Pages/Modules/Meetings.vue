@@ -70,12 +70,33 @@ const transcriptionBadge = (status) => {
     const map = {
         none: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
         pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
+        converting: 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200',
         processing: 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200',
         ready: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200',
         failed: 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200',
     };
     return map[status] || map.none;
 };
+
+const isBusyStatus = (status) => ['pending', 'converting', 'processing'].includes(status);
+
+const busyProgress = computed(() => {
+    const row = editingRow.value;
+    if (! row || ! isBusyStatus(row.transcription_status)) {
+        return 0;
+    }
+
+    return Math.max(1, Math.min(100, Number(row.transcription_progress || 0)));
+});
+
+const busyStage = computed(() => {
+    const row = editingRow.value;
+    if (! row) return '';
+
+    return row.transcription_stage
+        || row.transcription_label
+        || 'Боловсруулж байна…';
+});
 
 const openCreate = () => {
     editingId.value = null;
@@ -249,6 +270,7 @@ const stopRecording = () => {
 
 /* ── Poll while processing ────────────────────────────────────────── */
 let pollTimer = null;
+let statusPollTimer = null;
 
 const pollIfNeeded = () => {
     if (! props.hasProcessing) return;
@@ -262,7 +284,54 @@ const pollIfNeeded = () => {
                 pollIfNeeded();
             },
         });
-    }, 4000);
+    }, 2500);
+};
+
+const pollEditingStatus = async () => {
+    const id = editingId.value;
+    if (! id || ! showModal.value) {
+        statusPollTimer = null;
+
+        return;
+    }
+
+    const row = props.meetings.find((m) => m.id === id);
+    if (! row || ! isBusyStatus(row.transcription_status)) {
+        statusPollTimer = null;
+
+        return;
+    }
+
+    try {
+        const res = await fetch(route('meetings.status', id), {
+            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin',
+        });
+        if (res.ok) {
+            const data = await res.json();
+            const idx = props.meetings.findIndex((m) => m.id === id);
+            if (idx >= 0) {
+                Object.assign(props.meetings[idx], data);
+            }
+            if (data.transcription_status === 'ready') {
+                form.transcript = data.transcript || form.transcript;
+                form.minutes = data.minutes || form.minutes;
+                audioPreviewName.value = data.audio_name || audioPreviewName.value;
+            }
+        }
+    } catch {
+        // ignore transient poll errors
+    }
+
+    statusPollTimer = setTimeout(pollEditingStatus, 1200);
+};
+
+const ensureStatusPoll = () => {
+    if (statusPollTimer) return;
+    const row = editingRow.value;
+    if (row && isBusyStatus(row.transcription_status)) {
+        pollEditingStatus();
+    }
 };
 
 onMounted(() => {
@@ -279,8 +348,15 @@ watch(() => props.hasProcessing, (v) => {
     if (v && ! pollTimer) pollIfNeeded();
 });
 
+watch([showModal, editingId, () => editingRow.value?.transcription_status], () => {
+    if (showModal.value && editingRow.value && isBusyStatus(editingRow.value.transcription_status)) {
+        ensureStatusPoll();
+    }
+});
+
 onBeforeUnmount(() => {
     if (pollTimer) clearTimeout(pollTimer);
+    if (statusPollTimer) clearTimeout(statusPollTimer);
     stopRecording();
 });
 </script>
@@ -405,6 +481,21 @@ onBeforeUnmount(() => {
                                             {{ row.transcription_label }}
                                         </span>
                                         <div
+                                            v-if="isBusyStatus(row.transcription_status)"
+                                            class="mt-1.5 w-36 max-w-full"
+                                        >
+                                            <div class="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                                                <div
+                                                    class="h-full rounded-full bg-brand-navy-500 transition-all duration-500"
+                                                    :style="{ width: `${Math.max(4, row.transcription_progress || 0)}%` }"
+                                                />
+                                            </div>
+                                            <div class="mt-0.5 text-[10px] tabular-nums text-slate-400">
+                                                {{ row.transcription_progress || 0 }}%
+                                                <span v-if="row.transcription_stage"> · {{ row.transcription_stage }}</span>
+                                            </div>
+                                        </div>
+                                        <div
                                             v-if="row.transcription_status === 'failed' && row.transcription_error"
                                             class="ui-clamp-1 mt-1 text-xs text-rose-500"
                                             :title="row.transcription_error"
@@ -466,11 +557,25 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div
-                    v-if="editingRow?.transcription_status === 'processing' || editingRow?.transcription_status === 'pending'"
-                    class="flex items-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100"
+                    v-if="editingRow && isBusyStatus(editingRow.transcription_status)"
+                    class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-3 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100"
                 >
-                    <span class="inline-block h-3 w-3 animate-pulse rounded-full bg-sky-500" />
-                    Текст рүү хөрвүүлж байна… хуудас автоматаар шинэчлэгдэнэ.
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <span class="inline-block h-3 w-3 shrink-0 animate-pulse rounded-full bg-sky-500" />
+                            <span class="truncate font-medium">{{ busyStage }}</span>
+                        </div>
+                        <span class="shrink-0 tabular-nums text-xs opacity-80">{{ busyProgress }}%</span>
+                    </div>
+                    <div class="mt-2 h-2 overflow-hidden rounded-full bg-sky-100 dark:bg-sky-900/60">
+                        <div
+                            class="h-full rounded-full bg-brand-navy-600 transition-all duration-500 dark:bg-sky-400"
+                            :style="{ width: `${busyProgress}%` }"
+                        />
+                    </div>
+                    <p class="mt-2 text-xs opacity-80">
+                        Эхлээд MP3 болгож, дараа нь текст тэмдэглэл үүсгэнэ. Явц автоматаар шинэчлэгдэнэ.
+                    </p>
                 </div>
 
                 <div
