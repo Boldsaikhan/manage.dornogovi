@@ -32,7 +32,13 @@ class MeetingController extends Controller
 
         ModuleOwnScope::apply($query, $request->user(), self::MODULE);
 
-        $meetings = $query->get()->map(fn (Meeting $m) => $this->serialize($m));
+        $meetings = $query->get()->map(function (Meeting $m) use ($transcription) {
+            if ($m->isTranscribing()) {
+                $m = $transcription->failIfStuck($m);
+            }
+
+            return $this->serialize($m);
+        });
 
         return Inertia::render('Modules/Meetings', [
             'meetings' => $meetings,
@@ -206,12 +212,18 @@ class MeetingController extends Controller
         return back()->with('success', 'Аудио орууллаа. MP3 болгож текст рүү хөрвүүлнэ…');
     }
 
-    public function status(Request $request, Meeting $meeting): JsonResponse
-    {
+    public function status(
+        Request $request,
+        Meeting $meeting,
+        MeetingTranscriptionService $transcription,
+    ): JsonResponse {
         abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
         abort_unless(ModuleOwnScope::allows($request->user(), self::MODULE, $meeting), 403);
 
-        return response()->json($this->serialize($meeting->fresh()));
+        $fresh = $meeting->fresh() ?? $meeting;
+        $fresh = $transcription->failIfStuck($fresh);
+
+        return response()->json($this->serialize($fresh));
     }
 
     public function downloadAudio(Request $request, Meeting $meeting): StreamedResponse
@@ -249,6 +261,7 @@ class MeetingController extends Controller
             'audio_name' => $m->audio_original_name,
             'audio_size' => $m->audio_size,
             'transcribed_at' => optional($m->transcribed_at)?->format('Y-m-d H:i'),
+            'updated_at' => optional($m->updated_at)?->toIso8601String(),
             'creator' => $m->creator?->name,
             'created_at' => optional($m->created_at)?->format('Y-m-d H:i'),
         ];

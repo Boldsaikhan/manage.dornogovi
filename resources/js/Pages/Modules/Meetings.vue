@@ -98,6 +98,33 @@ const busyStage = computed(() => {
         || 'Боловсруулж байна…';
 });
 
+const stuckBusy = ref(false);
+let stuckWatchProgress = null;
+let stuckWatchSince = 0;
+
+const noteBusyProgress = (row) => {
+    if (! row || ! isBusyStatus(row.transcription_status)) {
+        stuckBusy.value = false;
+        stuckWatchProgress = null;
+        stuckWatchSince = 0;
+
+        return;
+    }
+
+    const progress = Number(row.transcription_progress || 0);
+    const now = Date.now();
+    if (stuckWatchProgress !== progress) {
+        stuckWatchProgress = progress;
+        stuckWatchSince = now;
+        stuckBusy.value = false;
+
+        return;
+    }
+
+    // Ижил % дээр 90 сек+ бол гацсан гэж үзнэ.
+    stuckBusy.value = now - stuckWatchSince >= 90_000;
+};
+
 const openCreate = () => {
     editingId.value = null;
     form.reset();
@@ -313,10 +340,15 @@ const pollEditingStatus = async () => {
             if (idx >= 0) {
                 Object.assign(props.meetings[idx], data);
             }
+            noteBusyProgress(data);
             if (data.transcription_status === 'ready') {
                 form.transcript = data.transcript || form.transcript;
                 form.minutes = data.minutes || form.minutes;
                 audioPreviewName.value = data.audio_name || audioPreviewName.value;
+                stuckBusy.value = false;
+            }
+            if (data.transcription_status === 'failed') {
+                stuckBusy.value = false;
             }
         }
     } catch {
@@ -576,6 +608,19 @@ onBeforeUnmount(() => {
                     <p class="mt-2 text-xs opacity-80">
                         Эхлээд MP3 болгож, дараа нь текст тэмдэглэл үүсгэнэ. Явц автоматаар шинэчлэгдэнэ.
                     </p>
+                    <div
+                        v-if="stuckBusy && canManage"
+                        class="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100"
+                    >
+                        <p class="text-xs">Явц удаан байна — сервер гацсан байж магадгүй.</p>
+                        <button
+                            type="button"
+                            class="ui-btn-ghost mt-2 !py-1 text-xs"
+                            @click="retryTranscription(editingRow)"
+                        >
+                            Дахин оролдох
+                        </button>
+                    </div>
                 </div>
 
                 <div
