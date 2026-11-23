@@ -940,23 +940,24 @@ onBeforeUnmount(() => {
             </div>
         </div>
 
-        <Modal :show="showModal" max-width="7xl" @close="closeModal">
-            <div class="space-y-3 p-4 sm:p-5">
-                <div class="flex items-start justify-between gap-3">
+        <Modal :show="showModal" max-width="full" @close="closeModal">
+            <div class="flex h-dvh max-h-dvh flex-col">
+                <div class="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-700 sm:px-5">
                     <div>
                         <h2 class="text-lg font-semibold text-brand-navy-800 dark:text-slate-100">
                             {{ isEditing ? 'Тэмдэглэл засах' : 'Шинэ хурлын тэмдэглэл' }}
                         </h2>
-                        <p class="mt-1 text-sm text-slate-500">
+                        <p class="mt-0.5 text-sm text-slate-500">
                             Аудио → Whisper → Word маягаар засварлах
                         </p>
                     </div>
                     <button type="button" class="ui-btn-ghost !px-2 !py-1" @click="closeModal">Хаах</button>
                 </div>
+                <div class="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-4 sm:p-5">
 
                 <div
                     v-if="editingRow && isBusyStatus(editingRow.transcription_status)"
-                    class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-3 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100"
+                    class="shrink-0 rounded-lg border border-sky-200 bg-sky-50 px-3 py-3 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100"
                 >
                     <div class="flex items-center justify-between gap-3">
                         <div class="flex min-w-0 items-center gap-2">
@@ -1018,7 +1019,7 @@ onBeforeUnmount(() => {
 
                 <div
                     v-if="editingRow?.transcription_status === 'failed'"
-                    class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-100"
+                    class="shrink-0 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-100"
                 >
                     <p>{{ editingRow.transcription_error || 'Боловсруулалт амжилтгүй.' }}</p>
                     <button
@@ -1031,8 +1032,8 @@ onBeforeUnmount(() => {
                     </button>
                 </div>
 
-                <form class="space-y-3" @submit.prevent="submit">
-                    <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2 dark:border-slate-700">
+                <form class="flex min-h-0 flex-1 flex-col gap-3" @submit.prevent="submit">
+                    <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-slate-200 pb-2 dark:border-slate-700">
                         <button
                             type="button"
                             class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition"
@@ -1060,8 +1061,8 @@ onBeforeUnmount(() => {
                     </div>
 
                     <!-- Хөрвүүлэг: сегмент + тоглуулагч -->
-                    <div v-show="editorTab === 'convert'" class="space-y-3">
-                        <div v-if="speakersInUse.length" class="flex flex-wrap gap-2">
+                    <div v-show="editorTab === 'convert'" class="flex min-h-0 flex-1 flex-col gap-3">
+                        <div v-if="speakersInUse.length" class="flex shrink-0 flex-wrap gap-2">
                             <button
                                 type="button"
                                 class="rounded-full border px-3 py-1 text-xs font-medium transition"
@@ -1086,7 +1087,7 @@ onBeforeUnmount(() => {
                             </button>
                         </div>
 
-                        <div class="relative max-h-[min(52vh,28rem)] space-y-3 overflow-y-auto pr-1">
+                        <div class="relative min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
                             <div
                                 v-if="!filteredSegments.length"
                                 class="rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-400 dark:border-slate-700"
@@ -1166,7 +1167,7 @@ onBeforeUnmount(() => {
 
                         <div
                             v-if="editingRow?.audio_stream_url"
-                            class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+                            class="shrink-0 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900"
                         >
                             <audio
                                 ref="audioPlayer"
@@ -1245,8 +1246,8 @@ onBeforeUnmount(() => {
                     </div>
 
                     <!-- Тэмдэглэл: Word маягийн хуудас -->
-                    <div v-show="editorTab === 'notes'" class="space-y-2">
-                        <div class="flex flex-wrap items-center gap-2">
+                    <div v-show="editorTab === 'notes'" class="flex min-h-0 flex-1 flex-col gap-2">
+                        <div class="flex shrink-0 flex-wrap items-center gap-2">
                             <button
                                 type="button"
                                 class="ui-btn-ghost !py-1.5 text-xs"
@@ -1268,7 +1269,7 @@ onBeforeUnmount(() => {
 
                         <div
                             v-show="notesMetaOpen"
-                            class="grid gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900/50 sm:grid-cols-2 lg:grid-cols-4"
+                            class="grid shrink-0 gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900/50 sm:grid-cols-2 lg:grid-cols-4"
                         >
                             <div class="lg:col-span-2">
                                 <label class="ui-label">Гарчиг</label>
@@ -1356,7 +1357,7 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
 
-                        <div class="meeting-doc-canvas max-h-[min(68vh,40rem)] overflow-y-auto rounded-lg">
+                        <div class="meeting-doc-canvas min-h-0 flex-1 overflow-y-auto rounded-lg">
                             <div class="meeting-doc-sheet">
                                 <div
                                     ref="docEditor"
@@ -1370,13 +1371,14 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
 
-                    <div v-if="canManage" class="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+                    <div v-if="canManage" class="mt-auto flex shrink-0 flex-wrap justify-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
                         <button type="button" class="ui-btn-ghost" @click="closeModal">Болих</button>
                         <button type="submit" class="ui-btn-accent" :disabled="form.processing">
                             {{ form.processing ? 'Хадгалж байна…' : (isEditing ? 'Хадгалах' : 'Үүсгэх') }}
                         </button>
                     </div>
                 </form>
+                </div>
             </div>
         </Modal>
     </AuthenticatedLayout>
@@ -1395,8 +1397,8 @@ onBeforeUnmount(() => {
 
 .meeting-doc-sheet {
     margin: 0 auto;
-    width: min(100%, 48rem);
-    min-height: 36rem;
+    width: min(100%, 52rem);
+    min-height: min(70vh, 48rem);
     background: #fff;
     box-shadow:
         0 1px 2px rgba(15, 23, 42, 0.06),
