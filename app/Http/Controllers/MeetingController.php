@@ -42,6 +42,7 @@ class MeetingController extends Controller
             'maxUploadMb' => (int) config('ai.whisper_max_mb', 25),
             'hasProcessing' => $meetings->contains(fn (array $row) => in_array($row['transcription_status'], [
                 Meeting::TRANSCRIPTION_PENDING,
+                Meeting::TRANSCRIPTION_CONVERTING,
                 Meeting::TRANSCRIPTION_PROCESSING,
             ], true)),
         ]);
@@ -84,6 +85,9 @@ class MeetingController extends Controller
             $this->storeAudio($meeting, $request->file('audio'));
             $meeting->forceFill([
                 'transcription_status' => Meeting::TRANSCRIPTION_PENDING,
+                'transcription_progress' => 1,
+                'transcription_stage' => 'Дараалалд орлоо…',
+                'transcription_error' => null,
             ])->save();
             TranscribeMeetingAudio::dispatchAfterResponse($meeting->id);
         }
@@ -159,6 +163,8 @@ class MeetingController extends Controller
 
         $meeting->forceFill([
             'transcription_status' => Meeting::TRANSCRIPTION_PENDING,
+            'transcription_progress' => 1,
+            'transcription_stage' => 'Дахин боловсруулж байна…',
             'transcription_error' => null,
         ])->save();
 
@@ -188,6 +194,8 @@ class MeetingController extends Controller
         $this->storeAudio($meeting, $request->file('audio'));
         $meeting->forceFill([
             'transcription_status' => Meeting::TRANSCRIPTION_PENDING,
+            'transcription_progress' => 1,
+            'transcription_stage' => 'Дараалалд орлоо…',
             'transcription_error' => null,
             'transcript' => null,
             'transcribed_at' => null,
@@ -195,7 +203,7 @@ class MeetingController extends Controller
 
         TranscribeMeetingAudio::dispatchAfterResponse($meeting->id);
 
-        return back()->with('success', 'Аудио орууллаа. Текст рүү хөрвүүлж байна…');
+        return back()->with('success', 'Аудио орууллаа. MP3 болгож текст рүү хөрвүүлнэ…');
     }
 
     public function status(Request $request, Meeting $meeting): JsonResponse
@@ -234,6 +242,8 @@ class MeetingController extends Controller
             'status_label' => $m->statusLabel(),
             'transcription_status' => $m->transcription_status,
             'transcription_label' => $m->transcriptionLabel(),
+            'transcription_progress' => (int) ($m->transcription_progress ?? 0),
+            'transcription_stage' => $m->transcription_stage,
             'transcription_error' => $m->transcription_error,
             'has_audio' => filled($m->audio_path),
             'audio_name' => $m->audio_original_name,

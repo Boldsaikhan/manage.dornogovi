@@ -11,6 +11,8 @@ class Meeting extends Model
 
     public const TRANSCRIPTION_PENDING = 'pending';
 
+    public const TRANSCRIPTION_CONVERTING = 'converting';
+
     public const TRANSCRIPTION_PROCESSING = 'processing';
 
     public const TRANSCRIPTION_READY = 'ready';
@@ -20,7 +22,8 @@ class Meeting extends Model
     public const TRANSCRIPTION_LABELS = [
         self::TRANSCRIPTION_NONE => 'Аудиогүй',
         self::TRANSCRIPTION_PENDING => 'Хүлээгдэж байна',
-        self::TRANSCRIPTION_PROCESSING => 'Боловсруулж байна',
+        self::TRANSCRIPTION_CONVERTING => 'MP3 хөрвүүлж байна',
+        self::TRANSCRIPTION_PROCESSING => 'Текст рүү хөрвүүлж байна',
         self::TRANSCRIPTION_READY => 'Бэлэн',
         self::TRANSCRIPTION_FAILED => 'Алдаа',
     ];
@@ -41,6 +44,8 @@ class Meeting extends Model
         'audio_mime',
         'audio_size',
         'transcription_status',
+        'transcription_progress',
+        'transcription_stage',
         'transcription_error',
         'transcribed_at',
         'status',
@@ -54,6 +59,7 @@ class Meeting extends Model
             'attendees' => 'array',
             'transcribed_at' => 'datetime',
             'audio_size' => 'integer',
+            'transcription_progress' => 'integer',
         ];
     }
 
@@ -66,6 +72,7 @@ class Meeting extends Model
     {
         return in_array($this->transcription_status, [
             self::TRANSCRIPTION_PENDING,
+            self::TRANSCRIPTION_CONVERTING,
             self::TRANSCRIPTION_PROCESSING,
         ], true);
     }
