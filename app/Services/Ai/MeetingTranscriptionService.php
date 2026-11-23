@@ -120,8 +120,13 @@ class MeetingTranscriptionService
                 ? 'Текст бичиж байна… 0:00 / '.$this->formatClock((int) round($duration))
                 : 'Текст бичиж байна (Whisper)…';
             $this->setProgress($meeting, Meeting::TRANSCRIPTION_PROCESSING, 50, $label, 0);
-            $text = $this->whisperFile($absolutePath, basename($absolutePath));
-            $text = $this->collapseRepetitions($text);
+            $text = $this->collapseRepetitions($this->whisperFile($absolutePath, basename($absolutePath)));
+            if ($text === '') {
+                throw new RuntimeException(
+                    'Whisper текст олдсонгүй (аудио чимээгүй эсвэл яриа танигдаагүй). '
+                    .'Тод монгол яриатай бичлэг дахин оруулна уу.'
+                );
+            }
             if ($this->looksUnreliableTranscript($text)) {
                 throw new RuntimeException(
                     'Аудиог найдвартай монгол текст болгож чадсангүй (буруу хэл/давталт илэрлээ). '
@@ -171,13 +176,15 @@ class MeetingTranscriptionService
                     (int) round($start),
                 );
 
-                $chunkText = $this->whisperFile($chunkPath, basename($chunkPath));
-                $chunkText = trim($this->collapseRepetitions($chunkText));
+                $chunkText = trim($this->collapseRepetitions(
+                    $this->whisperFile($chunkPath, basename($chunkPath))
+                ));
 
                 $segStart = (int) round($start);
                 $segEnd = (int) round(min($duration, $start + $len));
 
-                // Хэсэг доторх хүчтэй hallucination-ийг алгасна (бүтэн файл унагахгүй).
+                // Чимээгүй/хоосон хэсэг — алгасаад үргэлжилнэ (эхний секундүүд ихэвчлэн чимээгүй).
+                // Хүчтэй hallucination-ийг ч алгасна (бүтэн файл унагахгүй).
                 if ($chunkText !== '' && (! $this->looksUnreliableTranscript($chunkText) || $this->hasCyrillic($chunkText))) {
                     $segments[] = [
                         'id' => uniqid('seg_', true),
@@ -196,20 +203,28 @@ class MeetingTranscriptionService
                     'transcription_position_sec' => $pos,
                 ])->save();
             } catch (RuntimeException $e) {
-                $meeting->forceFill([
-                    'transcription_position_sec' => (int) round($start),
-                    'transcript_segments' => $segments,
-                    'transcript' => trim(implode("\n\n", array_column($segments, 'text'))),
-                ])->save();
+                // Хоосон текст = чимээгүй хэсэг; бүх боловсруулалтыг бүү унагаа.
+                if (str_contains($e->getMessage(), 'хоосон текст')
+                    || str_contains($e->getMessage(), 'текст олдсонгүй')) {
+                    $meeting->forceFill([
+                        'transcription_position_sec' => (int) round(min($duration, $start + $len)),
+                    ])->save();
+                } else {
+                    $meeting->forceFill([
+                        'transcription_position_sec' => (int) round($start),
+                        'transcript_segments' => $segments,
+                        'transcript' => trim(implode("\n\n", array_column($segments, 'text'))),
+                    ])->save();
 
-                throw new RuntimeException(
-                    sprintf(
-                        '%s (байрлал %s / %s)',
-                        $e->getMessage(),
-                        $this->formatClock((int) round($start)),
-                        $this->formatClock($total),
-                    )
-                );
+                    throw new RuntimeException(
+                        sprintf(
+                            '%s (байрлал %s / %s)',
+                            $e->getMessage(),
+                            $this->formatClock((int) round($start)),
+                            $this->formatClock($total),
+                        )
+                    );
+                }
             } finally {
                 if (is_file($chunkPath)) {
                     @unlink($chunkPath);
@@ -221,7 +236,13 @@ class MeetingTranscriptionService
         }
 
         $raw = trim(implode("\n\n", array_column($segments, 'text')));
-        if ($raw === '' || $this->looksUnreliableTranscript($raw)) {
+        if ($raw === '') {
+            throw new RuntimeException(
+                'Whisper текст олдсонгүй (аудио бүхэлдээ чимээгүй эсвэл яриа танигдаагүй). '
+                .'Тод монгол яриатай бичлэг дахин оруулна уу.'
+            );
+        }
+        if ($this->looksUnreliableTranscript($raw)) {
             throw new RuntimeException(
                 'Аудиог найдвартай монгол текст болгож чадсангүй. '
                 .'Дуу чимээгүй, тод монгол яриатай хэсгийг дахин оруулна уу.'
@@ -579,7 +600,14 @@ class MeetingTranscriptionService
             .'Англиар бүү орчуул, үг бүү зохио, үг бүү давта.',
         );
 
-        return $this->callWhisper($apiKey, $model, $timeout, $absolutePath, $filename, $prompt);
+        $text = $this->callWhisper($apiKey, $model, $timeout, $absolutePath, $filename, $prompt);
+
+        // Чимээгүй буюу prompt-оос болж хоосон ирвэл нэг удаа promptгүйгээр дахин оролдоно.
+        if ($text === '') {
+            $text = $this->callWhisper($apiKey, $model, $timeout, $absolutePath, $filename, null);
+        }
+
+        return $text;
     }
 
     private function callWhisper(
@@ -588,11 +616,20 @@ class MeetingTranscriptionService
         int $timeout,
         string $absolutePath,
         string $filename,
-        string $prompt,
+        ?string $prompt,
     ): string {
         $stream = fopen($absolutePath, 'r');
         if ($stream === false) {
             throw new RuntimeException('Аудио файлыг уншиж чадсангүй.');
+        }
+
+        $payload = [
+            'model' => $model,
+            'temperature' => '0',
+            'response_format' => 'text',
+        ];
+        if ($prompt !== null && trim($prompt) !== '') {
+            $payload['prompt'] = $prompt;
         }
 
         try {
@@ -601,12 +638,7 @@ class MeetingTranscriptionService
                 ->connectTimeout(20)
                 ->timeout(max(30, $timeout))
                 ->attach('file', $stream, $filename)
-                ->post('/audio/transcriptions', [
-                    'model' => $model,
-                    'prompt' => $prompt,
-                    'temperature' => '0',
-                    'response_format' => 'text',
-                ]);
+                ->post('/audio/transcriptions', $payload);
         } finally {
             if (is_resource($stream)) {
                 fclose($stream);
@@ -617,12 +649,21 @@ class MeetingTranscriptionService
             throw new RuntimeException('Whisper алдаа: '.$response->status().' '.mb_substr($response->body(), 0, 500));
         }
 
-        $text = trim($response->body());
-        if ($text === '') {
-            throw new RuntimeException('Whisper хоосон текст буцаалаа.');
+        $body = trim((string) $response->body());
+        if ($body === '') {
+            // Чимээгүй хэсэг — progressive горимд алгасна; бүтэн файл дээр дараа шалгана.
+            return '';
         }
 
-        return $text;
+        // Заримдаа JSON {"text":"..."} ирнэ.
+        if (str_starts_with($body, '{')) {
+            $json = json_decode($body, true);
+            if (is_array($json) && array_key_exists('text', $json)) {
+                return trim((string) $json['text']);
+            }
+        }
+
+        return $body;
     }
 
     /** Гацсан боловсруулалтыг алдаа болгоно. */

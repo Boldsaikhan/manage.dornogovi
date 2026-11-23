@@ -181,6 +181,40 @@ class MeetingMinutesTest extends TestCase
         $this->assertStringContainsString('Шийдвэр', (string) $meeting->minutes);
     }
 
+    public function test_empty_whisper_response_fails_clearly(): void
+    {
+        Storage::fake('local');
+        $admin = $this->admin();
+
+        app(AiSettings::class)->setOpenAiApiKey('sk-test-meeting-key');
+        app(AiSettings::class)->set(AiSettings::KEY_PROVIDER, 'openai');
+
+        $path = 'meeting-audio/1/silent.mp3';
+        Storage::disk('local')->put($path, 'fake-audio-bytes');
+
+        $meeting = Meeting::query()->create([
+            'title' => 'Чимээгүй',
+            'held_at' => now(),
+            'status' => 'draft',
+            'audio_path' => $path,
+            'audio_original_name' => 'silent.mp3',
+            'audio_mime' => 'audio/mpeg',
+            'audio_size' => 16,
+            'transcription_status' => Meeting::TRANSCRIPTION_PENDING,
+            'created_by' => $admin->id,
+        ]);
+
+        Http::fake([
+            '*/audio/transcriptions' => Http::response('', 200),
+        ]);
+
+        (new TranscribeMeetingAudio($meeting->id))->handle(app(\App\Services\Ai\MeetingTranscriptionService::class));
+
+        $meeting->refresh();
+        $this->assertSame(Meeting::TRANSCRIPTION_FAILED, $meeting->transcription_status);
+        $this->assertStringContainsString('текст олдсонгүй', (string) $meeting->transcription_error);
+    }
+
     public function test_hallucinated_english_transcript_is_rejected(): void
     {
         Storage::fake('local');
