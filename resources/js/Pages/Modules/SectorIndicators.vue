@@ -96,7 +96,7 @@ const focusCell = async (selector) => {
     }
 };
 
-/** Нүд/мөр дээр дарахад тухайн мөрийг засварлах горимд нээнэ. */
+/** Харандаа товчоор мөр засах горимд нээнэ (нүд дээр дарж нээхгүй). */
 const beginEditAt = (row, cellSelector = null) => {
     if (! props.canEdit) {
         return;
@@ -745,11 +745,7 @@ const removePeriod = (period) => {
                         <tr v-for="row in group.rows" :key="row.id" :class="rowEditing(row) ? 'bg-sky-50/80' : ''">
                             <td class="ui-register__cell--no text-center">{{ row.no }}</td>
 
-                            <td
-                                class="align-top whitespace-normal text-left"
-                                :class="canEdit && ! rowEditing(row) ? 'cursor-pointer hover:bg-sky-50/60' : ''"
-                                @click="canEdit && ! rowEditing(row) && beginEditAt(row, `[data-cell='title-${row.id}']`)"
-                            >
+                            <td class="align-top whitespace-normal text-left">
                                 <textarea
                                     v-if="rowEditing(row) && drafts[row.id]"
                                     :ref="bindTitle"
@@ -780,11 +776,7 @@ const removePeriod = (period) => {
                                 >{{ row.title || '—' }}</span>
                             </td>
 
-                            <td
-                                class="text-center"
-                                :class="canEdit && ! rowEditing(row) ? 'cursor-pointer hover:bg-sky-50/60' : ''"
-                                @click="canEdit && ! rowEditing(row) && beginEditAt(row, `[data-cell='unit-${row.id}']`)"
-                            >
+                            <td class="text-center">
                                 <select
                                     v-if="rowEditing(row) && drafts[row.id]"
                                     v-model="drafts[row.id].measure_unit"
@@ -801,11 +793,7 @@ const removePeriod = (period) => {
                                 <span v-else class="text-sm">{{ row.measure_unit || '—' }}</span>
                             </td>
 
-                            <td
-                                class="text-center"
-                                :class="canEdit && ! rowEditing(row) ? 'cursor-pointer hover:bg-sky-50/60' : ''"
-                                @click="canEdit && ! rowEditing(row) && beginEditAt(row, `[data-cell='target-${row.id}']`)"
-                            >
+                            <td class="text-center">
                                 <span
                                     v-if="rowEditing(row) && drafts[row.id]"
                                     class="inline-flex w-full items-center justify-center gap-0.5"
