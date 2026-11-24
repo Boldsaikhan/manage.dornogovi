@@ -2,7 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 
 const props = defineProps({
     units: { type: Array, default: () => [] },
@@ -21,22 +21,35 @@ const SLOT_LABELS = { half: 'хагас жил', year: 'жилийн эцэс' }
 /** Нүднүүдийн түр хуулбар — засаж байхад шууд харагдана. */
 const drafts = reactive({});
 
+const draftFromRow = (row) => ({
+    title: row.title ?? '',
+    category_id: row.category_id ?? '',
+    measure_unit: row.measure_unit ?? '',
+    target: row.target ?? '',
+    values: { ...(row.values ?? {}) },
+});
+
+/** Засаж буй мөрийн draft-ийг бүү устга — олон нүд зэрэг оруулахад утга алдагдахгүй. */
 const syncDrafts = () => {
-    Object.keys(drafts).forEach((key) => delete drafts[key]);
+    const open = new Set(editingIds.value);
+    const liveIds = new Set(props.rows.map((row) => row.id));
+
+    Object.keys(drafts).forEach((key) => {
+        const id = Number(key);
+
+        if (! liveIds.has(id) && ! liveIds.has(key)) {
+            delete drafts[key];
+        }
+    });
 
     props.rows.forEach((row) => {
-        drafts[row.id] = {
-            title: row.title ?? '',
-            category_id: row.category_id ?? '',
-            measure_unit: row.measure_unit ?? '',
-            target: row.target ?? '',
-            values: { ...row.values },
-        };
+        if (open.has(row.id) && drafts[row.id]) {
+            return;
+        }
+
+        drafts[row.id] = draftFromRow(row);
     });
 };
-
-syncDrafts();
-watch(() => props.rows, syncDrafts, { deep: true });
 
 /** Толгойн доод мөрөнд хэдэн нүд гарах вэ. */
 const valueColumnCount = computed(
@@ -54,11 +67,41 @@ function fitTitle(el) {
     node.style.height = `${node.scrollHeight}px`;
 }
 
-/** Нэг мөрийг тусад нь засна. */
-const editingId = ref(null);
+/** Олон мөрийг зэрэг засварлана — нүд дээр дарж нээнэ. */
+const editingIds = ref([]);
 const structureEditing = ref(false);
-const rowEditing = (row) => props.canEdit && editingId.value === row.id;
+const rowEditing = (row) => props.canEdit && editingIds.value.includes(row.id);
 const structureEditable = computed(() => structureEditing.value && props.canManage);
+
+syncDrafts();
+watch(() => props.rows, syncDrafts, { deep: true });
+
+const focusCell = async (selector) => {
+    await nextTick();
+    await nextTick();
+    const el = typeof selector === 'string'
+        ? document.querySelector(selector)
+        : selector;
+    el?.focus?.();
+    if (el && typeof el.select === 'function') {
+        el.select();
+    }
+};
+
+/** Нүд/мөр дээр дарахад тухайн мөрийг засварлах горимд нээнэ. */
+const beginEditAt = (row, cellSelector = null) => {
+    if (! props.canEdit) {
+        return;
+    }
+
+    if (! editingIds.value.includes(row.id)) {
+        editingIds.value = [...editingIds.value, row.id];
+    }
+
+    if (cellSelector) {
+        focusCell(cellSelector);
+    }
+};
 
 const totalColumns = computed(() => (
     4
@@ -84,7 +127,16 @@ const columnWidths = computed(() => {
 });
 
 const toggleRow = (row) => {
-    editingId.value = editingId.value === row.id ? null : row.id;
+    if (editingIds.value.includes(row.id)) {
+        editingIds.value = editingIds.value.filter((id) => id !== row.id);
+        const server = props.rows.find((item) => item.id === row.id);
+
+        if (server) {
+            drafts[row.id] = draftFromRow(server);
+        }
+    } else {
+        editingIds.value = [...editingIds.value, row.id];
+    }
 };
 
 const seenRowIds = new Set();
@@ -105,10 +157,12 @@ watch(() => props.rows.map((row) => row.id).join(','), () => {
     ids.forEach((id) => seenRowIds.add(id));
 
     if (fresh != null) {
-        editingId.value = fresh;
-    } else if (editingId.value != null && ! ids.includes(editingId.value)) {
-        editingId.value = null;
+        if (! editingIds.value.includes(fresh)) {
+            editingIds.value = [...editingIds.value, fresh];
+        }
     }
+
+    editingIds.value = editingIds.value.filter((id) => ids.includes(id));
 });
 
 const groups = computed(() => {
@@ -535,22 +589,29 @@ const removePeriod = (period) => {
                         <tr v-for="row in group.rows" :key="row.id" :class="rowEditing(row) ? 'bg-sky-50/80' : ''">
                             <td class="ui-register__cell--no text-center">{{ row.no }}</td>
 
-                            <td class="align-top whitespace-normal text-left">
+                            <td
+                                class="align-top whitespace-normal text-left"
+                                :class="canEdit && ! rowEditing(row) ? 'cursor-pointer hover:bg-sky-50/60' : ''"
+                                @click="canEdit && ! rowEditing(row) && beginEditAt(row, `[data-cell='title-${row.id}']`)"
+                            >
                                 <template v-if="rowEditing(row) && drafts[row.id]">
                                     <textarea
                                         :ref="fitTitle"
                                         v-model="drafts[row.id].title"
+                                        :data-cell="`title-${row.id}`"
                                         rows="1"
                                         class="block w-full resize-none overflow-hidden whitespace-pre-wrap break-words rounded border-0 bg-transparent px-1 py-0.5 text-left text-sm leading-snug focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
                                         placeholder="Үзүүлэлтийн нэр…"
                                         @input="fitTitle"
                                         @blur="saveField(row, 'title')"
+                                        @click.stop
                                     />
                                     <select
                                         v-if="categories.length"
                                         v-model="drafts[row.id].category_id"
                                         class="mt-1 w-full rounded border border-slate-200 bg-white px-1 py-0.5 text-xs text-slate-600 focus:border-brand-navy-400 focus:ring-1 focus:ring-brand-navy-400"
                                         @change="saveCategory(row)"
+                                        @click.stop
                                     >
                                         <option value="">Ангилалгүй</option>
                                         <option v-for="category in categories" :key="category.id" :value="category.id">
@@ -558,31 +619,43 @@ const removePeriod = (period) => {
                                         </option>
                                     </select>
                                 </template>
-                                <span v-else class="block whitespace-pre-wrap break-words text-left text-sm leading-snug">{{ row.title }}</span>
+                                <span v-else class="block whitespace-pre-wrap break-words text-left text-sm leading-snug">{{ row.title || '—' }}</span>
                             </td>
 
-                            <td class="text-center">
+                            <td
+                                class="text-center"
+                                :class="canEdit && ! rowEditing(row) ? 'cursor-pointer hover:bg-sky-50/60' : ''"
+                                @click="canEdit && ! rowEditing(row) && beginEditAt(row, `[data-cell='unit-${row.id}']`)"
+                            >
                                 <select
                                     v-if="rowEditing(row) && drafts[row.id]"
                                     v-model="drafts[row.id].measure_unit"
+                                    :data-cell="`unit-${row.id}`"
                                     class="w-full rounded border-0 bg-transparent px-0.5 py-0.5 text-center text-sm focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
                                     @change="saveField(row, 'measure_unit')"
+                                    @click.stop
                                 >
                                     <option value="">Сонгох</option>
                                     <option v-for="unit in measureUnits" :key="unit.value" :value="unit.value">
                                         {{ unit.value }}
                                     </option>
                                 </select>
-                                <span v-else class="text-sm">{{ row.measure_unit }}</span>
+                                <span v-else class="text-sm">{{ row.measure_unit || '—' }}</span>
                             </td>
 
-                            <td class="text-center">
+                            <td
+                                class="text-center"
+                                :class="canEdit && ! rowEditing(row) ? 'cursor-pointer hover:bg-sky-50/60' : ''"
+                                @click="canEdit && ! rowEditing(row) && beginEditAt(row, `[data-cell='target-${row.id}']`)"
+                            >
                                 <span
                                     v-if="rowEditing(row) && drafts[row.id]"
                                     class="inline-flex w-full items-center justify-center gap-0.5"
+                                    @click.stop
                                 >
                                     <input
                                         v-model="drafts[row.id].target"
+                                        :data-cell="`target-${row.id}`"
                                         :disabled="! drafts[row.id].measure_unit"
                                         :inputmode="unitOf(drafts[row.id].measure_unit)?.kind === 'integer' ? 'numeric' : 'decimal'"
                                         class="w-full min-w-0 rounded border-0 bg-transparent px-1 py-0.5 text-center text-sm font-semibold tabular-nums focus:bg-white focus:ring-1 focus:ring-brand-navy-400 disabled:cursor-not-allowed disabled:text-slate-300"
@@ -595,7 +668,7 @@ const removePeriod = (period) => {
                                         class="shrink-0 text-[11px] text-slate-400"
                                     >{{ unitOf(drafts[row.id].measure_unit).suffix }}</span>
                                 </span>
-                                <span v-else class="text-sm font-semibold tabular-nums">{{ formatMeasure(row.target, row.measure_unit) }}</span>
+                                <span v-else class="text-sm font-semibold tabular-nums">{{ formatMeasure(row.target, row.measure_unit) || '—' }}</span>
                             </td>
 
                             <template v-for="period in periods" :key="'v-' + period.id">
@@ -603,13 +676,17 @@ const removePeriod = (period) => {
                                     v-for="slot in period.slots"
                                     :key="row.id + '-' + period.id + '-' + slot"
                                     class="text-center"
+                                    :class="canEdit && ! rowEditing(row) ? 'cursor-pointer hover:bg-sky-50/60' : ''"
+                                    @click="canEdit && ! rowEditing(row) && beginEditAt(row, `[data-cell='val-${row.id}-${period.id}-${slot}']`)"
                                 >
                                     <span
                                         v-if="rowEditing(row) && drafts[row.id]"
                                         class="inline-flex w-full items-center justify-center gap-0.5"
+                                        @click.stop
                                     >
                                         <input
                                             v-model="drafts[row.id].values[cellKey(period, slot)]"
+                                            :data-cell="`val-${row.id}-${period.id}-${slot}`"
                                             :disabled="! drafts[row.id].measure_unit"
                                             :inputmode="unitOf(drafts[row.id].measure_unit)?.kind === 'integer' ? 'numeric' : 'decimal'"
                                             class="w-full min-w-0 rounded border-0 bg-transparent px-1 py-0.5 text-center text-sm tabular-nums focus:bg-white focus:ring-1 focus:ring-brand-navy-400 disabled:cursor-not-allowed disabled:text-slate-300"
@@ -622,7 +699,7 @@ const removePeriod = (period) => {
                                         >{{ unitOf(drafts[row.id].measure_unit).suffix }}</span>
                                     </span>
                                     <span v-else class="text-sm tabular-nums">
-                                        {{ formatMeasure(row.values[cellKey(period, slot)], row.measure_unit) }}
+                                        {{ formatMeasure(row.values[cellKey(period, slot)], row.measure_unit) || '—' }}
                                     </span>
                                 </td>
                             </template>
