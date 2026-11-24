@@ -8,6 +8,7 @@ import PushSubscribe from '@/Components/PushSubscribe.vue';
 import VaultPanel from '@/Components/VaultPanel.vue';
 import VaultUsersPanel from '@/Components/VaultUsersPanel.vue';
 import EmployeePicker from '@/Components/EmployeePicker.vue';
+import StorageBrowserPanel from '@/Components/StorageBrowserPanel.vue';
 
 const props = defineProps({
     systems: Array,
@@ -111,6 +112,7 @@ const checkGenitive = async () => {
 
 const SETTINGS_TABS = [
     { id: 'menus', label: 'Цэс нээх / хаах' },
+    { id: 'files', label: 'Файлууд' },
     { id: 'ai', label: 'Manage AI' },
     { id: 'verify', label: 'Утсаар сэргээх' },
     { id: 'push', label: 'Push мэдэгдэл' },
@@ -706,6 +708,21 @@ const saveAi = () => {
                 {{ tab.label }}
             </button>
         </div>
+
+        <section
+            v-show="activeTab === 'files'"
+            class="rounded-xl border border-brand-navy-100 bg-white p-5 shadow-sm"
+            role="tabpanel"
+        >
+            <div class="mb-4">
+                <h2 class="text-base font-semibold text-brand-navy-900">Файлын сан</h2>
+                <p class="mt-1 max-w-3xl text-sm text-brand-navy-400">
+                    Системд хадгалагдсан зураг, баримт болон бусад файлыг хавтас бүрт орж үзнэ.
+                    Зураг дээр дарж томруулна, бусдыг татна.
+                </p>
+            </div>
+            <StorageBrowserPanel v-if="activeTab === 'files'" />
+        </section>
 
         <section
             v-show="activeTab === 'menus'"
