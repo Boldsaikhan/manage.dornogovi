@@ -97,6 +97,44 @@ class AwardTest extends TestCase
         $this->assertSame('УБ85031512', $award->register_no);
         $this->assertSame(41, $award->age);
         $this->assertSame('эр', $award->gender);
+        // РД patch бусад талбарыг бүү устга.
+        $this->assertSame('Бат', $award->surname);
+        $this->assertSame('Дорж', $award->given_name);
+    }
+
+    public function test_register_patch_preserves_award_fields(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $award = Award::query()->create([
+            'category' => 'state_high',
+            'year' => 2026,
+            'surname' => 'Цэрэндолгор',
+            'given_name' => 'Батбаяр',
+            'last_award' => 'Алтан гадас одон',
+            'position' => 'Засаг дарга',
+            'work_sector' => 'Засаг даргын тамгын газар',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('awards.update', $award), [
+                'register_no' => 'УБ90010115',
+                'surname' => 'Цэрэндолгор',
+                'given_name' => 'Батбаяр',
+                'last_award' => 'Алтан гадас одон',
+                'position' => 'Засаг дарга',
+            ])
+            ->assertRedirect();
+
+        $award->refresh();
+
+        $this->assertSame('УБ90010115', $award->register_no);
+        $this->assertSame('Цэрэндолгор', $award->surname);
+        $this->assertSame('Батбаяр', $award->given_name);
+        $this->assertSame('Алтан гадас одон', $award->last_award);
+        $this->assertSame('Засаг дарга', $award->position);
+        $this->assertSame('Засаг даргын тамгын газар', $award->work_sector);
     }
 
     public function test_register_number_normalizes_spaces_and_latin_letters(): void
