@@ -1,5 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Modal from '@/Components/Modal.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, nextTick, reactive, ref, watch } from 'vue';
@@ -326,6 +327,150 @@ const saveValue = (row, period, slot) => {
         slot,
         value,
     }, { preserveScroll: true, preserveState: true });
+};
+
+/* ── Нүдний задаргаа ─────────────────────────────────────────────── */
+
+const breakdown = reactive({
+    open: false,
+    loading: false,
+    saving: false,
+    error: '',
+    indicatorId: null,
+    title: '',
+    measureUnit: '',
+    periodId: null,
+    periodLabel: '',
+    slot: 'year',
+    value: null,
+    canEdit: false,
+    items: [],
+});
+
+const breakdownSum = computed(() => {
+    const unit = breakdown.measureUnit;
+    let total = 0;
+    let has = false;
+
+    breakdown.items.forEach((item) => {
+        const normalized = normalizeMeasure(item.amount, unit);
+
+        if (normalized === '') return;
+
+        const number = Number(normalized);
+
+        if (Number.isNaN(number)) return;
+
+        total += number;
+        has = true;
+    });
+
+    if (! has) return '';
+
+    return normalizeMeasure(String(total), unit);
+});
+
+const breakdownHeading = computed(() => {
+    const slot = SLOT_LABELS[breakdown.slot] ?? breakdown.slot;
+    const period = breakdown.periodLabel || '';
+
+    return [period, slot].filter(Boolean).join(' · ');
+});
+
+const openBreakdown = async (row, period, slot) => {
+    breakdown.open = true;
+    breakdown.loading = true;
+    breakdown.saving = false;
+    breakdown.error = '';
+    breakdown.indicatorId = row.id;
+    breakdown.title = row.title || 'Үзүүлэлт';
+    breakdown.measureUnit = row.measure_unit || '';
+    breakdown.periodId = period.id;
+    breakdown.periodLabel = period.label;
+    breakdown.slot = slot;
+    breakdown.value = row.values?.[cellKey(period, slot)] ?? null;
+    breakdown.canEdit = props.canEdit;
+    breakdown.items = [];
+
+    try {
+        const { data } = await window.axios.get(route('indicators.breakdown', row.id), {
+            params: { period_id: period.id, slot },
+        });
+
+        breakdown.title = data.title || breakdown.title;
+        breakdown.measureUnit = data.measure_unit || breakdown.measureUnit;
+        breakdown.value = data.value;
+        breakdown.canEdit = Boolean(data.can_edit);
+        breakdown.items = (data.items || []).map((item) => ({
+            label: item.label ?? '',
+            amount: item.amount ?? '',
+        }));
+
+        if (breakdown.canEdit && breakdown.items.length === 0) {
+            breakdown.items.push({ label: '', amount: '' });
+        }
+    } catch (error) {
+        breakdown.error = error?.response?.data?.message || 'Задаргаа ачаалж чадсангүй.';
+    } finally {
+        breakdown.loading = false;
+    }
+};
+
+const closeBreakdown = () => {
+    breakdown.open = false;
+};
+
+const addBreakdownItem = () => {
+    breakdown.items.push({ label: '', amount: '' });
+};
+
+const removeBreakdownItem = (index) => {
+    breakdown.items.splice(index, 1);
+
+    if (breakdown.canEdit && breakdown.items.length === 0) {
+        breakdown.items.push({ label: '', amount: '' });
+    }
+};
+
+const saveBreakdown = async () => {
+    if (! breakdown.canEdit || ! breakdown.indicatorId) return;
+
+    breakdown.saving = true;
+    breakdown.error = '';
+
+    try {
+        const { data } = await window.axios.put(route('indicators.breakdown.sync', breakdown.indicatorId), {
+            period_id: breakdown.periodId,
+            slot: breakdown.slot,
+            items: breakdown.items.map((item) => ({
+                label: item.label,
+                amount: item.amount,
+            })),
+        });
+
+        breakdown.value = data.value;
+        breakdown.items = (data.items || []).map((item) => ({
+            label: item.label ?? '',
+            amount: item.amount ?? '',
+        }));
+
+        if (breakdown.canEdit && breakdown.items.length === 0) {
+            breakdown.items.push({ label: '', amount: '' });
+        }
+
+        router.reload({ only: ['rows'], preserveScroll: true, preserveState: true });
+        breakdown.open = false;
+    } catch (error) {
+        breakdown.error = error?.response?.data?.message || 'Хадгалж чадсангүй.';
+    } finally {
+        breakdown.saving = false;
+    }
+};
+
+const onValueCellClick = (row, period, slot) => {
+    if (rowEditing(row)) return;
+
+    openBreakdown(row, period, slot);
 };
 
 /* Жилийн баганыг хүснэгтийн толгой дээр шууд засна. */
@@ -676,8 +821,9 @@ const removePeriod = (period) => {
                                     v-for="slot in period.slots"
                                     :key="row.id + '-' + period.id + '-' + slot"
                                     class="text-center"
-                                    :class="canEdit && ! rowEditing(row) ? 'cursor-pointer hover:bg-sky-50/60' : ''"
-                                    @click="canEdit && ! rowEditing(row) && beginEditAt(row, `[data-cell='val-${row.id}-${period.id}-${slot}']`)"
+                                    :class="! rowEditing(row) ? 'cursor-pointer hover:bg-sky-50/60' : ''"
+                                    :title="rowEditing(row) ? '' : 'Задаргаа харах'"
+                                    @click="onValueCellClick(row, period, slot)"
                                 >
                                     <span
                                         v-if="rowEditing(row) && drafts[row.id]"
@@ -697,8 +843,25 @@ const removePeriod = (period) => {
                                             v-if="drafts[row.id].values[cellKey(period, slot)] && unitOf(drafts[row.id].measure_unit)?.suffix"
                                             class="shrink-0 text-[11px] text-slate-400"
                                         >{{ unitOf(drafts[row.id].measure_unit).suffix }}</span>
+                                        <button
+                                            type="button"
+                                            class="ui-icon-btn !h-6 !w-6 shrink-0"
+                                            title="Задаргаа"
+                                            aria-label="Задаргаа"
+                                            @click="openBreakdown(row, period, slot)"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h10M4 18h7" />
+                                            </svg>
+                                        </button>
                                     </span>
-                                    <span v-else class="text-sm tabular-nums">
+                                    <span
+                                        v-else
+                                        class="text-sm tabular-nums"
+                                        :class="(row.values[cellKey(period, slot)] || row.breakdowns?.[cellKey(period, slot)])
+                                            ? 'font-medium text-brand-navy-700 underline decoration-dotted underline-offset-2'
+                                            : 'text-slate-400'"
+                                    >
                                         {{ formatMeasure(row.values[cellKey(period, slot)], row.measure_unit) || '—' }}
                                     </span>
                                 </td>
@@ -750,5 +913,120 @@ const removePeriod = (period) => {
                 </table>
             </TableScrollViewport>
         </div>
+
+        <Modal :show="breakdown.open" max-width="2xl" @close="closeBreakdown">
+            <div class="ui-card-pad space-y-4">
+                <div class="space-y-1">
+                    <h2 class="ui-title text-base">Задаргаа</h2>
+                    <p class="ui-subtitle !mt-0 text-sm">
+                        <span class="font-medium text-slate-700">{{ breakdownHeading }}</span>
+                        <span v-if="breakdown.title" class="text-slate-500"> — {{ breakdown.title }}</span>
+                    </p>
+                </div>
+
+                <div v-if="breakdown.loading" class="py-10 text-center text-sm text-slate-400">
+                    Ачаалж байна…
+                </div>
+
+                <template v-else>
+                    <p v-if="breakdown.error" class="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                        {{ breakdown.error }}
+                    </p>
+
+                    <div class="ui-table-wrap">
+                        <table class="ui-table">
+                            <thead>
+                                <tr>
+                                    <th class="w-12 text-center">№</th>
+                                    <th>Тайлбар</th>
+                                    <th class="w-36 text-right">Тоо</th>
+                                    <th v-if="breakdown.canEdit" class="w-12" />
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(item, index) in breakdown.items" :key="index">
+                                    <td class="text-center text-slate-400">{{ index + 1 }}</td>
+                                    <td>
+                                        <input
+                                            v-if="breakdown.canEdit"
+                                            v-model="item.label"
+                                            class="ui-input !py-1.5 text-sm"
+                                            maxlength="500"
+                                            placeholder="Юунаас бүрдсэн"
+                                        />
+                                        <span v-else class="text-sm">{{ item.label || '—' }}</span>
+                                    </td>
+                                    <td>
+                                        <input
+                                            v-if="breakdown.canEdit"
+                                            v-model="item.amount"
+                                            class="ui-input !py-1.5 text-right text-sm tabular-nums"
+                                            :inputmode="unitOf(breakdown.measureUnit)?.kind === 'integer' ? 'numeric' : 'decimal'"
+                                            placeholder="0"
+                                        />
+                                        <span v-else class="block text-right text-sm tabular-nums">
+                                            {{ formatMeasure(item.amount, breakdown.measureUnit) || '—' }}
+                                        </span>
+                                    </td>
+                                    <td v-if="breakdown.canEdit" class="text-center">
+                                        <button
+                                            type="button"
+                                            class="ui-icon-btn ui-icon-btn--danger !h-7 !w-7"
+                                            title="Мөр хасах"
+                                            aria-label="Мөр хасах"
+                                            @click="removeBreakdownItem(index)"
+                                        >
+                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13" />
+                                            </svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr v-if="! breakdown.items.length">
+                                    <td :colspan="breakdown.canEdit ? 4 : 3" class="py-8 text-center text-sm text-slate-400">
+                                        Задаргаа байхгүй.
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr class="border-t border-slate-200 bg-slate-50/80">
+                                    <td />
+                                    <td class="text-sm font-medium text-slate-600">Нийлбэр / нүдний утга</td>
+                                    <td class="text-right text-sm font-semibold tabular-nums text-brand-navy-800">
+                                        {{ formatMeasure(breakdownSum || breakdown.value, breakdown.measureUnit) || '—' }}
+                                    </td>
+                                    <td v-if="breakdown.canEdit" />
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <button
+                            v-if="breakdown.canEdit"
+                            type="button"
+                            class="ui-btn-ghost"
+                            @click="addBreakdownItem"
+                        >
+                            Мөр нэмэх
+                        </button>
+                        <div class="ml-auto flex items-center gap-2">
+                            <button type="button" class="ui-btn-ghost" @click="closeBreakdown">
+                                Хаах
+                            </button>
+                            <button
+                                v-if="breakdown.canEdit"
+                                type="button"
+                                class="ui-btn-primary"
+                                :disabled="breakdown.saving"
+                                @click="saveBreakdown"
+                            >
+                                {{ breakdown.saving ? 'Хадгалж байна…' : 'Хадгалах' }}
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </Modal>
     </AuthenticatedLayout>
 </template>

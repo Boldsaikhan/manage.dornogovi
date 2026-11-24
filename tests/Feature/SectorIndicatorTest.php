@@ -434,4 +434,57 @@ class SectorIndicatorTest extends TestCase
             ->get(route('indicators.index'))
             ->assertForbidden();
     }
+
+    public function test_a_cell_breakdown_is_saved_and_sums_into_the_value(): void
+    {
+        $unit = $this->department('Мэдээлэл технологийн хэлтэс');
+        $user = $this->staff($unit, 'edit');
+        $period = $this->period('2026', true);
+        $row = SectorIndicator::create([
+            'department_id' => $unit->id,
+            'title' => 'ERP-д бүртгэгдсэн байгууллага',
+            'measure_unit' => 'тоо',
+        ]);
+
+        $this->actingAs($user)
+            ->putJson(route('indicators.breakdown.sync', $row), [
+                'period_id' => $period->id,
+                'slot' => 'year',
+                'items' => [
+                    ['label' => 'Аймаг', 'amount' => '100'],
+                    ['label' => 'Сум', 'amount' => '79'],
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('value', '179')
+            ->assertJsonPath('breakdown_count', 2);
+
+        $this->assertDatabaseHas('sector_indicator_values', [
+            'sector_indicator_id' => $row->id,
+            'indicator_period_id' => $period->id,
+            'slot' => 'year',
+            'value' => '179',
+        ]);
+
+        $this->assertDatabaseHas('sector_indicator_value_items', [
+            'label' => 'Аймаг',
+            'amount' => '100',
+        ]);
+
+        $this->actingAs($user)
+            ->getJson(route('indicators.breakdown', [
+                'indicator' => $row->id,
+                'period_id' => $period->id,
+                'slot' => 'year',
+            ]))
+            ->assertOk()
+            ->assertJsonPath('items.0.label', 'Аймаг')
+            ->assertJsonPath('items.1.amount', '79')
+            ->assertJsonPath('value', '179');
+
+        $this->actingAs($user)
+            ->get(route('indicators.index'))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('rows.0.breakdowns.'.$period->id.':year', 2));
+    }
 }

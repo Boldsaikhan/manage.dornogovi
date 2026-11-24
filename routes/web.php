@@ -195,6 +195,10 @@ Route::middleware('auth')->group(function () {
         ->name('indicators.update');
     Route::patch('/modules/legal_acts/indicators/{indicator}/value', [SectorIndicatorController::class, 'updateValue'])
         ->name('indicators.value');
+    Route::get('/modules/legal_acts/indicators/{indicator}/breakdown', [SectorIndicatorController::class, 'breakdown'])
+        ->name('indicators.breakdown');
+    Route::put('/modules/legal_acts/indicators/{indicator}/breakdown', [SectorIndicatorController::class, 'syncBreakdown'])
+        ->name('indicators.breakdown.sync');
     Route::delete('/modules/legal_acts/indicators/{indicator}', [SectorIndicatorController::class, 'destroy'])
         ->name('indicators.destroy');
     Route::post('/modules/legal_acts/indicator-categories', [SectorIndicatorController::class, 'storeCategory'])
