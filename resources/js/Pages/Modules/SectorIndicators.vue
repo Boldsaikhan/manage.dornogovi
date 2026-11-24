@@ -552,7 +552,7 @@ const removePeriod = (period) => {
     <Head title="Салбарын үзүүлэлт" />
 
     <AuthenticatedLayout title="Салбарын үзүүлэлт">
-        <div class="ui-page ui-page--tight">
+        <div class="ui-page ui-page--indicators-table">
             <div class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-soft">
                 <form
                     v-if="canEdit"
@@ -618,7 +618,8 @@ const removePeriod = (period) => {
                 </p>
             </div>
 
-            <TableScrollViewport v-else>
+            <div v-else class="ui-indicators-table-shell">
+            <TableScrollViewport fill>
                 <table class="ui-table ui-register__table w-full">
                     <colgroup>
                         <col style="width: 4%" />
@@ -924,6 +925,7 @@ const removePeriod = (period) => {
                     </tbody>
                 </table>
             </TableScrollViewport>
+            </div>
         </div>
 
         <Modal :show="breakdown.open" max-width="4xl" @close="closeBreakdown">
