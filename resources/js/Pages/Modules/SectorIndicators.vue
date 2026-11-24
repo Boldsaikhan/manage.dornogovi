@@ -145,7 +145,7 @@ const columnWidths = computed(() => {
 });
 
 /**
- * Мөрийн нийт — жил бүрийн эцсийн утгыг нэмнэ.
+ * Мөрийн нийт — тоо/мөнгө бол нийлбэр, хувь бол орсон жилийн дундаж.
  * Хагас жил/жилийн эцэстэй баганад жилийн эцсийг авна; хоосон бол хагас жил.
  */
 const rowTotal = (row) => {
@@ -154,7 +154,7 @@ const rowTotal = (row) => {
         : (row.values || {});
 
     let total = 0;
-    let has = false;
+    let count = 0;
 
     props.periods.forEach((period) => {
         const yearRaw = values[cellKey(period, 'year')];
@@ -172,20 +172,21 @@ const rowTotal = (row) => {
         if (cleaned === '' || Number.isNaN(number)) return;
 
         total += number;
-        has = true;
+        count += 1;
     });
 
-    if (! has) return null;
+    if (! count) return null;
 
     const kind = unitOf(row.measure_unit || drafts[row.id]?.measure_unit)?.kind;
 
-    if (kind === 'integer' || kind === 'money') return String(Math.round(total));
-
     if (kind === 'percent') {
-        const fixed = total.toFixed(1);
+        const avg = total / count;
+        const fixed = avg.toFixed(1);
 
         return fixed.replace(/\.0$/, '');
     }
+
+    if (kind === 'integer' || kind === 'money') return String(Math.round(total));
 
     const fixed = total.toFixed(2);
 
@@ -1030,7 +1031,11 @@ const removePeriod = (period) => {
                                 <span
                                     class="text-sm font-semibold tabular-nums text-brand-navy-900"
                                     :class="rowTotal(row) == null ? 'text-slate-400' : ''"
-                                    :title="rowTotal(row) == null ? 'Тоон утга алга' : 'Жил бүрийн эцсийн нийлбэр'"
+                                    :title="rowTotal(row) == null
+                                        ? 'Тоон утга алга'
+                                        : (unitOf(row.measure_unit)?.kind === 'percent'
+                                            ? 'Орсон жилийн дундаж хувь'
+                                            : 'Жил бүрийн эцсийн нийлбэр')"
                                 >
                                     {{ formatMeasure(rowTotal(row), row.measure_unit || drafts[row.id]?.measure_unit) || '—' }}
                                 </span>
