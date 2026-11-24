@@ -447,7 +447,7 @@ class SectorIndicatorTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->putJson(route('indicators.breakdown.sync', $row), [
+            ->postJson(route('indicators.breakdown.sync', $row), [
                 'period_id' => $period->id,
                 'slot' => 'year',
                 'items' => [

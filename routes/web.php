@@ -198,7 +198,7 @@ Route::middleware('auth')->group(function () {
         ->name('indicators.value');
     Route::get('/modules/legal_acts/indicators/{indicator}/breakdown', [SectorIndicatorController::class, 'breakdown'])
         ->name('indicators.breakdown');
-    Route::put('/modules/legal_acts/indicators/{indicator}/breakdown', [SectorIndicatorController::class, 'syncBreakdown'])
+    Route::match(['put', 'post'], '/modules/legal_acts/indicators/{indicator}/breakdown', [SectorIndicatorController::class, 'syncBreakdown'])
         ->name('indicators.breakdown.sync');
     Route::delete('/modules/legal_acts/indicators/{indicator}', [SectorIndicatorController::class, 'destroy'])
         ->name('indicators.destroy');
