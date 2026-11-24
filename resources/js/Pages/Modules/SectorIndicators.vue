@@ -123,18 +123,19 @@ const beginEditAt = (row, cellSelector = null) => {
 const totalColumns = computed(() => (
     4
     + valueColumnCount.value
+    + 1 // Нийт
     + (structureEditable.value ? 1 : 0)
     + (props.canEdit ? 1 : 0)
 ));
 
 /** Багануудын өргөн нийлээд 100% — хүснэгт дэлгэцээс халина. */
 const columnWidths = computed(() => {
-    const fixed = 4 + 12 + 9
+    const fixed = 4 + 12 + 9 + 8
         + (structureEditable.value ? 8 : 0)
         + (props.canEdit ? 7 : 0);
     const pool = Math.max(0, 100 - fixed);
     const count = valueColumnCount.value;
-    const titleShare = count ? Math.max(26, pool * 0.4) : pool;
+    const titleShare = count ? Math.max(24, pool * 0.38) : pool;
     const valueShare = count ? (pool - titleShare) / count : 0;
 
     return {
@@ -142,6 +143,54 @@ const columnWidths = computed(() => {
         value: `${valueShare}%`,
     };
 });
+
+/**
+ * Мөрийн нийт — жил бүрийн эцсийн утгыг нэмнэ.
+ * Хагас жил/жилийн эцэстэй баганад жилийн эцсийг авна; хоосон бол хагас жил.
+ */
+const rowTotal = (row) => {
+    const values = (rowEditing(row) && drafts[row.id]?.values)
+        ? drafts[row.id].values
+        : (row.values || {});
+
+    let total = 0;
+    let has = false;
+
+    props.periods.forEach((period) => {
+        const yearRaw = values[cellKey(period, 'year')];
+        const halfRaw = period.slots.includes('half') ? values[cellKey(period, 'half')] : '';
+        const raw = (yearRaw !== undefined && yearRaw !== null && String(yearRaw).trim() !== '')
+            ? yearRaw
+            : halfRaw;
+        const text = String(raw ?? '').trim();
+
+        if (text === '' || text === '—') return;
+
+        const cleaned = text.replace(/[\s\u00a0]/g, '').replace(',', '.').replace(/[^\d.-]/g, '');
+        const number = Number(cleaned);
+
+        if (cleaned === '' || Number.isNaN(number)) return;
+
+        total += number;
+        has = true;
+    });
+
+    if (! has) return null;
+
+    const kind = unitOf(row.measure_unit || drafts[row.id]?.measure_unit)?.kind;
+
+    if (kind === 'integer' || kind === 'money') return String(Math.round(total));
+
+    if (kind === 'percent') {
+        const fixed = total.toFixed(1);
+
+        return fixed.replace(/\.0$/, '');
+    }
+
+    const fixed = total.toFixed(2);
+
+    return fixed.replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+};
 
 const flushRow = (row) => {
     const id = Number(row.id);
@@ -725,6 +774,7 @@ const removePeriod = (period) => {
                             :key="'col-' + index"
                             :style="{ width: columnWidths.value }"
                         />
+                        <col style="width: 8%" />
                         <col v-if="structureEditable" style="width: 8%" />
                         <col v-if="canEdit" style="width: 7%" />
                     </colgroup>
@@ -771,6 +821,12 @@ const removePeriod = (period) => {
                                         Устгах
                                     </button>
                                 </div>
+                            </th>
+                            <th
+                                rowspan="2"
+                                class="whitespace-normal text-center font-semibold text-brand-navy-800"
+                            >
+                                Нийт
                             </th>
                             <th v-if="structureEditable" rowspan="2" class="w-28 align-bottom">
                                 <input
@@ -969,6 +1025,16 @@ const removePeriod = (period) => {
                                     </span>
                                 </td>
                             </template>
+
+                            <td class="bg-brand-navy-50/40 text-center">
+                                <span
+                                    class="text-sm font-semibold tabular-nums text-brand-navy-900"
+                                    :class="rowTotal(row) == null ? 'text-slate-400' : ''"
+                                    :title="rowTotal(row) == null ? 'Тоон утга алга' : 'Жил бүрийн эцсийн нийлбэр'"
+                                >
+                                    {{ formatMeasure(rowTotal(row), row.measure_unit || drafts[row.id]?.measure_unit) || '—' }}
+                                </span>
+                            </td>
 
                             <td v-if="structureEditable" />
 
