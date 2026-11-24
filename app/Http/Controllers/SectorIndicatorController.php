@@ -259,6 +259,7 @@ class SectorIndicatorController extends Controller
                 'id' => $item->id,
                 'label' => $item->label,
                 'amount' => $item->amount,
+                'note' => $item->note,
             ])->values(),
         ]);
     }
@@ -276,6 +277,7 @@ class SectorIndicatorController extends Controller
             'items' => ['present', 'array'],
             'items.*.label' => ['nullable', 'string', 'max:500'],
             'items.*.amount' => ['nullable', 'string', 'max:60'],
+            'items.*.note' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $unit = $indicator->measure_unit;
@@ -284,14 +286,16 @@ class SectorIndicatorController extends Controller
         foreach ($data['items'] as $index => $raw) {
             $label = trim((string) ($raw['label'] ?? ''));
             $amount = IndicatorMeasure::normalize($unit, $raw['amount'] ?? '');
+            $note = trim((string) ($raw['note'] ?? ''));
 
-            if ($label === '' && $amount === '') {
+            if ($label === '' && $amount === '' && $note === '') {
                 continue;
             }
 
             $cleanItems[] = [
                 'label' => $label !== '' ? $label : '—',
                 'amount' => $amount !== '' ? $amount : null,
+                'note' => $note !== '' ? $note : null,
                 'sort_order' => $index,
             ];
         }
@@ -343,6 +347,7 @@ class SectorIndicatorController extends Controller
                     'id' => $item->id,
                     'label' => $item->label,
                     'amount' => $item->amount,
+                    'note' => $item->note,
                 ])->values(),
                 'breakdown_count' => $cell->items->count(),
             ];

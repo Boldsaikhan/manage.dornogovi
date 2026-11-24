@@ -411,10 +411,11 @@ const openBreakdown = async (row, period, slot) => {
         breakdown.items = (data.items || []).map((item) => ({
             label: item.label ?? '',
             amount: item.amount ?? '',
+            note: item.note ?? '',
         }));
 
         if (breakdown.canEdit && breakdown.items.length === 0) {
-            breakdown.items.push({ label: '', amount: '' });
+            breakdown.items.push({ label: '', amount: '', note: '' });
         }
     } catch (error) {
         breakdown.error = error?.response?.data?.message || 'Задаргаа ачаалж чадсангүй.';
@@ -428,14 +429,14 @@ const closeBreakdown = () => {
 };
 
 const addBreakdownItem = () => {
-    breakdown.items.push({ label: '', amount: '' });
+    breakdown.items.push({ label: '', amount: '', note: '' });
 };
 
 const removeBreakdownItem = (index) => {
     breakdown.items.splice(index, 1);
 
     if (breakdown.canEdit && breakdown.items.length === 0) {
-        breakdown.items.push({ label: '', amount: '' });
+        breakdown.items.push({ label: '', amount: '', note: '' });
     }
 };
 
@@ -452,6 +453,7 @@ const saveBreakdown = async () => {
             items: breakdown.items.map((item) => ({
                 label: item.label,
                 amount: item.amount,
+                note: item.note,
             })),
         });
 
@@ -459,10 +461,11 @@ const saveBreakdown = async () => {
         breakdown.items = (data.items || []).map((item) => ({
             label: item.label ?? '',
             amount: item.amount ?? '',
+            note: item.note ?? '',
         }));
 
         if (breakdown.canEdit && breakdown.items.length === 0) {
-            breakdown.items.push({ label: '', amount: '' });
+            breakdown.items.push({ label: '', amount: '', note: '' });
         }
 
         router.reload({ only: ['rows'], preserveScroll: true, preserveState: true });
@@ -923,7 +926,7 @@ const removePeriod = (period) => {
             </TableScrollViewport>
         </div>
 
-        <Modal :show="breakdown.open" max-width="2xl" @close="closeBreakdown">
+        <Modal :show="breakdown.open" max-width="4xl" @close="closeBreakdown">
             <div class="ui-card-pad space-y-4">
                 <div class="space-y-1">
                     <h2 class="ui-title text-base">Задаргаа</h2>
@@ -947,25 +950,37 @@ const removePeriod = (period) => {
                             <thead>
                                 <tr>
                                     <th class="w-12 text-center">№</th>
+                                    <th class="w-44">Нэр</th>
                                     <th>Тайлбар</th>
-                                    <th class="w-36 text-right">Тоо</th>
+                                    <th class="w-28 text-right">Тоо</th>
                                     <th v-if="breakdown.canEdit" class="w-12" />
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-for="(item, index) in breakdown.items" :key="index">
-                                    <td class="text-center text-slate-400">{{ index + 1 }}</td>
-                                    <td>
+                                    <td class="align-top text-center text-slate-400">{{ index + 1 }}</td>
+                                    <td class="align-top">
                                         <input
                                             v-if="breakdown.canEdit"
                                             v-model="item.label"
                                             class="ui-input !py-1.5 text-sm"
                                             maxlength="500"
-                                            placeholder="Юунаас бүрдсэн"
+                                            placeholder="Жишээ: Сайншанд"
                                         />
                                         <span v-else class="text-sm">{{ item.label || '—' }}</span>
                                     </td>
-                                    <td>
+                                    <td class="align-top">
+                                        <textarea
+                                            v-if="breakdown.canEdit"
+                                            v-model="item.note"
+                                            rows="2"
+                                            class="ui-input !min-h-[2.5rem] w-full resize-y !py-1.5 text-sm leading-snug"
+                                            maxlength="2000"
+                                            placeholder="Тайлбар бичих…"
+                                        />
+                                        <span v-else class="block whitespace-pre-wrap text-sm text-slate-600">{{ item.note || '—' }}</span>
+                                    </td>
+                                    <td class="align-top">
                                         <input
                                             v-if="breakdown.canEdit"
                                             v-model="item.amount"
@@ -977,7 +992,7 @@ const removePeriod = (period) => {
                                             {{ formatMeasure(item.amount, breakdown.measureUnit) || '—' }}
                                         </span>
                                     </td>
-                                    <td v-if="breakdown.canEdit" class="text-center">
+                                    <td v-if="breakdown.canEdit" class="align-top text-center">
                                         <button
                                             type="button"
                                             class="ui-icon-btn ui-icon-btn--danger !h-7 !w-7"
@@ -992,7 +1007,7 @@ const removePeriod = (period) => {
                                     </td>
                                 </tr>
                                 <tr v-if="! breakdown.items.length">
-                                    <td :colspan="breakdown.canEdit ? 4 : 3" class="py-8 text-center text-sm text-slate-400">
+                                    <td :colspan="breakdown.canEdit ? 5 : 4" class="py-8 text-center text-sm text-slate-400">
                                         Задаргаа байхгүй.
                                     </td>
                                 </tr>
@@ -1000,7 +1015,7 @@ const removePeriod = (period) => {
                             <tfoot>
                                 <tr class="border-t border-slate-200 bg-slate-50/80">
                                     <td />
-                                    <td class="text-sm font-medium text-slate-600">Нийлбэр / нүдний утга</td>
+                                    <td colspan="2" class="text-sm font-medium text-slate-600">Нийлбэр / нүдний утга</td>
                                     <td class="text-right text-sm font-semibold tabular-nums text-brand-navy-800">
                                         {{ formatMeasure(breakdownSum || breakdown.value, breakdown.measureUnit) || '—' }}
                                     </td>

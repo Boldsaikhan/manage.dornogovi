@@ -14,6 +14,7 @@ class SectorIndicatorValueItem extends Model
         'sector_indicator_value_id',
         'label',
         'amount',
+        'note',
         'sort_order',
     ];
 
