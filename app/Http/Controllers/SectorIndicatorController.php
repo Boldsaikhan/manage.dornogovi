@@ -7,10 +7,13 @@ use App\Models\IndicatorPeriod;
 use App\Models\SectorIndicator;
 use App\Models\SectorIndicatorCategory;
 use App\Models\SectorIndicatorValue;
+use App\Models\SectorIndicatorValueItem;
 use App\Support\IndicatorMeasure;
 use App\Support\ModuleAccess;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -52,16 +55,19 @@ class SectorIndicatorController extends Controller
             ->values();
 
         $rows = SectorIndicator::query()
-            ->with('values:id,sector_indicator_id,indicator_period_id,slot,value')
+            ->with(['values' => fn ($q) => $q->withCount('items')])
             ->when($unitId, fn ($q) => $q->where('department_id', $unitId))
             ->when(! $unitId, fn ($q) => $q->whereNull('department_id'))
             ->orderBy('sort_order')->orderBy('id')
             ->get()
             ->map(function (SectorIndicator $row, int $i) {
                 $values = [];
+                $breakdowns = [];
 
                 foreach ($row->values as $value) {
-                    $values[$value->indicator_period_id.':'.$value->slot] = $value->value;
+                    $key = $value->indicator_period_id.':'.$value->slot;
+                    $values[$key] = $value->value;
+                    $breakdowns[$key] = (int) $value->items_count;
                 }
 
                 return [
@@ -73,6 +79,7 @@ class SectorIndicatorController extends Controller
                     'target' => $row->target,
                     'note' => $row->note,
                     'values' => $values,
+                    'breakdowns' => $breakdowns,
                 ];
             })
             ->values();
@@ -216,6 +223,165 @@ class SectorIndicatorController extends Controller
         }
 
         return back(303);
+    }
+
+    /** Нүдний задаргааг уншина. */
+    public function breakdown(Request $request, SectorIndicator $indicator): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless(ModuleAccess::canView($user, self::MODULE), 403);
+        $this->authorizeRow($user, $indicator);
+
+        $data = $request->validate([
+            'period_id' => ['required', Rule::exists('indicator_periods', 'id')],
+            'slot' => ['required', Rule::in(array_keys(IndicatorPeriod::SLOTS))],
+        ]);
+
+        $cell = SectorIndicatorValue::query()
+            ->where('sector_indicator_id', $indicator->id)
+            ->where('indicator_period_id', $data['period_id'])
+            ->where('slot', $data['slot'])
+            ->with('items')
+            ->first();
+
+        $period = IndicatorPeriod::findOrFail($data['period_id']);
+
+        return response()->json([
+            'indicator_id' => $indicator->id,
+            'title' => $indicator->title,
+            'measure_unit' => $indicator->measure_unit,
+            'period_id' => $period->id,
+            'period_label' => $period->label,
+            'slot' => $data['slot'],
+            'value' => $cell?->value,
+            'can_edit' => ModuleAccess::canEdit($user, self::MODULE),
+            'items' => ($cell?->items ?? collect())->map(fn (SectorIndicatorValueItem $item) => [
+                'id' => $item->id,
+                'label' => $item->label,
+                'amount' => $item->amount,
+            ])->values(),
+        ]);
+    }
+
+    /** Нүдний задаргааг бүхэлд нь хадгална; нийлбэрийг нүдэнд бичнэ. */
+    public function syncBreakdown(Request $request, SectorIndicator $indicator): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless(ModuleAccess::canEdit($user, self::MODULE), 403);
+        $this->authorizeRow($user, $indicator);
+
+        $data = $request->validate([
+            'period_id' => ['required', Rule::exists('indicator_periods', 'id')],
+            'slot' => ['required', Rule::in(array_keys(IndicatorPeriod::SLOTS))],
+            'items' => ['present', 'array'],
+            'items.*.label' => ['nullable', 'string', 'max:500'],
+            'items.*.amount' => ['nullable', 'string', 'max:60'],
+        ]);
+
+        $unit = $indicator->measure_unit;
+        $cleanItems = [];
+
+        foreach ($data['items'] as $index => $raw) {
+            $label = trim((string) ($raw['label'] ?? ''));
+            $amount = IndicatorMeasure::normalize($unit, $raw['amount'] ?? '');
+
+            if ($label === '' && $amount === '') {
+                continue;
+            }
+
+            $cleanItems[] = [
+                'label' => $label !== '' ? $label : '—',
+                'amount' => $amount !== '' ? $amount : null,
+                'sort_order' => $index,
+            ];
+        }
+
+        $sum = $this->sumAmounts($unit, array_column($cleanItems, 'amount'));
+
+        $payload = DB::transaction(function () use ($indicator, $data, $cleanItems, $sum) {
+            $cell = SectorIndicatorValue::query()
+                ->where('sector_indicator_id', $indicator->id)
+                ->where('indicator_period_id', $data['period_id'])
+                ->where('slot', $data['slot'])
+                ->first();
+
+            if ($cleanItems === [] && ($cell === null || $cell->value === null || $cell->value === '')) {
+                $cell?->items()->delete();
+                $cell?->delete();
+
+                return [
+                    'value' => null,
+                    'items' => [],
+                    'breakdown_count' => 0,
+                ];
+            }
+
+            if ($cell === null) {
+                $cell = SectorIndicatorValue::create([
+                    'sector_indicator_id' => $indicator->id,
+                    'indicator_period_id' => $data['period_id'],
+                    'slot' => $data['slot'],
+                    'value' => $sum !== '' ? $sum : null,
+                ]);
+            } else {
+                $cell->update([
+                    'value' => $sum !== '' ? $sum : $cell->value,
+                ]);
+            }
+
+            $cell->items()->delete();
+
+            foreach ($cleanItems as $item) {
+                $cell->items()->create($item);
+            }
+
+            $cell->load('items');
+
+            return [
+                'value' => $cell->value,
+                'items' => $cell->items->map(fn (SectorIndicatorValueItem $item) => [
+                    'id' => $item->id,
+                    'label' => $item->label,
+                    'amount' => $item->amount,
+                ])->values(),
+                'breakdown_count' => $cell->items->count(),
+            ];
+        });
+
+        return response()->json([
+            'indicator_id' => $indicator->id,
+            'period_id' => (int) $data['period_id'],
+            'slot' => $data['slot'],
+            ...$payload,
+        ]);
+    }
+
+    /** Задаргааны тоонуудын нийлбэр. */
+    private function sumAmounts(?string $unit, array $amounts): string
+    {
+        $total = 0.0;
+        $has = false;
+
+        foreach ($amounts as $amount) {
+            if ($amount === null || $amount === '') {
+                continue;
+            }
+
+            $normalized = IndicatorMeasure::normalize($unit, $amount);
+
+            if ($normalized === '' || ! is_numeric($normalized)) {
+                continue;
+            }
+
+            $total += (float) $normalized;
+            $has = true;
+        }
+
+        if (! $has) {
+            return '';
+        }
+
+        return IndicatorMeasure::normalize($unit, (string) $total);
     }
 
     public function destroy(Request $request, SectorIndicator $indicator): RedirectResponse

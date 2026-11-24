@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Үзүүлэлт × жилийн багана огтлолцлын утга.
@@ -20,5 +21,12 @@ class SectorIndicatorValue extends Model
     public function period(): BelongsTo
     {
         return $this->belongsTo(IndicatorPeriod::class, 'indicator_period_id');
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(SectorIndicatorValueItem::class, 'sector_indicator_value_id')
+            ->orderBy('sort_order')
+            ->orderBy('id');
     }
 }
