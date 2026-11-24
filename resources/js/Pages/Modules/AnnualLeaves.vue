@@ -175,11 +175,11 @@ const logTone = (action) => ({
  * Мөр бүр серверт бодит бичлэгтэй тул «Мөр нэмэх» дарахад шууд хоосон мөр
  * үүсээд, дараа нь нүд бүрийг {@see saveField} горимоор нэг нэгээр нь
  * хадгална. «Байгууллага», «Албан тушаал», «Орлох албан тушаал» —
- * сонгосон нэрнээс, «Дуусах огноо» нь эхлэх огноо, олгох хоногоос дагаж
- * бөглөгддөг тул энд байхгүй.
+ * сонгосон нэрнээс дагаж бөглөгддөг. «Дуусах огноо»-г гараар засаж болно;
+ * эхлэх огноо/олгох хоног өөрчлөгдвөл дахин тооцогдоно.
  */
 const DRAFT_FIELDS = [
-    'person_name', 'work_years', 'entitled_days', 'start_date', 'signer',
+    'person_name', 'work_years', 'entitled_days', 'start_date', 'end_date', 'signer',
     'substitute_name', 'substitute_phone',
 ];
 
@@ -598,8 +598,16 @@ const visibleRows = computed(() => (
                                     @commit="(v) => saveField(row.id, 'start_date', v)"
                                 />
                             </td>
-                            <td class="px-1.5 py-1.5 text-center text-xs tabular-nums text-slate-600">
-                                {{ formatYmdDisplay(row.end_date) || '—' }}
+                            <td :class="cellClass">
+                                <SheetCell
+                                    v-if="drafts[row.id]"
+                                    v-model="drafts[row.id].end_date"
+                                    type="date"
+                                    align="center"
+                                    :editable="rowEditable(row)"
+                                    empty-label=""
+                                    @commit="(v) => saveField(row.id, 'end_date', v)"
+                                />
                             </td>
                             <td class="px-1.5 py-1.5">
                                 <select
