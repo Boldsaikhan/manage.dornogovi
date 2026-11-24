@@ -32,23 +32,25 @@ const draftFromRow = (row) => ({
 
 /** Засаж буй мөрийн draft-ийг бүү устга — олон нүд зэрэг оруулахад утга алдагдахгүй. */
 const syncDrafts = () => {
-    const open = new Set(editingIds.value);
-    const liveIds = new Set(props.rows.map((row) => row.id));
+    const open = new Set(editingIds.value.map((id) => Number(id)));
+    const liveIds = new Set(props.rows.map((row) => Number(row.id)));
 
     Object.keys(drafts).forEach((key) => {
         const id = Number(key);
 
-        if (! liveIds.has(id) && ! liveIds.has(key)) {
+        if (! liveIds.has(id)) {
             delete drafts[key];
         }
     });
 
     props.rows.forEach((row) => {
-        if (open.has(row.id) && drafts[row.id]) {
+        const id = Number(row.id);
+
+        if (open.has(id) && drafts[id]) {
             return;
         }
 
-        drafts[row.id] = draftFromRow(row);
+        drafts[id] = draftFromRow(row);
     });
 };
 
@@ -65,21 +67,15 @@ function fitTitle(el) {
     }
 
     node.style.height = 'auto';
-    node.style.height = `${Math.max(node.scrollHeight, 36)}px`;
+    node.style.height = `${Math.max(node.scrollHeight, 40)}px`;
 }
 
-/** Textarea mount-д өндрийг зөв тооцоолно. */
-const bindTitle = (el) => {
-    if (! el) return;
-
-    nextTick(() => fitTitle(el));
-};
-
-/** Олон мөрийг зэрэг засварлана — нүд дээр дарж нээнэ. */
+/** Олон мөрийг зэрэг засварлана — зөвхөн харандаа товчоор. */
 const editingIds = ref([]);
 const structureEditing = ref(false);
-const rowEditing = (row) => props.canEdit && editingIds.value.includes(row.id);
+const rowEditing = (row) => props.canEdit && editingIds.value.map(Number).includes(Number(row.id));
 const structureEditable = computed(() => structureEditing.value && props.canManage);
+const titleTimers = {};
 
 syncDrafts();
 watch(() => props.rows, syncDrafts, { deep: true });
@@ -91,8 +87,11 @@ const focusCell = async (selector) => {
         ? document.querySelector(selector)
         : selector;
     el?.focus?.();
-    if (el && typeof el.select === 'function') {
-        el.select();
+
+    // Бүх текстийг select хийхгүй — бичихэд бэлэн курсор тавина.
+    if (el && typeof el.setSelectionRange === 'function') {
+        const len = String(el.value ?? '').length;
+        el.setSelectionRange(len, len);
     }
 };
 
@@ -102,8 +101,14 @@ const beginEditAt = (row, cellSelector = null) => {
         return;
     }
 
-    if (! editingIds.value.includes(row.id)) {
-        editingIds.value = [...editingIds.value, row.id];
+    const id = Number(row.id);
+
+    if (! editingIds.value.map(Number).includes(id)) {
+        editingIds.value = [...editingIds.value, id];
+    }
+
+    if (! drafts[id]) {
+        drafts[id] = draftFromRow(row);
     }
 
     if (cellSelector) {
@@ -134,16 +139,27 @@ const columnWidths = computed(() => {
     };
 });
 
-const toggleRow = (row) => {
-    if (editingIds.value.includes(row.id)) {
-        editingIds.value = editingIds.value.filter((id) => id !== row.id);
-        const server = props.rows.find((item) => item.id === row.id);
+const flushRow = (row) => {
+    const id = Number(row.id);
 
-        if (server) {
-            drafts[row.id] = draftFromRow(server);
-        }
+    if (titleTimers[id]) {
+        clearTimeout(titleTimers[id]);
+        delete titleTimers[id];
+    }
+
+    saveField(row, 'title');
+    saveField(row, 'measure_unit');
+    saveField(row, 'target');
+};
+
+const toggleRow = (row) => {
+    const id = Number(row.id);
+
+    if (editingIds.value.map(Number).includes(id)) {
+        flushRow(row);
+        editingIds.value = editingIds.value.filter((item) => Number(item) !== id);
     } else {
-        beginEditAt(row, `[data-cell='title-${row.id}']`);
+        beginEditAt(row, `[data-cell='title-${id}']`);
     }
 };
 
@@ -302,19 +318,43 @@ const formatMeasure = (raw, unit) => {
 };
 
 const saveField = (row, field) => {
-    let value = drafts[row.id]?.[field] ?? '';
+    const id = Number(row.id);
+    let value = drafts[id]?.[field] ?? '';
 
     if (field === 'target') {
-        value = normalizeMeasure(value, drafts[row.id]?.measure_unit);
-        drafts[row.id].target = value;
+        value = normalizeMeasure(value, drafts[id]?.measure_unit);
+        if (drafts[id]) drafts[id].target = value;
     }
 
-    if (value === (row[field] ?? '')) return;
+    if (field === 'title') {
+        value = String(value ?? '').trim();
+        if (drafts[id]) drafts[id].title = value;
+    }
 
-    router.patch(route('indicators.update', row.id), { [field]: value }, {
+    const current = row[field] ?? '';
+
+    if (value === current || value === (current ?? '')) return;
+    if (String(value) === String(current ?? '')) return;
+
+    router.patch(route('indicators.update', id), { [field]: value === '' ? null : value }, {
         preserveScroll: true,
         preserveState: true,
+        only: ['rows'],
     });
+};
+
+const onTitleInput = (row) => {
+    const id = Number(row.id);
+    const el = document.querySelector(`[data-cell='title-${id}']`);
+
+    if (el) fitTitle(el);
+
+    if (titleTimers[id]) clearTimeout(titleTimers[id]);
+
+    titleTimers[id] = setTimeout(() => {
+        saveField(row, 'title');
+        delete titleTimers[id];
+    }, 450);
 };
 
 const cellKey = (period, slot) => `${period.id}:${slot}`;
@@ -745,24 +785,32 @@ const removePeriod = (period) => {
                         <tr v-for="row in group.rows" :key="row.id" :class="rowEditing(row) ? 'bg-sky-50/80' : ''">
                             <td class="ui-register__cell--no text-center">{{ row.no }}</td>
 
-                            <td class="align-top whitespace-normal text-left">
+                            <td
+                                class="relative align-top whitespace-normal text-left"
+                                :class="rowEditing(row) ? 'z-20' : ''"
+                            >
                                 <textarea
                                     v-if="rowEditing(row) && drafts[row.id]"
-                                    :ref="bindTitle"
+                                    :key="'title-edit-' + row.id"
                                     v-model="drafts[row.id].title"
                                     :data-cell="`title-${row.id}`"
                                     rows="2"
-                                    class="ui-input !min-h-[2.5rem] w-full resize-y whitespace-pre-wrap break-words !py-1.5 text-left text-sm leading-snug"
+                                    class="relative z-20 block w-full min-h-[2.75rem] resize-y rounded-lg border-2 border-brand-navy-400 bg-white px-2 py-1.5 text-left text-sm leading-snug text-slate-800 shadow-sm outline-none focus:border-brand-navy-600 focus:ring-2 focus:ring-brand-navy-600/20"
                                     placeholder="Үзүүлэлтийн нэр…"
-                                    @input="fitTitle"
+                                    autocomplete="off"
+                                    @focus="fitTitle($event)"
+                                    @input="onTitleInput(row)"
                                     @blur="saveField(row, 'title')"
+                                    @mousedown.stop
                                     @click.stop
+                                    @keydown.stop
                                 />
                                 <select
                                     v-if="rowEditing(row) && drafts[row.id] && categories.length"
                                     v-model="drafts[row.id].category_id"
-                                    class="ui-input mt-1 w-full !py-1 text-xs text-slate-600"
+                                    class="ui-input relative z-20 mt-1 w-full !py-1 text-xs text-slate-600"
                                     @change="saveCategory(row)"
+                                    @mousedown.stop
                                     @click.stop
                                 >
                                     <option value="">Ангилалгүй</option>
