@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -292,12 +293,18 @@ class SectorIndicatorController extends Controller
                 continue;
             }
 
-            $cleanItems[] = [
+            $row = [
                 'label' => $label !== '' ? $label : '—',
                 'amount' => $amount !== '' ? $amount : null,
-                'note' => $note !== '' ? $note : null,
                 'sort_order' => $index,
             ];
+
+            // note багана байхгүй сервер дээр ч хадгалагдана.
+            if (Schema::hasColumn('sector_indicator_value_items', 'note')) {
+                $row['note'] = $note !== '' ? $note : null;
+            }
+
+            $cleanItems[] = $row;
         }
 
         $sum = $this->sumAmounts($unit, array_column($cleanItems, 'amount'));
@@ -320,17 +327,18 @@ class SectorIndicatorController extends Controller
                 ];
             }
 
+            // Нийлбэр байвал нүдийг түүгээр шинэчилнэ; үгүй бол хуучныг үлдээнэ.
+            $nextValue = $sum !== '' ? $sum : ($cell?->value);
+
             if ($cell === null) {
                 $cell = SectorIndicatorValue::create([
                     'sector_indicator_id' => $indicator->id,
                     'indicator_period_id' => $data['period_id'],
                     'slot' => $data['slot'],
-                    'value' => $sum !== '' ? $sum : null,
+                    'value' => $nextValue,
                 ]);
             } else {
-                $cell->update([
-                    'value' => $sum !== '' ? $sum : $cell->value,
-                ]);
+                $cell->update(['value' => $nextValue]);
             }
 
             $cell->items()->delete();
@@ -347,7 +355,7 @@ class SectorIndicatorController extends Controller
                     'id' => $item->id,
                     'label' => $item->label,
                     'amount' => $item->amount,
-                    'note' => $item->note,
+                    'note' => $item->note ?? null,
                 ])->values(),
                 'breakdown_count' => $cell->items->count(),
             ];

@@ -335,15 +335,22 @@ const saveField = (row, field) => {
         if (drafts[id]) drafts[id].title = value;
     }
 
-    const current = row[field] ?? '';
+    const current = String(row[field] ?? '').trim();
+    const next = value === '' || value == null ? '' : String(value);
 
-    if (value === current || value === (current ?? '')) return;
-    if (String(value) === String(current ?? '')) return;
+    if (next === current) return;
 
-    router.patch(route('indicators.update', id), { [field]: value === '' ? null : value }, {
+    // UI-г шууд шинэчилнэ — хариу иртэл хуучин утга харагдахгүй.
+    row[field] = next === '' ? null : next;
+
+    router.patch(route('indicators.update', id), { [field]: next === '' ? null : next }, {
         preserveScroll: true,
         preserveState: true,
         only: ['rows'],
+        onError: () => {
+            row[field] = current === '' ? null : current;
+            if (drafts[id]) drafts[id][field] = current;
+        },
     });
 };
 
@@ -484,22 +491,44 @@ const removeBreakdownItem = (index) => {
     }
 };
 
+const breakdownErrorMessage = (error) => {
+    const data = error?.response?.data;
+
+    if (! data) return 'Хадгалж чадсангүй. Сүлжээг шалгана уу.';
+
+    if (typeof data.message === 'string' && data.message) return data.message;
+
+    if (data.errors && typeof data.errors === 'object') {
+        const first = Object.values(data.errors).flat().find(Boolean);
+
+        if (first) return String(first);
+    }
+
+    return `Хадгалж чадсангүй (${error?.response?.status || '?'}).`;
+};
+
 const saveBreakdown = async () => {
     if (! breakdown.canEdit || ! breakdown.indicatorId) return;
 
     breakdown.saving = true;
     breakdown.error = '';
 
+    const payload = {
+        period_id: breakdown.periodId,
+        slot: breakdown.slot,
+        items: breakdown.items.map((item) => ({
+            label: item.label,
+            amount: item.amount,
+            note: item.note,
+        })),
+    };
+
     try {
-        const { data } = await window.axios.put(route('indicators.breakdown.sync', breakdown.indicatorId), {
-            period_id: breakdown.periodId,
-            slot: breakdown.slot,
-            items: breakdown.items.map((item) => ({
-                label: item.label,
-                amount: item.amount,
-                note: item.note,
-            })),
-        });
+        // POST — зарим сервер PUT-ыг хаадаг.
+        const { data } = await window.axios.post(
+            route('indicators.breakdown.sync', breakdown.indicatorId),
+            payload,
+        );
 
         breakdown.value = data.value;
         breakdown.items = (data.items || []).map((item) => ({
@@ -512,10 +541,26 @@ const saveBreakdown = async () => {
             breakdown.items.push({ label: '', amount: '', note: '' });
         }
 
-        router.reload({ only: ['rows'], preserveScroll: true, preserveState: true });
+        // Нүдний утгыг шууд шинэчилнэ.
+        const key = `${breakdown.periodId}:${breakdown.slot}`;
+        const row = props.rows.find((item) => Number(item.id) === Number(breakdown.indicatorId));
+
+        if (row) {
+            row.values = { ...(row.values || {}), [key]: data.value ?? '' };
+            row.breakdowns = {
+                ...(row.breakdowns || {}),
+                [key]: Number(data.breakdown_count || 0),
+            };
+        }
+
+        if (drafts[breakdown.indicatorId]) {
+            drafts[breakdown.indicatorId].values[key] = data.value ?? '';
+        }
+
+        await router.reload({ only: ['rows'], preserveScroll: true, preserveState: true });
         breakdown.open = false;
     } catch (error) {
-        breakdown.error = error?.response?.data?.message || 'Хадгалж чадсангүй.';
+        breakdown.error = breakdownErrorMessage(error);
     } finally {
         breakdown.saving = false;
     }
