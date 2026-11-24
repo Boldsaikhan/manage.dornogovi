@@ -221,6 +221,7 @@ class AnnualLeaveController extends Controller
             'work_years' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:80'],
             'entitled_days' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:365'],
             'start_date' => ['sometimes', 'nullable', 'date'],
+            'end_date' => ['sometimes', 'nullable', 'date'],
             'signer' => ['sometimes', 'nullable', Rule::in(array_keys(AnnualLeave::signerOptions()))],
             'substitute_position' => ['sometimes', 'nullable', 'string', 'max:255'],
             'substitute_name' => ['sometimes', 'nullable', 'string', 'max:255'],
@@ -253,8 +254,12 @@ class AnnualLeaveController extends Controller
             $data['entitled_days'] = AnnualLeave::entitledDaysFor($data['work_years']);
         }
 
-        // Эхлэх огноо, эсвэл олгох хоног өөрчлөгдвөл дуусах огноог дагуулна.
-        if (array_key_exists('start_date', $data) || array_key_exists('entitled_days', $data)) {
+        // Эхлэх огноо / олгох хоног өөрчлөгдвөл дуусах огноог дагуулна.
+        // Дуусах огноог шууд илгээсэн бол гараар засагдсан утгыг хадгална.
+        if (
+            ! array_key_exists('end_date', $data)
+            && (array_key_exists('start_date', $data) || array_key_exists('entitled_days', $data))
+        ) {
             $startValue = array_key_exists('start_date', $data) ? $data['start_date'] : $annualLeave->start_date;
             $daysValue = array_key_exists('entitled_days', $data) ? $data['entitled_days'] : $annualLeave->entitled_days;
 

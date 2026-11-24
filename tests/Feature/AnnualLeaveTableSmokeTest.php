@@ -231,6 +231,32 @@ class AnnualLeaveTableSmokeTest extends TestCase
         $this->assertSame('2026-09-11', $row->fresh()->end_date->toDateString());
     }
 
+    public function test_the_end_date_can_be_edited_manually(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->post(route('annual-leaves.store'), [
+            'scope' => 'baiguullaga',
+        ])->assertRedirect();
+
+        $row = AnnualLeave::query()->sole();
+
+        $this->actingAs($admin)
+            ->patch(route('annual-leaves.update', $row), [
+                'start_date' => '2026-08-31',
+                'entitled_days' => 15,
+            ])
+            ->assertRedirect();
+
+        $this->assertSame('2026-09-18', $row->fresh()->end_date->toDateString());
+
+        $this->actingAs($admin)
+            ->patch(route('annual-leaves.update', $row), ['end_date' => '2026-09-25'])
+            ->assertRedirect();
+
+        $this->assertSame('2026-09-25', $row->fresh()->end_date->toDateString());
+    }
+
     public function test_choosing_a_name_fills_the_position(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
