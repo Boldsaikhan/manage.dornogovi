@@ -490,7 +490,8 @@
 
     .ui-page--tasks-table,
     .ui-page--reports-table,
-    .ui-page--awards-table {
+    .ui-page--awards-table,
+    .ui-page--indicators-table {
         @apply flex min-h-0 flex-1 flex-col gap-2 overflow-hidden !space-y-0;
     }
 
@@ -506,8 +507,13 @@
         @apply shrink-0;
     }
 
+    .ui-page--indicators-table > :not(.ui-indicators-table-shell) {
+        @apply shrink-0;
+    }
+
     /* Таб/toolbar-оос хүснэгт бага зэрэг зайтай. */
-    .ui-page--awards-table {
+    .ui-page--awards-table,
+    .ui-page--indicators-table {
         @apply gap-3;
     }
 
@@ -520,6 +526,10 @@
     }
 
     .ui-awards-table-shell {
+        @apply flex min-h-0 w-full min-w-0 flex-1 basis-0 flex-col overflow-hidden;
+    }
+
+    .ui-indicators-table-shell {
         @apply flex min-h-0 w-full min-w-0 flex-1 basis-0 flex-col overflow-hidden;
     }
 
@@ -540,13 +550,15 @@
 
     html:has(.ui-page--tasks-table),
     html:has(.ui-page--reports-table),
-    html:has(.ui-page--awards-table) {
+    html:has(.ui-page--awards-table),
+    html:has(.ui-page--indicators-table) {
         @apply h-dvh overflow-hidden;
     }
 
     html:has(.ui-page--tasks-table) body,
     html:has(.ui-page--reports-table) body,
-    html:has(.ui-page--awards-table) body {
+    html:has(.ui-page--awards-table) body,
+    html:has(.ui-page--indicators-table) body {
         @apply h-dvh overflow-x-hidden overflow-y-hidden;
     }
 
@@ -556,21 +568,25 @@
      */
     html:has(.ui-page--tasks-table) #app,
     html:has(.ui-page--reports-table) #app,
-    html:has(.ui-page--awards-table) #app {
+    html:has(.ui-page--awards-table) #app,
+    html:has(.ui-page--indicators-table) #app {
         @apply flex h-dvh flex-col overflow-hidden;
     }
 
     .flex.min-h-dvh:has(.ui-page--tasks-table),
     .flex.min-h-dvh:has(.ui-page--reports-table),
-    .flex.min-h-dvh:has(.ui-page--awards-table) {
+    .flex.min-h-dvh:has(.ui-page--awards-table),
+    .flex.min-h-dvh:has(.ui-page--indicators-table) {
         @apply h-dvh min-h-0 flex-1 overflow-hidden;
     }
 
     /*
-     * Шагнал: хажуугийн padding-ийг шахж хүснэгтийг баруун тийш дүүргэнэ.
+     * Шагнал / салбарын үзүүлэлт: хажуугийн padding-ийг шахж
+     * хүснэгтийг доош, баруун тийш дүүргэнэ.
      * (! — utilities давхаргаас px-*-ийг дарна)
      */
-    .flex.min-h-dvh:has(.ui-page--awards-table) > main {
+    .flex.min-h-dvh:has(.ui-page--awards-table) > main,
+    .flex.min-h-dvh:has(.ui-page--indicators-table) > main {
         @apply min-h-0 overflow-hidden !px-1 !pb-2 !pr-1 sm:!px-2 sm:!pb-3 sm:!pr-2 lg:!px-2 lg:!pb-3 lg:!pr-2;
     }
 
