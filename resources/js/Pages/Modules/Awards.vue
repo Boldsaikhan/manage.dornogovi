@@ -556,12 +556,14 @@ const patchAward = (id, payload, onSaved) => {
         // props.rows шинэчлэгдэнэ; local draft/editingRows хадгалагдана.
         preserveState: true,
         onSuccess: () => {
-            // Серверээс ирсэн мөрийг draft-д тусгана — хуучин утга буцахгүй.
+            // Зөвхөн илгээсэн талбаруудыг серверээс draft-д тусгана.
+            // (Бүх draft-ыг дарвал РД хадгалахад овог/нэр/шагнал зэрэг
+            // бусад нүдний хараахан илгээгдээгүй засвар арилдаг байсан.)
             const row = props.rows.find((item) => item.id === id);
 
             if (row && drafts[id]) {
-                draftFields.value.forEach((field) => {
-                    if (Object.prototype.hasOwnProperty.call(row, field)) {
+                Object.keys(payload).forEach((field) => {
+                    if (Object.prototype.hasOwnProperty.call(drafts[id], field)) {
                         drafts[id][field] = row[field] ?? '';
                     }
                 });
@@ -587,6 +589,10 @@ const patchAward = (id, payload, onSaved) => {
 const samePayload = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 
 const saveField = (id, field, value) => {
+    if (! drafts[id]) {
+        ensureDraft(id);
+    }
+
     const before = { [field]: snapshotField(id, field) };
 
     // Он талбарт бүрэн бус утга (ж: 20) — хоосон болгохгүй, хуучныг үлдээнэ.
@@ -622,6 +628,25 @@ const saveField = (id, field, value) => {
             after.age = before.age;
             after.gender = before.gender;
         }
+    }
+
+    // Draft-д байгаа бусад «бохир» талбаруудыг хамт хадгална —
+    // РД commit хийхэд овог/нэр/шагнал сервер дээр үлдэж, draft-аас арилдаггүй.
+    const row = props.rows.find((item) => item.id === id);
+    if (row && drafts[id]) {
+        draftFields.value.forEach((other) => {
+            if (Object.prototype.hasOwnProperty.call(after, other)) {
+                return;
+            }
+
+            const draftVal = normalizeFieldValue(other, drafts[id][other]);
+            const rowVal = normalizeFieldValue(other, row[other]);
+
+            if (JSON.stringify(draftVal) !== JSON.stringify(rowVal)) {
+                before[other] = rowVal;
+                after[other] = draftVal;
+            }
+        });
     }
 
     if (samePayload(before, after)) {
