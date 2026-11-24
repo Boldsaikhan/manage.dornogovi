@@ -166,13 +166,18 @@ class MeetingMinutesTest extends TestCase
 
         Http::fake([
             '*/audio/transcriptions' => Http::response('Сайн байна уу. Хурал эхэллээ.', 200),
-            '*/chat/completions' => Http::response([
-                'choices' => [[
-                    'message' => [
-                        'content' => "Гарчиг: Тест хурал\nШийдвэр: Хурал эхэлсэн.",
-                    ],
-                ]],
-            ], 200),
+            // 1) ASR refine  2) тэмдэглэл цэгцлэх
+            '*/chat/completions' => Http::sequence()
+                ->push([
+                    'choices' => [[
+                        'message' => ['content' => 'Сайн байна уу. Хурал эхэллээ.'],
+                    ]],
+                ], 200)
+                ->push([
+                    'choices' => [[
+                        'message' => ['content' => "Гарчиг: Тест хурал\nШийдвэр: Хурал эхэлсэн."],
+                    ]],
+                ], 200),
         ]);
 
         (new TranscribeMeetingAudio($meeting->id))->handle(app(\App\Services\Ai\MeetingTranscriptionService::class));
@@ -277,7 +282,7 @@ class MeetingMinutesTest extends TestCase
 
         Http::fake([
             '*/audio/transcriptions' => Http::response(
-                'Зөвхөн сонсогдсон монгол үгийг кирилл үсгээр бич. Англиар бүү орчуул.',
+                'Тайлан хэлэлцэж, шийдвэр гаргая. Баярлалаа. Монгол хэл. Кирилл үсэг. Сайн байна уу.',
                 200
             ),
         ]);

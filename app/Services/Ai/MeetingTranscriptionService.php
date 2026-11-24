@@ -30,8 +30,8 @@ class MeetingTranscriptionService
         return 'Системийн тохиргоо → Manage AI хэсэгт OpenAI API түлхүүр оруулна уу. Whisper (speech-to-text) энэ түлхүүрээр ажиллана.';
     }
 
-    /** Нэг хэсгийн урт (сек) — эхнээсээ текст бичигдэхийн тулд жижиг хэсэгчилж Whisper дуудна. */
-    private const CHUNK_SECONDS = 30;
+    /** Нэг хэсгийн урт (сек) — эхнээсээ текст бичигдэхийн тулд хэсэгчилж STT дуудна. */
+    private const CHUNK_SECONDS = 45;
 
     public function transcribeMeeting(Meeting $meeting): Meeting
     {
@@ -121,6 +121,7 @@ class MeetingTranscriptionService
                 : 'Текст бичиж байна (Whisper)…';
             $this->setProgress($meeting, Meeting::TRANSCRIPTION_PROCESSING, 50, $label, 0);
             $text = $this->collapseRepetitions($this->whisperFile($absolutePath, basename($absolutePath)));
+            $text = $this->refineMongolianChunk($text, $meeting);
             if ($text === '') {
                 throw new RuntimeException(
                     'Whisper текст олдсонгүй (аудио чимээгүй эсвэл яриа танигдаагүй). '
@@ -152,9 +153,10 @@ class MeetingTranscriptionService
 
         $segments = [];
         $total = (int) ceil($duration);
-        $overlap = 1;
+        $overlap = 2;
         $start = 0;
         $index = 0;
+        $carryPrompt = '';
 
         while ($start < $duration - 0.5) {
             $len = min($chunkSec, $duration - $start);
@@ -176,15 +178,16 @@ class MeetingTranscriptionService
                     (int) round($start),
                 );
 
+                // Зөвхөн өмнөх амжилттай хэсгийн сүүлийн өгүүлбэрийг дамжуулна (заавар prompt биш).
                 $chunkText = trim($this->collapseRepetitions(
-                    $this->whisperFile($chunkPath, basename($chunkPath))
+                    $this->whisperFile($chunkPath, basename($chunkPath), $carryPrompt !== '' ? $carryPrompt : null)
                 ));
+                $chunkText = $this->refineMongolianChunk($chunkText, $meeting);
 
                 $segStart = (int) round($start);
                 $segEnd = (int) round(min($duration, $start + $len));
 
                 // Зөвхөн найдвартай монгол кирилл хэсгийг хадгална.
-                // (Өмнө нь «кирилл байвал зөвшөөр» гэж хятад/казах hallucination нэвтрүүлдэг байсан.)
                 if ($chunkText !== ''
                     && $this->hasCyrillic($chunkText)
                     && ! $this->looksUnreliableTranscript($chunkText)
@@ -196,6 +199,7 @@ class MeetingTranscriptionService
                         'speaker' => 'Танигдаагүй яригч',
                         'text' => $chunkText,
                     ];
+                    $carryPrompt = mb_substr(trim($chunkText), -180);
                 }
 
                 $combined = trim(implode("\n\n", array_column($segments, 'text')));
@@ -584,7 +588,10 @@ class MeetingTranscriptionService
         $meeting->forceFill($payload)->save();
     }
 
-    private function whisperFile(string $absolutePath, string $filename): string
+    /**
+     * @param  string|null  $contextPrompt  Өмнөх амжилттай хэсгийн сүүл (заавар биш)
+     */
+    private function whisperFile(string $absolutePath, string $filename, ?string $contextPrompt = null): string
     {
         $apiKey = $this->settings->openaiApiKey();
         if (! $apiKey) {
@@ -592,27 +599,30 @@ class MeetingTranscriptionService
         }
 
         $timeout = (int) config('ai.whisper_timeout', 180);
-        // Хэсэгчилсэн боловсруулалтад нэг хэсэгт богино timeout.
-        $timeout = min($timeout, 90);
-        $model = (string) config('ai.whisper_model', 'whisper-1');
-
-        $prompt = (string) config(
-            'ai.whisper_prompt',
-            'Сайн байна уу. Хурал эхэллээ. Өнөөдрийн хэлэлцэх асуудал. '
-            .'Ирц бүртгэе. Тайлан хэлэлцэж, шийдвэр гаргая. Баярлалаа.',
-        );
+        $timeout = min($timeout, 120);
+        $model = (string) config('ai.whisper_model', 'gpt-4o-transcribe');
+        $fallback = (string) config('ai.whisper_fallback_model', 'whisper-1');
+        $language = trim((string) config('ai.whisper_language', 'mn'));
+        $configuredPrompt = trim((string) config('ai.whisper_prompt', ''));
+        // Зөвхөн бодит өмнөх текст эсвэл тохируулсан богино prompt — заавар өгүүлбэр бүү өг.
+        $prompt = $contextPrompt !== null && trim($contextPrompt) !== ''
+            ? trim($contextPrompt)
+            : ($configuredPrompt !== '' ? $configuredPrompt : null);
 
         $text = $this->sanitizeWhisperText(
-            $this->callWhisper($apiKey, $model, $timeout, $absolutePath, $filename, $prompt)
+            $this->callWhisper($apiKey, $model, $timeout, $absolutePath, $filename, $prompt, $language !== '' ? $language : null)
         );
 
-        // Хоосон/буруу хэлтэй бол нэг удаа өөр монгол жишээтэй дахин оролдоно (promptгүйгээр бүү дууд — хятад/казах ирдэг).
+        // Хоосон/буруу бол fallback модель + хэлгүйгээр дахин оролдоно (promptгүй).
         if ($text === '' || $this->looksUnreliableTranscript($text)) {
-            $retryPrompt = 'Хурлын тэмдэглэл. Монгол хэл. Кирилл үсэг. Сайн байна уу.';
+            $retryModel = $model === $fallback ? $model : $fallback;
             $retry = $this->sanitizeWhisperText(
-                $this->callWhisper($apiKey, $model, $timeout, $absolutePath, $filename, $retryPrompt)
+                $this->callWhisper($apiKey, $retryModel, $timeout, $absolutePath, $filename, null, null)
             );
             if ($retry !== '' && ! $this->looksUnreliableTranscript($retry)) {
+                return $retry;
+            }
+            if ($retry !== '' && ($text === '' || $this->looksUnreliableTranscript($text))) {
                 return $retry;
             }
         }
@@ -623,13 +633,41 @@ class MeetingTranscriptionService
     private function sanitizeWhisperText(string $text): string
     {
         $text = preg_replace('/\x{FFFD}/u', '', $text) ?? $text;
-        // Whisper заримдаа prompt-ыг шууд буцаадаг — тэр мөрийг хасна.
-        $prompt = trim((string) config('ai.whisper_prompt', ''));
-        if ($prompt !== '' && mb_stripos($text, $prompt) !== false) {
-            $text = str_ireplace($prompt, '', $text);
+
+        // Бүтэн текст prompt echo бол хоослоно.
+        if ($this->looksLikePromptEcho($text)) {
+            return '';
         }
 
+        // Зөвхөн урт, тодорхой prompt мөрүүдийг хасна (жинхэнэ яриаг бүү устга).
+        foreach ($this->promptEchoPhrases() as $phrase) {
+            if (mb_strlen($phrase) >= 18 && mb_stripos($text, $phrase) !== false) {
+                $text = str_ireplace($phrase, '', $text);
+            }
+        }
+
+        $text = preg_replace('/[ \t]{2,}/u', ' ', $text) ?? $text;
+        $text = preg_replace("/\n{3,}/u", "\n\n", $text) ?? $text;
+
         return trim($text);
+    }
+
+    /** @return list<string> */
+    private function promptEchoPhrases(): array
+    {
+        return array_values(array_filter(array_unique([
+            trim((string) config('ai.whisper_prompt', '')),
+            'Тайлан хэлэлцэж, шийдвэр гаргая. Баярлалаа.',
+            'Тайлан хэлэлцэж, шийдвэр гаргая',
+            'Өнөөдрийн хэлэлцэх асуудал. Ирц бүртгэе',
+            'Хурлын тэмдэглэл. Монгол хэл. Кирилл үсэг. Сайн байна уу.',
+            'Монгол хэл. Кирилл үсэг. Сайн байна уу',
+            'Монгол хэл. Кирилл үсэг',
+            'Зөвхөн сонсогдсон монгол үгийг',
+            'кирилл үсгээр бич',
+            'Англиар бүү орчуул',
+            'үг бүү зохио, үг бүү давта',
+        ])));
     }
 
     private function callWhisper(
@@ -639,53 +677,132 @@ class MeetingTranscriptionService
         string $absolutePath,
         string $filename,
         ?string $prompt,
+        ?string $language = null,
     ): string {
-        $stream = fopen($absolutePath, 'r');
-        if ($stream === false) {
-            throw new RuntimeException('Аудио файлыг уншиж чадсангүй.');
-        }
+        $attemptLanguage = $language;
 
-        $payload = [
-            'model' => $model,
-            'temperature' => '0',
-            'response_format' => 'text',
-        ];
-        if ($prompt !== null && trim($prompt) !== '') {
-            $payload['prompt'] = $prompt;
-        }
-
-        try {
-            $response = Http::baseUrl(rtrim((string) config('ai.openai_base_url'), '/'))
-                ->withToken($apiKey)
-                ->connectTimeout(20)
-                ->timeout(max(30, $timeout))
-                ->attach('file', $stream, $filename)
-                ->post('/audio/transcriptions', $payload);
-        } finally {
-            if (is_resource($stream)) {
-                fclose($stream);
+        for ($try = 0; $try < 2; $try++) {
+            $stream = fopen($absolutePath, 'r');
+            if ($stream === false) {
+                throw new RuntimeException('Аудио файлыг уншиж чадсангүй.');
             }
-        }
 
-        if (! $response->successful()) {
+            $payload = [
+                'model' => $model,
+                'response_format' => 'text',
+            ];
+            // gpt-4o-transcribe зарим параметр дэмжихгүй — temperature зөвхөн whisper-1.
+            if (str_starts_with($model, 'whisper')) {
+                $payload['temperature'] = '0';
+            }
+            if ($prompt !== null && trim($prompt) !== '') {
+                $payload['prompt'] = mb_substr(trim($prompt), 0, 800);
+            }
+            if ($attemptLanguage !== null && $attemptLanguage !== '') {
+                $payload['language'] = $attemptLanguage;
+            }
+
+            try {
+                $response = Http::baseUrl(rtrim((string) config('ai.openai_base_url'), '/'))
+                    ->withToken($apiKey)
+                    ->connectTimeout(20)
+                    ->timeout(max(30, $timeout))
+                    ->attach('file', $stream, $filename)
+                    ->post('/audio/transcriptions', $payload);
+            } finally {
+                if (is_resource($stream)) {
+                    fclose($stream);
+                }
+            }
+
+            if ($response->successful()) {
+                $body = trim((string) $response->body());
+                if ($body === '') {
+                    return '';
+                }
+                if (str_starts_with($body, '{')) {
+                    $json = json_decode($body, true);
+                    if (is_array($json) && array_key_exists('text', $json)) {
+                        return trim((string) $json['text']);
+                    }
+                }
+
+                return $body;
+            }
+
+            $err = mb_strtolower($response->body());
+            // language=mn дэмжихгүй бол хэлгүйгээр дахин.
+            if ($attemptLanguage !== null && (
+                str_contains($err, 'language') || $response->status() === 400
+            )) {
+                $attemptLanguage = null;
+
+                continue;
+            }
+
+            // Модель олдохгүй бол fallback.
+            if (in_array($response->status(), [404, 400], true)
+                && $model !== (string) config('ai.whisper_fallback_model', 'whisper-1')
+                && (str_contains($err, 'model') || str_contains($err, 'invalid'))
+            ) {
+                return $this->callWhisper(
+                    $apiKey,
+                    (string) config('ai.whisper_fallback_model', 'whisper-1'),
+                    $timeout,
+                    $absolutePath,
+                    $filename,
+                    $prompt,
+                    null,
+                );
+            }
+
             throw new RuntimeException('Whisper алдаа: '.$response->status().' '.mb_substr($response->body(), 0, 500));
         }
 
-        $body = trim((string) $response->body());
-        if ($body === '') {
-            // Чимээгүй хэсэг — progressive горимд алгасна; бүтэн файл дээр дараа шалгана.
-            return '';
+        return '';
+    }
+
+    /** STT-ийн монгол кирилл алдааг бага зэрэг цэгцэлнэ — шинэ утга зохиохгүй. */
+    private function refineMongolianChunk(string $text, Meeting $meeting): string
+    {
+        $text = trim($text);
+        if ($text === '' || $this->looksUnreliableTranscript($text) || ! $this->openAi->isAvailable()) {
+            return $text;
         }
 
-        // Заримдаа JSON {"text":"..."} ирнэ.
-        if (str_starts_with($body, '{')) {
-            $json = json_decode($body, true);
-            if (is_array($json) && array_key_exists('text', $json)) {
-                return trim((string) $json['text']);
+        // Маш богино хэсгийг бүү «засаад» гэмтээ.
+        if (mb_strlen($text) < 24) {
+            return $text;
+        }
+
+        try {
+            $title = $meeting->title ?: 'Хурлын бичлэг';
+            $result = $this->openAi->chat([
+                [
+                    'role' => 'system',
+                    'content' => 'Та монгол хэлний ярианы текст (ASR) засварлагч. '
+                        .'Зөвхөн өгсөн текстийг зөв монгол кирилл үсгээр, албан хурлын хэллэгээр засана. '
+                        .'Сонсогдоогүй шинэ өгүүлбэр, орчуулга, англи/хятад текст бүү нэм. '
+                        .'Хэрэв текст утгагүй/давталт/prompt бол хоосон мөр буцаа. '
+                        .'Зөвхөн зассан текстийг буцаа.',
+                ],
+                [
+                    'role' => 'user',
+                    'content' => "Хурлын гарчиг: {$title}\n\nASR текст:\n{$text}",
+                ],
+            ], [
+                'temperature' => 0,
+            ]);
+
+            $fixed = trim((string) ($result['content'] ?? ''));
+            if ($fixed === '' || $this->looksUnreliableTranscript($fixed)) {
+                return $text;
             }
-        }
 
-        return $body;
+            return $fixed;
+        } catch (\Throwable) {
+            return $text;
+        }
     }
 
     /** Гацсан боловсруулалтыг алдаа болгоно. */
@@ -740,6 +857,11 @@ class MeetingTranscriptionService
             return true;
         }
 
+        // Утгагүй үсгийн холимог (ASR garbage)
+        if ($this->looksLikeGibberish($text)) {
+            return true;
+        }
+
         // Казак/кирилл бусад хэлний үсэг давамгайлсан
         $mnSpecial = preg_match_all('/[ӨөҮүЁё]/u', $text) ?: 0;
         $kzSpecial = preg_match_all('/[ӘәҒғҚқҢңҰұҺһІі]/u', $text) ?: 0;
@@ -784,23 +906,24 @@ class MeetingTranscriptionService
 
     private function looksLikePromptEcho(string $text): bool
     {
-        $prompt = trim((string) config('ai.whisper_prompt', ''));
-        $needles = array_filter(array_unique([
-            $prompt,
-            'Зөвхөн сонсогдсон монгол',
-            'кирилл үсгээр бич',
-            'Англиар бүү орчуул',
-            'үг бүү зохио',
-            'Үг бүү давта',
-        ]));
-
-        foreach ($needles as $needle) {
-            if ($needle !== '' && mb_stripos($text, $needle) !== false) {
-                return true;
+        foreach ($this->promptEchoPhrases() as $needle) {
+            if ($needle === '') {
+                continue;
+            }
+            // Текст бүхэлдээ эсвэл ихэнх нь prompt
+            if (mb_stripos($text, $needle) !== false) {
+                $ratio = mb_strlen($needle) / max(1, mb_strlen($text));
+                if ($ratio >= 0.45 || mb_strlen($text) <= mb_strlen($needle) + 12) {
+                    return true;
+                }
+                // Тодорхой зааврын хэллэг байвал
+                if (mb_strlen($needle) >= 18) {
+                    return true;
+                }
             }
         }
 
-        // Prompt-ын үгсийн overlap
+        $prompt = trim((string) config('ai.whisper_prompt', ''));
         if ($prompt === '') {
             return false;
         }
@@ -812,6 +935,34 @@ class MeetingTranscriptionService
         $overlap = count(array_intersect($promptWords, $textWords));
 
         return ($overlap / count($promptWords)) >= 0.55;
+    }
+
+    private function looksLikeGibberish(string $text): bool
+    {
+        $words = preg_split('/\s+/u', trim($text), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        if (count($words) < 3) {
+            return false;
+        }
+
+        $vowels = 'аэеиоуөүяёюыАЭЕИОУӨҮЯЁЮЫ';
+        $weird = 0;
+        foreach ($words as $word) {
+            $letters = preg_replace('/[^\p{L}]/u', '', $word) ?? '';
+            $len = mb_strlen($letters);
+            if ($len < 6) {
+                continue;
+            }
+            $vowelCount = preg_match_all('/['.$vowels.']/u', $letters) ?: 0;
+            if ($vowelCount / max(1, $len) < 0.18) {
+                $weird++;
+            }
+            // Хэт урт, эгшиг цөөн = garbage
+            if ($len >= 14 && $vowelCount <= 2) {
+                $weird += 2;
+            }
+        }
+
+        return $weird >= 3 || ($weird / max(1, count($words))) >= 0.4;
     }
 
     private function formatMinutes(string $transcript, Meeting $meeting): string
