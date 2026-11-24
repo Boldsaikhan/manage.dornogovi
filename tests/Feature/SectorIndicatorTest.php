@@ -451,13 +451,14 @@ class SectorIndicatorTest extends TestCase
                 'period_id' => $period->id,
                 'slot' => 'year',
                 'items' => [
-                    ['label' => 'Аймаг', 'amount' => '100'],
-                    ['label' => 'Сум', 'amount' => '79'],
+                    ['label' => 'Аймаг', 'amount' => '100', 'note' => 'Төвийн бүртгэл'],
+                    ['label' => 'Сум', 'amount' => '79', 'note' => 'Сумдын нэгдсэн тоо'],
                 ],
             ])
             ->assertOk()
             ->assertJsonPath('value', '179')
-            ->assertJsonPath('breakdown_count', 2);
+            ->assertJsonPath('breakdown_count', 2)
+            ->assertJsonPath('items.0.note', 'Төвийн бүртгэл');
 
         $this->assertDatabaseHas('sector_indicator_values', [
             'sector_indicator_id' => $row->id,
@@ -469,6 +470,7 @@ class SectorIndicatorTest extends TestCase
         $this->assertDatabaseHas('sector_indicator_value_items', [
             'label' => 'Аймаг',
             'amount' => '100',
+            'note' => 'Төвийн бүртгэл',
         ]);
 
         $this->actingAs($user)
@@ -479,6 +481,7 @@ class SectorIndicatorTest extends TestCase
             ]))
             ->assertOk()
             ->assertJsonPath('items.0.label', 'Аймаг')
+            ->assertJsonPath('items.0.note', 'Төвийн бүртгэл')
             ->assertJsonPath('items.1.amount', '79')
             ->assertJsonPath('value', '179');
 
