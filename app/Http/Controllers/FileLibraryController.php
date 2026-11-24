@@ -3,74 +3,29 @@
 namespace App\Http\Controllers;
 
 use App\Models\LibraryFile;
-use App\Support\ModuleAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\File as FileRule;
-use Inertia\Inertia;
-use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/**
+ * Хуучин «Файлын сан» API — одоо зөвхөн админ.
+ * Үзэх UI: Системийн тохиргоо → Файлууд.
+ */
 class FileLibraryController extends Controller
 {
-    public const MODULE = 'file_library';
-
-    public function index(Request $request): Response
+    public function index(Request $request): RedirectResponse
     {
-        abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
+        abort_unless($request->user()?->is_admin, 403);
 
-        $q = trim($request->string('q')->toString());
-        $folder = trim($request->string('folder')->toString());
-
-        $files = LibraryFile::query()
-            ->with('uploader:id,name')
-            ->when($folder !== '', fn ($query) => $query->where('folder', $folder))
-            ->when($q !== '', function ($query) use ($q) {
-                $like = '%'.$q.'%';
-                $query->where(function ($inner) use ($like) {
-                    $inner->where('title', 'like', $like)
-                        ->orWhere('original_name', 'like', $like)
-                        ->orWhere('folder', 'like', $like)
-                        ->orWhere('mime', 'like', $like);
-                });
-            })
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->get()
-            ->map(fn (LibraryFile $file) => $this->serialize($file));
-
-        $folders = LibraryFile::query()
-            ->whereNotNull('folder')
-            ->where('folder', '!=', '')
-            ->distinct()
-            ->orderBy('folder')
-            ->pluck('folder')
-            ->values()
-            ->all();
-
-        return Inertia::render('Modules/FileLibrary', [
-            'files' => $files,
-            'folders' => $folders,
-            'filters' => [
-                'q' => $q,
-                'folder' => $folder,
-            ],
-            'canManage' => ModuleAccess::canEdit($request->user(), self::MODULE),
-            'maxUploadMb' => (int) ceil(((int) config('file_library.max_kb', 20480)) / 1024),
-            'allowedExtensions' => config('file_library.extensions', []),
-            'stats' => [
-                'count' => $files->count(),
-                'total_size' => $files->sum('size'),
-                'total_size_label' => $this->formatBytes((int) $files->sum('size')),
-            ],
-        ]);
+        return redirect()->route('admin.systems.index', ['tab' => 'files']);
     }
 
     public function store(Request $request): RedirectResponse
     {
-        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
+        abort_unless($request->user()?->is_admin, 403);
 
         $extensions = config('file_library.extensions', []);
         $maxKb = (int) config('file_library.max_kb', 20480);
@@ -121,15 +76,13 @@ class FileLibraryController extends Controller
         ]);
 
         return redirect()
-            ->route('file-library.index', array_filter([
-                'folder' => $folder,
-            ]))
+            ->route('admin.systems.index', ['tab' => 'files'])
             ->with('success', 'Файл байршууллаа.');
     }
 
     public function update(Request $request, LibraryFile $libraryFile): RedirectResponse
     {
-        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
+        abort_unless($request->user()?->is_admin, 403);
 
         $data = $request->validate([
             'title' => ['nullable', 'string', 'max:255'],
@@ -157,18 +110,18 @@ class FileLibraryController extends Controller
 
     public function destroy(Request $request, LibraryFile $libraryFile): RedirectResponse
     {
-        abort_unless(ModuleAccess::canEdit($request->user(), self::MODULE), 403);
+        abort_unless($request->user()?->is_admin, 403);
 
         $libraryFile->delete();
 
         return redirect()
-            ->route('file-library.index')
+            ->route('admin.systems.index', ['tab' => 'files'])
             ->with('success', 'Файл устгалаа.');
     }
 
     public function download(Request $request, LibraryFile $libraryFile): StreamedResponse
     {
-        abort_unless(ModuleAccess::canView($request->user(), self::MODULE), 403);
+        abort_unless($request->user()?->is_admin, 403);
         abort_unless($this->isSafeStoredPath($libraryFile->path), 404);
         abort_unless(Storage::disk('local')->exists($libraryFile->path), 404);
 
@@ -180,28 +133,6 @@ class FileLibraryController extends Controller
             'Content-Type' => $mime,
             'Content-Disposition' => "attachment; filename=\"{$ascii}\"; filename*=UTF-8''".rawurlencode($name),
         ]);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function serialize(LibraryFile $file): array
-    {
-        return [
-            'id' => $file->id,
-            'title' => $file->title,
-            'name' => $file->displayName(),
-            'original_name' => $file->original_name,
-            'extension' => $file->extension() ?: '—',
-            'mime' => $file->mime,
-            'size' => $file->size,
-            'size_label' => $this->formatBytes((int) $file->size),
-            'folder' => $file->folder,
-            'uploaded_by' => $file->uploader?->name,
-            'created_at' => optional($file->created_at)?->timezone(config('app.timezone'))->format('Y-m-d H:i'),
-            'created_at_label' => optional($file->created_at)?->timezone(config('app.timezone'))->format('Y.m.d H:i'),
-            'download_url' => route('file-library.download', $file),
-        ];
     }
 
     private function isSafeStoredPath(?string $path): bool
@@ -217,23 +148,5 @@ class FileLibraryController extends Controller
         $base = trim((string) config('file_library.folder', 'file-library'), '/');
 
         return Str::startsWith($path, $base.'/');
-    }
-
-    private function formatBytes(int $bytes): string
-    {
-        if ($bytes < 1024) {
-            return $bytes.' B';
-        }
-
-        $units = ['KB', 'MB', 'GB', 'TB'];
-        $value = $bytes / 1024;
-        $unit = 0;
-
-        while ($value >= 1024 && $unit < count($units) - 1) {
-            $value /= 1024;
-            $unit++;
-        }
-
-        return number_format($value, $value >= 10 ? 0 : 1, '.', '').' '.$units[$unit];
     }
 }

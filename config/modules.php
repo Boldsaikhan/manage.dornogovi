@@ -186,18 +186,12 @@ return [
             'icon' => 'graduation',
         ],
         [
-            'key' => 'file_library',
-            'label' => 'Файлын сан',
-            'route' => 'file-library.index',
-            'group' => 'knowledge',
-            'icon' => 'folder',
-        ],
-        [
             'key' => 'ai',
             'label' => 'Manage AI',
             'route' => 'ai.index',
             'group' => 'knowledge',
             'icon' => 'sparkles',
         ],
+        // «Файлын сан» — Системийн тохиргоо → Файлууд (админ).
     ],
 ];

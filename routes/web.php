@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\PhonePasswordResetController;
 use App\Http\Controllers\Admin\DatabaseBackupController;
+use App\Http\Controllers\Admin\StorageBrowserController;
 use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\UserAccessController;
 use App\Http\Controllers\AiAssistantController;
@@ -248,6 +249,7 @@ Route::middleware('auth')->group(function () {
         ->name('reports.schedule');
     Route::get('/modules/onboarding', [ModuleResourceController::class, 'index'])->name('onboarding.index');
 
+    // Хуучин хаяг — Системийн тохиргоо → Файлууд руу шилжинэ.
     Route::get('/modules/file-library', [FileLibraryController::class, 'index'])->name('file-library.index');
     Route::post('/modules/file-library', [FileLibraryController::class, 'store'])->name('file-library.store');
     Route::patch('/modules/file-library/{libraryFile}', [FileLibraryController::class, 'update'])->name('file-library.update');
@@ -326,6 +328,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/database/download', [DatabaseBackupController::class, 'download'])
             ->middleware('throttle:6,1')
             ->name('database.download');
+
+        // Файлын сан — хавтас/зураг үзэх.
+        Route::get('/storage/browse', [StorageBrowserController::class, 'browse'])->name('storage.browse');
+        Route::get('/storage/preview', [StorageBrowserController::class, 'preview'])->name('storage.preview');
+        Route::get('/storage/download', [StorageBrowserController::class, 'download'])->name('storage.download');
     });
 
     // Системийн алдааны бүртгэл — зөвхөн админ.
