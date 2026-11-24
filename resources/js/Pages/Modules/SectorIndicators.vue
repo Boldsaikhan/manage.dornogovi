@@ -65,8 +65,15 @@ function fitTitle(el) {
     }
 
     node.style.height = 'auto';
-    node.style.height = `${node.scrollHeight}px`;
+    node.style.height = `${Math.max(node.scrollHeight, 36)}px`;
 }
+
+/** Textarea mount-д өндрийг зөв тооцоолно. */
+const bindTitle = (el) => {
+    if (! el) return;
+
+    nextTick(() => fitTitle(el));
+};
 
 /** Олон мөрийг зэрэг засварлана — нүд дээр дарж нээнэ. */
 const editingIds = ref([]);
@@ -136,7 +143,7 @@ const toggleRow = (row) => {
             drafts[row.id] = draftFromRow(server);
         }
     } else {
-        editingIds.value = [...editingIds.value, row.id];
+        beginEditAt(row, `[data-cell='title-${row.id}']`);
     }
 };
 
@@ -739,32 +746,34 @@ const removePeriod = (period) => {
                                 :class="canEdit && ! rowEditing(row) ? 'cursor-pointer hover:bg-sky-50/60' : ''"
                                 @click="canEdit && ! rowEditing(row) && beginEditAt(row, `[data-cell='title-${row.id}']`)"
                             >
-                                <template v-if="rowEditing(row) && drafts[row.id]">
-                                    <textarea
-                                        :ref="fitTitle"
-                                        v-model="drafts[row.id].title"
-                                        :data-cell="`title-${row.id}`"
-                                        rows="1"
-                                        class="block w-full resize-none overflow-hidden whitespace-pre-wrap break-words rounded border-0 bg-transparent px-1 py-0.5 text-left text-sm leading-snug focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
-                                        placeholder="Үзүүлэлтийн нэр…"
-                                        @input="fitTitle"
-                                        @blur="saveField(row, 'title')"
-                                        @click.stop
-                                    />
-                                    <select
-                                        v-if="categories.length"
-                                        v-model="drafts[row.id].category_id"
-                                        class="mt-1 w-full rounded border border-slate-200 bg-white px-1 py-0.5 text-xs text-slate-600 focus:border-brand-navy-400 focus:ring-1 focus:ring-brand-navy-400"
-                                        @change="saveCategory(row)"
-                                        @click.stop
-                                    >
-                                        <option value="">Ангилалгүй</option>
-                                        <option v-for="category in categories" :key="category.id" :value="category.id">
-                                            {{ category.name }}
-                                        </option>
-                                    </select>
-                                </template>
-                                <span v-else class="block whitespace-pre-wrap break-words text-left text-sm leading-snug">{{ row.title || '—' }}</span>
+                                <textarea
+                                    v-if="rowEditing(row) && drafts[row.id]"
+                                    :ref="bindTitle"
+                                    v-model="drafts[row.id].title"
+                                    :data-cell="`title-${row.id}`"
+                                    rows="2"
+                                    class="ui-input !min-h-[2.5rem] w-full resize-y whitespace-pre-wrap break-words !py-1.5 text-left text-sm leading-snug"
+                                    placeholder="Үзүүлэлтийн нэр…"
+                                    @input="fitTitle"
+                                    @blur="saveField(row, 'title')"
+                                    @click.stop
+                                />
+                                <select
+                                    v-if="rowEditing(row) && drafts[row.id] && categories.length"
+                                    v-model="drafts[row.id].category_id"
+                                    class="ui-input mt-1 w-full !py-1 text-xs text-slate-600"
+                                    @change="saveCategory(row)"
+                                    @click.stop
+                                >
+                                    <option value="">Ангилалгүй</option>
+                                    <option v-for="category in categories" :key="category.id" :value="category.id">
+                                        {{ category.name }}
+                                    </option>
+                                </select>
+                                <span
+                                    v-if="! rowEditing(row) || ! drafts[row.id]"
+                                    class="block whitespace-pre-wrap break-words text-left text-sm leading-snug"
+                                >{{ row.title || '—' }}</span>
                             </td>
 
                             <td
