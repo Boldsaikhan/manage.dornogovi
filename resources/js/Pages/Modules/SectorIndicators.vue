@@ -2,6 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import TableScrollViewport from '@/Components/TableScrollViewport.vue';
+import { useStickyTableHead } from '@/composables/useStickyTableHead';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, nextTick, reactive, ref, watch } from 'vue';
 
@@ -18,6 +19,9 @@ const props = defineProps({
 });
 
 const SLOT_LABELS = { half: 'хагас жил', year: 'жилийн эцэс' };
+
+const registerEl = ref(null);
+const { schedule: scheduleStickySync } = useStickyTableHead(() => registerEl.value);
 
 /** Нүднүүдийн түр хуулбар — засаж байхад шууд харагдана. */
 const drafts = reactive({});
@@ -535,7 +539,11 @@ const syncPeriodLabels = () => {
 };
 
 syncPeriodLabels();
-watch(() => props.periods, syncPeriodLabels, { deep: true });
+watch(() => props.periods, () => {
+    syncPeriodLabels();
+    scheduleStickySync();
+}, { deep: true });
+watch(structureEditable, () => scheduleStickySync());
 
 const addPeriod = () => {
     const label = newYear.value.trim();
@@ -660,7 +668,8 @@ const removePeriod = (period) => {
 
             <div v-else class="ui-indicators-table-shell">
             <TableScrollViewport fill>
-                <table class="ui-table ui-register__table w-full">
+                <div ref="registerEl" class="ui-register">
+                <table class="ui-register__table w-full">
                     <colgroup>
                         <col style="width: 4%" />
                         <col :style="{ width: columnWidths.title }" />
@@ -960,6 +969,7 @@ const removePeriod = (period) => {
                         </tr>
                     </tbody>
                 </table>
+                </div>
             </TableScrollViewport>
             </div>
         </div>
