@@ -538,7 +538,7 @@ const openCreate = () => {
     segments.value = [];
     transcriptDraft.value = '';
     transcriptDirty.value = false;
-    editorTab.value = 'notes';
+    editorTab.value = 'convert';
     speakerFilter.value = '';
     notesMetaOpen.value = false;
     currentTime.value = 0;
@@ -546,7 +546,6 @@ const openCreate = () => {
     playing.value = false;
     form.minutes = buildFormalMinutes();
     showModal.value = true;
-    nextTick(() => syncDocEditorFromMinutes());
 };
 
 const openEdit = (row) => {
@@ -1199,8 +1198,120 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
 
-                    <!-- Хөрвүүлэг: нэг талбар + тоглуулагч -->
+                    <!-- Хөрвүүлэг: аудио + нэг талбар + тоглуулагч -->
                     <div v-show="editorTab === 'convert'" class="flex min-h-0 flex-1 flex-col gap-3">
+                        <div
+                            v-if="canManage && !isEditing"
+                            class="grid shrink-0 gap-3 sm:grid-cols-2"
+                        >
+                            <div>
+                                <label class="ui-label">Гарчиг</label>
+                                <input v-model="form.title" class="ui-input" required />
+                                <InputError :message="form.errors.title" class="mt-1" />
+                            </div>
+                            <div>
+                                <label class="ui-label">Огноо</label>
+                                <input v-model="form.held_at" type="datetime-local" class="ui-input" />
+                                <InputError :message="form.errors.held_at" class="mt-1" />
+                            </div>
+                        </div>
+
+                        <div
+                            v-if="canManage && !editingRow?.audio_stream_url"
+                            class="shrink-0 rounded-xl border-2 border-dashed px-4 py-5 text-center transition"
+                            :class="dragOver
+                                ? 'border-brand-orange-400 bg-brand-orange-50/60 dark:bg-brand-orange-950/20'
+                                : 'border-slate-300 bg-slate-50 dark:border-slate-600 dark:bg-slate-900/40'"
+                            @dragover.prevent="dragOver = true"
+                            @dragleave.prevent="dragOver = false"
+                            @drop.prevent="onDrop"
+                        >
+                            <p class="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                Аудио файл оруулах
+                            </p>
+                            <p class="mt-1 text-xs text-slate-500">
+                                MP3, WAV, M4A, WEBM, WMA · хамгийн ихдээ {{ maxUploadMb }}MB · чирж оруулна
+                            </p>
+                            <div class="mt-3 flex flex-wrap items-center justify-center gap-2">
+                                <button type="button" class="ui-btn-primary !py-2" @click="fileInput?.click()">
+                                    Файл сонгох
+                                </button>
+                                <button
+                                    v-if="!recording"
+                                    type="button"
+                                    class="ui-btn-ghost !py-2"
+                                    :disabled="!sttReady"
+                                    @click="startRecording"
+                                >
+                                    ● Бичлэг эхлүүлэх
+                                </button>
+                                <button
+                                    v-else
+                                    type="button"
+                                    class="ui-btn-danger !py-2"
+                                    @click="stopRecording"
+                                >
+                                    ■ Зогсоох ({{ recordLabel }})
+                                </button>
+                                <button
+                                    v-if="isEditing && audioFile"
+                                    type="button"
+                                    class="ui-btn-accent !py-2"
+                                    :disabled="!sttReady"
+                                    @click="uploadAudioToExisting"
+                                >
+                                    Аудио илгээж хөрвүүлэх
+                                </button>
+                            </div>
+                            <p v-if="audioPreviewName" class="mt-3 text-sm text-brand-navy-700 dark:text-sky-300">
+                                Сонгосон: {{ audioPreviewName }}
+                            </p>
+                            <InputError :message="form.errors.audio" class="mt-2" />
+                            <p v-if="!sttReady" class="mt-2 text-xs text-amber-700 dark:text-amber-300">{{ sttHint }}</p>
+                        </div>
+
+                        <div
+                            v-else-if="canManage && editingRow?.audio_stream_url"
+                            class="flex shrink-0 flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-900/40"
+                        >
+                            <span class="text-slate-600 dark:text-slate-300">
+                                Аудио: {{ audioPreviewName || editingRow.audio_name || 'файл' }}
+                                <span v-if="editingRow.audio_duration_label" class="tabular-nums">
+                                    · {{ editingRow.audio_duration_label }}
+                                </span>
+                            </span>
+                            <button type="button" class="ui-btn-ghost !py-1 text-xs" @click="fileInput?.click()">
+                                Солих
+                            </button>
+                            <button
+                                v-if="audioFile"
+                                type="button"
+                                class="ui-btn-accent !py-1 text-xs"
+                                :disabled="!sttReady"
+                                @click="uploadAudioToExisting"
+                            >
+                                Хөрвүүлэх
+                            </button>
+                            <a
+                                :href="route('meetings.audio.download', editingRow.id)"
+                                class="underline text-slate-500"
+                                @click.stop
+                            >
+                                Татах
+                            </a>
+                            <span v-if="audioFile" class="text-brand-navy-700 dark:text-sky-300">
+                                Шинэ: {{ audioPreviewName }}
+                            </span>
+                        </div>
+
+                        <input
+                            ref="fileInput"
+                            type="file"
+                            class="hidden"
+                            accept="audio/*,.mp3,.wav,.m4a,.webm,.ogg,.flac,.wma,.asf"
+                            @change="onFileChange"
+                        />
+
                         <div
                             class="transcript-field relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border-2 bg-white transition dark:bg-slate-900/50"
                             :class="transcriptHovered || playing
@@ -1309,10 +1420,10 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
                         <p
-                            v-else
-                            class="rounded-xl border border-dashed border-slate-200 px-3 py-4 text-center text-sm text-slate-400 dark:border-slate-700"
+                            v-else-if="audioFile"
+                            class="shrink-0 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-center text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100"
                         >
-                            Аудио оруулсны дараа энд тоглуулагч гарна. «Тэмдэглэл» табаас файл оруулна.
+                            «{{ audioPreviewName }}» сонгогдлоо — Үүсгэх/Хадгалах дарсны дараа хөрвүүлнэ.
                         </p>
                     </div>
 
@@ -1339,73 +1450,9 @@ onBeforeUnmount(() => {
                                     <option value="final">Батлагдсан</option>
                                 </select>
                             </div>
-                            <div
-                                v-if="canManage"
-                                class="sm:col-span-2 lg:col-span-4"
-                            >
-                                <label class="ui-label">Аудио (MP3, WAV, M4A, WEBM, WMA · max {{ maxUploadMb }}MB)</label>
-                                <div
-                                    class="rounded-xl border-2 border-dashed px-3 py-3 text-center transition"
-                                    :class="dragOver
-                                        ? 'border-brand-orange-400 bg-brand-orange-50/60 dark:bg-brand-orange-950/20'
-                                        : 'border-slate-200 dark:border-slate-700'"
-                                    @dragover.prevent="dragOver = true"
-                                    @dragleave.prevent="dragOver = false"
-                                    @drop.prevent="onDrop"
-                                >
-                                    <div class="flex flex-wrap items-center justify-center gap-2">
-                                        <button type="button" class="ui-btn-primary !py-1.5 text-xs" @click="fileInput?.click()">
-                                            Файл сонгох
-                                        </button>
-                                        <button
-                                            v-if="!recording"
-                                            type="button"
-                                            class="ui-btn-ghost !py-1.5 text-xs"
-                                            :disabled="!sttReady"
-                                            @click="startRecording"
-                                        >
-                                            ● Бичлэг
-                                        </button>
-                                        <button
-                                            v-else
-                                            type="button"
-                                            class="ui-btn-danger !py-1.5 text-xs"
-                                            @click="stopRecording"
-                                        >
-                                            ■ Зогсоох ({{ recordLabel }})
-                                        </button>
-                                        <button
-                                            v-if="isEditing && audioFile"
-                                            type="button"
-                                            class="ui-btn-accent !py-1.5 text-xs"
-                                            :disabled="!sttReady"
-                                            @click="uploadAudioToExisting"
-                                        >
-                                            Хөрвүүлэх
-                                        </button>
-                                        <span v-if="audioPreviewName" class="text-xs text-slate-500">
-                                            {{ audioPreviewName }}
-                                            <span v-if="editingRow?.audio_duration_label" class="tabular-nums">
-                                                · {{ editingRow.audio_duration_label }}
-                                            </span>
-                                        </span>
-                                    </div>
-                                    <input
-                                        ref="fileInput"
-                                        type="file"
-                                        class="hidden"
-                                        accept="audio/*,.mp3,.wav,.m4a,.webm,.ogg,.flac,.wma,.asf"
-                                        @change="onFileChange"
-                                    />
-                                </div>
-                                <InputError :message="form.errors.audio" class="mt-1" />
-                                <p v-if="!sttReady" class="mt-1 text-xs text-amber-700 dark:text-amber-300">{{ sttHint }}</p>
-                                <p v-if="editingRow?.has_audio && !audioFile" class="mt-1 text-xs text-slate-400">
-                                    <a :href="route('meetings.audio.download', editingRow.id)" class="underline" @click.stop>
-                                        Одоогийн аудио татах
-                                    </a>
-                                </p>
-                            </div>
+                            <p class="sm:col-span-2 lg:col-span-4 text-xs text-slate-500">
+                                Аудио файлыг «Хөрвүүлэг» табаас оруулна.
+                            </p>
                         </div>
 
                         <div class="meeting-doc-canvas min-h-0 flex-1 overflow-y-auto">
