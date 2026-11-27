@@ -18,7 +18,13 @@ const props = defineProps({
     measureUnits: { type: Array, default: () => [] },
 });
 
-const SLOT_LABELS = { half: 'хагас жил', year: 'өссөн' };
+const SLOT_LABELS = { half: 'хагас жил', year: 'дүн' };
+
+/** Мөр бүрийн дүнг хэрхэн харуулах вэ. */
+const VALUE_BASIS_OPTIONS = [
+    { value: 'year', label: 'тухайн он' },
+    { value: 'cumulative', label: 'өссөн' },
+];
 
 const registerEl = ref(null);
 const { schedule: scheduleStickySync } = useStickyTableHead(() => registerEl.value);
@@ -30,6 +36,7 @@ const draftFromRow = (row) => ({
     title: row.title ?? '',
     category_id: row.category_id ?? '',
     measure_unit: row.measure_unit ?? '',
+    value_basis: row.value_basis || 'year',
     target: row.target ?? '',
     values: { ...(row.values ?? {}) },
 });
@@ -120,7 +127,7 @@ const beginEditAt = (row, cellSelector = null) => {
 };
 
 const totalColumns = computed(() => (
-    4
+    5
     + valueColumnCount.value
     + 1 // Нийт
     + (structureEditable.value ? 1 : 0)
@@ -129,7 +136,7 @@ const totalColumns = computed(() => (
 
 /** Багануудын өргөн нийлээд 100% — хүснэгт дэлгэцээс халина. */
 const columnWidths = computed(() => {
-    const fixed = 4 + 12 + 9 + 8
+    const fixed = 4 + 12 + 11 + 9 + 8
         + (structureEditable.value ? 8 : 0)
         + (props.canEdit ? 7 : 0);
     const pool = Math.max(0, 100 - fixed);
@@ -162,7 +169,7 @@ const parseCellNumber = (raw) => {
     return number;
 };
 
-/** Тухайн оны өссөн дүн (хоосон бол хагас жил). */
+/** Тухайн оны оруулсан дүн (хоосон бол хагас жил). */
 const periodTotalNumber = (row, period) => {
     const values = rowValues(row);
     const yearRaw = values[cellKey(period, 'year')];
@@ -175,6 +182,72 @@ const periodTotalNumber = (row, period) => {
     }
 
     return null;
+};
+
+const basisOf = (row) => {
+    if (drafts[row.id]?.value_basis) {
+        return drafts[row.id].value_basis;
+    }
+
+    return row.value_basis || 'year';
+};
+
+const basisLabel = (value) => (
+    VALUE_BASIS_OPTIONS.find((item) => item.value === value)?.label || 'тухайн он'
+);
+
+/**
+ * Харах горим: тухайн он — оруулсан утга;
+ * өссөн — эхнээс тухайн үе хүртэлх нийлбэр (хувьд өөрчлөхгүй).
+ */
+const displayCellRaw = (row, period, slot, periodIndex) => {
+    const values = rowValues(row);
+    const key = cellKey(period, slot);
+    const raw = values[key] ?? '';
+
+    if (rowEditing(row) || basisOf(row) !== 'cumulative') {
+        return raw;
+    }
+
+    if (unitOf(row.measure_unit || drafts[row.id]?.measure_unit)?.kind === 'percent') {
+        return raw;
+    }
+
+    if (parseCellNumber(raw) == null && ! String(raw).trim()) {
+        return raw;
+    }
+
+    let total = 0;
+    let found = false;
+
+    for (let index = 0; index < periodIndex; index += 1) {
+        const number = periodTotalNumber(row, props.periods[index]);
+
+        if (number == null) continue;
+
+        total += number;
+        found = true;
+    }
+
+    if (slot === 'half') {
+        const half = parseCellNumber(raw);
+
+        if (half == null) return raw;
+
+        total += half;
+        found = true;
+    } else {
+        const number = periodTotalNumber(row, period);
+
+        if (number == null) return raw;
+
+        total += number;
+        found = true;
+    }
+
+    if (! found) return raw;
+
+    return formatTotalNumber(total, row.measure_unit || drafts[row.id]?.measure_unit) ?? raw;
 };
 
 const formatTotalNumber = (number, unit) => {
@@ -234,7 +307,30 @@ const flushRow = (row) => {
 
     saveField(row, 'title');
     saveField(row, 'measure_unit');
+    saveField(row, 'value_basis');
     saveField(row, 'target');
+};
+
+const saveBasis = (row, next) => {
+    const id = Number(row.id);
+    const value = next || 'year';
+    const current = row.value_basis || 'year';
+
+    if (drafts[id]) drafts[id].value_basis = value;
+
+    if (value === current) return;
+
+    row.value_basis = value;
+
+    router.patch(route('indicators.update', id), { value_basis: value }, {
+        preserveScroll: true,
+        preserveState: true,
+        only: ['rows'],
+        onError: () => {
+            row.value_basis = current;
+            if (drafts[id]) drafts[id].value_basis = current;
+        },
+    });
 };
 
 const toggleRow = (row) => {
@@ -799,8 +895,9 @@ const removePeriod = (period) => {
                     <colgroup>
                         <col style="width: 4%" />
                         <col :style="{ width: columnWidths.title }" />
-                        <col style="width: 12%" />
-                        <col style="width: 9%" />
+                        <col style="width: 11%" />
+                        <col style="width: 11%" />
+                        <col style="width: 8%" />
                         <col
                             v-for="index in valueColumnCount"
                             :key="'col-' + index"
@@ -817,6 +914,13 @@ const removePeriod = (period) => {
                                 Үзүүлэлтийн дэлгэрэнгүй мэдээлэл
                             </th>
                             <th rowspan="2" class="whitespace-normal text-center">Хэмжих нэгж</th>
+                            <th
+                                rowspan="2"
+                                class="whitespace-normal text-center"
+                                title="Он бүрийн дүнг өссөн эсвэл тухайн оноор харуулна"
+                            >
+                                Дүнгийн төрөл
+                            </th>
                             <th rowspan="2" class="whitespace-normal text-center">Хүрэх түвшин</th>
                             <th
                                 v-for="period in periods"
@@ -839,7 +943,7 @@ const removePeriod = (period) => {
                                         :class="period.split
                                             ? 'bg-brand-navy-600 text-white'
                                             : 'text-slate-500 hover:bg-white'"
-                                        :title="period.split ? 'Зөвхөн өссөн харуулах' : 'Хагас жил + өссөн гэж хоёр нүд болгох'"
+                                        :title="period.split ? 'Зөвхөн жилийн дүн харуулах' : 'Хагас жил + жилийн дүн гэж хоёр нүд болгох'"
                                         @click="toggleSplit(period)"
                                     >
                                         Хагас
@@ -885,7 +989,7 @@ const removePeriod = (period) => {
                                     :key="period.id + '-' + slot"
                                     class="whitespace-normal text-center !text-[10px] !font-semibold !normal-case !leading-tight"
                                 >
-                                    {{ SLOT_LABELS[slot] || 'өссөн' }}
+                                    {{ SLOT_LABELS[slot] || 'дүн' }}
                                 </th>
                             </template>
                         </tr>
@@ -984,6 +1088,28 @@ const removePeriod = (period) => {
                             </td>
 
                             <td class="text-center">
+                                <select
+                                    v-if="canEdit"
+                                    class="w-full rounded border-0 bg-transparent px-0.5 py-0.5 text-center text-sm focus:bg-white focus:ring-1 focus:ring-brand-navy-400"
+                                    :value="basisOf(row)"
+                                    :title="basisOf(row) === 'cumulative'
+                                        ? 'Өссөн дүнгээр харуулж байна'
+                                        : 'Тухайн оны дүнгээр харуулж байна'"
+                                    @change="saveBasis(row, $event.target.value)"
+                                    @click.stop
+                                >
+                                    <option
+                                        v-for="option in VALUE_BASIS_OPTIONS"
+                                        :key="option.value"
+                                        :value="option.value"
+                                    >
+                                        {{ option.label }}
+                                    </option>
+                                </select>
+                                <span v-else class="text-sm">{{ basisLabel(basisOf(row)) }}</span>
+                            </td>
+
+                            <td class="text-center">
                                 <span
                                     v-if="rowEditing(row) && drafts[row.id]"
                                     class="inline-flex w-full items-center justify-center gap-0.5"
@@ -1007,13 +1133,17 @@ const removePeriod = (period) => {
                                 <span v-else class="text-sm font-semibold tabular-nums">{{ formatMeasure(row.target, row.measure_unit) || '—' }}</span>
                             </td>
 
-                            <template v-for="period in periods" :key="'v-' + period.id">
+                            <template v-for="(period, periodIndex) in periods" :key="'v-' + period.id">
                                 <td
                                     v-for="slot in period.slots"
                                     :key="row.id + '-' + period.id + '-' + slot"
                                     class="text-center"
                                     :class="! rowEditing(row) ? 'cursor-pointer hover:bg-sky-50/60' : ''"
-                                    :title="rowEditing(row) ? '' : 'Задаргаа харах'"
+                                    :title="rowEditing(row)
+                                        ? ''
+                                        : (basisOf(row) === 'cumulative'
+                                            ? 'Өссөн дүн — задаргаа харах'
+                                            : 'Тухайн оны дүн — задаргаа харах')"
                                     @click="onValueCellClick(row, period, slot)"
                                 >
                                     <span
@@ -1027,7 +1157,7 @@ const removePeriod = (period) => {
                                             :disabled="! drafts[row.id].measure_unit"
                                             :inputmode="unitOf(drafts[row.id].measure_unit)?.kind === 'integer' ? 'numeric' : 'decimal'"
                                             class="w-full min-w-0 rounded border-0 bg-transparent px-1 py-0.5 text-center text-sm tabular-nums focus:bg-white focus:ring-1 focus:ring-brand-navy-400 disabled:cursor-not-allowed disabled:text-slate-300"
-                                            :title="drafts[row.id].measure_unit ? '' : 'Эхлээд хэмжих нэгж сонгоно'"
+                                            :title="drafts[row.id].measure_unit ? 'Тухайн оны дүн оруулна' : 'Эхлээд хэмжих нэгж сонгоно'"
                                             @blur="saveValue(row, period, slot)"
                                         />
                                         <span
@@ -1053,7 +1183,7 @@ const removePeriod = (period) => {
                                             ? 'font-medium text-brand-navy-700 underline decoration-dotted underline-offset-2'
                                             : 'text-slate-400'"
                                     >
-                                        {{ formatMeasure(row.values[cellKey(period, slot)], row.measure_unit) || '—' }}
+                                        {{ formatMeasure(displayCellRaw(row, period, slot, periodIndex), row.measure_unit) || '—' }}
                                     </span>
                                 </td>
                             </template>

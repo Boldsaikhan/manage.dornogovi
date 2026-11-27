@@ -250,6 +250,42 @@ class SectorIndicatorTest extends TestCase
         $this->assertSame('80', IndicatorMeasure::normalize('төгрөг', '80.4₮'));
     }
 
+    public function test_value_basis_switches_between_year_and_cumulative(): void
+    {
+        $unit = $this->department('Хэвлэл мэдээллийн алба');
+        $user = $this->staff($unit, 'edit');
+        $row = SectorIndicator::create([
+            'department_id' => $unit->id,
+            'title' => 'ERP систем',
+            'measure_unit' => 'тоо',
+        ]);
+
+        $this->assertSame(SectorIndicator::VALUE_BASIS_YEAR, $row->fresh()->value_basis);
+
+        $this->actingAs($user)
+            ->patch(route('indicators.update', $row), ['value_basis' => 'дурын'])
+            ->assertSessionHasErrors('value_basis');
+
+        $this->actingAs($user)
+            ->patch(route('indicators.update', $row), [
+                'value_basis' => SectorIndicator::VALUE_BASIS_CUMULATIVE,
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(
+            SectorIndicator::VALUE_BASIS_CUMULATIVE,
+            $row->fresh()->value_basis,
+        );
+
+        $this->actingAs($user)
+            ->get(route('indicators.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Modules/SectorIndicators')
+                ->where('rows.0.value_basis', SectorIndicator::VALUE_BASIS_CUMULATIVE)
+            );
+    }
+
     public function test_the_employee_dashboard_charts_the_units_baseline(): void
     {
         $mine = $this->department('Архивын тасаг');

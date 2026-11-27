@@ -11,16 +11,25 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class SectorIndicator extends Model
 {
+    public const VALUE_BASIS_YEAR = 'year';
+
+    public const VALUE_BASIS_CUMULATIVE = 'cumulative';
+
     protected $fillable = [
         'department_id',
         'category_id',
         'unit_name',
         'title',
         'measure_unit',
+        'value_basis',
         'target',
         'note',
         'sort_order',
         'created_by',
+    ];
+
+    protected $attributes = [
+        'value_basis' => self::VALUE_BASIS_YEAR,
     ];
 
     public function department(): BelongsTo
