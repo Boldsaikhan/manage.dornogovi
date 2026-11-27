@@ -18,7 +18,7 @@ const props = defineProps({
     measureUnits: { type: Array, default: () => [] },
 });
 
-const SLOT_LABELS = { half: 'хагас жил', year: 'нийт' };
+const SLOT_LABELS = { half: 'хагас жил', year: 'өссөн' };
 
 const registerEl = ref(null);
 const { schedule: scheduleStickySync } = useStickyTableHead(() => registerEl.value);
@@ -58,9 +58,8 @@ const syncDrafts = () => {
     });
 };
 
-/** Толгойн доод мөрөнд хэдэн нүд гарах вэ — он бүрт +1 (нэмэгдсэн). */
 const valueColumnCount = computed(
-    () => props.periods.reduce((sum, p) => sum + p.slots.length + 1, 0),
+    () => props.periods.reduce((sum, p) => sum + p.slots.length, 0),
 );
 
 function fitTitle(el) {
@@ -163,7 +162,7 @@ const parseCellNumber = (raw) => {
     return number;
 };
 
-/** Тухайн оны нийт (жилийн эцэс; хоосон бол хагас жил). */
+/** Тухайн оны өссөн дүн (хоосон бол хагас жил). */
 const periodTotalNumber = (row, period) => {
     const values = rowValues(row);
     const yearRaw = values[cellKey(period, 'year')];
@@ -196,24 +195,9 @@ const formatTotalNumber = (number, unit) => {
     return fixed.replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
 };
 
-/** Өмнөх оны нийтээс хэдээр нэмэгдсэн. */
-const periodIncrease = (row, periodIndex) => {
-    if (periodIndex <= 0) return null;
-
-    const current = periodTotalNumber(row, props.periods[periodIndex]);
-    const previous = periodTotalNumber(row, props.periods[periodIndex - 1]);
-
-    if (current == null || previous == null) return null;
-
-    return formatTotalNumber(
-        current - previous,
-        row.measure_unit || drafts[row.id]?.measure_unit,
-    );
-};
-
 /**
  * Мөрийн нийт — тоо/мөнгө бол нийлбэр, хувь бол орсон жилийн дундаж.
- * Хагас жил/жилийн эцэстэй баганад жилийн эцсийг авна; хоосон бол хагас жил.
+ * Хагас жил/өссөнтэй баганад өссөн дүнг авна; хоосон бол хагас жил.
  */
 const rowTotal = (row) => {
     let total = 0;
@@ -837,7 +821,7 @@ const removePeriod = (period) => {
                             <th
                                 v-for="period in periods"
                                 :key="'p-' + period.id"
-                                :colspan="period.slots.length + 1"
+                                :colspan="period.slots.length"
                                 class="text-center align-bottom"
                             >
                                 <input
@@ -855,7 +839,7 @@ const removePeriod = (period) => {
                                         :class="period.split
                                             ? 'bg-brand-navy-600 text-white'
                                             : 'text-slate-500 hover:bg-white'"
-                                        :title="period.split ? 'Зөвхөн нийт харуулах' : 'Хагас жил + нийт гэж хоёр нүд болгох'"
+                                        :title="period.split ? 'Зөвхөн өссөн харуулах' : 'Хагас жил + өссөн гэж хоёр нүд болгох'"
                                         @click="toggleSplit(period)"
                                     >
                                         Хагас
@@ -901,13 +885,7 @@ const removePeriod = (period) => {
                                     :key="period.id + '-' + slot"
                                     class="whitespace-normal text-center !text-[10px] !font-semibold !normal-case !leading-tight"
                                 >
-                                    {{ SLOT_LABELS[slot] || 'нийт' }}
-                                </th>
-                                <th
-                                    class="whitespace-normal text-center !text-[10px] !font-semibold !normal-case !leading-tight text-brand-orange-700"
-                                    title="Өмнөх оны нийтээс нэмэгдсэн"
-                                >
-                                    нэмэгдсэн
+                                    {{ SLOT_LABELS[slot] || 'өссөн' }}
                                 </th>
                             </template>
                         </tr>
@@ -1029,7 +1007,7 @@ const removePeriod = (period) => {
                                 <span v-else class="text-sm font-semibold tabular-nums">{{ formatMeasure(row.target, row.measure_unit) || '—' }}</span>
                             </td>
 
-                            <template v-for="(period, periodIndex) in periods" :key="'v-' + period.id">
+                            <template v-for="period in periods" :key="'v-' + period.id">
                                 <td
                                     v-for="slot in period.slots"
                                     :key="row.id + '-' + period.id + '-' + slot"
@@ -1078,24 +1056,6 @@ const removePeriod = (period) => {
                                         {{ formatMeasure(row.values[cellKey(period, slot)], row.measure_unit) || '—' }}
                                     </span>
                                 </td>
-                                <td
-                                    class="bg-orange-50/50 text-center"
-                                    title="Өмнөх оны нийтээс нэмэгдсэн"
-                                >
-                                    <span
-                                        class="text-sm tabular-nums font-medium"
-                                        :class="periodIncrease(row, periodIndex) == null
-                                            ? 'text-slate-400'
-                                            : (Number(periodIncrease(row, periodIndex)) < 0
-                                                ? 'text-rose-600'
-                                                : 'text-brand-orange-700')"
-                                    >
-                                        <template v-if="periodIncrease(row, periodIndex) == null">—</template>
-                                        <template v-else>
-                                            {{ Number(periodIncrease(row, periodIndex)) > 0 ? '+' : '' }}{{ formatMeasure(periodIncrease(row, periodIndex), row.measure_unit) }}
-                                        </template>
-                                    </span>
-                                </td>
                             </template>
 
                             <td class="bg-brand-navy-50/40 text-center">
@@ -1106,7 +1066,7 @@ const removePeriod = (period) => {
                                         ? 'Тоон утга алга'
                                         : (unitOf(row.measure_unit)?.kind === 'percent'
                                             ? 'Орсон жилийн дундаж хувь'
-                                            : 'Жил бүрийн эцсийн нийлбэр')"
+                                            : 'Жил бүрийн өссөн дүнгүүдийн нийлбэр')"
                                 >
                                     {{ formatMeasure(rowTotal(row), row.measure_unit || drafts[row.id]?.measure_unit) || '—' }}
                                 </span>
