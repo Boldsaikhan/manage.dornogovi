@@ -77,6 +77,7 @@ class SectorIndicatorController extends Controller
                     'category_id' => $row->category_id,
                     'title' => $row->title,
                     'measure_unit' => $row->measure_unit,
+                    'value_basis' => $row->value_basis ?: SectorIndicator::VALUE_BASIS_YEAR,
                     'target' => $row->target,
                     'note' => $row->note,
                     'values' => $values,
@@ -162,10 +163,18 @@ class SectorIndicatorController extends Controller
         $data = $request->validate([
             'title' => ['sometimes', 'nullable', 'string', 'max:2000'],
             'measure_unit' => ['sometimes', 'nullable', 'string', Rule::in(array_keys(IndicatorMeasure::units()))],
+            'value_basis' => ['sometimes', 'nullable', 'string', Rule::in([
+                SectorIndicator::VALUE_BASIS_YEAR,
+                SectorIndicator::VALUE_BASIS_CUMULATIVE,
+            ])],
             'target' => ['sometimes', 'nullable', 'string', 'max:60'],
             'note' => ['sometimes', 'nullable', 'string', 'max:2000'],
             'category_id' => ['sometimes', 'nullable', 'integer'],
         ]);
+
+        if (array_key_exists('value_basis', $data)) {
+            $data['value_basis'] = $data['value_basis'] ?: SectorIndicator::VALUE_BASIS_YEAR;
+        }
 
         if (array_key_exists('category_id', $data)) {
             $data['category_id'] = $this->ownedCategoryId($data['category_id'], $indicator->department_id);
